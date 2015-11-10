@@ -6,6 +6,8 @@
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.python.org/pypi/meshio)
 [![PyPi Downloads](https://img.shields.io/pypi/dm/meshio.svg)](https://pypi.python.org/pypi/meshio)
 
+![](https://nschloe.github.io/meshio/pp.png)
+
 There are various mesh formats available for representing unstructured meshes.
 The most important ones are
 
