@@ -284,6 +284,11 @@ def _read_exodusii_mesh(reader, timestep=None):
         arr_name = reader.GetPointResultArrayName(k)
         reader.SetPointResultArrayStatus(arr_name, 1)
 
+    # Make sure the point fields are read during Update().
+    for k in range(reader.GetNumberOfElementResultArrays()):
+        arr_name = reader.GetElementResultArrayName(k)
+        reader.SetElementResultArrayStatus(arr_name, 1)
+
     # Make sure all field data is read.
     for k in range(reader.GetNumberOfGlobalResultArrays()):
         arr_name = reader.GetGlobalResultArrayName(k)
