@@ -195,6 +195,13 @@ def _read_h5m(filename):
         for name, dataset in elems['tags'].items():
             cell_data[name] = dataset[()]
 
+    # The `sets` in H5M are special in that they represent a segration of data
+    # in the current file, particularly by a load balancer (Metis, Zoltan,
+    # etc.). This segregation has no equivalent in other data types, but is
+    # certainly worthwhile visualizing.
+    # Hence, we will translate the sets into cell data with the prefix "set::"
+    # here.
+    # TODO deal with point data
     field_data = {}
     if 'sets' in dset:
         # read sets
@@ -205,18 +212,19 @@ def _read_h5m(filename):
         cell_start_gid = conn.attrs['start_id']
         cell_gids = cell_start_gid + elems['tags']['GLOBAL_ID'][()]
         cell_end_gid = cell_start_gid + len(cell_gids) - 1
-        # assert all(cell_gids == range(cell_start_gid, cell_end_gid + 1))
+        assert all(cell_gids == range(cell_start_gid, cell_end_gid + 1))
 
         # create the sets
         for key, value in sets_tags.items():
-            field_data[key] = numpy.empty(len(cells), dtype=int)
+            mod_key = 'set::' + key
+            cell_data[mod_key] = numpy.empty(len(cells), dtype=int)
             end = 0
             for k, row in enumerate(sets_list):
                 bits = int_to_bool_list(row[3])
-                # is_owner = bits[3]
-                # is_unique = bits[2]
-                # is_ordered = bits[1]
-                is_range_compressed = bits[0]
+                # is_owner = bits[0]
+                # is_unique = bits[1]
+                # is_ordered = bits[2]
+                is_range_compressed = bits[3]
                 if is_range_compressed:
                     start_gids = sets_contents[end:row[0]+1:2]
                     lengths = sets_contents[end+1:row[0]+1:2]
@@ -226,13 +234,13 @@ def _read_h5m(filename):
                                 end_gid <= cell_end_gid:
                             i0 = start_gid - cell_start_gid
                             i1 = end_gid - cell_start_gid + 1
-                            field_data[key][i0:i1] = value[k]
+                            cell_data[mod_key][i0:i1] = value[k]
                         else:
                             # TODO deal with point data
                             raise RuntimeError('')
                 else:
                     gids = sets_contents[end:row[0]+1]
-                    field_data[key][gids - cell_start_gid] = value[k]
+                    cell_data[mod_key][gids - cell_start_gid] = value[k]
 
                 end = row[0] + 1
 
