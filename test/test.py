@@ -18,11 +18,6 @@ def test_io():
         [0, 2, 3]
         ])
 
-    # Don't test exodus yet, something funny is going on. When saving, exodus
-    # reduces the number of points, as if to throw out unneccessary ones.
-    # TODO investigate
-    # filename.replace('.geo', '.e')
-
     for extension in ['.e', '.vtk', '.vtu', '.h5m']:
         filename = 'test' + extension
         yield _write_read, filename, points, cells
@@ -34,7 +29,7 @@ def _write_read(filename, points, cells):
     '''Write and read a file, and make sure the data is the same as before.
     '''
     meshio.write(filename, points, cells)
-    p, c, _, _ = meshio.read(filename)
+    p, c, _, _, _ = meshio.read(filename)
 
     # We cannot compare the exact rows here since the order of the points might
     # have changes. Just compare the sums

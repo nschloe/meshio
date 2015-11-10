@@ -48,23 +48,19 @@ def read(filenames, timestep=None):
             return _read_h5m(filename)
         else:
             if extension == '.vtu':
-                from vtk import vtkXMLUnstructuredGridReader
-                reader = vtkXMLUnstructuredGridReader()
+                reader = vtk.vtkXMLUnstructuredGridReader()
                 vtk_mesh = _read_vtk_mesh(reader, filename)
             elif extension == '.vtk':
-                from vtk import vtkUnstructuredGridReader
-                reader = vtkUnstructuredGridReader()
+                reader = vtk.vtkUnstructuredGridReader()
                 vtk_mesh = _read_vtk_mesh(reader, filename)
             elif extension in ['.ex2', '.exo', '.e']:
-                from vtk import vtkExodusIIReader
-                reader = vtkExodusIIReader()
+                reader = vtk.vtkExodusIIReader()
                 reader.SetFileName(filename)
                 vtk_mesh = _read_exodusii_mesh(reader, timestep=timestep)
             elif re.match('[^\.]*\.e\.\d+\.\d+', filename):
                 # Parallel Exodus files.
                 # TODO handle with vtkPExodusIIReader
-                from vtk import vtkExodusIIReader
-                reader = vtkExodusIIReader()
+                reader = vtk.vtkExodusIIReader()
                 reader.SetFileName(filenames[0])
                 vtk_mesh = _read_exodusii_mesh(reader, timestep=timestep)
             else:
@@ -174,8 +170,9 @@ def _read_h5m(filename):
     points = dset['nodes']['coordinates'][()]
     # read point data
     point_data = {}
-    for name, dataset in dset['nodes']['tags'].items():
-        point_data[name] = dataset[()]
+    if 'tags' in dset['nodes']:
+        for name, dataset in dset['nodes']['tags'].items():
+            point_data[name] = dataset[()]
 
     # # Assert that the GLOBAL_IDs are contiguous.
     # point_gids = dset['nodes']['tags']['GLOBAL_ID'][()]
@@ -195,47 +192,49 @@ def _read_h5m(filename):
     cells = conn[()] - 1
 
     cell_data = {}
-    for name, dataset in elems['tags'].items():
-        cell_data[name] = dataset[()]
+    if 'tags' in elems:
+        for name, dataset in elems['tags'].items():
+            cell_data[name] = dataset[()]
 
-    # read sets
-    sets_contents = dset['sets']['contents'][()]
-    sets_list = dset['sets']['list'][()]
-    sets_tags = dset['sets']['tags']
-
-    cell_start_gid = conn.attrs['start_id']
-    # cell_gids = cell_start_gid + elems['tags']['GLOBAL_ID'][()]
-    # cell_end_gid = cell_start_gid + len(cell_gids) - 1
-    # assert all(cell_gids == range(cell_start_gid, cell_end_gid + 1))
-
-    # create the sets
     field_data = {}
-    for key, value in sets_tags.items():
-        field_data[key] = numpy.empty(len(cells), dtype=int)
-        end = 0
-        for k, row in enumerate(sets_list):
-            bits = int_to_bool_list(row[3])
-            # is_owner = bits[3]
-            # is_unique = bits[2]
-            # is_ordered = bits[1]
-            is_range_compressed = bits[0]
-            if is_range_compressed:
-                start_gids = sets_contents[end:row[0]+1:2]
-                lengths = sets_contents[end+1:row[0]+1:2]
-                for start_gid, length in zip(start_gids, lengths):
-                    end_gid = start_gid + length - 1
-                    if start_gid >= cell_start_gid and end_gid <= cell_end_gid:
-                        i0 = start_gid - cell_start_gid
-                        i1 = end_gid - cell_start_gid + 1
-                        field_data[key][i0:i1] = value[k]
-                    else:
-                        # TODO deal with point data
-                        raise RuntimeError('')
-            else:
-                gids = sets_contents[end:row[0]+1]
-                field_data[key][gids - cell_start_gid] = value[k]
+    if 'sets' in dset:
+        # read sets
+        sets_contents = dset['sets']['contents'][()]
+        sets_list = dset['sets']['list'][()]
+        sets_tags = dset['sets']['tags']
 
-            end = row[0] + 1
+        cell_start_gid = conn.attrs['start_id']
+        # cell_gids = cell_start_gid + elems['tags']['GLOBAL_ID'][()]
+        # cell_end_gid = cell_start_gid + len(cell_gids) - 1
+        # assert all(cell_gids == range(cell_start_gid, cell_end_gid + 1))
+
+        # create the sets
+        for key, value in sets_tags.items():
+            field_data[key] = numpy.empty(len(cells), dtype=int)
+            end = 0
+            for k, row in enumerate(sets_list):
+                bits = int_to_bool_list(row[3])
+                # is_owner = bits[3]
+                # is_unique = bits[2]
+                # is_ordered = bits[1]
+                is_range_compressed = bits[0]
+                if is_range_compressed:
+                    start_gids = sets_contents[end:row[0]+1:2]
+                    lengths = sets_contents[end+1:row[0]+1:2]
+                    for start_gid, length in zip(start_gids, lengths):
+                        end_gid = start_gid + length - 1
+                        if start_gid >= cell_start_gid and end_gid <= cell_end_gid:
+                            i0 = start_gid - cell_start_gid
+                            i1 = end_gid - cell_start_gid + 1
+                            field_data[key][i0:i1] = value[k]
+                        else:
+                            # TODO deal with point data
+                            raise RuntimeError('')
+                else:
+                    gids = sets_contents[end:row[0]+1]
+                    field_data[key][gids - cell_start_gid] = value[k]
+
+                end = row[0] + 1
 
     return points, cells, point_data, cell_data, field_data
 
