@@ -17,14 +17,15 @@ import os
 import shlex
 
 # from <https://read-the-docs.readthedocs.org/en/latest/faq.html>
-from mock import Mock as MagicMock
+# from mock import Mock as MagicMock
+from unittest.mock import MagicMock
 
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
         return Mock()
 
-MOCK_MODULES = ['h5py', 'vtk']
+MOCK_MODULES = ['h5py']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # If extensions (or modules to document with autodoc) are in another directory,
