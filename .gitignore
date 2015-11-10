@@ -1,0 +1,14 @@
+*.pyc
+*.h5
+*.h5m
+*.geo
+*.msh
+*.e
+*.vtk
+*.vtu
+MANIFEST
+README.rst
+build/
+dist/
+pygmsh.egg-info/
+doc/_build/

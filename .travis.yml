@@ -1,0 +1,33 @@
+sudo: false
+#sudo: required
+#dist: trusty
+
+language: python
+
+python:
+    - "2.7"
+    #- "3.2"
+
+virtualenv:
+  system_site_packages: true
+
+# install dependencies
+addons:
+  apt:
+    packages:
+      - python-numpy
+      - python-vtk
+
+install:
+  - pip install -r requirements.txt
+  - pip install coveralls
+  # Alternative: setup.py install.
+  # Using pip makes sure that the package is pip-compatible, too.
+  - pip install .
+
+# run tests
+script:
+  - nosetests --with-coverage --cover-package=meshio
+
+after_success:
+  - coveralls
