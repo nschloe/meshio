@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-from collections import defaultdict
 import h5py
 import numpy
 import os
@@ -185,12 +184,10 @@ def _write_h5m(
 
 
 def _generate_vtk_mesh(points, cellsNodes):
-    from vtk import vtkUnstructuredGrid, VTK_LINE, VTK_TRIANGLE, VTK_TETRA, \
-        vtkIdList, vtkPoints, vtkDoubleArray, vtkCellArray
-    mesh = vtkUnstructuredGrid()
+    mesh = vtk.vtkUnstructuredGrid()
 
     # set points
-    vtk_points = vtkPoints()
+    vtk_points = vtk.vtkPoints()
     # Not using a deep copy here results in a segfault.
     vtk_array = numpy_support.numpy_to_vtk(points, deep=True)
     vtk_points.SetData(vtk_array)
@@ -200,7 +197,7 @@ def _generate_vtk_mesh(points, cellsNodes):
     cell_array = vtk.vtkCellArray()
     # set cells
     for cellNodes in cellsNodes:
-        pts = vtkIdList()
+        pts = vtk.vtkIdList()
         num_local_nodes = len(cellNodes)
         pts.SetNumberOfIds(num_local_nodes)
         # Get the connectivity for this element.
@@ -209,9 +206,9 @@ def _generate_vtk_mesh(points, cellsNodes):
         cell_array.InsertNextCell(pts)
 
     numnodes_to_type = {
-        2: VTK_LINE,
-        3: VTK_TRIANGLE,
-        4: VTK_TETRA
+        2: vtk.VTK_LINE,
+        3: vtk.VTK_TRIANGLE,
+        4: vtk.VTK_TETRA
         }
     mesh.SetCells(
         # simply use the type of the last cell
