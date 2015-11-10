@@ -15,6 +15,7 @@ addons:
   apt:
     packages:
       - python-h5py
+      - python-nose
       - python-numpy
       - python-vtk
 
