@@ -1,3 +1,2 @@
-h5py
 mock
 numpy
