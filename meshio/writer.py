@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 #
+from meshio import __name__, __version__
+
+from datetime import datetime
 import h5py
 import numpy
 import os
@@ -125,11 +128,17 @@ def _write_h5m(
     coords.attrs.create('start_id', global_id)
     global_id += len(points)
 
+    # Global tags
+    tstt_tags = tstt.create_group('tags')
+
     # add point data
     if point_data:
         tags = nodes.create_group('tags')
         for key, value in point_data.items():
             tags.create_dataset(key, data=value)
+            # Create entry in global tags
+            g = tstt_tags.create_group(key)
+            g['type'] = value.dtype
 
     # add elements
     elements = tstt.create_group('elements')
@@ -147,6 +156,17 @@ def _write_h5m(
             'Hex': 9,
             'Polyhedron': 10
             })
+        )
+
+    tstt['elemtypes'] = elem_dt
+
+    tstt.create_dataset(
+        'history',
+        data=[
+         __name__,
+         __version__,
+         str(datetime.now())
+        ]
         )
 
     # number of nodes to h5m name, element type
@@ -168,9 +188,6 @@ def _write_h5m(
         tags = elem_group.create_group('tags')
         for key, value in cell_data.items():
             tags.create_dataset(key, data=value)
-
-    # Add tags
-    tstt_tags = tstt.create_group('tags')
 
     # set max_id
     tstt.attrs.create('max_id', global_id, dtype='u8')
