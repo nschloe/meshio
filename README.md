@@ -8,23 +8,28 @@
 
 ![](https://nschloe.github.io/meshio/pp.png)
 
-There are various mesh formats available for representing unstructured meshes.
-The most important ones are
+There are various mesh formats available for representing unstructured meshes,
+e.g.,
 
- * [VTK](http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
- * [VTU](http://www.vtk.org/Wiki/VTK_XML_Formats)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
  * [H5M](https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m)
+ * [MSH](http://geuz.org/gmsh/doc/texinfo/gmsh.html#File-formats)
+ * [VTK](http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
+ * [VTU](http://www.vtk.org/Wiki/VTK_XML_Formats)
 
 MeshIO can read and write all of these formats and smoothly converts between
-them.
+them. Simply call
+```
+meshio-convert input.msh output.vtu
+```
+with any of the supported formats.
 
-To read a mesh, simply call
+In Python, simply call
 ```python
 points, cells, point_data, cell_data, field_data = \
     meshio.read(args.infile, timestep=args.timesteps)
 ```
-To write, do
+to read a mesh. To write, do
 ```python
 meshio.write(
     args.outfile,
