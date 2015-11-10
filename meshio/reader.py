@@ -204,8 +204,8 @@ def _read_h5m(filename):
         sets_tags = dset['sets']['tags']
 
         cell_start_gid = conn.attrs['start_id']
-        # cell_gids = cell_start_gid + elems['tags']['GLOBAL_ID'][()]
-        # cell_end_gid = cell_start_gid + len(cell_gids) - 1
+        cell_gids = cell_start_gid + elems['tags']['GLOBAL_ID'][()]
+        cell_end_gid = cell_start_gid + len(cell_gids) - 1
         # assert all(cell_gids == range(cell_start_gid, cell_end_gid + 1))
 
         # create the sets
@@ -223,7 +223,8 @@ def _read_h5m(filename):
                     lengths = sets_contents[end+1:row[0]+1:2]
                     for start_gid, length in zip(start_gids, lengths):
                         end_gid = start_gid + length - 1
-                        if start_gid >= cell_start_gid and end_gid <= cell_end_gid:
+                        if start_gid >= cell_start_gid and \
+                                end_gid <= cell_end_gid:
                             i0 = start_gid - cell_start_gid
                             i1 = end_gid - cell_start_gid + 1
                             field_data[key][i0:i1] = value[k]
