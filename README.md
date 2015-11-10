@@ -3,7 +3,6 @@
 [![Build Status](https://travis-ci.org/nschloe/meshio.svg)](https://travis-ci.org/nschloe/meshio)
 [![Code Health](https://landscape.io/github/nschloe/meshio/master/landscape.png)](https://landscape.io/github/nschloe/meshio/master)
 [![Coverage Status](https://coveralls.io/repos/nschloe/meshio/badge.svg?branch=master&service=github)](https://coveralls.io/github/nschloe/meshio?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/meshio/badge/?version=latest)](http://meshio.readthedocs.org/en/latest/?badge=latest)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.python.org/pypi/meshio)
 [![PyPi Downloads](https://img.shields.io/pypi/dm/meshio.svg)](https://pypi.python.org/pypi/meshio)
 
@@ -73,8 +72,7 @@ Just
 ```
 import meshio
 ```
-and make use of all the goodies the module provides. The
-[documentation](http://meshio.readthedocs.org/) might give you deeper insight.
+and make use of all the goodies the module provides.
 
 
 ### Testing

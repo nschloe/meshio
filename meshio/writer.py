@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 #
+import h5py
 import numpy
 import os
 import re
 import vtk
 from vtk.util import numpy_support
-#import h5py
 
 
 def write(filename,

@@ -6,12 +6,12 @@ formats.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
+import h5py
 from itertools import islice
 import os
 import numpy
 import re
 import vtk
-#import h5py
 
 
 def read(filenames, timestep=None):
