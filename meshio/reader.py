@@ -6,12 +6,12 @@ formats.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-import h5py
 from itertools import islice
 import os
 import numpy
 import re
 import vtk
+#import h5py
 
 
 def read(filenames, timestep=None):
@@ -68,9 +68,8 @@ def read(filenames, timestep=None):
 
         # # Parallel files.
         # # Assume Exodus format as we don't know anything else yet.
-        # from vtk import vtkPExodusIIReader
         # # TODO Guess the file pattern or whatever.
-        # reader = vtkPExodusIIReader()
+        # reader = vtk.vtkPExodusIIReader()
         # reader.SetFileNames(filenames)
         # vtk_mesh = _read_exodusii_mesh(reader, filename, timestep=timestep)
 

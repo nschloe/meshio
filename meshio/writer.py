@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-import h5py
 import numpy
 import os
 import re
 import vtk
 from vtk.util import numpy_support
+#import h5py
 
 
 def write(filename,
@@ -71,25 +71,20 @@ def write(filename,
                         .AddArray(_create_vtkarray(value, key))
 
         if extension == '.vtu':  # VTK XML format
-            from vtk import vtkXMLUnstructuredGridWriter
-            writer = vtkXMLUnstructuredGridWriter()
+            writer = vtk.vtkXMLUnstructuredGridWriter()
         elif extension == '.pvtu':  # parallel VTK XML format
-            from vtk import vtkXMLPUnstructuredGridWriter
-            writer = vtkXMLPUnstructuredGridWriter()
+            writer = vtk.vtkXMLPUnstructuredGridWriter()
         elif extension == '.vtk':  # classical VTK format
-            from vtk import vtkUnstructuredGridWriter
-            writer = vtkUnstructuredGridWriter()
+            writer = vtk.vtkUnstructuredGridWriter()
             writer.SetFileTypeToASCII()
         elif extension in ['.ex2', '.exo', '.e']:  # Exodus II format
-            from vtk import vtkExodusIIWriter
-            writer = vtkExodusIIWriter()
+            writer = vtk.vtkExodusIIWriter()
             # If the mesh contains vtkModelData information, make use of it
             # and write out all time steps.
             writer.WriteAllTimeStepsOn()
         elif re.match('[^\.]*\.e\.\d+\.\d+', filename):
             # TODO handle parallel I/O with vtkPExodusIIWriter
-            from vtk import vtkExodusIIWriter
-            writer = vtkExodusIIWriter()
+            writer = vtk.vtkExodusIIWriter()
             # If the mesh contains vtkModelData information, make use of it
             # and write out all time steps.
             writer.WriteAllTimeStepsOn()
@@ -217,16 +212,6 @@ def _generate_vtk_mesh(points, cellsNodes):
         )
 
     return mesh
-
-
-def recreate_cells_with_qhull(nodes):
-    '''Remesh using scipy.spatial.Delaunay.
-    '''
-    import scipy.spatial
-    # Create a Delaunay triangulation of the given points.
-    delaunay = scipy.spatial.Delaunay(nodes)
-    # Use the new cells.
-    return delaunay.vertices
 
 
 def _create_vtkarray(X, name):
