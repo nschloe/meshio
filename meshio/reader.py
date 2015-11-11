@@ -74,7 +74,8 @@ def read(filenames, timestep=None):
         # vtk_mesh = _read_exodusii_mesh(reader, filename, timestep=timestep)
 
         # Explicitly extract points, cells, point data, field data
-        points = _read_points(vtk_mesh)
+        points = \
+            vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetPoints().GetData())
         cells_nodes = _read_cells_nodes(vtk_mesh)
         point_data = _read_point_data(vtk_mesh)
         cell_data = _read_cell_data(vtk_mesh)
@@ -332,15 +333,6 @@ def _read_exodusii_mesh(reader, timestep=None):
     #     )
 
     return vtk_mesh[0]  # , time_values
-
-
-def _read_points(vtk_mesh):
-    num_points = vtk_mesh.GetNumberOfPoints()
-    # construct the points list
-    points = numpy.empty(num_points, numpy.dtype((float, 3)))
-    for k in range(num_points):
-        points[k] = numpy.array(vtk_mesh.GetPoint(k))
-    return points
 
 
 def _read_cells_nodes(vtk_mesh):
