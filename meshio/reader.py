@@ -203,7 +203,7 @@ def _read_h5m(filename):
     # here.
     # TODO deal with point data
     field_data = {}
-    if 'sets' in dset:
+    if 'sets' in dset and 'contents' in dset['sets']:
         # read sets
         sets_contents = dset['sets']['contents'][()]
         sets_list = dset['sets']['list'][()]
