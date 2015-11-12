@@ -365,7 +365,7 @@ def _read_point_data(vtk_data):
     for k in range(vtk_data.GetPointData().GetNumberOfArrays()):
         arrays.append(vtk_data.GetPointData().GetArray(k))
 
-    # Go through all arrays, fetch psi and A.
+    # Go through all arrays, fetch data.
     out = {}
     for array in arrays:
         array_name = array.GetName()
