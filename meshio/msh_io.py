@@ -6,6 +6,8 @@ I/O for Gmsh's msh format, cf.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
+from itertools import islice
+import numpy
 
 
 def read(filename):
