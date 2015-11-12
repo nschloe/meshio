@@ -5,8 +5,9 @@ I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-import h5m
-
+from datetime import datetime
+import h5py
+from meshio import __version__
 
 def _int_to_bool_list(num):
     # From <http://stackoverflow.com/a/33608387/353337>.
