@@ -79,9 +79,9 @@ def read(filenames, timestep=None):
                 vtk_mesh.GetPoints().GetData()
                 )
         cells_nodes = _read_cells_nodes(vtk_mesh)
-        point_data = _read_point_data(vtk_mesh)
-        cell_data = _read_cell_data(vtk_mesh)
-        field_data = _read_field_data(vtk_mesh)
+        point_data = _read_data(vtk_mesh.GetPointData())
+        cell_data = _read_data(vtk_mesh.GetCellData())
+        field_data = _read_data(vtk_mesh.GetFieldData())
 
         return points, cells_nodes, point_data, cell_data, field_data
 
@@ -358,46 +358,13 @@ def _read_cells_nodes(vtk_mesh):
     return cells_nodes
 
 
-def _read_point_data(vtk_data):
-    '''Extract point data from a VTK data set.
+def _read_data(data):
+    '''Extract numpy arrays from a VTK data set.
     '''
-    arrays = []
-    for k in range(vtk_data.GetPointData().GetNumberOfArrays()):
-        arrays.append(vtk_data.GetPointData().GetArray(k))
-
     # Go through all arrays, fetch data.
     out = {}
-    for array in arrays:
-        array_name = array.GetName()
-        out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
-
-    return out
-
-
-def _read_cell_data(vtk_data):
-    '''Extract cell data from a VTK data set.
-    '''
-    arrays = []
-    for k in range(vtk_data.GetCellData().GetNumberOfArrays()):
-        arrays.append(vtk_data.GetCellData().GetArray(k))
-
-    out = {}
-    for array in arrays:
-        array_name = array.GetName()
-        out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
-
-    return out
-
-
-def _read_field_data(vtk_data):
-    '''Gather field data.
-    '''
-    arrays = []
-    for k in range(vtk_data.GetFieldData().GetNumberOfArrays()):
-        arrays.append(vtk_data.GetFieldData().GetArray(k))
-
-    out = {}
-    for array in arrays:
+    for k in range(data.GetNumberOfArrays()):
+        array = data.GetArray(k)
         array_name = array.GetName()
         out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
 
