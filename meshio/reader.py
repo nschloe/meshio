@@ -74,8 +74,7 @@ def read(filenames, timestep=None):
         # vtk_mesh = _read_exodusii_mesh(reader, filename, timestep=timestep)
 
         # Explicitly extract points, cells, point data, field data
-        points = \
-            vtk.util.numpy_support.vtk_to_numpy(
+        points = vtk.util.numpy_support.vtk_to_numpy(
                 vtk_mesh.GetPoints().GetData()
                 )
         cells_nodes = _read_cells_nodes(vtk_mesh)
@@ -340,22 +339,15 @@ def _read_exodusii_mesh(reader, timestep=None):
 def _read_cells_nodes(vtk_mesh):
 
     num_cells = vtk_mesh.GetNumberOfCells()
-    # Assume that all cells have the same number of local nodes.
-    max_num_local_nodes = vtk_mesh.GetCell(0).GetNumberOfPoints()
-    cells_nodes = numpy.empty(num_cells,
-                              dtype=numpy.dtype((int, max_num_local_nodes))
-                              )
+    array = vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
+    # array is a one-dimensional vector with
+    # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+    num_nodes_per_cell = array[0]
+    assert all(array[::num_nodes_per_cell+1] == num_nodes_per_cell)
+    cells = array.reshape(num_cells, num_nodes_per_cell+1)
 
-    for k in range(num_cells):
-        cell = vtk_mesh.GetCell(k)
-        num_local_nodes = cell.GetNumberOfPoints()
-        assert num_local_nodes == max_num_local_nodes, 'Cells not uniform.'
-        if num_local_nodes == max_num_local_nodes:
-            # Gather up the points.
-            for l in range(num_local_nodes):
-                cells_nodes[k][l] = cell.GetPointId(l)
-
-    return cells_nodes
+    # remove first column; it only lists the number of points
+    return numpy.delete(cells, 0, 1)
 
 
 def _read_data(data):
