@@ -5,10 +5,12 @@ __author__ = 'Nico Schlömer'
 __author_email__ = 'nico.schloemer@gmail.com'
 __website__ = 'https://github.com/nschloe/meshio'
 
-from meshio.reader import read
-from meshio.writer import write
+from meshio.io import read
+from meshio.io import write
 
 __all__ = [
-        'reader',
-        'writer'
+        'h5m',
+        'io',
+        'gmsh',
+        'vtk'
         ]
