@@ -139,6 +139,20 @@ def _write_h5m(
             # Create entry in global tags
             g = tstt_tags.create_group(key)
             g['type'] = value.dtype
+            # Add a class tag:
+            # From
+            # <http://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
+            # ```
+            # /* Was dense tag data in mesh database */
+            #  define mhdf_DENSE_TYPE   2
+            # /** \brief Was sparse tag data in mesh database */
+            # #define mhdf_SPARSE_TYPE  1
+            # /** \brief Was bit-field tag data in mesh database */
+            # #define mhdf_BIT_TYPE     0
+            # /** \brief Unused */
+            # #define mhdf_MESH_TYPE    3
+            #
+            g.attrs['class'] = 2
 
     # add elements
     elements = tstt.create_group('elements')
@@ -188,6 +202,10 @@ def _write_h5m(
         tags = elem_group.create_group('tags')
         for key, value in cell_data.items():
             tags.create_dataset(key, data=value)
+
+    # add empty set -- MOAB wants this
+    sets = tstt.create_group('sets')
+    sets.create_group('tags')
 
     # set max_id
     tstt.attrs.create('max_id', global_id, dtype='u8')
