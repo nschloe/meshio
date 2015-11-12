@@ -74,14 +74,13 @@ def read(filenames, timestep=None):
         # vtk_mesh = _read_exodusii_mesh(reader, filename, timestep=timestep)
 
         # Explicitly extract points, cells, point data, field data
-        points = \
-            vtk.util.numpy_support.vtk_to_numpy(
+        points = vtk.util.numpy_support.vtk_to_numpy(
                 vtk_mesh.GetPoints().GetData()
                 )
         cells_nodes = _read_cells_nodes(vtk_mesh)
-        point_data = _read_point_data(vtk_mesh)
-        cell_data = _read_cell_data(vtk_mesh)
-        field_data = _read_field_data(vtk_mesh)
+        point_data = _read_data(vtk_mesh.GetPointData())
+        cell_data = _read_data(vtk_mesh.GetCellData())
+        field_data = _read_data(vtk_mesh.GetFieldData())
 
         return points, cells_nodes, point_data, cell_data, field_data
 
@@ -340,81 +339,25 @@ def _read_exodusii_mesh(reader, timestep=None):
 def _read_cells_nodes(vtk_mesh):
 
     num_cells = vtk_mesh.GetNumberOfCells()
-    # Assume that all cells have the same number of local nodes.
-    max_num_local_nodes = vtk_mesh.GetCell(0).GetNumberOfPoints()
-    cells_nodes = numpy.empty(num_cells,
-                              dtype=numpy.dtype((int, max_num_local_nodes))
-                              )
+    array = vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
+    # array is a one-dimensional vector with
+    # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+    num_nodes_per_cell = array[0]
+    assert all(array[::num_nodes_per_cell+1] == num_nodes_per_cell)
+    cells = array.reshape(num_cells, num_nodes_per_cell+1)
 
-    for k in range(num_cells):
-        cell = vtk_mesh.GetCell(k)
-        num_local_nodes = cell.GetNumberOfPoints()
-        assert num_local_nodes == max_num_local_nodes, 'Cells not uniform.'
-        if num_local_nodes == max_num_local_nodes:
-            # Gather up the points.
-            for l in range(num_local_nodes):
-                cells_nodes[k][l] = cell.GetPointId(l)
-
-    return cells_nodes
+    # remove first column; it only lists the number of points
+    return numpy.delete(cells, 0, 1)
 
 
-def _read_point_data(vtk_data):
-    '''Extract point data from a VTK data set.
+def _read_data(data):
+    '''Extract numpy arrays from a VTK data set.
     '''
-    arrays = []
-    for k in range(vtk_data.GetPointData().GetNumberOfArrays()):
-        arrays.append(vtk_data.GetPointData().GetArray(k))
-
-    # Go through all arrays, fetch psi and A.
+    # Go through all arrays, fetch data.
     out = {}
-    for array in arrays:
+    for k in range(data.GetNumberOfArrays()):
+        array = data.GetArray(k)
         array_name = array.GetName()
         out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
 
     return out
-
-
-def _read_cell_data(vtk_data):
-    '''Extract cell data from a VTK data set.
-    '''
-    arrays = []
-    for k in range(vtk_data.GetCellData().GetNumberOfArrays()):
-        arrays.append(vtk_data.GetCellData().GetArray(k))
-
-    out = {}
-    for array in arrays:
-        array_name = array.GetName()
-        out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
-
-    return out
-
-
-def _read_field_data(vtk_data):
-    '''Gather field data.
-    '''
-    vtk_field_data = vtk_data.GetFieldData()
-    num_arrays = vtk_field_data.GetNumberOfArrays()
-
-    field_data = {}
-    for k in range(num_arrays):
-        array = vtk_field_data.GetArray(k)
-        name = array.GetName()
-        num_values = array.GetDataSize()
-        # Data type as specified in vtkSetGet.h.
-        data_type = array.GetDataType()
-        if data_type == 1:
-            dtype = numpy.bool
-        elif data_type in [2, 3]:
-            dtype = numpy.str
-        elif data_type in [4, 5, 6, 7, 8, 9]:
-            dtype = numpy.int
-        elif data_type in [10, 11]:
-            dtype = numpy.float
-        else:
-            raise TypeError('Unknown VTK data type %d.' % data_type)
-        values = numpy.empty(num_values, dtype=dtype)
-        for i in range(num_values):
-            values[i] = array.GetValue(i)
-        field_data[name] = values
-
-    return field_data

@@ -223,32 +223,20 @@ def _generate_vtk_mesh(points, cellsNodes):
     vtk_points.SetData(vtk_array)
     mesh.SetPoints(vtk_points)
 
-    # set cells
-    # TODO use numpy_support here, avoid the copying
-    #
-    # # create cell_array. It's a one-dimensional vector with
-    # # (num_points2, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    # numcells, num_local_nodes = cellsNodes.shape
-    # cc = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
-    #     numpy.c_[
-    #         num_local_nodes * numpy.ones(numcells, dtype=cellsNodes.dtype),
-    #         cellsNodes
-    #         ],
-    #     deep=1
-    #     )
-    # # wrap the data into a vtkCellArray
-    # cell_array = vtk.vtkCellArray()
-    # cell_array.SetCells(numcells, cc)
-
+    # Set cells.
+    # create cell_array. It's a one-dimensional vector with
+    # (num_points2, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+    numcells, num_local_nodes = cellsNodes.shape
+    cc = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
+        numpy.c_[
+            num_local_nodes * numpy.ones(numcells, dtype=cellsNodes.dtype),
+            cellsNodes
+            ].flatten(),
+        deep=1
+        )
+    # wrap the data into a vtkCellArray
     cell_array = vtk.vtkCellArray()
-    for cellNodes in cellsNodes:
-        pts = vtk.vtkIdList()
-        num_local_nodes = len(cellNodes)
-        pts.SetNumberOfIds(num_local_nodes)
-        # Get the connectivity for this element.
-        for k, node_index in enumerate(cellNodes):
-            pts.InsertId(k, node_index)
-        cell_array.InsertNextCell(pts)
+    cell_array.SetCells(numcells, cc)
 
     numnodes_to_type = {
         2: vtk.VTK_LINE,
