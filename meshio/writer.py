@@ -58,8 +58,8 @@ def write(filename,
                 if is_exodus_format and len(X.shape) == 2 \
                    and X.shape[1] == 3 and name[-1] != '_':
                     name += '_'
-                vtk_mesh.GetPointData() \
-                        .AddArray(_create_vtkarray(X, name))
+                pd = vtk_mesh.GetPointData()
+                pd.AddArray(_create_vtkarray(X, name))
 
         # add cell data
         if cell_data:
@@ -205,9 +205,24 @@ def _generate_vtk_mesh(points, cellsNodes):
     vtk_points.SetData(vtk_array)
     mesh.SetPoints(vtk_points)
 
-    # TODO use numpy_support here, avoid the copying
-    cell_array = vtk.vtkCellArray()
     # set cells
+    # TODO use numpy_support here, avoid the copying
+    #
+    # # create cell_array. It's a one-dimensional vector with
+    # # (num_points2, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+    # numcells, num_local_nodes = cellsNodes.shape
+    # cc = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
+    #     numpy.c_[
+    #         num_local_nodes * numpy.ones(numcells, dtype=cellsNodes.dtype),
+    #         cellsNodes
+    #         ],
+    #     deep=1
+    #     )
+    # # wrap the data into a vtkCellArray
+    # cell_array = vtk.vtkCellArray()
+    # cell_array.SetCells(numcells, cc)
+
+    cell_array = vtk.vtkCellArray()
     for cellNodes in cellsNodes:
         pts = vtk.vtkIdList()
         num_local_nodes = len(cellNodes)
@@ -223,7 +238,6 @@ def _generate_vtk_mesh(points, cellsNodes):
         4: vtk.VTK_TETRA
         }
     mesh.SetCells(
-        # simply use the type of the last cell
         numnodes_to_type[num_local_nodes],
         cell_array
         )
@@ -232,11 +246,6 @@ def _generate_vtk_mesh(points, cellsNodes):
 
 
 def _create_vtkarray(X, name):
-    # If something isn't a Numpy array already, try to make it one.
-    if not isinstance(X, numpy.ndarray) and not isinstance(X, str):
-        X = numpy.array(X)
-
     array = vtk.util.numpy_support.numpy_to_vtk(X, deep=1)
     array.SetName(name)
-
     return array

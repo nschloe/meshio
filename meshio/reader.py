@@ -75,7 +75,9 @@ def read(filenames, timestep=None):
 
         # Explicitly extract points, cells, point data, field data
         points = \
-            vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetPoints().GetData())
+            vtk.util.numpy_support.vtk_to_numpy(
+                vtk_mesh.GetPoints().GetData()
+                )
         cells_nodes = _read_cells_nodes(vtk_mesh)
         point_data = _read_point_data(vtk_mesh)
         cell_data = _read_cell_data(vtk_mesh)
