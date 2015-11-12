@@ -392,29 +392,13 @@ def _read_cell_data(vtk_data):
 def _read_field_data(vtk_data):
     '''Gather field data.
     '''
-    vtk_field_data = vtk_data.GetFieldData()
-    num_arrays = vtk_field_data.GetNumberOfArrays()
+    arrays = []
+    for k in range(vtk_data.GetFieldData().GetNumberOfArrays()):
+        arrays.append(vtk_data.GetFieldData().GetArray(k))
 
-    field_data = {}
-    for k in range(num_arrays):
-        array = vtk_field_data.GetArray(k)
-        name = array.GetName()
-        num_values = array.GetDataSize()
-        # Data type as specified in vtkSetGet.h.
-        data_type = array.GetDataType()
-        if data_type == 1:
-            dtype = numpy.bool
-        elif data_type in [2, 3]:
-            dtype = numpy.str
-        elif data_type in [4, 5, 6, 7, 8, 9]:
-            dtype = numpy.int
-        elif data_type in [10, 11]:
-            dtype = numpy.float
-        else:
-            raise TypeError('Unknown VTK data type %d.' % data_type)
-        values = numpy.empty(num_values, dtype=dtype)
-        for i in range(num_values):
-            values[i] = array.GetValue(i)
-        field_data[name] = values
+    out = {}
+    for array in arrays:
+        array_name = array.GetName()
+        out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
 
-    return field_data
+    return out
