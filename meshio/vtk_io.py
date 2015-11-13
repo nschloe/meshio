@@ -157,7 +157,7 @@ def write(type,
 
     vtk_mesh = _generate_vtk_mesh(points, cells)
     # add point data
-    if point_data:
+    if point_data is not None:
         pd = vtk_mesh.GetPointData()
         for name, X in point_data.iteritems():
             # There is a naming inconsistency in VTK when it comes to
