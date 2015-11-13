@@ -78,3 +78,44 @@ def read(filename):
         raise RuntimeError('Expected at least triangles.')
 
     return points, cells
+
+
+def write(
+        filename,
+        points,
+        cells,
+        point_data=None,
+        cell_data=None,
+        field_data=None
+        ):
+    '''Writes msh files, cf.
+    http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
+    '''
+    with open(filename, 'w') as fh:
+        fh.write('$MeshFormat\n2 0 8\n$EndMeshFormat\n')
+
+        # Write nodes
+        fh.write('$Nodes\n')
+        fh.write('%d\n' % len(points))
+        for k, x in enumerate(points):
+            fh.write('%d %f %f %f\n' % (k+1, x[0], x[1], x[2]))
+        fh.write('$EndNodes\n')
+
+        # Write elements.
+        # translate the number of points per element (aka the type) to a Gmsh
+        # enum.
+        type_to_number = {
+            1: 15,  # point
+            2: 1,  # line
+            3: 2,  # triangle
+            4: 4,  # tetrahedron
+            }
+        fh.write('$Elements\n')
+        fh.write('%d\n' % len(cells))
+        for k, c in enumerate(cells):
+            n = len(c)
+            form = '%d %d 0 ' + ' '.join(n * ['%d']) + '\n'
+            fh.write(form % ((k, type_to_number[n]) + tuple(c + 1)))
+        fh.write('$EndElements')
+
+    return

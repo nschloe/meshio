@@ -135,7 +135,7 @@ def write(
     tstt_tags = tstt.create_group('tags')
 
     # add point data
-    if point_data:
+    if point_data is not None:
         tags = nodes.create_group('tags')
         for key, data in point_data.items():
             if len(data.shape) == 1:
