@@ -6,6 +6,7 @@
 *.e
 *.vtk
 *.vtu
+*.pvtu
 MANIFEST
 README.rst
 build/
