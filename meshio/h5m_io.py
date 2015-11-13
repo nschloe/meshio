@@ -7,7 +7,10 @@ I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
 '''
 from datetime import datetime
 import h5py
+import numpy
+
 from meshio import __version__
+
 
 def _int_to_bool_list(num):
     # From <http://stackoverflow.com/a/33608387/353337>.
@@ -134,11 +137,21 @@ def write(
     # add point data
     if point_data:
         tags = nodes.create_group('tags')
-        for key, value in point_data.items():
-            tags.create_dataset(key, data=value)
+        for key, data in point_data.items():
+            if len(data.shape) == 1:
+                dtype = data.dtype
+                tags.create_dataset(key, data=data)
+            else:
+                # H5M doesn't accept n-x-k arrays as data; it wants an n-x-1
+                # array with k-tuples as entries.
+                n, k = data.shape
+                dtype = numpy.dtype((data.dtype, (k,)))
+                dset = tags.create_dataset(key, (n,), dtype=dtype)
+                dset[:] = data
+
             # Create entry in global tags
             g = tstt_tags.create_group(key)
-            g['type'] = value.dtype
+            g['type'] = dtype
             # Add a class tag:
             # From
             # <http://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
