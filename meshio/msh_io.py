@@ -98,7 +98,7 @@ def write(
         fh.write('$Nodes\n')
         fh.write('%d\n' % len(points))
         for k, x in enumerate(points):
-            fh.write('%d %f %f %f\n' % (k, x[0], x[1], x[2]))
+            fh.write('%d %f %f %f\n' % (k+1, x[0], x[1], x[2]))
         fh.write('$EndNodes\n')
 
         # Write elements.
@@ -115,7 +115,7 @@ def write(
         for k, c in enumerate(cells):
             n = len(c)
             form = '%d %d 0 ' + ' '.join(n * ['%d']) + '\n'
-            fh.write(form % ((k, type_to_number[n]) + tuple(c)))
+            fh.write(form % ((k, type_to_number[n]) + tuple(c + 1)))
         fh.write('$EndElements')
 
     return

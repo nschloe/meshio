@@ -33,10 +33,14 @@ def test_io():
         filename = 'test' + extension
         yield _write_read, filename, points, cells, point_data, cell_data
 
+    for extension in ['.msh']:
+        filename = 'test' + extension
+        yield _write_read, filename, points, cells
+
     return
 
 
-def _write_read(filename, points, cells, point_data, cell_data):
+def _write_read(filename, points, cells, point_data={}, cell_data={}):
     '''Write and read a file, and make sure the data is the same as before.
     '''
     meshio.write(
