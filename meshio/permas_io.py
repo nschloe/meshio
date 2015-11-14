@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 '''
-I/O for PERMAS dat format.
+I/O for PERMAS dat format, cf.
 
 .. moduleauthor:: Nils Wagner
 '''
@@ -10,7 +10,10 @@ I/O for PERMAS dat format.
 def write(
         filename,
         points,
-        cells
+        cells,
+        point_data=None,
+        cell_data=None,
+        field_data=None
         ):
     '''Writes PERMAS dat files, cf.
     http://www.intes.de # PERMAS-ASCII-file-format
@@ -52,14 +55,14 @@ def write(
 #           Ni  : Node ID
 #
             if n == 2:
-                fh.write('!\n')
+                fh.write('! \n')
                 fh.write('        $ELEMENT TYPE = PLOTL2 ESET = PLOTL2\n')
-                fh.write('!\n')
+                fh.write('! \n')
                 fh.write(form % (k+1, c[0]+1, c[1]+1))
             elif n == 3:
-                fh.write('!\n')
+                fh.write('! \n')
                 fh.write('        $ELEMENT TYPE = TRIA3 ESET = TRIA3\n')
-                fh.write('!\n')
+                fh.write('! \n')
                 fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1))
             elif n == 4:
                 if k == 0:
