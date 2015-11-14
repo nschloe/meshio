@@ -9,7 +9,7 @@ from datetime import datetime
 import h5py
 import numpy
 
-from meshio import __version__
+from . import meta
 
 
 def _int_to_bool_list(num):
@@ -191,7 +191,7 @@ def write(
         'history',
         data=[
          __name__,
-         __version__,
+         meta.__version__,
          str(datetime.now())
         ]
         )
