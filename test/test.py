@@ -33,7 +33,7 @@ def test_io():
         filename = 'test' + extension
         yield _write_read, filename, points, cells, point_data, cell_data
 
-    for extension in ['.msh']:
+    for extension in ['.dat', '.msh']:
         filename = 'test' + extension
         yield _write_read, filename, points, cells
 
