@@ -10,18 +10,18 @@ import vtk
 from vtk.util import numpy_support
 
 
-def read(type, filename):
-    if type == 'vtk':
+def read(filetype, filename):
+    if filetype == 'vtk':
         reader = vtk.vtkUnstructuredGridReader()
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutput()
-    elif type == 'vtu':
+    elif filetype == 'vtu':
         reader = vtk.vtkXMLUnstructuredGridReader()
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutput()
-    elif type == 'exodus':
+    elif filetype == 'exodus':
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
         vtk_mesh = _read_exodusii_mesh(reader)
