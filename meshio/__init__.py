@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-__version__ = '0.3.0'
-__author__ = 'Nico Schlömer'
-__author_email__ = 'nico.schloemer@gmail.com'
-__website__ = 'https://github.com/nschloe/meshio'
-
 from . import h5m_io
 from . import msh_io
 from . import vtk_io
+
+from meta import __version__, __author__, __author_email__, __website__
 
 
 def read(filename, timestep=None):
