@@ -146,7 +146,7 @@ def _read_data(data):
     return out
 
 
-def write(type,
+def write(filetype,
           filename,
           points,
           cells,
@@ -168,7 +168,7 @@ def write(type,
             # underscore if needed.  Note that for VTK files, this problem does
             # not occur since the label of a vector is always stored as a
             # string.
-            if type == 'exodus' and len(X.shape) == 2 \
+            if filetype == 'exodus' and len(X.shape) == 2 \
                and X.shape[1] == 3 and name[-1] != '_':
                 name += '_'
             pd.AddArray(_create_vtkarray(X, name))
@@ -185,20 +185,20 @@ def write(type,
         for key, value in field_data.iteritems():
             fd.AddArray(_create_vtkarray(value, key))
 
-    if type == 'vtk':  # classical vtk format
+    if filetype == 'vtk':  # classical vtk format
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
-    elif type == 'vtu':  # vtk xml format
+    elif filetype == 'vtu':  # vtk xml format
         writer = vtk.vtk.vtkXMLUnstructuredGridWriter()
-    elif type == 'pvtu':  # parallel vtk xml format
+    elif filetype == 'pvtu':  # parallel vtk xml format
         writer = vtk.vtkXMLUnstructuredGridWriter()
-    elif type == 'exodus':   # exodus ii format
+    elif filetype == 'exodus':   # exodus ii format
         writer = vtk.vtkExodusIIWriter()
         # if the mesh contains vtkmodeldata information, make use of it
         # and write out all time steps.
         writer.WriteAllTimeStepsOn()
     else:
-        raise RuntimeError('unknown file type \'%s\'.' % filename)
+        raise RuntimeError('unknown file type \'%s\'.' % filetype)
 
     writer.SetFileName(filename)
     try:
