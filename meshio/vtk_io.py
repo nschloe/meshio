@@ -201,7 +201,10 @@ def write(type,
         raise RuntimeError('unknown file type \'%s\'.' % filename)
 
     writer.SetFileName(filename)
-    writer.SetInput(vtk_mesh)
+    try:
+        writer.SetInput(vtk_mesh)
+    except AttributeError:
+        writer.SetInputData(vtk_mesh)
     writer.Write()
 
     return
