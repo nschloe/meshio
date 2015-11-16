@@ -6,7 +6,9 @@ I/O for PERMAS dat format, cf.
 .. moduleauthor:: Nils Wagner
 '''
 import gzip
+import numpy
 import re
+
 
 def read(filename):
     '''Reads a PERMAS dato, post file.
@@ -30,6 +32,24 @@ def read(filename):
             break
         if re.search('\$END STRUCTURE', line):
             break
+        if re.search('\$ELEMENT TYPE = TRIA3', line):
+            # print line,
+            elems = {
+                'points': [],
+                'lines': [],
+                'triangles': [],
+                'tetrahedra': []
+                }
+
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                if line.startswith('!'):
+                    break
+                data = numpy.array(line.split(), dtype=int)
+                elems['triangles'].append(data[-3:])
+
         if re.search('\$ELEMENT TYPE = TET4', line):
             elems = {
                 'points': [],
@@ -44,8 +64,9 @@ def read(filename):
                     break
                 if line.startswith('!'):
                     break
-                data = np.array(line.split(), dtype=int)
+                data = numpy.array(line.split(), dtype=int)
                 elems['tetrahedra'].append(data[-4:])
+
         if re.search('\$COOR', line):
             icoor = 0
             while True:
@@ -54,9 +75,11 @@ def read(filename):
                     break
                 if line.startswith('!'):
                     break
-                points = np.empty((1000000, 3))
-                points[icoor, :] = np.array(line.split(), dtype=float)[1:]
+                points = numpy.empty((1000000, 3))
+                points[icoor, :] = numpy.array(line.split(), dtype=float)[1:]
                 icoor += 1
+
+#   print elems['triangles']
 
     if len(elems['tetrahedra']) > 0:
         cells = elems['tetrahedra']
@@ -64,9 +87,9 @@ def read(filename):
         cells = elems['triangles']
     else:
         raise RuntimeError('Expected at least triangles.')
-    print cells[-2:]
-    print points[icoor-4:icoor, :]
-    return points[:icoor, :], cells
+#   print cells[-2:]
+#   print points[icoor-4:icoor,:]
+    return points[:icoor, :], cells, {}, {}, {}
 
 
 def write(
@@ -87,10 +110,9 @@ def write(
         fh.write('! \n')
 
         # Write nodes
-        fh.write('! Number of nodes = %d\n' % len(points))
-        fh.write('! \n')
+#       fh.write('! Number of nodes = %d\n' % len(points))
+#       fh.write('! \n')
         fh.write('        $COOR NSET = ALL_NODES\n')
-        fh.write('! \n')
         for k, x in enumerate(points):
             fh.write(
                 '        %8d %+.15f %+.15f %+.15f\n' %
@@ -106,9 +128,9 @@ def write(
             3: 2,  # triangle
             4: 4,  # tetrahedron
             }
-        fh.write('!\n')
-        fh.write('! Number of elements = %d\n' % len(cells))
-        fh.write('!\n')
+#       fh.write('!\n')
+#       fh.write('! Number of elements = %d\n' % len(cells))
+#       fh.write('!\n')
         for k, c in enumerate(cells):
             n = len(c)
             form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
@@ -117,20 +139,19 @@ def write(
 #           Ni  : Node ID
 #
             if n == 2:
-                fh.write('! \n')
-                fh.write('        $ELEMENT TYPE = PLOTL2 ESET = PLOTL2\n')
-                fh.write('! \n')
+                if k == 0:
+                    fh.write('! \n')
+                    fh.write('        $ELEMENT TYPE = PLOTL2 ESET = PLOTL2\n')
                 fh.write(form % (k+1, c[0]+1, c[1]+1))
             elif n == 3:
-                fh.write('! \n')
-                fh.write('        $ELEMENT TYPE = TRIA3 ESET = TRIA3\n')
-                fh.write('! \n')
+                if k == 0:
+                    fh.write('! \n')
+                    fh.write('        $ELEMENT TYPE = TRIA3 ESET = TRIA3\n')
                 fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1))
             elif n == 4:
                 if k == 0:
                     fh.write('!\n')
                     fh.write('        $ELEMENT TYPE = TET4 ESET = TET4\n')
-                    fh.write('!\n')
                 fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1))
         fh.write('!\n')
         fh.write('    $END STRUCTURE\n')
