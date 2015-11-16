@@ -32,7 +32,7 @@ def read(filename, timestep=None):
     if extension == '.msh':
         points, cells_nodes = msh_io.read(filename)
         return points, cells_nodes, None, None, None
-    elif extension == '.dat':
+    elif extension in ['.post', '.post.gz', '.dato', '.dato.gz']:
         return permas_io.read(filename)
     elif extension == '.h5m':
         return h5m_io.read(filename)
@@ -74,7 +74,7 @@ def write(filename,
             )
     elif extension == '.msh':
         msh_io.write(filename, points, cells)
-    elif extension == '.dat':
+    elif extension == '.dato':
         permas_io.write(filename, points, cells)
     elif extension == '.vtu':  # vtk xml format
         vtk_io.write(

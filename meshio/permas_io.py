@@ -5,6 +5,68 @@ I/O for PERMAS dat format, cf.
 
 .. moduleauthor:: Nils Wagner
 '''
+import gzip
+import re
+
+def read(filename):
+    '''Reads a PERMAS dato, post file.
+    '''
+    # The format is specified at
+    # <http://www.intes.de #PERMAS-ASCII-file-format>.
+    if filename.endswith('post.gz'):
+        f = gzip.open(filename, 'r')
+    elif filename.endswith('dato.gz'):
+        f = gzip.open(filename, 'r')
+    elif filename.endswith('dato'):
+        f = open(filename, 'r')
+    elif filename.endswith('post'):
+        f = open(filename, 'r')
+    else:
+        print 'Unsupported file format'
+
+    while True:
+        line = f.readline()
+        if not line:
+            break
+        if re.search('\$END STRUCTURE', line):
+            break
+        if re.search('\$ELEMENT TYPE = TET4', line):
+            elems = {
+                'points': [],
+                'lines': [],
+                'triangles': [],
+                'tetrahedra': []
+                }
+
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                if line.startswith('!'):
+                    break
+                data = np.array(line.split(), dtype=int)
+                elems['tetrahedra'].append(data[-4:])
+        if re.search('\$COOR', line):
+            icoor = 0
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                if line.startswith('!'):
+                    break
+                points = np.empty((1000000, 3))
+                points[icoor, :] = np.array(line.split(), dtype=float)[1:]
+                icoor += 1
+
+    if len(elems['tetrahedra']) > 0:
+        cells = elems['tetrahedra']
+    elif len(elems['triangles']) > 0:
+        cells = elems['triangles']
+    else:
+        raise RuntimeError('Expected at least triangles.')
+    print cells[-2:]
+    print points[icoor-4:icoor, :]
+    return points[:icoor, :], cells
 
 
 def write(
