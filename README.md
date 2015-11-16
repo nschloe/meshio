@@ -1,6 +1,6 @@
 # MeshIO
 
-[![Build Status](https://travis-ci.org/nschloe/meshio.svg)](https://travis-ci.org/nschloe/meshio)
+[![Build Status](https://travis-ci.org/nschloe/meshio.svg?branch=master)](https://travis-ci.org/nschloe/meshio)
 [![Code Health](https://landscape.io/github/nschloe/meshio/master/landscape.png)](https://landscape.io/github/nschloe/meshio/master)
 [![Coverage Status](https://coveralls.io/repos/nschloe/meshio/badge.svg?branch=master&service=github)](https://coveralls.io/github/nschloe/meshio?branch=master)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.python.org/pypi/meshio)
