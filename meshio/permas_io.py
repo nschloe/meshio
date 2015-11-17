@@ -68,16 +68,16 @@ def read(filename):
                 elems['tetrahedra'].append(data[-4:])
 
         if re.search('\$COOR', line):
-            points = numpy.empty((1000000, 3))
-            icoor = 0
+            points = []
             while True:
                 line = f.readline()
                 if not line:
                     break
                 if line.startswith('!'):
                     break
-                points[icoor, :] = numpy.array(line.split(), dtype=float)[1:]
-                icoor += 1
+                for r in numpy.array(line.split(), dtype=float)[1:]:
+                    points.append(r)
+    points = numpy.reshape(points, newshape=(len(points)/3, 3))
 
     for key in elems:
         # Subtract one to account for the fact that python indices
@@ -90,7 +90,7 @@ def read(filename):
         cells = elems['triangles']
     else:
         raise RuntimeError('Expected at least triangles.')
-    return points[:icoor, :], cells, {}, {}, {}
+    return points, cells, {}, {}, {}
 
 
 def write(
