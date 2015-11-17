@@ -5,10 +5,10 @@ I/O for PERMAS dat format, cf.
 
 .. moduleauthor:: Nils Wagner
 '''
-import gzip
-import numpy
-import re
 
+import gzip
+import re
+import numpy as np
 
 def read(filename):
     '''Reads a PERMAS dato, post file.
@@ -16,24 +16,21 @@ def read(filename):
     # The format is specified at
     # <http://www.intes.de #PERMAS-ASCII-file-format>.
     if filename.endswith('post.gz'):
-        f = gzip.open(filename, 'r')
+        f = gzip.open(filename,'r')
     elif filename.endswith('dato.gz'):
-        f = gzip.open(filename, 'r')
+        f = gzip.open(filename,'r')
     elif filename.endswith('dato'):
-        f = open(filename, 'r')
+        f = open(filename,'r')
     elif filename.endswith('post'):
-        f = open(filename, 'r')
+        f = open(filename,'r')
     else:
         print 'Unsupported file format'
 
     while True:
         line = f.readline()
-        if not line:
-            break
-        if re.search('\$END STRUCTURE', line):
-            break
-        if re.search('\$ELEMENT TYPE = TRIA3', line):
-            # print line,
+        if not line: break
+        if re.search('\$END STRUCTURE',line): break
+        if re.search('\$ELEMENT TYPE = TRIA3',line):
             elems = {
                 'points': [],
                 'lines': [],
@@ -43,14 +40,12 @@ def read(filename):
 
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
+                if not line: break
+                if line.startswith('!'): break
+                data = np.array(line.split(), dtype=int)
                 elems['triangles'].append(data[-3:])
 
-        if re.search('\$ELEMENT TYPE = TET4', line):
+        if re.search('\$ELEMENT TYPE = TET4',line):
             elems = {
                 'points': [],
                 'lines': [],
@@ -60,26 +55,25 @@ def read(filename):
 
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
+                if not line: break
+                if line.startswith('!'): break
+                data = np.array(line.split(), dtype=int)
                 elems['tetrahedra'].append(data[-4:])
 
-        if re.search('\$COOR', line):
+        if re.search('\$COOR',line):
+            points = np.empty((1000000, 3))
             icoor = 0
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
-                    break
-                points = numpy.empty((1000000, 3))
-                points[icoor, :] = numpy.array(line.split(), dtype=float)[1:]
+                if not line: break
+                if line.startswith('!'): break
+                points[icoor, :] = np.array(line.split(), dtype=float)[1:]
                 icoor += 1
 
-#   print elems['triangles']
+    for key in elems:
+        # Subtract one to account for the fact that python indices
+        # are 0-based.
+        elems[key] = np.array(elems[key], dtype=int) - 1
 
     if len(elems['tetrahedra']) > 0:
         cells = elems['tetrahedra']
@@ -87,9 +81,7 @@ def read(filename):
         cells = elems['triangles']
     else:
         raise RuntimeError('Expected at least triangles.')
-#   print cells[-2:]
-#   print points[icoor-4:icoor,:]
-    return points[:icoor, :], cells, {}, {}, {}
+    return points[:icoor,:], cells, {}, {}, {}
 
 
 def write(
@@ -110,8 +102,6 @@ def write(
         fh.write('! \n')
 
         # Write nodes
-#       fh.write('! Number of nodes = %d\n' % len(points))
-#       fh.write('! \n')
         fh.write('        $COOR NSET = ALL_NODES\n')
         for k, x in enumerate(points):
             fh.write(
@@ -128,21 +118,14 @@ def write(
             3: 2,  # triangle
             4: 4,  # tetrahedron
             }
-#       fh.write('!\n')
-#       fh.write('! Number of elements = %d\n' % len(cells))
-#       fh.write('!\n')
         for k, c in enumerate(cells):
             n = len(c)
             form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
-#
-#           EID : element ID > 0 !!!
-#           Ni  : Node ID
-#
             if n == 2:
                 if k == 0:
                     fh.write('! \n')
                     fh.write('        $ELEMENT TYPE = PLOTL2 ESET = PLOTL2\n')
-                fh.write(form % (k+1, c[0]+1, c[1]+1))
+                fh.write(form % (k+1, c[0], c[1]))
             elif n == 3:
                 if k == 0:
                     fh.write('! \n')
