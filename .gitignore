@@ -1,4 +1,6 @@
 *.pyc
+*.dat
+*.dato
 *.h5
 *.h5m
 *.geo

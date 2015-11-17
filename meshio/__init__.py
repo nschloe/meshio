@@ -2,6 +2,7 @@
 #
 from . import h5m_io
 from . import msh_io
+from . import permas_io
 from . import vtk_io
 
 from meta import __version__, __author__, __author_email__, __website__
@@ -28,11 +29,11 @@ def read(filename, timestep=None):
     # serial files
     extension = os.path.splitext(filename)[1]
 
-    # setup the reader
     if extension == '.msh':
         points, cells_nodes = msh_io.read(filename)
         return points, cells_nodes, None, None, None
-    # setup the reader
+    elif extension in ['.post', '.post.gz', '.dato', '.dato.gz']:
+        return permas_io.read(filename)
     elif extension == '.h5m':
         return h5m_io.read(filename)
     elif extension == '.vtu':
@@ -73,6 +74,8 @@ def write(filename,
             )
     elif extension == '.msh':
         msh_io.write(filename, points, cells)
+    elif extension == '.dato':
+        permas_io.write(filename, points, cells)
     elif extension == '.vtu':  # vtk xml format
         vtk_io.write(
             'vtu', filename, points, cells,
