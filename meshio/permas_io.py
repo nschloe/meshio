@@ -47,7 +47,7 @@ def read(filename):
                     break
                 if line.startswith('!'):
                     break
-                data = np.array(line.split(), dtype=int)
+                data = numpy.array(line.split(), dtype=int)
                 elems['triangles'].append(data[-3:])
 
         if re.search('\$ELEMENT TYPE = TET4', line):
@@ -68,7 +68,7 @@ def read(filename):
                 elems['tetrahedra'].append(data[-4:])
 
         if re.search('\$COOR', line):
-            points = np.empty((1000000, 3))
+            points = numpy.empty((1000000, 3))
             icoor = 0
             while True:
                 line = f.readline()
@@ -76,13 +76,13 @@ def read(filename):
                     break
                 if line.startswith('!'):
                     break
-                points[icoor, :] = np.array(line.split(), dtype=float)[1:]
+                points[icoor, :] = numpy.array(line.split(), dtype=float)[1:]
                 icoor += 1
 
     for key in elems:
         # Subtract one to account for the fact that python indices
         # are 0-based.
-        elems[key] = np.array(elems[key], dtype=int) - 1
+        elems[key] = numpy.array(elems[key], dtype=int) - 1
 
     if len(elems['tetrahedra']) > 0:
         cells = elems['tetrahedra']
