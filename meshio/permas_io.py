@@ -38,6 +38,7 @@ def read(filename):
                 'points': [],
                 'lines': [],
                 'triangles': [],
+                'prism': [],
                 'tetrahedra': []
                 }
 
@@ -55,6 +56,7 @@ def read(filename):
                 'points': [],
                 'lines': [],
                 'triangles': [],
+                'prism': [],
                 'tetrahedra': []
                 }
 
@@ -66,6 +68,24 @@ def read(filename):
                     break
                 data = numpy.array(line.split(), dtype=int)
                 elems['tetrahedra'].append(data[-4:])
+
+        if re.search('\$ELEMENT TYPE = PENTA6', line):
+            elems = {
+                'points': [],
+                'lines': [],
+                'triangles': [],
+                'tetrahedra': [],
+                'prism': [],
+                }
+
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                if line.startswith('!'):
+                    break
+                data = numpy.array(line.split(), dtype=int)
+                elems['prism'].append(data[-6:])
 
         if re.search('\$COOR', line):
             points = []
@@ -86,6 +106,8 @@ def read(filename):
 
     if len(elems['tetrahedra']) > 0:
         cells = elems['tetrahedra']
+    if len(elems['prism']) > 0:
+        cells = elems['prism']
     elif len(elems['triangles']) > 0:
         cells = elems['triangles']
     else:
@@ -126,6 +148,7 @@ def write(
             2: 1,  # line
             3: 2,  # triangle
             4: 4,  # tetrahedron
+            5: 6,  # prism
             }
         for k, c in enumerate(cells):
             n = len(c)
@@ -145,6 +168,11 @@ def write(
                     fh.write('!\n')
                     fh.write('        $ELEMENT TYPE = TET4 ESET = TET4\n')
                 fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1))
+            elif n == 6:
+                if k == 0:
+                    fh.write('!\n')
+                    fh.write('        $ELEMENT TYPE = PENTA6 ESET = PENTA6\n')
+                fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1, c[4]+1, c[5]+1))
         fh.write('!\n')
         fh.write('    $END STRUCTURE\n')
         fh.write('!\n')

@@ -46,7 +46,8 @@ def read(filename):
                     'points': [],
                     'lines': [],
                     'triangles': [],
-                    'tetrahedra': []
+                    'tetrahedra': [],
+                    'prism': []
                     }
                 for k, line in enumerate(islice(f, num_elems)):
                     # Throw away the index immediately
@@ -59,6 +60,8 @@ def read(filename):
                         elems['triangles'].append(data[-3:])
                     elif data[1] == 4:
                         elems['tetrahedra'].append(data[-4:])
+                    elif data[1] == 6:
+                        elems['prism'].append(data[-6:])
                     else:
                         raise RuntimeError('Unknown element type')
                 for key in elems:
@@ -67,11 +70,20 @@ def read(filename):
                     elems[key] = numpy.array(elems[key], dtype=int) - 1
                 line = islice(f, 1).next()
                 assert(line.strip() == '$EndElements')
+            elif environ == 'PhysicalNames':
+                line = islice(f, 1).next()
+                num_phys_names = int(line)
+                for k, line in enumerate(islice(f, num_phys_names)):
+                    pass
+                line = islice(f, 1).next()
+                assert(line.strip() == '$EndPhysicalNames')
             else:
                 raise RuntimeError('Unknown environment \'%s\'.' % environ)
 
     if len(elems['tetrahedra']) > 0:
         cells = elems['tetrahedra']
+    if len(elems['prism']) > 0:
+        cells = elems['prism']
     elif len(elems['triangles']) > 0:
         cells = elems['triangles']
     else:
@@ -109,6 +121,7 @@ def write(
             2: 1,  # line
             3: 2,  # triangle
             4: 4,  # tetrahedron
+            6: 6,  # prism
             }
         fh.write('$Elements\n')
         fh.write('%d\n' % len(cells))
