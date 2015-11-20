@@ -39,6 +39,7 @@ def read(filename):
                 'lines': [],
                 'triangles': [],
                 'tetrahedra': [],
+                'prism'     : [],
                 'hexahedron': []
                 }
 
@@ -57,14 +58,45 @@ def read(filename):
                 'lines': [],
                 'triangles': [],
                 'tetrahedra': [],
+                'prism'     : [],
                 'hexahedron': []
                 }
+
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                if line.startswith('!'):
+                    break
+                data = numpy.array(line.split(), dtype=int)
+                elems['tetrahedra'].append(data[-4:])
+
+        if re.search('\$ELEMENT TYPE = PENTA6', line):
+            elems = {
+                'points': [],
+                'lines': [],
+                'triangles': [],
+                'tetrahedra': [],
+                'prism': [],
+                'hexahedron': []
+                }
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                if line.startswith('!'):
+                    break
+                data = numpy.array(line.split(), dtype=int)
+                elems['prism'].append(data[-6:])
+
+
         if re.search('\$ELEMENT TYPE = HEXE8', line):
             elems = {
                 'points': [],
                 'lines': [],
                 'triangles': [],
                 'tetrahedra': [],
+                'prism'     : [],
                 'hexahedron': []
                 }
 
@@ -98,6 +130,8 @@ def read(filename):
         cells = elems['tetrahedra']
     if len(elems['hexahedron']) > 0:
         cells = elems['hexahedron']
+    elif len(elems['prism']) > 0:
+        cells = elems['prism']
     elif len(elems['triangles']) > 0:
         cells = elems['triangles']
     else:
@@ -138,7 +172,8 @@ def write(
             2: 1,  # line
             3: 2,  # triangle
             4: 4,  # tetrahedron
-            5: 5,  # tetrahedron
+            6: 6,  # prism
+            8: 5,  # hexaeder
             }
         for k, c in enumerate(cells):
             n = len(c)
@@ -158,6 +193,11 @@ def write(
                     fh.write('!\n')
                     fh.write('        $ELEMENT TYPE = TET4 ESET = TET4\n')
                 fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1))
+            elif n == 6:
+                if k == 0:
+                    fh.write('!\n')
+                    fh.write('        $ELEMENT TYPE = PENTA6 ESET = PENTA6\n')
+                fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1, c[4]+1, c[5]+1))
             elif n == 8:
                 if k == 0:
                     fh.write('!\n')

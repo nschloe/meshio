@@ -47,6 +47,7 @@ def read(filename):
                     'lines': [],
                     'triangles': [],
                     'tetrahedra': [],
+                    'prism': [],
                     'hexahedron': []
                     }
                 for k, line in enumerate(islice(f, num_elems)):
@@ -64,6 +65,8 @@ def read(filename):
                         elems['tetrahedra'].append(data[-4:])
                     elif data[1] == 5:
                         elems['hexahedron'].append(data[-8:])
+                    elif data[1] == 6:
+                        elems['prism'].append(data[-6:])
                     else:
                         raise RuntimeError('Unknown element type')
                 for key in elems:
@@ -124,6 +127,7 @@ def write(
             3: 2,  # triangle
             4: 4,  # tetrahedron
             8: 5,  # hexahedron
+            6: 6,  # prism
             }
         fh.write('$Elements\n')
         fh.write('%d\n' % len(cells))
