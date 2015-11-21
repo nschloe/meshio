@@ -12,10 +12,10 @@ import re
 
 
 def read(filename):
-    '''Reads a PERMAS dato, post file.
+    '''Reads a (compressed) PERMAS dato or post file.
     '''
     # The format is specified at
-    # <http://www.intes.de #PERMAS-ASCII-file-format>.
+    # <http://www.intes.de>.
     if filename.endswith('post.gz'):
         f = gzip.open(filename, 'r')
     elif filename.endswith('dato.gz'):
@@ -38,8 +38,9 @@ def read(filename):
                 'points': [],
                 'lines': [],
                 'triangles': [],
-                'prism': [],
-                'tetrahedra': []
+                'tetrahedra': [],
+                'prism'     : [],
+                'hexahedron': []
                 }
 
             while True:
@@ -56,8 +57,9 @@ def read(filename):
                 'points': [],
                 'lines': [],
                 'triangles': [],
-                'prism': [],
-                'tetrahedra': []
+                'tetrahedra': [],
+                'prism'     : [],
+                'hexahedron': []
                 }
 
             while True:
@@ -76,6 +78,26 @@ def read(filename):
                 'triangles': [],
                 'tetrahedra': [],
                 'prism': [],
+                'hexahedron': []
+                }
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                if line.startswith('!'):
+                    break
+                data = numpy.array(line.split(), dtype=int)
+                elems['prism'].append(data[-6:])
+
+
+        if re.search('\$ELEMENT TYPE = HEXE8', line):
+            elems = {
+                'points': [],
+                'lines': [],
+                'triangles': [],
+                'tetrahedra': [],
+                'prism'     : [],
+                'hexahedron': []
                 }
 
             while True:
@@ -85,7 +107,7 @@ def read(filename):
                 if line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
-                elems['prism'].append(data[-6:])
+                elems['hexahedron'].append(data[-8:])
 
         if re.search('\$COOR', line):
             points = []
@@ -106,7 +128,9 @@ def read(filename):
 
     if len(elems['tetrahedra']) > 0:
         cells = elems['tetrahedra']
-    if len(elems['prism']) > 0:
+    if len(elems['hexahedron']) > 0:
+        cells = elems['hexahedron']
+    elif len(elems['prism']) > 0:
         cells = elems['prism']
     elif len(elems['triangles']) > 0:
         cells = elems['triangles']
@@ -148,7 +172,8 @@ def write(
             2: 1,  # line
             3: 2,  # triangle
             4: 4,  # tetrahedron
-            5: 6,  # prism
+            6: 6,  # prism
+            8: 5,  # hexahedron
             }
         for k, c in enumerate(cells):
             n = len(c)
@@ -173,6 +198,11 @@ def write(
                     fh.write('!\n')
                     fh.write('        $ELEMENT TYPE = PENTA6 ESET = PENTA6\n')
                 fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1, c[4]+1, c[5]+1))
+            elif n == 8:
+                if k == 0:
+                    fh.write('!\n')
+                    fh.write('        $ELEMENT TYPE = HEXE8 ESET = HEXE8\n')
+                fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1, c[4]+1, c[5]+1, c[6]+1, c[7]+1))
         fh.write('!\n')
         fh.write('    $END STRUCTURE\n')
         fh.write('!\n')
