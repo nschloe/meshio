@@ -173,7 +173,7 @@ def write(
             3: 2,  # triangle
             4: 4,  # tetrahedron
             6: 6,  # prism
-            8: 5,  # hexaeder
+            8: 5,  # hexahedron
             }
         for k, c in enumerate(cells):
             n = len(c)
