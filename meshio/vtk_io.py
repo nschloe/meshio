@@ -226,8 +226,8 @@ def _generate_vtk_mesh(points, cellsNodes):
     numcells, num_local_nodes = cellsNodes.shape
     cc = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
         numpy.c_[
-            num_local_nodes * numpy.ones(numcells, dtype=cellsNodes.dtype),
-            cellsNodes
+            num_local_nodes * numpy.ones(numcells, dtype=numpy.int64),
+            cellsNodes.astype(numpy.int64)
             ].flatten(),
         deep=1
         )
