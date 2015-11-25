@@ -32,12 +32,12 @@ def read(filetype, filename):
     points = vtk.util.numpy_support.vtk_to_numpy(
             vtk_mesh.GetPoints().GetData()
             )
-    cells_nodes = _read_cells_nodes(vtk_mesh)
+    cells = _read_cells(vtk_mesh)
     point_data = _read_data(vtk_mesh.GetPointData())
     cell_data = _read_data(vtk_mesh.GetCellData())
     field_data = _read_data(vtk_mesh.GetFieldData())
 
-    return points, cells_nodes, point_data, cell_data, field_data
+    return points, cells, point_data, cell_data, field_data
 
 
 # def _read_exodus_mesh(reader, file_name):
@@ -119,18 +119,44 @@ def _read_exodusii_mesh(reader, timestep=None):
     return vtk_mesh[0]  # , time_values
 
 
-def _read_cells_nodes(vtk_mesh):
+def _read_cells(vtk_mesh):
 
     num_cells = vtk_mesh.GetNumberOfCells()
-    array = vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
+    data = vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
+    offsets = vtk.util.numpy_support.vtk_to_numpy(
+            vtk_mesh.GetCellLocationsArray()
+            )
+    types = vtk.util.numpy_support.vtk_to_numpy(
+            vtk_mesh.GetCellTypesArray()
+            )
+
+    vtk_to_meshio_type = {
+        vtk.VTK_LINE: 'vertex',
+        vtk.VTK_LINE: 'line',
+        vtk.VTK_TRIANGLE: 'triangle',
+        vtk.VTK_QUAD: 'quad',
+        vtk.VTK_TETRA: 'tetra',
+        vtk.VTK_HEXAHEDRON: 'hexahedron',
+        vtk.VTK_WEDGE: 'wedge',
+        vtk.VTK_PYRAMID: 'pyramid'
+        }
+
     # array is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    num_nodes_per_cell = array[0]
-    assert all(array[::num_nodes_per_cell+1] == num_nodes_per_cell)
-    cells = array.reshape(num_cells, num_nodes_per_cell+1)
+    cells = {}
+    for offset, type in zip(offsets, types):
+        meshio_type = vtk_to_meshio_type[type]
+        num_points = data[offset]
+        connectivity = data[offset+1:offset+1+num_points]
+        if meshio_type in cells:
+            cells[meshio_type].append(connectivity)
+        else:
+            cells[meshio_type] = [connectivity]
 
-    # remove first column; it only lists the number of points
-    return numpy.delete(cells, 0, 1)
+    for key, data in cells.iteritems():
+        cells[key] = numpy.vstack(data)
+
+    return cells
 
 
 def _read_data(data):
