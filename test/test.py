@@ -10,24 +10,33 @@ def test_io():
     points = numpy.array([
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+        [2.0, 1.0, 0.0],
         [1.0, 1.0, 0.0],
         [0.0, 1.0, 0.0]
         ])
-    cells = numpy.array([
-        [0, 1, 2],
-        [0, 2, 3]
-        ])
+    cells = {
+        'triangle': numpy.array([
+            [0, 1, 4],
+            [0, 4, 5]
+            ]),
+        'quad': numpy.array([
+            [1, 2, 3, 4]
+            ])
+            }
 
     point_data = {
         'a': numpy.array([
-        [1.0, 2.0],
-        [3.0, 4.0],
-        [5.0, 6.0],
-        [7.0, 8.0]
-        ])
+            [1.0, 2.0],
+            [3.0, 4.0],
+            [5.0, 6.0],
+            [7.0, 8.0],
+            [9.0, 10.0],
+            [11.0, 12.0],
+            ])
         }
 
-    cell_data = {'b': numpy.array([3.14, 2.718])}
+    cell_data = {'b': numpy.array([3.14, 2.718, 1.414])}
 
     for extension in ['.e', '.vtk', '.vtu', '.h5m']:
         filename = 'test' + extension

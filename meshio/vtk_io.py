@@ -210,7 +210,7 @@ def write(filetype,
     return
 
 
-def _generate_vtk_mesh(points, cellsNodes):
+def _generate_vtk_mesh(points, cells):
     mesh = vtk.vtkUnstructuredGrid()
 
     # set points
@@ -221,27 +221,69 @@ def _generate_vtk_mesh(points, cellsNodes):
     mesh.SetPoints(vtk_points)
 
     # Set cells.
+    meshio_to_vtk_type = {
+        'vertex': vtk.VTK_LINE,
+        'line': vtk.VTK_LINE,
+        'triangle': vtk.VTK_TRIANGLE,
+        'quad': vtk.VTK_QUAD,
+        'tetra': vtk.VTK_TETRA,
+        'hexahedron': vtk.VTK_HEXAHEDRON,
+        'wedge': vtk.VTK_WEDGE,
+        'pyramid': vtk.VTK_PYRAMID
+        }
+
     # create cell_array. It's a one-dimensional vector with
     # (num_points2, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    numcells, num_local_nodes = cellsNodes.shape
-    cc = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
-        numpy.c_[
-            num_local_nodes * numpy.ones(numcells, dtype=numpy.int64),
-            cellsNodes.astype(numpy.int64)
-            ].flatten(),
+    cell_types = []
+    cell_offsets = []
+    cell_connectivity = []
+    len_array = 0
+    for meshio_type, data in cells.iteritems():
+        numcells, num_local_nodes = data.shape
+        vtk_type = meshio_to_vtk_type[meshio_type]
+        # add cell types
+        cell_types.append(numpy.empty(numcells, dtype=numpy.ubyte))
+        cell_types[-1].fill(vtk_type)
+        # add cell offsets
+        cell_offsets.append(numpy.arange(
+            len_array,
+            len_array + numcells * num_local_nodes,
+            num_local_nodes + 1,
+            dtype=numpy.int64
+            ))
+        cell_connectivity.append(
+            numpy.c_[
+                num_local_nodes * numpy.ones(numcells, dtype=data.dtype),
+                data
+            ].flatten()
+            )
+        len_array += len(cell_connectivity[-1])
+
+    cell_types = numpy.concatenate(cell_types)
+    cell_offsets = numpy.concatenate(cell_offsets)
+    cell_connectivity = numpy.concatenate(cell_connectivity)
+
+    connectivity = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
+        cell_connectivity.astype(numpy.int64),
         deep=1
         )
+
     # wrap the data into a vtkCellArray
     cell_array = vtk.vtkCellArray()
-    cell_array.SetCells(numcells, cc)
+    cell_array.SetCells(len(cell_types), connectivity)
 
-    numnodes_to_type = {
-        2: vtk.VTK_LINE,
-        3: vtk.VTK_TRIANGLE,
-        4: vtk.VTK_TETRA
-        }
+    # Add cell data to the mesh
     mesh.SetCells(
-        numnodes_to_type[num_local_nodes],
+        numpy_support.numpy_to_vtk(
+            cell_types,
+            deep=1,
+            array_type=vtk.vtkUnsignedCharArray().GetDataType()
+            ),
+        numpy_support.numpy_to_vtk(
+            cell_offsets,
+            deep=1,
+            array_type=vtk.vtkIdTypeArray().GetDataType()
+            ),
         cell_array
         )
 
