@@ -123,7 +123,6 @@ def _read_exodusii_mesh(reader, timestep=None):
 
 def _read_cells(vtk_mesh):
 
-    num_cells = vtk_mesh.GetNumberOfCells()
     data = vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
     offsets = vtk.util.numpy_support.vtk_to_numpy(
             vtk_mesh.GetCellLocationsArray()
@@ -146,8 +145,8 @@ def _read_cells(vtk_mesh):
     # array is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
     cells = {}
-    for offset, type in zip(offsets, types):
-        meshio_type = vtk_to_meshio_type[type]
+    for offset, elem_type in zip(offsets, types):
+        meshio_type = vtk_to_meshio_type[elem_type]
         num_points = data[offset]
         connectivity = data[offset+1:offset+1+num_points]
         if meshio_type in cells:
