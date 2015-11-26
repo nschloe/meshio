@@ -41,13 +41,17 @@ def read(filename):
     # Note that the indices are off by 1 in h5m.
     if 'Tri3' in dset['elements']:
         elems = dset['elements']['Tri3']
+        elem_type = 'triangle'
     elif 'Tet4' in dset['elements']:
         elems = dset['elements']['Tet4']
+        elem_type = 'tetra'
     else:
         raise RuntimeError('Need Tri3s or Tet4s.')
 
     conn = elems['connectivity']
-    cells = conn[()] - 1
+    cells = {
+            elem_type: conn[()] - 1
+            }
 
     cell_data = {}
     if 'tags' in elems:

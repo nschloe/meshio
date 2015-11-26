@@ -41,38 +41,28 @@ def read(filename):
             elif environ == 'Elements':
                 # The first line is the number of elements
                 line = islice(f, 1).next()
-                num_elems = int(line)
-                elems = {
-                    'points': [],
-                    'lines': [],
-                    'triangles': [],
-                    'tetrahedra': [],
-                    'prism': [],
-                    'hexahedra': []
-                    }
-                for k, line in enumerate(islice(f, num_elems)):
-                    # Throw away the index immediately
+                num_cells = int(line)
+                cells = {}
+                gmsh_to_meshio_type = {
+                        15: ('vertex', 1),
+                        1: ('line', 2),
+                        2: ('triangle', 3),
+                        3: ('quad', 4),
+                        4: ('tetra', 4),
+                        5: ('hexahedron', 8),
+                        6: ('wedge', 6)
+                        }
+                for k, line in enumerate(islice(f, num_cells)):
+                    # Throw away the index immediately;
                     data = numpy.array(line.split(), dtype=int)
-                    if data[1] == 15:
-                        elems['points'].append(data[-1:])
-                    elif data[1] == 1:
-                        elems['lines'].append(data[-2:])
-                    elif data[1] == 2:
-                        elems['triangles'].append(data[-3:])
-                    elif data[1] == 3:
-                        pass
-                    elif data[1] == 4:
-                        elems['tetrahedra'].append(data[-4:])
-                    elif data[1] == 5:
-                        elems['hexahedra'].append(data[-8:])
-                    elif data[1] == 6:
-                        elems['prism'].append(data[-6:])
-                    else:
-                        raise RuntimeError('Unknown element type')
-                for key in elems:
+                    t = gmsh_to_meshio_type[data[1]]
                     # Subtract one to account for the fact that python indices
                     # are 0-based.
-                    elems[key] = numpy.array(elems[key], dtype=int) - 1
+                    if t[0] in cells:
+                        cells[t[0]].append(data[-t[1]:] - 1)
+                    else:
+                        cells[t[0]] = [data[-t[1]:] - 1]
+
                 line = islice(f, 1).next()
                 assert(line.strip() == '$EndElements')
             elif environ == 'PhysicalNames':
@@ -85,16 +75,7 @@ def read(filename):
             else:
                 raise RuntimeError('Unknown environment \'%s\'.' % environ)
 
-    if len(elems['tetrahedra']) > 0:
-        cells = elems['tetrahedra']
-    elif len(elems['hexahedra']) > 0:
-        cells = elems['hexahedra']
-    elif len(elems['triangles']) > 0:
-        cells = elems['triangles']
-    else:
-        raise RuntimeError('Expected at least triangles.')
-
-    return points, cells
+    return points, cells, {}, {}, {}
 
 
 def write(

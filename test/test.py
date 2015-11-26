@@ -75,7 +75,7 @@ def test_io():
     for extension in ['.vtk', '.vtu']:
         filename = 'test' + extension
         for mesh in [simple_data, tri_quad_data]:
-            yield _write_read, filename, tri_quad
+            yield _write_read, filename, mesh
 
     for extension in ['.e', '.h5m']:
         filename = 'test' + extension
@@ -85,12 +85,12 @@ def test_io():
     for extension in ['.msh']:
         filename = 'test' + extension
         for mesh in [simple, tri_quad]:
-            yield _write_read, filename, simple
+            yield _write_read, filename, mesh
 
     for extension in ['.dato']:
         filename = 'test' + extension
         for mesh in [simple]:
-            yield _write_read, filename, simple
+            yield _write_read, filename, mesh
 
     return
 

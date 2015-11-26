@@ -30,8 +30,7 @@ def read(filename, timestep=None):
     extension = os.path.splitext(filename)[1]
 
     if extension == '.msh':
-        points, cells_nodes = msh_io.read(filename)
-        return points, cells_nodes, None, None, None
+        return msh_io.read(filename)
     elif extension in ['.post', '.post.gz', '.dato', '.dato.gz']:
         return permas_io.read(filename)
     elif extension == '.h5m':
