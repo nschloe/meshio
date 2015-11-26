@@ -75,6 +75,9 @@ def read(filename):
             else:
                 raise RuntimeError('Unknown environment \'%s\'.' % environ)
 
+    for key in cells:
+        cells[key] = numpy.vstack(cells[key])
+
     return points, cells, {}, {}, {}
 
 
