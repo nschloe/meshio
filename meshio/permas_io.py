@@ -132,55 +132,79 @@ def write(
                 (k+1, x[0], x[1], x[2])
                 )
 
-        # Write elements.
-        # translate the number of points per element (aka the type) to a PERMAS
-        # enum.
-        type_to_number = {
-            1: 15,  # point
-            2: 1,  # line
-            3: 2,  # triangle
-            4: 4,  # tetrahedron
-            6: 6,  # prism
-            8: 5,  # hexahedron
-            }
+        #
+        # Avoid non-unique element numbers in case of multiple element types by num_ele !!!
+        #
+        num_ele = 0
+        for eltyp in cells.keys(): # Loop over available element types
+            
+            if eltyp == 'line':
+                fh.write('!\n')
+                fh.write('        $ELEMENT TYPE = PLOTL2 ESET = PLOTL2\n')
+                cell = cells[eltyp]
+                for k, c in enumerate(cell):
+                    n = len(c)
+                    form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
+                    fh.write(form % (k+1, c[0]+1, c[1]+1))
+                num_ele += len(cell)
 
-        # PERMAS I/O can only deal with one element type at a time
-        assert len(cells) == 1
-        cell = cells.values()[0]
+            elif eltyp == 'quad':
+                fh.write('!\n')
+                fh.write('        $ELEMENT TYPE = QUAD4 ESET = QUAD4\n')
+                cell = cells[eltyp]
+                for k, c in enumerate(cell):
+                    n = len(c)
+                    form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
+                    fh.write(form % (num_ele+k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1))
+                num_ele += len(cell)
+                
+            elif eltyp == 'triangle':
+                fh.write('!\n')
+                fh.write('        $ELEMENT TYPE = TRIA3 ESET = TRIA3\n')
+                cell = cells[eltyp]
+                for k, c in enumerate(cell):
+                    n = len(c)
+                    form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
+                    fh.write(form % (num_ele+k+1, c[0]+1, c[1]+1, c[2]+1))
+                num_ele += len(cell)
+                
+            elif eltyp == 'tetrahedron':
+                fh.write('!\n')
+                fh.write('        $ELEMENT TYPE = TET4 ESET = TET4\n')
+                cell = cells[eltyp]
+                for k, c in enumerate(cell):
+                    n = len(c)
+                    form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
+                    fh.write(form % (num_ele+k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1))
+                num_ele += len(cell)
 
-        for k, c in enumerate(cell):
-            n = len(c)
-            form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
-            if n == 2:
-                if k == 0:
-                    fh.write('! \n')
-                    fh.write('        $ELEMENT TYPE = PLOTL2 ESET = PLOTL2\n')
-                fh.write(form % (k+1, c[0], c[1]))
-            elif n == 3:
-                if k == 0:
-                    fh.write('! \n')
-                    fh.write('        $ELEMENT TYPE = TRIA3 ESET = TRIA3\n')
-                fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1))
-            elif n == 4:
-                if k == 0:
-                    fh.write('!\n')
-                    fh.write('        $ELEMENT TYPE = TET4 ESET = TET4\n')
-                fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1))
-            elif n == 6:
-                if k == 0:
-                    fh.write('!\n')
-                    fh.write('        $ELEMENT TYPE = PENTA6 ESET = PENTA6\n')
-                fh.write(form % (
-                    k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1, c[4]+1, c[5]+1
-                    ))
-            elif n == 8:
-                if k == 0:
-                    fh.write('!\n')
-                    fh.write('        $ELEMENT TYPE = HEXE8 ESET = HEXE8\n')
-                fh.write(form % (
-                    k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1,
-                    c[4]+1, c[5]+1, c[6]+1, c[7]+1
-                    ))
+            elif eltyp == 'wedge':
+                fh.write('!\n')
+                fh.write('        $ELEMENT TYPE = PENTA6 ESET = TET4\n')
+                cell = cells[eltyp]
+                for k, c in enumerate(cell):
+                    n = len(c)
+                    form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
+                    fh.write(form % (
+                        num_ele+k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1,
+                        c[4]+1,c[5]+1))
+                num_ele += len(cell)
+
+            elif eltyp == 'hexahedron':
+                fh.write('!\n')
+                fh.write('        $ELEMENT TYPE = HEXE8 ESET = HEXE8\n')
+                cell = cells[eltyp]
+                for k, c in enumerate(cell):
+                    n = len(c)
+                    form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
+                    fh.write(form % (
+                        num_ele+k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1,
+                        c[4]+1, c[5]+1, c[6]+1, c[7]+1
+                        ))
+                num_ele += len(cell)
+            else:
+                print 'Unknown element type'
+                
         fh.write('!\n')
         fh.write('    $END STRUCTURE\n')
         fh.write('!\n')
