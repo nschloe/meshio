@@ -72,7 +72,7 @@ MeshIO depends on
 
  * [h5py](http://www.h5py.org/),
  * [NumPy](http://www.numpy.org/), and
- * [VTK](http://www.numpy.org/).
+ * [VTK](http://www.vtk.org/Wiki/VTK/Examples/Python).
 
 ### Usage
 

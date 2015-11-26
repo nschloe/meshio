@@ -27,6 +27,8 @@ def read(filename):
     else:
         print 'Unsupported file format'
 
+    cells = {}
+
     while True:
         line = f.readline()
         if not line:
@@ -34,15 +36,6 @@ def read(filename):
         if re.search('\$END STRUCTURE', line):
             break
         if re.search('\$ELEMENT TYPE = TRIA3', line):
-            elems = {
-                'points': [],
-                'lines': [],
-                'triangles': [],
-                'tetrahedra': [],
-                'prism'     : [],
-                'hexahedron': []
-                }
-
             while True:
                 line = f.readline()
                 if not line:
@@ -50,18 +43,12 @@ def read(filename):
                 if line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
-                elems['triangles'].append(data[-3:])
+                if 'triangle' in cells:
+                    cells['triangle'].append(data[-3:])
+                else:
+                    cells['triangle'] = [data[-3:]]
 
         if re.search('\$ELEMENT TYPE = TET4', line):
-            elems = {
-                'points': [],
-                'lines': [],
-                'triangles': [],
-                'tetrahedra': [],
-                'prism'     : [],
-                'hexahedron': []
-                }
-
             while True:
                 line = f.readline()
                 if not line:
@@ -69,17 +56,12 @@ def read(filename):
                 if line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
-                elems['tetrahedra'].append(data[-4:])
+                if 'tetra' in cells:
+                    cells['tetra'].append(data[-4:])
+                else:
+                    cells['tetra'] = [data[-4:]]
 
         if re.search('\$ELEMENT TYPE = PENTA6', line):
-            elems = {
-                'points': [],
-                'lines': [],
-                'triangles': [],
-                'tetrahedra': [],
-                'prism': [],
-                'hexahedron': []
-                }
             while True:
                 line = f.readline()
                 if not line:
@@ -87,19 +69,12 @@ def read(filename):
                 if line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
-                elems['prism'].append(data[-6:])
-
+                if 'wedge' in cells:
+                    cells['wedge'].append(data[-6:])
+                else:
+                    cells['wedge'] = [data[-6:]]
 
         if re.search('\$ELEMENT TYPE = HEXE8', line):
-            elems = {
-                'points': [],
-                'lines': [],
-                'triangles': [],
-                'tetrahedra': [],
-                'prism'     : [],
-                'hexahedron': []
-                }
-
             while True:
                 line = f.readline()
                 if not line:
@@ -107,7 +82,10 @@ def read(filename):
                 if line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
-                elems['hexahedron'].append(data[-8:])
+                if 'hexahedron' in cells:
+                    cells['hexahedron'].append(data[-8:])
+                else:
+                    cells['hexahedron'] = [data[-8:]]
 
         if re.search('\$COOR', line):
             points = []
@@ -121,21 +99,11 @@ def read(filename):
                     points.append(r)
     points = numpy.reshape(points, newshape=(len(points)/3, 3))
 
-    for key in elems:
+    for key in cells:
         # Subtract one to account for the fact that python indices
         # are 0-based.
-        elems[key] = numpy.array(elems[key], dtype=int) - 1
+        cells[key] = numpy.array(cells[key], dtype=int) - 1
 
-    if len(elems['tetrahedra']) > 0:
-        cells = elems['tetrahedra']
-    if len(elems['hexahedron']) > 0:
-        cells = elems['hexahedron']
-    elif len(elems['prism']) > 0:
-        cells = elems['prism']
-    elif len(elems['triangles']) > 0:
-        cells = elems['triangles']
-    else:
-        raise RuntimeError('Expected at least triangles.')
     return points, cells, {}, {}, {}
 
 
@@ -175,7 +143,12 @@ def write(
             6: 6,  # prism
             8: 5,  # hexahedron
             }
-        for k, c in enumerate(cells):
+
+        # PERMAS I/O can only deal with one element type at a time
+        assert len(cells) == 1
+        cell = cells.values()[0]
+
+        for k, c in enumerate(cell):
             n = len(c)
             form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
             if n == 2:
@@ -197,12 +170,17 @@ def write(
                 if k == 0:
                     fh.write('!\n')
                     fh.write('        $ELEMENT TYPE = PENTA6 ESET = PENTA6\n')
-                fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1, c[4]+1, c[5]+1))
+                fh.write(form % (
+                    k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1, c[4]+1, c[5]+1
+                    ))
             elif n == 8:
                 if k == 0:
                     fh.write('!\n')
                     fh.write('        $ELEMENT TYPE = HEXE8 ESET = HEXE8\n')
-                fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1, c[4]+1, c[5]+1, c[6]+1, c[7]+1))
+                fh.write(form % (
+                    k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1,
+                    c[4]+1, c[5]+1, c[6]+1, c[7]+1
+                    ))
         fh.write('!\n')
         fh.write('    $END STRUCTURE\n')
         fh.write('!\n')

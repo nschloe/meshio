@@ -32,12 +32,12 @@ def read(filetype, filename):
     points = vtk.util.numpy_support.vtk_to_numpy(
             vtk_mesh.GetPoints().GetData()
             )
-    cells_nodes = _read_cells_nodes(vtk_mesh)
+    cells = _read_cells(vtk_mesh)
     point_data = _read_data(vtk_mesh.GetPointData())
     cell_data = _read_data(vtk_mesh.GetCellData())
     field_data = _read_data(vtk_mesh.GetFieldData())
 
-    return points, cells_nodes, point_data, cell_data, field_data
+    return points, cells, point_data, cell_data, field_data
 
 
 # def _read_exodus_mesh(reader, file_name):
@@ -92,6 +92,8 @@ def _read_exodusii_mesh(reader, timestep=None):
     out = reader.GetOutput()
 
     # Loop through the blocks and search for a vtkUnstructuredGrid.
+    # In Exodus, different element types are stored different meshes, with
+    # point information possibly duplicated.
     vtk_mesh = []
     for i in range(out.GetNumberOfBlocks()):
         blk = out.GetBlock(i)
@@ -119,18 +121,43 @@ def _read_exodusii_mesh(reader, timestep=None):
     return vtk_mesh[0]  # , time_values
 
 
-def _read_cells_nodes(vtk_mesh):
+def _read_cells(vtk_mesh):
 
-    num_cells = vtk_mesh.GetNumberOfCells()
-    array = vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
+    data = vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
+    offsets = vtk.util.numpy_support.vtk_to_numpy(
+            vtk_mesh.GetCellLocationsArray()
+            )
+    types = vtk.util.numpy_support.vtk_to_numpy(
+            vtk_mesh.GetCellTypesArray()
+            )
+
+    vtk_to_meshio_type = {
+        vtk.VTK_LINE: 'vertex',
+        vtk.VTK_LINE: 'line',
+        vtk.VTK_TRIANGLE: 'triangle',
+        vtk.VTK_QUAD: 'quad',
+        vtk.VTK_TETRA: 'tetra',
+        vtk.VTK_HEXAHEDRON: 'hexahedron',
+        vtk.VTK_WEDGE: 'wedge',
+        vtk.VTK_PYRAMID: 'pyramid'
+        }
+
     # array is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    num_nodes_per_cell = array[0]
-    assert all(array[::num_nodes_per_cell+1] == num_nodes_per_cell)
-    cells = array.reshape(num_cells, num_nodes_per_cell+1)
+    cells = {}
+    for offset, elem_type in zip(offsets, types):
+        meshio_type = vtk_to_meshio_type[elem_type]
+        num_points = data[offset]
+        connectivity = data[offset+1:offset+1+num_points]
+        if meshio_type in cells:
+            cells[meshio_type].append(connectivity)
+        else:
+            cells[meshio_type] = [connectivity]
 
-    # remove first column; it only lists the number of points
-    return numpy.delete(cells, 0, 1)
+    for key, data in cells.iteritems():
+        cells[key] = numpy.vstack(data)
+
+    return cells
 
 
 def _read_data(data):
@@ -210,7 +237,7 @@ def write(filetype,
     return
 
 
-def _generate_vtk_mesh(points, cellsNodes):
+def _generate_vtk_mesh(points, cells):
     mesh = vtk.vtkUnstructuredGrid()
 
     # set points
@@ -221,27 +248,69 @@ def _generate_vtk_mesh(points, cellsNodes):
     mesh.SetPoints(vtk_points)
 
     # Set cells.
+    meshio_to_vtk_type = {
+        'vertex': vtk.VTK_VERTEX,
+        'line': vtk.VTK_LINE,
+        'triangle': vtk.VTK_TRIANGLE,
+        'quad': vtk.VTK_QUAD,
+        'tetra': vtk.VTK_TETRA,
+        'hexahedron': vtk.VTK_HEXAHEDRON,
+        'wedge': vtk.VTK_WEDGE,
+        'pyramid': vtk.VTK_PYRAMID
+        }
+
     # create cell_array. It's a one-dimensional vector with
     # (num_points2, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    numcells, num_local_nodes = cellsNodes.shape
-    cc = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
-        numpy.c_[
-            num_local_nodes * numpy.ones(numcells, dtype=numpy.int64),
-            cellsNodes.astype(numpy.int64)
-            ].flatten(),
+    cell_types = []
+    cell_offsets = []
+    cell_connectivity = []
+    len_array = 0
+    for meshio_type, data in cells.iteritems():
+        numcells, num_local_nodes = data.shape
+        vtk_type = meshio_to_vtk_type[meshio_type]
+        # add cell types
+        cell_types.append(numpy.empty(numcells, dtype=numpy.ubyte))
+        cell_types[-1].fill(vtk_type)
+        # add cell offsets
+        cell_offsets.append(numpy.arange(
+            len_array,
+            len_array + numcells * num_local_nodes,
+            num_local_nodes + 1,
+            dtype=numpy.int64
+            ))
+        cell_connectivity.append(
+            numpy.c_[
+                num_local_nodes * numpy.ones(numcells, dtype=data.dtype),
+                data
+            ].flatten()
+            )
+        len_array += len(cell_connectivity[-1])
+
+    cell_types = numpy.concatenate(cell_types)
+    cell_offsets = numpy.concatenate(cell_offsets)
+    cell_connectivity = numpy.concatenate(cell_connectivity)
+
+    connectivity = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
+        cell_connectivity.astype(numpy.int64),
         deep=1
         )
+
     # wrap the data into a vtkCellArray
     cell_array = vtk.vtkCellArray()
-    cell_array.SetCells(numcells, cc)
+    cell_array.SetCells(len(cell_types), connectivity)
 
-    numnodes_to_type = {
-        2: vtk.VTK_LINE,
-        3: vtk.VTK_TRIANGLE,
-        4: vtk.VTK_TETRA
-        }
+    # Add cell data to the mesh
     mesh.SetCells(
-        numnodes_to_type[num_local_nodes],
+        numpy_support.numpy_to_vtk(
+            cell_types,
+            deep=1,
+            array_type=vtk.vtkUnsignedCharArray().GetDataType()
+            ),
+        numpy_support.numpy_to_vtk(
+            cell_offsets,
+            deep=1,
+            array_type=vtk.vtkIdTypeArray().GetDataType()
+            ),
         cell_array
         )
 

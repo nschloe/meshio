@@ -41,13 +41,17 @@ def read(filename):
     # Note that the indices are off by 1 in h5m.
     if 'Tri3' in dset['elements']:
         elems = dset['elements']['Tri3']
+        elem_type = 'triangle'
     elif 'Tet4' in dset['elements']:
         elems = dset['elements']['Tet4']
+        elem_type = 'tetra'
     else:
         raise RuntimeError('Need Tri3s or Tet4s.')
 
     conn = elems['connectivity']
-    cells = conn[()] - 1
+    cells = {
+            elem_type: conn[()] - 1
+            }
 
     cell_data = {}
     if 'tags' in elems:
@@ -197,18 +201,23 @@ def write(
         )
 
     # number of nodes to h5m name, element type
-    h5m_type = {
-            2: {'name': 'Edge2', 'type': 1},
-            3: {'name': 'Tri3', 'type': 2},
-            4: {'name': 'Tet4', 'type': 5}
+    meshio_to_h5m_type = {
+            'line': {'name': 'Edge2', 'type': 1},
+            'triangle': {'name': 'Tri3', 'type': 2},
+            'tetra': {'name': 'Tet4', 'type': 5}
             }
-    this_type = h5m_type[cells.shape[1]]
-    elem_group = elements.create_group(this_type['name'])
-    elem_group.attrs.create('element_type', this_type['type'], dtype=elem_dt)
-    # h5m node indices are 1-based
-    conn = elem_group.create_dataset('connectivity', data=(cells + 1))
-    conn.attrs.create('start_id', global_id)
-    global_id += len(cells)
+    for key, data in cells.iteritems():
+        this_type = meshio_to_h5m_type[key]
+        elem_group = elements.create_group(this_type['name'])
+        elem_group.attrs.create(
+                'element_type',
+                this_type['type'],
+                dtype=elem_dt
+                )
+        # h5m node indices are 1-based
+        conn = elem_group.create_dataset('connectivity', data=(data + 1))
+        conn.attrs.create('start_id', global_id)
+        global_id += len(data)
 
     # add cell data
     if cell_data:
