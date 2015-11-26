@@ -2,6 +2,7 @@
 #
 import meshio
 
+import copy
 import numpy
 
 simple = {
@@ -21,7 +22,7 @@ simple = {
         'cell_data': {}
         }
 
-simple_data = simple
+simple_data = copy.deepcopy(simple)
 simple_data['point_data'] = {
         'a': numpy.array([
             [1.0, 2.0],
@@ -55,7 +56,7 @@ tri_quad = {
         'cell_data': {}
         }
 
-tri_quad_data = tri_quad
+tri_quad_data = copy.deepcopy(tri_quad)
 tri_quad_data['point_data'] = {
         'a': numpy.array([
             [1.0, 2.0],
