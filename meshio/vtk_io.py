@@ -92,6 +92,8 @@ def _read_exodusii_mesh(reader, timestep=None):
     out = reader.GetOutput()
 
     # Loop through the blocks and search for a vtkUnstructuredGrid.
+    # In Exodus, different element types are stored different meshes, with
+    # point information possibly duplicated.
     vtk_mesh = []
     for i in range(out.GetNumberOfBlocks()):
         blk = out.GetBlock(i)
@@ -248,7 +250,7 @@ def _generate_vtk_mesh(points, cells):
 
     # Set cells.
     meshio_to_vtk_type = {
-        'vertex': vtk.VTK_LINE,
+        'vertex': vtk.VTK_VERTEX,
         'line': vtk.VTK_LINE,
         'triangle': vtk.VTK_TRIANGLE,
         'quad': vtk.VTK_QUAD,

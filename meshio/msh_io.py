@@ -48,7 +48,7 @@ def read(filename):
                     'triangles': [],
                     'tetrahedra': [],
                     'prism': [],
-                    'hexahedron': []
+                    'hexahedra': []
                     }
                 for k, line in enumerate(islice(f, num_elems)):
                     # Throw away the index immediately
@@ -64,7 +64,7 @@ def read(filename):
                     elif data[1] == 4:
                         elems['tetrahedra'].append(data[-4:])
                     elif data[1] == 5:
-                        elems['hexahedron'].append(data[-8:])
+                        elems['hexahedra'].append(data[-8:])
                     elif data[1] == 6:
                         elems['prism'].append(data[-6:])
                     else:
@@ -87,8 +87,8 @@ def read(filename):
 
     if len(elems['tetrahedra']) > 0:
         cells = elems['tetrahedra']
-    if len(elems['hexahedron']) > 0:
-        cells = elems['hexahedron']
+    elif len(elems['hexahedra']) > 0:
+        cells = elems['hexahedra']
     elif len(elems['triangles']) > 0:
         cells = elems['triangles']
     else:
@@ -118,23 +118,28 @@ def write(
             fh.write('%d %f %f %f\n' % (k+1, x[0], x[1], x[2]))
         fh.write('$EndNodes\n')
 
-        # Write elements.
-        # translate the number of points per element (aka the type) to a Gmsh
-        # enum.
-        type_to_number = {
-            1: 15,  # point
-            2: 1,  # line
-            3: 2,  # triangle
-            4: 4,  # tetrahedron
-            8: 5,  # hexahedron
-            6: 6,  # prism
-            }
+        # Translate meshio types to gmsh codes
+        # http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
+        meshio_to_gmsh_type = {
+                'vertex': 15,
+                'line': 1,
+                'triangle': 2,
+                'quad': 3,
+                'tetra': 4,
+                'hexahedron': 5,
+                'wedge': 6,
+                }
         fh.write('$Elements\n')
-        fh.write('%d\n' % len(cells))
-        for k, c in enumerate(cells):
-            n = len(c)
-            form = '%d %d 0 ' + ' '.join(n * ['%d']) + '\n'
-            fh.write(form % ((k, type_to_number[n]) + tuple(c + 1)))
+        num_cells = 0
+        for key, data in cells.iteritems():
+            num_cells += data.shape[0]
+        fh.write('%d\n' % num_cells)
+        for key, data in cells.iteritems():
+            n = data.shape[1]
+            form = '%d ' + '%d' % meshio_to_gmsh_type[key] + ' 0 ' + \
+                ' '.join(n * ['%d']) + '\n'
+            for k, c in enumerate(data):
+                fh.write(form % ((k,) + tuple(c + 1)))
         fh.write('$EndElements')
 
     return
