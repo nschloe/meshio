@@ -132,7 +132,7 @@ def _read_cells(vtk_mesh):
             )
 
     vtk_to_meshio_type = {
-        vtk.VTK_LINE: 'vertex',
+        vtk.VTK_VERTEX: 'vertex',
         vtk.VTK_LINE: 'line',
         vtk.VTK_TRIANGLE: 'triangle',
         vtk.VTK_QUAD: 'quad',
