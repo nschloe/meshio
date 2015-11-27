@@ -132,7 +132,7 @@ def _read_cells(vtk_mesh):
             )
 
     vtk_to_meshio_type = {
-        vtk.VTK_LINE: 'vertex',
+        vtk.VTK_VERTEX: 'vertex',
         vtk.VTK_LINE: 'line',
         vtk.VTK_TRIANGLE: 'triangle',
         vtk.VTK_QUAD: 'quad',
@@ -142,20 +142,23 @@ def _read_cells(vtk_mesh):
         vtk.VTK_PYRAMID: 'pyramid'
         }
 
-    # array is a one-dimensional vector with
+    # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+    # Translate it into the cells dictionary.
     cells = {}
-    for offset, elem_type in zip(offsets, types):
-        meshio_type = vtk_to_meshio_type[elem_type]
-        num_points = data[offset]
-        connectivity = data[offset+1:offset+1+num_points]
-        if meshio_type in cells:
-            cells[meshio_type].append(connectivity)
-        else:
-            cells[meshio_type] = [connectivity]
-
-    for key, data in cells.iteritems():
-        cells[key] = numpy.vstack(data)
+    for vtk_type, meshio_type in vtk_to_meshio_type.iteritems():
+        # Get all offsets for vtk_type
+        os = offsets[numpy.argwhere(types == vtk_type).transpose()[0]]
+        num_cells = len(os)
+        if num_cells > 0:
+            num_pts = data[os[0]]
+            # instantiate the array
+            arr = numpy.empty((num_cells, num_pts))
+            # sort the num_pts entries after the offsets into the columns of
+            # arr
+            for k in range(num_pts):
+                arr[:, k] = data[os+k+1]
+            cells[meshio_type] = arr
 
     return cells
 
