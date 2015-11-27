@@ -38,25 +38,22 @@ def read(filename):
     # point_end_gid = point_start_gid + len(point_gids) - 1
     # assert all(point_gids == range(point_start_gid, point_end_gid + 1))
 
-    # Note that the indices are off by 1 in h5m.
-    if 'Tri3' in dset['elements']:
-        elems = dset['elements']['Tri3']
-        elem_type = 'triangle'
-    elif 'Tet4' in dset['elements']:
-        elems = dset['elements']['Tet4']
-        elem_type = 'tetra'
-    else:
-        raise RuntimeError('Need Tri3s or Tet4s.')
+    h5m_to_meshio_type = {
+        'Edge2': 'line',
+        'Tri3': 'triangle',
+        'Tet4': 'tetra'
+        }
+    cells = {}
+    for h5m_type, data in dset['elements'].iteritems():
+        meshio_type = h5m_to_meshio_type[h5m_type]
+        conn = data['connectivity']
+        # Note that the indices are off by 1 in h5m.
+        cells[meshio_type] = conn[()] - 1
 
-    conn = elems['connectivity']
-    cells = {
-            elem_type: conn[()] - 1
-            }
-
-    cell_data = {}
-    if 'tags' in elems:
-        for name, dataset in elems['tags'].items():
-            cell_data[name] = dataset[()]
+        cell_data = {}
+        if 'tags' in data:
+            for name, dataset in data['tags'].items():
+                cell_data[name] = dataset[()]
 
     # The `sets` in H5M are special in that they represent a segration of data
     # in the current file, particularly by a load balancer (Metis, Zoltan,
@@ -64,48 +61,48 @@ def read(filename):
     # certainly worthwhile visualizing.
     # Hence, we will translate the sets into cell data with the prefix "set::"
     # here.
-    # TODO deal with point data
     field_data = {}
-    if 'sets' in dset and 'contents' in dset['sets']:
-        # read sets
-        sets_contents = dset['sets']['contents'][()]
-        sets_list = dset['sets']['list'][()]
-        sets_tags = dset['sets']['tags']
+    # TODO deal with sets
+    # if 'sets' in dset and 'contents' in dset['sets']:
+    #     # read sets
+    #     sets_contents = dset['sets']['contents'][()]
+    #     sets_list = dset['sets']['list'][()]
+    #     sets_tags = dset['sets']['tags']
 
-        cell_start_gid = conn.attrs['start_id']
-        cell_gids = cell_start_gid + elems['tags']['GLOBAL_ID'][()]
-        cell_end_gid = cell_start_gid + len(cell_gids) - 1
-        assert all(cell_gids == range(cell_start_gid, cell_end_gid + 1))
+    #     cell_start_gid = conn.attrs['start_id']
+    #     cell_gids = cell_start_gid + elems['tags']['GLOBAL_ID'][()]
+    #     cell_end_gid = cell_start_gid + len(cell_gids) - 1
+    #     assert all(cell_gids == range(cell_start_gid, cell_end_gid + 1))
 
-        # create the sets
-        for key, value in sets_tags.items():
-            mod_key = 'set::' + key
-            cell_data[mod_key] = numpy.empty(len(cells), dtype=int)
-            end = 0
-            for k, row in enumerate(sets_list):
-                bits = _int_to_bool_list(row[3])
-                # is_owner = bits[0]
-                # is_unique = bits[1]
-                # is_ordered = bits[2]
-                is_range_compressed = bits[3]
-                if is_range_compressed:
-                    start_gids = sets_contents[end:row[0]+1:2]
-                    lengths = sets_contents[end+1:row[0]+1:2]
-                    for start_gid, length in zip(start_gids, lengths):
-                        end_gid = start_gid + length - 1
-                        if start_gid >= cell_start_gid and \
-                                end_gid <= cell_end_gid:
-                            i0 = start_gid - cell_start_gid
-                            i1 = end_gid - cell_start_gid + 1
-                            cell_data[mod_key][i0:i1] = value[k]
-                        else:
-                            # TODO deal with point data
-                            raise RuntimeError('')
-                else:
-                    gids = sets_contents[end:row[0]+1]
-                    cell_data[mod_key][gids - cell_start_gid] = value[k]
+    #     # create the sets
+    #     for key, value in sets_tags.items():
+    #         mod_key = 'set::' + key
+    #         cell_data[mod_key] = numpy.empty(len(cells), dtype=int)
+    #         end = 0
+    #         for k, row in enumerate(sets_list):
+    #             bits = _int_to_bool_list(row[3])
+    #             # is_owner = bits[0]
+    #             # is_unique = bits[1]
+    #             # is_ordered = bits[2]
+    #             is_range_compressed = bits[3]
+    #             if is_range_compressed:
+    #                 start_gids = sets_contents[end:row[0]+1:2]
+    #                 lengths = sets_contents[end+1:row[0]+1:2]
+    #                 for start_gid, length in zip(start_gids, lengths):
+    #                     end_gid = start_gid + length - 1
+    #                     if start_gid >= cell_start_gid and \
+    #                             end_gid <= cell_end_gid:
+    #                         i0 = start_gid - cell_start_gid
+    #                         i1 = end_gid - cell_start_gid + 1
+    #                         cell_data[mod_key][i0:i1] = value[k]
+    #                     else:
+    #                         # TODO deal with point data
+    #                         raise RuntimeError('')
+    #             else:
+    #                 gids = sets_contents[end:row[0]+1]
+    #                 cell_data[mod_key][gids - cell_start_gid] = value[k]
 
-                end = row[0] + 1
+    #             end = row[0] + 1
 
     return points, cells, point_data, cell_data, field_data
 
