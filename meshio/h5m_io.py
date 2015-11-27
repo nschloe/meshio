@@ -44,16 +44,17 @@ def read(filename):
         'Tet4': 'tetra'
         }
     cells = {}
+    cell_data = {}
     for h5m_type, data in dset['elements'].iteritems():
         meshio_type = h5m_to_meshio_type[h5m_type]
         conn = data['connectivity']
         # Note that the indices are off by 1 in h5m.
         cells[meshio_type] = conn[()] - 1
 
-        cell_data = {}
-        if 'tags' in data:
-            for name, dataset in data['tags'].items():
-                cell_data[name] = dataset[()]
+        # TODO bring cell data back
+        # if 'tags' in data:
+        #     for name, dataset in data['tags'].items():
+        #         cell_data[name] = dataset[()]
 
     # The `sets` in H5M are special in that they represent a segration of data
     # in the current file, particularly by a load balancer (Metis, Zoltan,
