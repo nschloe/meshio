@@ -146,7 +146,6 @@ def _read_cells(vtk_mesh):
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
     # Translate it into the cells dictionary.
     cells = {}
-    offset_dict = {}
     for vtk_type, meshio_type in vtk_to_meshio_type.iteritems():
         # Get all offsets for vtk_type
         os = offsets[numpy.argwhere(types == vtk_type).transpose()[0]]
