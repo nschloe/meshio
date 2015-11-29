@@ -113,7 +113,6 @@ def read(filename):
     points = numpy.reshape(points, newshape=(len(points)/3, 3))
 
     for key in cells:
-        print 'key', key
         # Subtract one to account for the fact that python indices
         # are 0-based.
         cells[key] = numpy.array(cells[key], dtype=int) - 1
@@ -155,7 +154,7 @@ def write(
                 )
 
         meshio_to_permas_type = {
-            'vertex': 'NA',
+#           'vertex': 'NA',
             'line': 'PLOTL2',
             'triangle': 'TRIA3',
             'quad': 'QUAD4',
@@ -172,13 +171,12 @@ def write(
         for meshio_type, cell in cells.iteritems():
             numcells, num_local_nodes = cell.shape
             permas_type = meshio_to_permas_type[meshio_type]
-            if permas_type != 'NA':
-                fh.write('!\n')
-                fh.write('        $ELEMENT TYPE = %s ESET = %s\n' % (permas_type, permas_type))
-                for k, c in enumerate(cell):
-                    form = '        %8d ' + ' '.join(num_local_nodes * ['%8d']) + '\n'
-                    fh.write(form % ((k+num_ele+1,) + tuple(c + 1)))
-                num_ele += numcells    
+            fh.write('!\n')
+            fh.write('        $ELEMENT TYPE = %s ESET = %s\n' % (permas_type, permas_type))
+            for k, c in enumerate(cell):
+                form = '        %8d ' + ' '.join(num_local_nodes * ['%8d']) + '\n'
+                fh.write(form % ((k+num_ele+1,) + tuple(c + 1)))
+            num_ele += numcells    
                 
         fh.write('!\n')
         fh.write('    $END STRUCTURE\n')
@@ -191,9 +189,9 @@ def write(
         for meshio_type, cell in cells.iteritems():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type in elem_3D:
-                fh.write('            %s MATERIAL = STEEL\n' %permas_type)
+                fh.write('            %s MATERIAL = DUMMY_MATERIAL\n' %permas_type)
             elif permas_type in elem_2D:
-                fh.write('            %s GEODAT = GD_%s MATERIAL = STEEL\n' %(permas_type,permas_type))
+                fh.write('            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n' %(permas_type,permas_type))
             else:
                 pass
         fh.write('!\n')
@@ -215,7 +213,7 @@ def write(
         fh.write('!\n')
         fh.write('$ENTER MATERIAL\n')
         fh.write('!\n')
-        fh.write('    $MATERIAL NAME = STEEL TYPE = ISO\n')
+        fh.write('    $MATERIAL NAME = DUMMY_MATERIAL TYPE = ISO\n')
         fh.write('!\n')
         fh.write('        $ELASTIC  GENERAL  INPUT = DATA\n')
         fh.write('            2.1E+05 0.3\n')
