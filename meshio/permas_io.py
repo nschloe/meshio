@@ -38,9 +38,7 @@ def read(filename):
         if re.search('\$ELEMENT TYPE = TRIA3', line):
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
+                if not line or line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
                 if 'triangle' in cells:
@@ -51,9 +49,7 @@ def read(filename):
         if re.search('\$ELEMENT TYPE = QUAD4', line):
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
+                if not line or line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
                 if 'quad' in cells:
@@ -64,9 +60,7 @@ def read(filename):
         if re.search('\$ELEMENT TYPE = TET4', line):
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
+                if not line or line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
                 if 'tetra' in cells:
@@ -77,9 +71,7 @@ def read(filename):
         if re.search('\$ELEMENT TYPE = PENTA6', line):
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
+                if not line or line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
                 if 'wedge' in cells:
@@ -90,9 +82,7 @@ def read(filename):
         if re.search('\$ELEMENT TYPE = HEXE8', line):
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
+                if not line or line.startswith('!'):
                     break
                 data = numpy.array(line.split(), dtype=int)
                 if 'hexahedron' in cells:
@@ -104,9 +94,7 @@ def read(filename):
             points = []
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
+                if not line or line.startswith('!'):
                     break
                 for r in numpy.array(line.split(), dtype=float)[1:]:
                     points.append(r)
