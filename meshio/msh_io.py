@@ -118,12 +118,14 @@ def write(
         for key, data in cells.iteritems():
             num_cells += data.shape[0]
         fh.write('%d\n' % num_cells)
+        num_cells = 0
         for key, data in cells.iteritems():
             n = data.shape[1]
             form = '%d ' + '%d' % meshio_to_gmsh_type[key] + ' 0 ' + \
                 ' '.join(n * ['%d']) + '\n'
             for k, c in enumerate(data):
-                fh.write(form % ((k,) + tuple(c + 1)))
+                fh.write(form % ((num_cells+k+1,) + tuple(c + 1)))
+            num_cells += data.shape[0]    
         fh.write('$EndElements')
 
     return
