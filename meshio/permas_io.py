@@ -28,67 +28,34 @@ def read(filename):
         print 'Unsupported file format'
 
     cells = {}
+    meshio_to_permas_type = {
+        'line': (2, 'PLOTL2'),
+        'triangle': (3, 'TRIA3'),
+        'quad': (4, 'QUAD4'),
+        'tetra': (4, 'TET4'),
+        'hexahedron': (8, 'HEXE8'),
+        'wedge': (6, 'PENTA6'),
+        'pyramid': (5, 'PYRA5')
+        }
 
     while True:
         line = f.readline()
-        if not line:
+        if not line or re.search('\$END STRUCTURE', line):
             break
-        if re.search('\$END STRUCTURE', line):
-            break
-        if re.search('\$ELEMENT TYPE = TRIA3', line):
-            while True:
-                line = f.readline()
-                if not line or line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
-                if 'triangle' in cells:
-                    cells['triangle'].append(data[-3:])
-                else:
-                    cells['triangle'] = [data[-3:]]
+        for meshio_typ, permas_ele in meshio_to_permas_type.iteritems():
+            num_nodes   = permas_ele[0]
+            permas_type = permas_ele[1]
 
-        if re.search('\$ELEMENT TYPE = QUAD4', line):
-            while True:
-                line = f.readline()
-                if not line or line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
-                if 'quad' in cells:
-                    cells['quad'].append(data[-4:])
-                else:
-                    cells['quad'] = [data[-4:]]
-
-        if re.search('\$ELEMENT TYPE = TET4', line):
-            while True:
-                line = f.readline()
-                if not line or line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
-                if 'tetra' in cells:
-                    cells['tetra'].append(data[-4:])
-                else:
-                    cells['tetra'] = [data[-4:]]
-
-        if re.search('\$ELEMENT TYPE = PENTA6', line):
-            while True:
-                line = f.readline()
-                if not line or line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
-                if 'wedge' in cells:
-                    cells['wedge'].append(data[-6:])
-                else:
-                    cells['wedge'] = [data[-6:]]
-
-        if re.search('\$ELEMENT TYPE = HEXE8', line):
-            while True:
-                line = f.readline()
-                if not line or line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
-                if 'hexahedron' in cells:
-                    cells['hexahedron'].append(data[-8:])
-                else:
-                    cells['hexahedron'] = [data[-8:]]
+            if re.search('\$ELEMENT TYPE = %s' %permas_type, line):
+                while True:
+                    line = f.readline()
+                    if not line or line.startswith('!'):
+                        break
+                    data = numpy.array(line.split(), dtype=int)
+                    if 'triangle' in cells:
+                        cells[meshio_type].append(data[-num_nodes:])
+                    else:
+                        cells[meshio_type] = [data[-num_nodes:]]
 
         if re.search('\$COOR', line):
             points = []
@@ -142,7 +109,6 @@ def write(
                 )
 
         meshio_to_permas_type = {
-#           'vertex': 'NA',
             'line': 'PLOTL2',
             'triangle': 'TRIA3',
             'quad': 'QUAD4',
