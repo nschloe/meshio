@@ -42,7 +42,7 @@ def read(filename):
         line = f.readline()
         if not line or re.search('\$END STRUCTURE', line):
             break
-        for meshio_typ, permas_ele in meshio_to_permas_type.iteritems():
+        for meshio_type, permas_ele in meshio_to_permas_type.iteritems():
             num_nodes   = permas_ele[0]
             permas_type = permas_ele[1]
 
