@@ -9,7 +9,7 @@ I/O for PERMAS dat format, cf.
 import gzip
 import numpy
 import re
-from meta import __version__,__website__
+from meta import __version__,__website__,__author__
 
 def read(filename):
     '''Reads a (compressed) PERMAS dato or post file.
@@ -52,7 +52,7 @@ def read(filename):
                     if not line or line.startswith('!'):
                         break
                     data = numpy.array(line.split(), dtype=int)
-                    if 'triangle' in cells:
+                    if meshio_type in cells:
                         cells[meshio_type].append(data[-num_nodes:])
                     else:
                         cells[meshio_type] = [data[-num_nodes:]]
@@ -66,7 +66,6 @@ def read(filename):
                 for r in numpy.array(line.split(), dtype=float)[1:]:
                     points.append(r)
     points = numpy.reshape(points, newshape=(len(points)/3, 3))
-
     for key in cells:
         # Subtract one to account for the fact that python indices
         # are 0-based.
@@ -88,7 +87,8 @@ def write(
     '''
     with open(filename, 'w') as fh:
         fh.write('!\n')
-        fh.write('! file written by meshio version %s\n' %__version__)
+        fh.write('! Author of meshio: %s\n' %__author__)
+        fh.write('! File written by meshio version %s\n' %__version__)
         fh.write('! Further information available at %s\n' %__website__)
         fh.write('!\n')
         fh.write('$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH\n')
@@ -109,13 +109,13 @@ def write(
                 )
 
         meshio_to_permas_type = {
-            'line': 'PLOTL2',
-            'triangle': 'TRIA3',
-            'quad': 'QUAD4',
-            'tetra': 'TET4',
-            'hexahedron': 'HEXE8',
-            'wedge': 'PENTA6',
-            'pyramid': 'PYRA5'
+            'line': (2, 'PLOTL2'),
+            'triangle': (3, 'TRIA3'),
+            'quad': (4, 'QUAD4'),
+            'tetra': (4, 'TET4'),
+            'hexahedron': (8, 'HEXE8'),
+            'wedge': (6, 'PENTA6'),
+            'pyramid': (5, 'PYRA5')
             }
         #
         # Avoid non-unique element numbers in case of multiple element types by num_ele !!!
@@ -126,7 +126,7 @@ def write(
             numcells, num_local_nodes = cell.shape
             permas_type = meshio_to_permas_type[meshio_type]
             fh.write('!\n')
-            fh.write('        $ELEMENT TYPE = %s ESET = %s\n' % (permas_type, permas_type))
+            fh.write('        $ELEMENT TYPE = %s ESET = %s\n' % (permas_type[1], permas_type[1]))
             for k, c in enumerate(cell):
                 form = '        %8d ' + ' '.join(num_local_nodes * ['%8d']) + '\n'
                 fh.write(form % ((k+num_ele+1,) + tuple(c + 1)))
@@ -142,18 +142,18 @@ def write(
         fh.write('        $ELPROP\n')
         for meshio_type, cell in cells.iteritems():
             permas_type = meshio_to_permas_type[meshio_type]
-            if permas_type in elem_3D:
-                fh.write('            %s MATERIAL = DUMMY_MATERIAL\n' %permas_type)
-            elif permas_type in elem_2D:
-                fh.write('            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n' %(permas_type,permas_type))
+            if permas_type[1] in elem_3D:
+                fh.write('            %s MATERIAL = DUMMY_MATERIAL\n' %permas_type[1])
+            elif permas_type[1] in elem_2D:
+                fh.write('            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n' %(permas_type[1],permas_type[1]))
             else:
                 pass
         fh.write('!\n')
         fh.write('        $GEODAT SHELL  CONT = THICK  NODES = ALL\n')
         for meshio_type, cell in cells.iteritems():
             permas_type = meshio_to_permas_type[meshio_type]
-            if permas_type in elem_2D:
-                fh.write('            GD_%s 1.0\n' %permas_type)
+            if permas_type[1] in elem_2D:
+                fh.write('            GD_%s 1.0\n' %permas_type[1])
         fh.write('!\n')
         fh.write('    $END SYSTEM\n')
         fh.write('!\n')
@@ -170,13 +170,13 @@ def write(
         fh.write('    $MATERIAL NAME = DUMMY_MATERIAL TYPE = ISO\n')
         fh.write('!\n')
         fh.write('        $ELASTIC  GENERAL  INPUT = DATA\n')
-        fh.write('            2.1E+05 0.3\n')
+        fh.write('            0.0 0.0\n')
         fh.write('!\n')
         fh.write('        $DENSITY  GENERAL  INPUT = DATA\n')
-        fh.write('            7.85E-09\n')
+        fh.write('            0.0\n')
         fh.write('!\n')
         fh.write('        $THERMEXP  GENERAL  INPUT = DATA\n')
-        fh.write('            1.200000E-05\n')
+        fh.write('            0.0\n')
         fh.write('!\n')
         fh.write('    $END MATERIAL\n')
         fh.write('!\n')
