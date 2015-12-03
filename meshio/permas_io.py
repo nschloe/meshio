@@ -11,6 +11,16 @@ import numpy
 import re
 from meta import __version__,__website__,__author__
 
+meshio_to_permas_type = {
+    'line': (2, 'PLOTL2'),
+    'triangle': (3, 'TRIA3'),
+    'quad': (4, 'QUAD4'),
+    'tetra': (4, 'TET4'),
+    'hexahedron': (8, 'HEXE8'),
+    'wedge': (6, 'PENTA6'),
+    'pyramid': (5, 'PYRA5')
+    }
+
 def read(filename):
     '''Reads a (compressed) PERMAS dato or post file.
     '''
@@ -28,15 +38,6 @@ def read(filename):
         print 'Unsupported file format'
 
     cells = {}
-    meshio_to_permas_type = {
-        'line': (2, 'PLOTL2'),
-        'triangle': (3, 'TRIA3'),
-        'quad': (4, 'QUAD4'),
-        'tetra': (4, 'TET4'),
-        'hexahedron': (8, 'HEXE8'),
-        'wedge': (6, 'PENTA6'),
-        'pyramid': (5, 'PYRA5')
-        }
 
     while True:
         line = f.readline()
@@ -102,21 +103,13 @@ def write(
 
         # Write nodes
         fh.write('        $COOR NSET = ALL_NODES\n')
-        for k, x in enumerate(points):
-            fh.write(
-                '        %8d %+.15f %+.15f %+.15f\n' %
-                (k+1, x[0], x[1], x[2])
-                )
-
-        meshio_to_permas_type = {
-            'line': (2, 'PLOTL2'),
-            'triangle': (3, 'TRIA3'),
-            'quad': (4, 'QUAD4'),
-            'tetra': (4, 'TET4'),
-            'hexahedron': (8, 'HEXE8'),
-            'wedge': (6, 'PENTA6'),
-            'pyramid': (5, 'PYRA5')
-            }
+#       for k, x in enumerate(points):
+#           fh.write(
+#               '        %8d %+.15f %+.15f %+.15f\n' %
+#               (k+1, x[0], x[1], x[2])
+#               )
+        numpy.savetxt(fh,numpy.c_[numpy.arange(1,len(points)+1),points],
+            fmt='%8d %+.15f %+.15f %+.15f',newline='\n')
         #
         # Avoid non-unique element numbers in case of multiple element types by num_ele !!!
         #
@@ -124,7 +117,11 @@ def write(
         
         for meshio_type, cell in cells.iteritems():
             numcells, num_local_nodes = cell.shape
-            permas_type = meshio_to_permas_type[meshio_type]
+            try:
+                permas_type = meshio_to_permas_type[meshio_type]
+            except KeyError:
+                print ('Warning: Dropping vertex definitions')
+
             fh.write('!\n')
             fh.write('        $ELEMENT TYPE = %s ESET = %s\n' % (permas_type[1], permas_type[1]))
             for k, c in enumerate(cell):
@@ -141,7 +138,11 @@ def write(
         fh.write('!\n')
         fh.write('        $ELPROP\n')
         for meshio_type, cell in cells.iteritems():
-            permas_type = meshio_to_permas_type[meshio_type]
+            try:
+                permas_type = meshio_to_permas_type[meshio_type]
+            except KeyError:
+                print ('Warning: Dropping vertex definitions')
+  
             if permas_type[1] in elem_3D:
                 fh.write('            %s MATERIAL = DUMMY_MATERIAL\n' %permas_type[1])
             elif permas_type[1] in elem_2D:
@@ -151,7 +152,11 @@ def write(
         fh.write('!\n')
         fh.write('        $GEODAT SHELL  CONT = THICK  NODES = ALL\n')
         for meshio_type, cell in cells.iteritems():
-            permas_type = meshio_to_permas_type[meshio_type]
+            try:
+                permas_type = meshio_to_permas_type[meshio_type]
+            except KeyError:
+                print ('Warning: Dropping vertex definitions')
+
             if permas_type[1] in elem_2D:
                 fh.write('            GD_%s 1.0\n' %permas_type[1])
         fh.write('!\n')
