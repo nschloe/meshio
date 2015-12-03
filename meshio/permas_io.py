@@ -9,7 +9,7 @@ I/O for PERMAS dat format, cf.
 import gzip
 import numpy
 import re
-
+from meta import __version__,__website__,__author__
 
 def read(filename):
     '''Reads a (compressed) PERMAS dato or post file.
@@ -28,77 +28,44 @@ def read(filename):
         print 'Unsupported file format'
 
     cells = {}
+    meshio_to_permas_type = {
+        'line': (2, 'PLOTL2'),
+        'triangle': (3, 'TRIA3'),
+        'quad': (4, 'QUAD4'),
+        'tetra': (4, 'TET4'),
+        'hexahedron': (8, 'HEXE8'),
+        'wedge': (6, 'PENTA6'),
+        'pyramid': (5, 'PYRA5')
+        }
 
     while True:
         line = f.readline()
-        if not line:
+        if not line or re.search('\$END STRUCTURE', line):
             break
-        if re.search('\$END STRUCTURE', line):
-            break
-        if re.search('\$ELEMENT TYPE = TRIA3', line):
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
-                if 'triangle' in cells:
-                    cells['triangle'].append(data[-3:])
-                else:
-                    cells['triangle'] = [data[-3:]]
+        for meshio_type, permas_ele in meshio_to_permas_type.iteritems():
+            num_nodes   = permas_ele[0]
+            permas_type = permas_ele[1]
 
-        if re.search('\$ELEMENT TYPE = TET4', line):
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
-                if 'tetra' in cells:
-                    cells['tetra'].append(data[-4:])
-                else:
-                    cells['tetra'] = [data[-4:]]
-
-        if re.search('\$ELEMENT TYPE = PENTA6', line):
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
-                if 'wedge' in cells:
-                    cells['wedge'].append(data[-6:])
-                else:
-                    cells['wedge'] = [data[-6:]]
-
-        if re.search('\$ELEMENT TYPE = HEXE8', line):
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
-                    break
-                data = numpy.array(line.split(), dtype=int)
-                if 'hexahedron' in cells:
-                    cells['hexahedron'].append(data[-8:])
-                else:
-                    cells['hexahedron'] = [data[-8:]]
+            if re.search('\$ELEMENT TYPE = %s' %permas_type, line):
+                while True:
+                    line = f.readline()
+                    if not line or line.startswith('!'):
+                        break
+                    data = numpy.array(line.split(), dtype=int)
+                    if meshio_type in cells:
+                        cells[meshio_type].append(data[-num_nodes:])
+                    else:
+                        cells[meshio_type] = [data[-num_nodes:]]
 
         if re.search('\$COOR', line):
             points = []
             while True:
                 line = f.readline()
-                if not line:
-                    break
-                if line.startswith('!'):
+                if not line or line.startswith('!'):
                     break
                 for r in numpy.array(line.split(), dtype=float)[1:]:
                     points.append(r)
     points = numpy.reshape(points, newshape=(len(points)/3, 3))
-
     for key in cells:
         # Subtract one to account for the fact that python indices
         # are 0-based.
@@ -119,7 +86,16 @@ def write(
     http://www.intes.de # PERMAS-ASCII-file-format
     '''
     with open(filename, 'w') as fh:
+        fh.write('!\n')
+        fh.write('! Author of meshio: %s\n' %__author__)
+        fh.write('! File written by meshio version %s\n' %__version__)
+        fh.write('! Further information available at %s\n' %__website__)
+        fh.write('!\n')
         fh.write('$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH\n')
+        fh.write('! \n')
+        fh.write('    $SITUATION NAME = REAL_MODES\n')
+        fh.write('        DFLT_COMP SYSTEM = NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1\n')
+        fh.write('    $END SITUATION\n')
         fh.write('! \n')
         fh.write('    $STRUCTURE\n')
         fh.write('! \n')
@@ -132,59 +108,79 @@ def write(
                 (k+1, x[0], x[1], x[2])
                 )
 
-        # Write elements.
-        # translate the number of points per element (aka the type) to a PERMAS
-        # enum.
-        type_to_number = {
-            1: 15,  # point
-            2: 1,  # line
-            3: 2,  # triangle
-            4: 4,  # tetrahedron
-            6: 6,  # prism
-            8: 5,  # hexahedron
+        meshio_to_permas_type = {
+            'line': (2, 'PLOTL2'),
+            'triangle': (3, 'TRIA3'),
+            'quad': (4, 'QUAD4'),
+            'tetra': (4, 'TET4'),
+            'hexahedron': (8, 'HEXE8'),
+            'wedge': (6, 'PENTA6'),
+            'pyramid': (5, 'PYRA5')
             }
-
-        # PERMAS I/O can only deal with one element type at a time
-        assert len(cells) == 1
-        cell = cells.values()[0]
-
-        for k, c in enumerate(cell):
-            n = len(c)
-            form = '        %8d ' + ' '.join(n * ['%8d']) + '\n'
-            if n == 2:
-                if k == 0:
-                    fh.write('! \n')
-                    fh.write('        $ELEMENT TYPE = PLOTL2 ESET = PLOTL2\n')
-                fh.write(form % (k+1, c[0], c[1]))
-            elif n == 3:
-                if k == 0:
-                    fh.write('! \n')
-                    fh.write('        $ELEMENT TYPE = TRIA3 ESET = TRIA3\n')
-                fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1))
-            elif n == 4:
-                if k == 0:
-                    fh.write('!\n')
-                    fh.write('        $ELEMENT TYPE = TET4 ESET = TET4\n')
-                fh.write(form % (k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1))
-            elif n == 6:
-                if k == 0:
-                    fh.write('!\n')
-                    fh.write('        $ELEMENT TYPE = PENTA6 ESET = PENTA6\n')
-                fh.write(form % (
-                    k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1, c[4]+1, c[5]+1
-                    ))
-            elif n == 8:
-                if k == 0:
-                    fh.write('!\n')
-                    fh.write('        $ELEMENT TYPE = HEXE8 ESET = HEXE8\n')
-                fh.write(form % (
-                    k+1, c[0]+1, c[1]+1, c[2]+1, c[3]+1,
-                    c[4]+1, c[5]+1, c[6]+1, c[7]+1
-                    ))
+        #
+        # Avoid non-unique element numbers in case of multiple element types by num_ele !!!
+        #
+        num_ele = 0
+        
+        for meshio_type, cell in cells.iteritems():
+            numcells, num_local_nodes = cell.shape
+            permas_type = meshio_to_permas_type[meshio_type]
+            fh.write('!\n')
+            fh.write('        $ELEMENT TYPE = %s ESET = %s\n' % (permas_type[1], permas_type[1]))
+            for k, c in enumerate(cell):
+                form = '        %8d ' + ' '.join(num_local_nodes * ['%8d']) + '\n'
+                fh.write(form % ((k+num_ele+1,) + tuple(c + 1)))
+            num_ele += numcells    
+                
         fh.write('!\n')
         fh.write('    $END STRUCTURE\n')
         fh.write('!\n')
+        elem_3D = ['HEXE8', 'TET4', 'PENTA6', 'PYRA5']
+        elem_2D = ['TRIA3', 'QUAD4']
+        fh.write('    $SYSTEM NAME = NSV\n')
+        fh.write('!\n')
+        fh.write('        $ELPROP\n')
+        for meshio_type, cell in cells.iteritems():
+            permas_type = meshio_to_permas_type[meshio_type]
+            if permas_type[1] in elem_3D:
+                fh.write('            %s MATERIAL = DUMMY_MATERIAL\n' %permas_type[1])
+            elif permas_type[1] in elem_2D:
+                fh.write('            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n' %(permas_type[1],permas_type[1]))
+            else:
+                pass
+        fh.write('!\n')
+        fh.write('        $GEODAT SHELL  CONT = THICK  NODES = ALL\n')
+        for meshio_type, cell in cells.iteritems():
+            permas_type = meshio_to_permas_type[meshio_type]
+            if permas_type[1] in elem_2D:
+                fh.write('            GD_%s 1.0\n' %permas_type[1])
+        fh.write('!\n')
+        fh.write('    $END SYSTEM\n')
+        fh.write('!\n')
+        fh.write('    $CONSTRAINTS NAME = SPCVAR_1\n')
+        fh.write('    $END CONSTRAINTS\n')
+        fh.write('!\n')
+        fh.write('    $LOADING NAME = LOADVAR_1\n')
+        fh.write('    $END LOADING\n')
+        fh.write('!\n')
         fh.write('$EXIT COMPONENT\n')
+        fh.write('!\n')
+        fh.write('$ENTER MATERIAL\n')
+        fh.write('!\n')
+        fh.write('    $MATERIAL NAME = DUMMY_MATERIAL TYPE = ISO\n')
+        fh.write('!\n')
+        fh.write('        $ELASTIC  GENERAL  INPUT = DATA\n')
+        fh.write('            0.0 0.0\n')
+        fh.write('!\n')
+        fh.write('        $DENSITY  GENERAL  INPUT = DATA\n')
+        fh.write('            0.0\n')
+        fh.write('!\n')
+        fh.write('        $THERMEXP  GENERAL  INPUT = DATA\n')
+        fh.write('            0.0\n')
+        fh.write('!\n')
+        fh.write('    $END MATERIAL\n')
+        fh.write('!\n')
+        fh.write('$EXIT MATERIAL\n')
         fh.write('!\n')
         fh.write('$FIN\n')
     return
