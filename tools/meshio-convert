@@ -57,6 +57,12 @@ def _parse_options():
         help='read a particular time step/range (default: all)'
         )
 
+    parser.add_argument(
+        '--version', '-v',
+        action='version',
+        version='%(prog)s ' + ('(version %s)' % meshio.__version__)
+        )
+
     return parser.parse_args()
 
 
