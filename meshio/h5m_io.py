@@ -114,7 +114,8 @@ def write(
         cells,
         point_data=None,
         cell_data=None,
-        field_data=None
+        field_data=None,
+        add_global_ids=True
         ):
     '''Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
@@ -135,6 +136,12 @@ def write(
 
     # Global tags
     tstt_tags = tstt.create_group('tags')
+
+    # The GLOBAL_ID associated with a point is used to identify points if
+    # distributed across several processes. mbpart automatically adds them,
+    # too.
+    if 'GLOBAL_ID' not in point_data and add_global_ids:
+        point_data['GLOBAL_ID'] = numpy.arange(1, len(points)+1, )
 
     # add point data
     if point_data is not None:
