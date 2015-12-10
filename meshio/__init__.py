@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from . import dolfin_io
 from . import h5m_io
 from . import msh_io
 from . import permas_io
@@ -31,6 +32,8 @@ def read(filename, timestep=None):
 
     if extension == '.msh':
         return msh_io.read(filename)
+    elif extension == '.xml':
+        return dolfin_io.read(filename)
     elif extension in ['.post', '.post.gz', '.dato', '.dato.gz']:
         return permas_io.read(filename)
     elif extension == '.h5m':
@@ -73,6 +76,8 @@ def write(filename,
             )
     elif extension == '.msh':
         msh_io.write(filename, points, cells)
+    elif extension == '.xml':
+        dolfin_io.write(filename, points, cells)
     elif extension == '.dato':
         permas_io.write(filename, points, cells)
     elif extension == '.vtu':  # vtk xml format
