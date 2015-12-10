@@ -11,6 +11,7 @@
 There are various mesh formats available for representing unstructured meshes,
 e.g.,
 
+ * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
  * [H5M](https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m)
  * [MSH](http://geuz.org/gmsh/doc/texinfo/gmsh.html#File-formats)
