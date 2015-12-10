@@ -21,6 +21,11 @@ def read(filetype, filename):
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutput()
+    elif filetype == 'xdmf':
+        reader = vtk.vtkXdmfReader()
+        reader.SetFileName(filename)
+        reader.Update()
+        vtk_mesh = reader.GetOutput()
     elif filetype == 'exodus':
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
@@ -221,7 +226,9 @@ def write(filetype,
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
     elif filetype == 'vtu':  # vtk xml format
-        writer = vtk.vtk.vtkXMLUnstructuredGridWriter()
+        writer = vtk.vtkXMLUnstructuredGridWriter()
+    elif filetype == 'xdmf':  # xdmf format
+        writer = vtk.vtkXdmfWriter()
     elif filetype == 'pvtu':  # parallel vtk xml format
         writer = vtk.vtkXMLUnstructuredGridWriter()
     elif filetype == 'exodus':   # exodus ii format

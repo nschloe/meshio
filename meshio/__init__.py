@@ -42,6 +42,8 @@ def read(filename, timestep=None):
         return vtk_io.read('vtu', filename)
     elif extension == '.vtk':
         return vtk_io.read('vtk', filename)
+    elif extension == '.xmf':
+        return vtk_io.read('xdmf', filename)
     elif extension in ['.ex2', '.exo', '.e']:
         return vtk_io.read('exodus', filename)
     else:
@@ -97,6 +99,13 @@ def write(filename,
     elif extension == '.vtk':  # classical vtk format
         vtk_io.write(
             'vtk', filename, points, cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data
+            )
+    elif extension == '.xmf':
+        vtk_io.write(
+            'xdmf', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
