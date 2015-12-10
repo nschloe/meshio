@@ -83,6 +83,11 @@ def test_io():
         for mesh in [simple_data]:
             yield _write_read, filename, mesh
 
+    for extension in ['.xml']:
+        filename = 'test' + extension
+        for mesh in [simple]:
+            yield _write_read, filename, mesh
+
     for extension in ['.msh']:
         filename = 'test' + extension
         for mesh in [simple, tri_quad]:
