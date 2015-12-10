@@ -1,3 +1,4 @@
 h5py
+lxml
 numpy
 vtk
