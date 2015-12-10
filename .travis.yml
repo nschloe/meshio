@@ -19,6 +19,7 @@ before_install:
   - dpkg -L python-vtk6
   - which python
   - python --version
+  - ls -l /usr/lib/python2.7/dist-packages/vtk/vtkCommonCorePython.so
   - export PYTHONPATH="$PYTHONPATH:/usr/lib/python2.7/dist-packages/vtk/"
   - python -c "import vtk.vtkCommonCorePython"
 
