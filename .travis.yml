@@ -13,6 +13,7 @@ virtualenv:
 # install dependencies
 before_install:
   - sudo apt-get update -qq
+  - sudo apt-add-repository ppa:nschloe/netcdf-nightly
   - sudo apt-get -y install python-h5py python-lxml python-nose python-numpy python-vtk6
 
 install:
