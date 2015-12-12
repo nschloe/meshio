@@ -9,6 +9,7 @@
 *.pyc
 *.vtk
 *.vtu
+*.xmf
 *.xml
 MANIFEST
 README.rst
