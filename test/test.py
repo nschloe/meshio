@@ -73,7 +73,7 @@ tri_quad_data['cell_data'] = {
 
 
 def test_io():
-    for extension in ['.vtk', '.vtu', '.xmf']:
+    for extension in ['.vtk', '.vtu']:
         filename = 'test' + extension
         for mesh in [simple_data, tri_quad_data]:
             yield _write_read, filename, mesh
