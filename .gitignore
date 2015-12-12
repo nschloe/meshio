@@ -9,6 +9,7 @@
 *.vtk
 *.vtu
 *.pvtu
+*.xml
 MANIFEST
 README.rst
 build/

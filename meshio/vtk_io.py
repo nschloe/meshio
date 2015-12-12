@@ -21,6 +21,11 @@ def read(filetype, filename):
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutput()
+    elif filetype == 'xdmf':
+        reader = vtk.vtkXdmfReader()
+        reader.SetFileName(filename)
+        reader.Update()
+        vtk_mesh = reader.GetOutput()
     elif filetype == 'exodus':
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
@@ -33,6 +38,7 @@ def read(filetype, filename):
             vtk_mesh.GetPoints().GetData()
             )
     cells = _read_cells(vtk_mesh)
+
     point_data = _read_data(vtk_mesh.GetPointData())
     cell_data = _read_data(vtk_mesh.GetCellData())
     field_data = _read_data(vtk_mesh.GetFieldData())
@@ -170,8 +176,9 @@ def _read_data(data):
     out = {}
     for k in range(data.GetNumberOfArrays()):
         array = data.GetArray(k)
-        array_name = array.GetName()
-        out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
+        if array:
+            array_name = array.GetName()
+            out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
 
     return out
 
@@ -219,7 +226,9 @@ def write(filetype,
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
     elif filetype == 'vtu':  # vtk xml format
-        writer = vtk.vtk.vtkXMLUnstructuredGridWriter()
+        writer = vtk.vtkXMLUnstructuredGridWriter()
+    elif filetype == 'xdmf':  # xdmf format
+        writer = vtk.vtkXdmfWriter()
     elif filetype == 'pvtu':  # parallel vtk xml format
         writer = vtk.vtkXMLUnstructuredGridWriter()
     elif filetype == 'exodus':   # exodus ii format
