@@ -170,8 +170,9 @@ def _read_data(data):
     out = {}
     for k in range(data.GetNumberOfArrays()):
         array = data.GetArray(k)
-        array_name = array.GetName()
-        out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
+        if array:
+            array_name = array.GetName()
+            out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
 
     return out
 
