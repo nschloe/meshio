@@ -33,7 +33,7 @@ def _parse_options():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Convert mesh formats (msh, vtk, vtu, exudus, ...).'
+        description='Convert mesh formats (msh, vtk, vtu, exodus, PERMAS dato...).'
         )
 
     parser.add_argument(
