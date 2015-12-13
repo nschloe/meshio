@@ -25,9 +25,7 @@ def read(filetype, filename):
         reader = vtk.vtkXdmfReader()
         reader.SetFileName(filename)
         reader.Update()
-        # TODO remove the magic `port` index
-        port = 0
-        vtk_mesh = reader.GetOutputDataObject(port)
+        vtk_mesh = reader.GetOutputDataObject(0)
     elif filetype == 'exodus':
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
