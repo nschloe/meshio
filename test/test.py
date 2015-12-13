@@ -78,7 +78,7 @@ def test_io():
         for mesh in [simple_data, tri_quad_data]:
             yield _write_read, filename, mesh
 
-    for extension in ['.e']:
+    for extension in ['.e', '.xmf']:
         filename = 'test' + extension
         for mesh in [simple_data]:
             yield _write_read, filename, mesh
