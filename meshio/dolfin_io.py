@@ -20,7 +20,8 @@ def read(filename):
 
     cell_type = mesh.attrib['celltype']
     nodes_per_cell = {
-        'triangle': 3
+        'triangle': 3,
+        'quad': 4
         }
     npc = nodes_per_cell[cell_type]
 
