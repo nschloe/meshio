@@ -18,6 +18,7 @@ e.g.,
  * [PERMAS](http://www.intes.de)
  * [VTK](http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
  * [VTU](http://www.vtk.org/Wiki/VTK_XML_Formats)
+ * [XDMF](http://www.xdmf.org/)
 
 MeshIO can read and write all of these formats and smoothly converts between
 them. Simply call
