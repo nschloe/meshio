@@ -85,13 +85,20 @@ def write(
         filename,
         points,
         cells,
-        point_data={},
-        cell_data={},
-        field_data={}
+        point_data=None,
+        cell_data=None,
+        field_data=None
         ):
     '''Writes msh files, cf.
     http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
     '''
+    if point_data is None:
+        point_data = {}
+    if cell_data is None:
+        cell_data = {}
+    if field_data is None:
+        field_data = {}
+
     with open(filename, 'w') as fh:
         fh.write('$MeshFormat\n2 0 8\n$EndMeshFormat\n')
 
