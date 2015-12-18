@@ -112,9 +112,9 @@ def write(
         filename,
         points,
         cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None,
+        point_data={},
+        cell_data={},
+        field_data={},
         add_global_ids=True
         ):
     '''Writes H5M files, cf.

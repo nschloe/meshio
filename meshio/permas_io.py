@@ -78,9 +78,9 @@ def write(
         filename,
         points,
         cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None
+        point_data={},
+        cell_data={},
+        field_data={}
         ):
     '''Writes PERMAS dat files, cf.
     http://www.intes.de # PERMAS-ASCII-file-format
