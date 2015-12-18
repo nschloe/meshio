@@ -12,10 +12,10 @@ import numpy
 from . import meta
 
 
-def _int_to_bool_list(num):
-    # From <http://stackoverflow.com/a/33608387/353337>.
-    bin_string = format(num, '04b')
-    return [x == '1' for x in bin_string[::-1]]
+# def _int_to_bool_list(num):
+#     # From <http://stackoverflow.com/a/33608387/353337>.
+#     bin_string = format(num, '04b')
+#     return [x == '1' for x in bin_string[::-1]]
 
 
 def read(filename):
