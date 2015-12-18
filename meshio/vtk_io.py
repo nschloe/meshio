@@ -225,11 +225,9 @@ def write(filetype,
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
     elif filetype == 'vtu':  # vtk xml format
-        writer = vtk.vtk.vtkXMLUnstructuredGridWriter()
-    elif filetype == 'pvtu':  # parallel vtk xml format
         writer = vtk.vtkXMLUnstructuredGridWriter()
     elif filetype == 'xdmf':
-        writer = vtk.vtk.vtkXdmfWriter()
+        writer = vtk.vtkXdmfWriter()
     elif filetype == 'exodus':   # exodus ii format
         writer = vtk.vtkExodusIIWriter()
         # if the mesh contains vtkmodeldata information, make use of it
