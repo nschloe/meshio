@@ -53,9 +53,9 @@ def read(filename, timestep=None):
 def write(filename,
           points,
           cells,
-          point_data={},
-          cell_data={},
-          field_data={}
+          point_data=None,
+          cell_data=None,
+          field_data=None
           ):
     '''Writes mesh together with data to a file.
 

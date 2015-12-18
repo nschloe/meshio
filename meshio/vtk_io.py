@@ -186,10 +186,16 @@ def write(filetype,
           filename,
           points,
           cells,
-          point_data={},
-          cell_data={},
-          field_data={}
+          point_data=None,
+          cell_data=None,
+          field_data=None
           ):
+    if point_data is None:
+        point_data = {}
+    if cell_data is None:
+        cell_data = {}
+    if field_data is None:
+        field_data = {}
 
     vtk_mesh = _generate_vtk_mesh(points, cells)
 

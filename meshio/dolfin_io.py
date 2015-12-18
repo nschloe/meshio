@@ -64,10 +64,16 @@ def write(
         filename,
         points,
         cells,
-        point_data={},
-        cell_data={},
-        field_data={}
+        point_data=None,
+        cell_data=None,
+        field_data=None
         ):
+    if point_data is None:
+        point_data = {}
+    if cell_data is None:
+        cell_data = {}
+    if field_data is None:
+        field_data = {}
 
     dolfin = ET.Element('dolfin')
     dolfin.attrib['xmlns_dolfin'] = 'http://www.fenics.org/dolfin/'

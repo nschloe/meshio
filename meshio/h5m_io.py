@@ -112,14 +112,20 @@ def write(
         filename,
         points,
         cells,
-        point_data={},
-        cell_data={},
-        field_data={},
+        point_data=None,
+        cell_data=None,
+        field_data=None,
         add_global_ids=True
         ):
     '''Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     '''
+    if point_data is None:
+        point_data = {}
+    if cell_data is None:
+        cell_data = {}
+    if field_data is None:
+        field_data = {}
 
     f = h5py.File(filename, 'w')
 
