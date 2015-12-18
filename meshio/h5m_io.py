@@ -12,10 +12,10 @@ import numpy
 from . import meta
 
 
-def _int_to_bool_list(num):
-    # From <http://stackoverflow.com/a/33608387/353337>.
-    bin_string = format(num, '04b')
-    return [x == '1' for x in bin_string[::-1]]
+# def _int_to_bool_list(num):
+#     # From <http://stackoverflow.com/a/33608387/353337>.
+#     bin_string = format(num, '04b')
+#     return [x == '1' for x in bin_string[::-1]]
 
 
 def read(filename):
@@ -120,6 +120,12 @@ def write(
     '''Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     '''
+    if point_data is None:
+        point_data = {}
+    if cell_data is None:
+        cell_data = {}
+    if field_data is None:
+        field_data = {}
 
     f = h5py.File(filename, 'w')
 

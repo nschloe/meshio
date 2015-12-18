@@ -21,6 +21,11 @@ def read(filetype, filename):
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutput()
+    elif filetype == 'xdmf':
+        reader = vtk.vtkXdmfReader()
+        reader.SetFileName(filename)
+        reader.Update()
+        vtk_mesh = reader.GetOutputDataObject(0)
     elif filetype == 'exodus':
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
@@ -185,44 +190,47 @@ def write(filetype,
           cell_data=None,
           field_data=None
           ):
+    if point_data is None:
+        point_data = {}
+    if cell_data is None:
+        cell_data = {}
+    if field_data is None:
+        field_data = {}
 
     vtk_mesh = _generate_vtk_mesh(points, cells)
+
     # add point data
-    if point_data is not None:
-        pd = vtk_mesh.GetPointData()
-        for name, X in point_data.iteritems():
-            # There is a naming inconsistency in VTK when it comes to
-            # multivectors in Exodus files:
-            # If a vector 'v' has two components, they are called 'v_r', 'v_z'
-            # (note the underscore), if it has three, then they are called
-            # 'vx', 'vy', 'vz'.  Make this consistent by appending an
-            # underscore if needed.  Note that for VTK files, this problem does
-            # not occur since the label of a vector is always stored as a
-            # string.
-            if filetype == 'exodus' and len(X.shape) == 2 \
-               and X.shape[1] == 3 and name[-1] != '_':
-                name += '_'
-            pd.AddArray(_create_vtkarray(X, name))
+    pd = vtk_mesh.GetPointData()
+    for name, X in point_data.iteritems():
+        # There is a naming inconsistency in VTK when it comes to multivectors
+        # in Exodus files:
+        # If a vector 'v' has two components, they are called 'v_r', 'v_z'
+        # (note the underscore), if it has three, then they are called 'vx',
+        # 'vy', 'vz'.  Make this consistent by appending an underscore if
+        # needed.  Note that for VTK files, this problem does not occur since
+        # the label of a vector is always stored as a string.
+        if filetype == 'exodus' and len(X.shape) == 2 \
+           and X.shape[1] == 3 and name[-1] != '_':
+            name += '_'
+        pd.AddArray(_create_vtkarray(X, name))
 
     # add cell data
-    if cell_data:
-        cd = vtk_mesh.GetCellData()
-        for key, value in cell_data.iteritems():
-            cd.AddArray(_create_vtkarray(value, key))
+    cd = vtk_mesh.GetCellData()
+    for key, value in cell_data.iteritems():
+        cd.AddArray(_create_vtkarray(value, key))
 
     # add field data
-    if field_data:
-        fd = vtk_mesh.GetFieldData()
-        for key, value in field_data.iteritems():
-            fd.AddArray(_create_vtkarray(value, key))
+    fd = vtk_mesh.GetFieldData()
+    for key, value in field_data.iteritems():
+        fd.AddArray(_create_vtkarray(value, key))
 
     if filetype == 'vtk':  # classical vtk format
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
     elif filetype == 'vtu':  # vtk xml format
-        writer = vtk.vtk.vtkXMLUnstructuredGridWriter()
-    elif filetype == 'pvtu':  # parallel vtk xml format
         writer = vtk.vtkXMLUnstructuredGridWriter()
+    elif filetype == 'xdmf':
+        writer = vtk.vtkXdmfWriter()
     elif filetype == 'exodus':   # exodus ii format
         writer = vtk.vtkExodusIIWriter()
         # if the mesh contains vtkmodeldata information, make use of it
