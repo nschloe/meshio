@@ -116,6 +116,7 @@ def test_io():
         test_meshes = [
             tri_mesh,
             _add_point_data(tri_mesh, 2),
+            _add_point_data(tri_mesh, 3),
             ]
         for mesh in test_meshes:
             yield _write_read, filename, mesh
@@ -146,8 +147,10 @@ def test_io():
             tri_quad_mesh,
             _add_point_data(tri_mesh, 1),
             _add_point_data(tri_mesh, 2),
+            _add_point_data(tri_mesh, 3),
             _add_cell_data(tri_mesh, 1),
-            _add_cell_data(tri_mesh, 2)
+            _add_cell_data(tri_mesh, 2),
+            _add_cell_data(tri_mesh, 3),
             ]
         for mesh in test_meshes:
             yield _write_read, filename, mesh
