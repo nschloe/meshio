@@ -125,6 +125,7 @@ def write(
             'wedge': (6, 'PENTA6'),
             'pyramid': (5, 'PYRA5')
             }
+
         #
         # Avoid non-unique element numbers in case of multiple element types by
         # num_ele !!!
