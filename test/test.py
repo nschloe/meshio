@@ -216,8 +216,6 @@ def _write_read(filename, mesh):
     except KeyError:
         input_cell_data = {}
 
-    os.remove(filename)
-
     meshio.write(
         filename,
         mesh['points'], mesh['cells'],
@@ -240,6 +238,9 @@ def _write_read(filename, mesh):
         assert numpy.allclose(data, point_data[key])
     for key, data in input_cell_data.items():
         assert numpy.allclose(data, cell_data[key])
+
+    os.remove(filename)
+
     return
 
 if __name__ == '__main__':
