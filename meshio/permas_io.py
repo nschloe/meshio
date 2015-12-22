@@ -9,7 +9,8 @@ I/O for PERMAS dat format, cf.
 import gzip
 import numpy
 import re
-from meta import __version__,__website__,__author__
+from meta import __version__, __website__, __author__
+
 
 def read(filename):
     '''Reads a (compressed) PERMAS dato or post file.
@@ -43,10 +44,10 @@ def read(filename):
         if not line or re.search('\$END STRUCTURE', line):
             break
         for meshio_type, permas_ele in meshio_to_permas_type.iteritems():
-            num_nodes   = permas_ele[0]
+            num_nodes = permas_ele[0]
             permas_type = permas_ele[1]
 
-            if re.search('\$ELEMENT TYPE = %s' %permas_type, line):
+            if re.search('\$ELEMENT TYPE = %s' % permas_type, line):
                 while True:
                     line = f.readline()
                     if not line or line.startswith('!'):
@@ -94,9 +95,9 @@ def write(
 
     with open(filename, 'w') as fh:
         fh.write('!\n')
-        fh.write('! Author of meshio: %s\n' %__author__)
-        fh.write('! File written by meshio version %s\n' %__version__)
-        fh.write('! Further information available at %s\n' %__website__)
+        fh.write('! Author of meshio: %s\n' % __author__)
+        fh.write('! File written by meshio version %s\n' % __version__)
+        fh.write('! Further information available at %s\n' % __website__)
         fh.write('!\n')
         fh.write('$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH\n')
         fh.write('! \n')
@@ -125,20 +126,26 @@ def write(
             'pyramid': (5, 'PYRA5')
             }
         #
-        # Avoid non-unique element numbers in case of multiple element types by num_ele !!!
+        # Avoid non-unique element numbers in case of multiple element types by
+        # num_ele !!!
         #
         num_ele = 0
-        
+
         for meshio_type, cell in cells.iteritems():
             numcells, num_local_nodes = cell.shape
             permas_type = meshio_to_permas_type[meshio_type]
             fh.write('!\n')
-            fh.write('        $ELEMENT TYPE = %s ESET = %s\n' % (permas_type[1], permas_type[1]))
+            fh.write(
+                '        $ELEMENT TYPE = %s ESET = %s\n' %
+                (permas_type[1], permas_type[1])
+                )
             for k, c in enumerate(cell):
-                form = '        %8d ' + ' '.join(num_local_nodes * ['%8d']) + '\n'
+                form = '        %8d ' + \
+                    ' '.join(num_local_nodes * ['%8d']) + \
+                    '\n'
                 fh.write(form % ((k+num_ele+1,) + tuple(c + 1)))
-            num_ele += numcells    
-                
+            num_ele += numcells
+
         fh.write('!\n')
         fh.write('    $END STRUCTURE\n')
         fh.write('!\n')
@@ -150,7 +157,10 @@ def write(
         for meshio_type, cell in cells.iteritems():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_3D:
-                fh.write('            %s MATERIAL = DUMMY_MATERIAL\n' %permas_type[1])
+                fh.write(
+                    '            %s MATERIAL = DUMMY_MATERIAL\n' %
+                    permas_type[1]
+                    )
             elif permas_type[1] in elem_2D:
                 fh.write('            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n' %(permas_type[1],permas_type[1]))
             else:
@@ -160,7 +170,7 @@ def write(
         for meshio_type, cell in cells.iteritems():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_2D:
-                fh.write('            GD_%s 1.0\n' %permas_type[1])
+                fh.write('            GD_%s 1.0\n' % permas_type[1])
         fh.write('!\n')
         fh.write('    $END SYSTEM\n')
         fh.write('!\n')
