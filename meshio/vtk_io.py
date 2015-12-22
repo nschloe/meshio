@@ -282,7 +282,7 @@ def _generate_vtk_mesh(points, cells):
         # add cell offsets
         cell_offsets.append(numpy.arange(
             len_array,
-            len_array + numcells * num_local_nodes,
+            len_array + numcells * (num_local_nodes + 1),
             num_local_nodes + 1,
             dtype=numpy.int64
             ))
