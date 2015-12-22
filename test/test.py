@@ -3,6 +3,7 @@
 import meshio
 
 import numpy
+import os
 
 tri_mesh = {
         'points': numpy.array([
@@ -214,6 +215,8 @@ def _write_read(filename, mesh):
         input_cell_data = mesh['cell_data']
     except KeyError:
         input_cell_data = {}
+
+    os.remove(filename)
 
     meshio.write(
         filename,
