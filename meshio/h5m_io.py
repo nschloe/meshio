@@ -8,6 +8,7 @@ I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
 from datetime import datetime
 import h5py
 import numpy
+import warnings
 
 from . import meta
 
@@ -218,6 +219,9 @@ def write(
             'tetra': {'name': 'Tet4', 'type': 5}
             }
     for key, data in cells.iteritems():
+        if key not in meshio_to_h5m_type:
+            warnings.warn('Unsupported H5M element type %s. Skipping.' % key)
+            continue
         this_type = meshio_to_h5m_type[key]
         elem_group = elements.create_group(this_type['name'])
         elem_group.attrs.create(
