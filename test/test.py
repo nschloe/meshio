@@ -3,6 +3,7 @@
 import meshio
 
 import numpy
+import os
 
 tri_mesh = {
         'points': numpy.array([
@@ -56,6 +57,22 @@ tri_quad_mesh = {
             }
         }
 
+tet_mesh = {
+        'points': numpy.array([
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.5, 0.5, 0.5],
+            ]),
+        'cells': {
+            'tetra': numpy.array([
+                [0, 1, 2, 4],
+                [0, 2, 3, 4]
+                ])
+            },
+        }
+
 
 def _clone(mesh):
     mesh2 = {
@@ -106,7 +123,8 @@ def test_io():
         test_meshes = [
             tri_mesh,
             quad_mesh,
-            tri_quad_mesh
+            tri_quad_mesh,
+            tet_mesh,
             ]
         for mesh in test_meshes:
             yield _write_read, filename, mesh
@@ -116,6 +134,7 @@ def test_io():
         test_meshes = [
             tri_mesh,
             _add_point_data(tri_mesh, 2),
+            _add_point_data(tri_mesh, 3),
             ]
         for mesh in test_meshes:
             yield _write_read, filename, mesh
@@ -123,7 +142,8 @@ def test_io():
     for extension in ['.h5m']:
         filename = 'test' + extension
         test_meshes = [
-            tri_mesh
+            tri_mesh,
+            tet_mesh,
             ]
         for mesh in test_meshes:
             yield _write_read, filename, mesh
@@ -133,7 +153,8 @@ def test_io():
         test_meshes = [
             tri_mesh,
             quad_mesh,
-            tri_quad_mesh
+            tri_quad_mesh,
+            tet_mesh,
             ]
         for mesh in test_meshes:
             yield _write_read, filename, mesh
@@ -144,10 +165,13 @@ def test_io():
             tri_mesh,
             quad_mesh,
             tri_quad_mesh,
+            tet_mesh,
             _add_point_data(tri_mesh, 1),
             _add_point_data(tri_mesh, 2),
+            _add_point_data(tri_mesh, 3),
             _add_cell_data(tri_mesh, 1),
-            _add_cell_data(tri_mesh, 2)
+            _add_cell_data(tri_mesh, 2),
+            _add_cell_data(tri_mesh, 3),
             ]
         for mesh in test_meshes:
             yield _write_read, filename, mesh
@@ -157,6 +181,7 @@ def test_io():
         test_meshes = [
             tri_mesh,
             quad_mesh,
+            tet_mesh,
             # The two following tests pass, but errors are emitted on the
             # console.
             # _add_point_data(tri_mesh, 1),
@@ -170,6 +195,7 @@ def test_io():
         test_meshes = [
             tri_mesh,
             quad_mesh,
+            tet_mesh,
             ]
         for mesh in test_meshes:
             yield _write_read, filename, mesh
@@ -212,6 +238,9 @@ def _write_read(filename, mesh):
         assert numpy.allclose(data, point_data[key])
     for key, data in input_cell_data.items():
         assert numpy.allclose(data, cell_data[key])
+
+    os.remove(filename)
+
     return
 
 if __name__ == '__main__':
