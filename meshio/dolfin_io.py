@@ -6,10 +6,9 @@ I/O for DOLFIN's XML format, cf.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-import numpy
-# import xml.etree.ElementTree as ET
 from lxml import etree as ET
-
+import numpy
+import warnings
 
 def read(filename):
 
@@ -76,15 +75,24 @@ def write(
     if field_data is None:
         field_data = {}
 
-    dolfin = ET.Element('dolfin')
-    dolfin.attrib['xmlns_dolfin'] = 'http://www.fenics.org/dolfin/'
+    dolfin = ET.Element('dolfin', nsmap={'dolfin': 'http://fenicsproject.org/'})
 
-    if len(cells) > 1:
+    if 'tetra' in cells:
+        stripped_cells = {'tetra': cells['tetra']}
+        cell_type = 'tetrahedron'
+    elif 'triangle' in cells:
+        stripped_cells = {'triangle': cells['triangle']}
+        cell_type = 'triangle'
+    else:
         raise RuntimeError(
-          'Dolfin XML can only deal with one cell type at a time.'
+          'Dolfin XML can only deal with triangle or tetra.'
           )
 
-    cell_type = cells.keys()[0]
+    if len(cells) > 1:
+        warnings.warn(
+          'DOLFIN XML can only handle one cell type at a time. '
+          'Using ' + cell_type + '.'
+          )
 
     if all(points[:, 2] == 0):
         dim = '2'
@@ -102,12 +110,12 @@ def write(
             )
 
     num_cells = 0
-    for cls in cells.values():
+    for cls in stripped_cells.values():
         num_cells += len(cls)
 
     xcells = ET.SubElement(mesh, 'cells', size=str(num_cells))
     idx = 0
-    for cell_type, cls in cells.iteritems():
+    for cell_type, cls in stripped_cells.iteritems():
         for cell in cls:
             cell_entry = ET.SubElement(
                 xcells,
