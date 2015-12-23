@@ -27,13 +27,11 @@ _extension_to_filetype = {
     }
 
 
-def read(filename, file_type=None, timestep=None):
+def read(filename, file_type=None):
     '''Reads an unstructured mesh with added data.
 
     :param filenames: The files to read from.
     :type filenames: str
-    :param timestep: Time step to read from, in case of an Exodus input mesh.
-    :type timestep: int, optional
     :returns mesh{2,3}d: The mesh data.
     :returns point_data: Point data read from file.
     :type point_data: dict
@@ -60,14 +58,16 @@ def read(filename, file_type=None, timestep=None):
         return h5m_io.read(filename)
     elif file_type == 'vtu':
         return vtk_io.read('vtu', filename)
-    elif file_type == '.vtk':
+    elif file_type == 'vtk':
         return vtk_io.read('vtk', filename)
     elif file_type == 'xdmf':
         return vtk_io.read('xdmf', filename)
     elif file_type == 'exodus':
         return vtk_io.read('exodus', filename)
     else:
-        raise RuntimeError('Unknown file type \'%s\'.' % filename)
+        raise RuntimeError(
+            'Unknown file type \'%s\' of file \'%s\'.' % (file_type, filename)
+            )
 
 
 def write(filename,
