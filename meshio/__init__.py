@@ -9,7 +9,25 @@ from . import vtk_io
 from meta import __version__, __author__, __author_email__, __website__
 
 
-def read(filename, timestep=None):
+_extension_to_filetype = {
+    'e': 'exodus',
+    'ex2': 'exodus',
+    'exo': 'exodus',
+    'msh': 'gmsh',
+    'xml': 'dolfin-xml',
+    'post': 'permas',
+    'post.gz': 'permas',
+    'dato': 'permas',
+    'dato.gz': 'permas',
+    'h5m': 'moab',
+    'vtu': 'vtu',
+    'vtk': 'vtk',
+    'xdmf': 'xdmf',
+    'xmf': 'xdmf',
+    }
+
+
+def read(filename, file_type=None, timestep=None):
     '''Reads an unstructured mesh with added data.
 
     :param filenames: The files to read from.
@@ -27,24 +45,26 @@ def read(filename, timestep=None):
     # http://stackoverflow.com/questions/4843173/how-to-check-if-a-type-of-variable-is-string-in-python
     assert isinstance(filename, str)
 
-    # serial files
-    extension = os.path.splitext(filename)[1]
+    if not file_type:
+        # deduct file type from extension
+        extension = filename.split(os.extsep, 1)[1]
+        file_type = _extension_to_filetype[extension]
 
-    if extension == '.msh':
+    if file_type == 'gmsh':
         return msh_io.read(filename)
-    elif extension == '.xml':
+    elif file_type == 'dolfin-xml':
         return dolfin_io.read(filename)
-    elif extension in ['.post', '.post.gz', '.dato', '.dato.gz']:
+    elif file_type == 'permas':
         return permas_io.read(filename)
-    elif extension == '.h5m':
+    elif file_type == 'moab':
         return h5m_io.read(filename)
-    elif extension == '.vtu':
+    elif file_type == 'vtu':
         return vtk_io.read('vtu', filename)
-    elif extension == '.vtk':
+    elif file_type == '.vtk':
         return vtk_io.read('vtk', filename)
-    elif extension == '.xmf':
+    elif file_type == 'xdmf':
         return vtk_io.read('xdmf', filename)
-    elif extension in ['.ex2', '.exo', '.e']:
+    elif file_type == 'exodus':
         return vtk_io.read('exodus', filename)
     else:
         raise RuntimeError('Unknown file type \'%s\'.' % filename)
@@ -53,6 +73,7 @@ def read(filename, timestep=None):
 def write(filename,
           points,
           cells,
+          file_type=None,
           point_data=None,
           cell_data=None,
           field_data=None
@@ -67,50 +88,46 @@ def write(filename,
     '''
     import os
 
-    extension = os.path.splitext(filename)[1]
+    if not file_type:
+        # deduct file type from extension
+        extension = filename.split(os.extsep, 1)[1]
+        file_type = _extension_to_filetype[extension]
 
-    if extension == '.h5m':
+    if file_type == 'moab':
         h5m_io.write(
             filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif extension == '.msh':
+    elif file_type == 'gmsh':
         msh_io.write(filename, points, cells)
-    elif extension == '.xml':
+    elif file_type == 'dolfin-xml':
         dolfin_io.write(filename, points, cells)
-    elif extension == '.dato':
+    elif file_type == 'permas':
         permas_io.write(filename, points, cells)
-    elif extension == '.vtu':  # vtk xml format
+    elif file_type == 'vtu':  # vtk xml format
         vtk_io.write(
             'vtu', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif extension == '.pvtu':  # parallel vtk xml format
-        vtk_io.write(
-            'pvtu', filename, points, cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data
-            )
-    elif extension == '.vtk':  # classical vtk format
+    elif file_type == 'vtk':  # classical vtk format
         vtk_io.write(
             'vtk', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif extension == '.xmf':  # XDMF
+    elif file_type == 'xdmf':  # XDMF
         vtk_io.write(
             'xdmf', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif extension in ['.ex2', '.exo', '.e']:  # exodus ii format
+    elif file_type == 'exodus':  # exodus ii format
         vtk_io.write(
             'exodus', filename, points, cells,
             point_data=point_data,
