@@ -92,7 +92,8 @@ def write(
         cell_type = 'triangle'
     else:
         raise RuntimeError(
-          'Dolfin XML can only deal with triangle or tetra.'
+          'Dolfin XML can only deal with triangle or tetra. The input data
+          contains ' + ', '.join(cells.keys())
           )
 
     if len(cells) > 1:
