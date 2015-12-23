@@ -114,8 +114,10 @@ def write(filename,
             field_data=field_data
             )
     elif file_type == 'vtk':  # classical vtk format
+        # The choice for vtk-ascii over vtk-binary is arbitrary.
         vtk_io.write(
-            'vtk', filename, points, cells,
+            'vtk-ascii', filename,
+            points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
