@@ -136,7 +136,7 @@ def write(filename,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_format == 'vtk-ascii':
+    elif file_format in ['vtk', 'vtk-ascii']:
         vtk_io.write(
             'vtk-ascii', filename,
             points, cells,
