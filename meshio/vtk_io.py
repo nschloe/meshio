@@ -220,9 +220,12 @@ def write(filetype,
     for key, value in field_data.iteritems():
         fd.AddArray(_create_vtkarray(value, key))
 
-    if filetype == 'vtk':  # classical vtk format
+    if filetype in 'vtk-ascii':
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
+    elif filetype == 'vtk-binary':
+        writer = vtk.vtkUnstructuredGridWriter()
+        writer.SetFileTypeToBinary()
     elif filetype == 'vtu':  # vtk xml format
         writer = vtk.vtkXMLUnstructuredGridWriter()
     elif filetype == 'xdmf':
