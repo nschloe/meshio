@@ -9,6 +9,29 @@ from . import vtk_io
 from meta import __version__, __author__, __author_email__, __website__
 
 
+input_filetypes = [
+        'exodus',
+        'gmsh',
+        'dolfin-xml',
+        'permas',
+        'moab',
+        'vtk',
+        'vtu',
+        'xdmf',
+        ]
+
+output_filetypes = [
+        'exodus',
+        'gmsh',
+        'dolfin-xml',
+        'permas',
+        'moab',
+        'vtk-ascii',
+        'vtk-binary',
+        'vtu',
+        'xdmf',
+        ]
+
 _extension_to_filetype = {
     'e': 'exodus',
     'ex2': 'exodus',
@@ -27,7 +50,7 @@ _extension_to_filetype = {
     }
 
 
-def read(filename, file_type=None):
+def read(filename, file_format=None):
     '''Reads an unstructured mesh with added data.
 
     :param filenames: The files to read from.
@@ -43,37 +66,37 @@ def read(filename, file_type=None):
     # http://stackoverflow.com/questions/4843173/how-to-check-if-a-type-of-variable-is-string-in-python
     assert isinstance(filename, str)
 
-    if not file_type:
-        # deduct file type from extension
+    if not file_format:
+        # deduct file format from extension
         extension = filename.split(os.extsep, 1)[1]
-        file_type = _extension_to_filetype[extension]
+        file_format = _extension_to_filetype[extension]
 
-    if file_type == 'gmsh':
+    if file_format == 'gmsh':
         return msh_io.read(filename)
-    elif file_type == 'dolfin-xml':
+    elif file_format == 'dolfin-xml':
         return dolfin_io.read(filename)
-    elif file_type == 'permas':
+    elif file_format == 'permas':
         return permas_io.read(filename)
-    elif file_type == 'moab':
+    elif file_format == 'moab':
         return h5m_io.read(filename)
-    elif file_type == 'vtu':
+    elif file_format == 'vtu':
         return vtk_io.read('vtu', filename)
-    elif file_type == 'vtk':
+    elif file_format == 'vtk':
         return vtk_io.read('vtk', filename)
-    elif file_type == 'xdmf':
+    elif file_format == 'xdmf':
         return vtk_io.read('xdmf', filename)
-    elif file_type == 'exodus':
+    elif file_format == 'exodus':
         return vtk_io.read('exodus', filename)
     else:
         raise RuntimeError(
-            'Unknown file type \'%s\' of file \'%s\'.' % (file_type, filename)
+            'Unknown file format \'%s\' of file \'%s\'.' % (file_format, filename)
             )
 
 
 def write(filename,
           points,
           cells,
-          file_type=None,
+          file_format=None,
           point_data=None,
           cell_data=None,
           field_data=None
@@ -88,33 +111,32 @@ def write(filename,
     '''
     import os
 
-    if not file_type:
-        # deduct file type from extension
+    if not file_format:
+        # deduct file format from extension
         extension = filename.split(os.extsep, 1)[1]
-        file_type = _extension_to_filetype[extension]
+        file_format = _extension_to_filetype[extension]
 
-    if file_type == 'moab':
+    if file_format == 'moab':
         h5m_io.write(
             filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_type == 'gmsh':
+    elif file_format == 'gmsh':
         msh_io.write(filename, points, cells)
-    elif file_type == 'dolfin-xml':
+    elif file_format == 'dolfin-xml':
         dolfin_io.write(filename, points, cells)
-    elif file_type == 'permas':
+    elif file_format == 'permas':
         permas_io.write(filename, points, cells)
-    elif file_type == 'vtu':  # vtk xml format
+    elif file_format == 'vtu':  # vtk xml format
         vtk_io.write(
             'vtu', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_type == 'vtk':  # classical vtk format
-        # The choice for vtk-ascii over vtk-binary is arbitrary.
+    elif file_format == 'vtk-ascii':
         vtk_io.write(
             'vtk-ascii', filename,
             points, cells,
@@ -122,14 +144,22 @@ def write(filename,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_type == 'xdmf':  # XDMF
+    elif file_format == 'vtk-binary':
+        vtk_io.write(
+            'vtk-binary', filename,
+            points, cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data
+            )
+    elif file_format == 'xdmf':  # XDMF
         vtk_io.write(
             'xdmf', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_type == 'exodus':  # exodus ii format
+    elif file_format == 'exodus':  # exodus ii format
         vtk_io.write(
             'exodus', filename, points, cells,
             point_data=point_data,
@@ -137,5 +167,7 @@ def write(filename,
             field_data=field_data
             )
     else:
-        raise RuntimeError('unknown file type \'%s\'.' % filename)
+        raise RuntimeError(
+            'unknown file format \'%s\' of \'%s\'.' % (file_format, filename)
+            )
     return

@@ -225,6 +225,7 @@ def write(filetype,
         writer.SetFileTypeToASCII()
     elif filetype == 'vtk-binary':
         writer = vtk.vtkUnstructuredGridWriter()
+        writer.SetFileTypeToBinary()
     elif filetype == 'vtu':  # vtk xml format
         writer = vtk.vtkXMLUnstructuredGridWriter()
     elif filetype == 'xdmf':
