@@ -30,7 +30,7 @@ with any of the supported formats.
 In Python, simply call
 ```python
 points, cells, point_data, cell_data, field_data = \
-    meshio.read(args.infile, timestep=args.timesteps)
+    meshio.read(args.infile)
 ```
 to read a mesh. To write, do
 ```python
@@ -43,6 +43,8 @@ meshio.write(
     field_data=field_data
     )
 ```
+For both input and output, you can optionally specify the exact `file_format`
+(in case you would like to enforce binary over ASCII VTK, for example).
 
 ### Installation
 
