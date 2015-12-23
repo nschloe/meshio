@@ -6,9 +6,9 @@ I/O for DOLFIN's XML format, cf.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-import numpy
-# import xml.etree.ElementTree as ET
 from lxml import etree as ET
+import numpy
+import warnings
 
 
 def read(filename):
@@ -18,19 +18,18 @@ def read(filename):
     mesh = root.getchildren()[0]
     assert(mesh.tag == 'mesh')
 
-    cell_type = mesh.attrib['celltype']
-    nodes_per_cell = {
-        'triangle': 3,
-        'quad': 4,
-        'tetra': 4,
+    dolfin_to_meshio_type = {
+        'triangle': ('triangle', 3),
+        'tetrahedron': ('tetra', 4),
         }
-    npc = nodes_per_cell[cell_type]
+
+    cell_type, npc = dolfin_to_meshio_type[mesh.attrib['celltype']]
 
     points = None
     cells = {
         cell_type: None
         }
-    print(cells)
+
     for child in mesh.getchildren():
         if child.tag == 'vertices':
             num_verts = int(child.attrib['size'])
@@ -46,7 +45,7 @@ def read(filename):
             num_cells = int(child.attrib['size'])
             cells[cell_type] = numpy.empty((num_cells, npc), dtype=int)
             for cell in child.getchildren():
-                assert(cell.tag == cell_type)
+                assert(dolfin_to_meshio_type[cell.tag][0] == cell_type)
                 idx = int(cell.attrib['index'])
                 for k in range(npc):
                     cells[cell_type][idx, k] = cell.attrib['v%s' % k]
@@ -54,10 +53,9 @@ def read(filename):
         else:
             raise RuntimeError('Unknown entry \'%s\'.' % child.tag)
 
-    print(cells)
-    point_data = []
-    cell_data = []
-    field_data = []
+    point_data = {}
+    cell_data = {}
+    field_data = {}
     return points, cells, point_data, cell_data, field_data
 
 
@@ -76,22 +74,49 @@ def write(
     if field_data is None:
         field_data = {}
 
-    dolfin = ET.Element('dolfin')
-    dolfin.attrib['xmlns_dolfin'] = 'http://www.fenics.org/dolfin/'
+    dolfin = ET.Element(
+        'dolfin',
+        nsmap={'dolfin': 'http://fenicsproject.org/'}
+        )
 
-    if len(cells) > 1:
+    meshio_to_dolfin_type = {
+            'triangle': 'triangle',
+            'tetra': 'tetrahedron',
+            }
+
+    if 'tetra' in cells:
+        stripped_cells = {'tetra': cells['tetra']}
+        cell_type = 'tetra'
+    elif 'triangle' in cells:
+        stripped_cells = {'triangle': cells['triangle']}
+        cell_type = 'triangle'
+    else:
         raise RuntimeError(
-          'Dolfin XML can only deal with one cell type at a time.'
+          'Dolfin XML can only deal with triangle or tetra. '
+          'The input data contains only ' + ', '.join(cells.keys()) + '.'
           )
 
-    cell_type = cells.keys()[0]
+    if len(cells) > 1:
+        discarded_cells = cells.keys()
+        discarded_cells.remove(cell_type)
+        warnings.warn(
+          'DOLFIN XML can only handle one cell type at a time. '
+          'Using ' + cell_type +
+          ', discarding ' + ', '.join(discarded_cells) +
+          '.'
+          )
 
     if all(points[:, 2] == 0):
         dim = '2'
     else:
         dim = '3'
 
-    mesh = ET.SubElement(dolfin, 'mesh', celltype=cell_type, dim=dim)
+    mesh = ET.SubElement(
+            dolfin,
+            'mesh',
+            celltype=meshio_to_dolfin_type[cell_type],
+            dim=dim
+            )
     vertices = ET.SubElement(mesh, 'vertices', size=str(len(points)))
     for k, point in enumerate(points):
         ET.SubElement(
@@ -102,16 +127,16 @@ def write(
             )
 
     num_cells = 0
-    for cls in cells.values():
+    for cls in stripped_cells.values():
         num_cells += len(cls)
 
     xcells = ET.SubElement(mesh, 'cells', size=str(num_cells))
     idx = 0
-    for cell_type, cls in cells.iteritems():
+    for cell_type, cls in stripped_cells.iteritems():
         for cell in cls:
             cell_entry = ET.SubElement(
                 xcells,
-                cell_type,
+                meshio_to_dolfin_type[cell_type],
                 index=str(idx)
                 )
             for k, c in enumerate(cell):

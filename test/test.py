@@ -194,7 +194,6 @@ def test_io():
         filename = 'test' + extension
         test_meshes = [
             tri_mesh,
-            quad_mesh,
             tet_mesh,
             ]
         for mesh in test_meshes:
