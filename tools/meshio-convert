@@ -21,9 +21,11 @@ def _main():
         print('  Number of %ss: %s' % (type, len(elems)))
 
     if args.prune:
-        # remove_lower_order_cells
+        cells.pop('vertex', None)
         cells.pop('line', None)
-        cells.pop('triangle', None)
+        if 'tetra' in cells:
+            # remove_lower_order_cells
+            cells.pop('triangle', None)
         # remove_orphaned_nodes.
         # find which nodes are not mentioned in the cells and remove them
         flat_cells = cells['tetra'].flatten()
