@@ -20,13 +20,11 @@ def _main():
     for type, elems in cells.iteritems():
         print('  Number of %ss: %s' % (type, len(elems)))
 
-    remove_lower_order_cells = True
-    if remove_lower_order_cells:
+    if args.prune:
+        # remove_lower_order_cells
         cells.pop('line', None)
         cells.pop('triangle', None)
-
-    remove_orphaned_nodes = True
-    if remove_orphaned_nodes:
+        # remove_orphaned_nodes.
         # find which nodes are not mentioned in the cells and remove them
         flat_cells = cells['tetra'].flatten()
         orphaned_nodes = np.setdiff1d(np.arange(len(points)), flat_cells)
@@ -99,6 +97,12 @@ def _parse_options():
         type=str,
         help='mesh file to be written to'
         )
+
+    parser.add_argument(
+            '--prune', '-p',
+            action='store_true',
+            help='remove lower order cells, remove orphaned nodes'
+            )
 
     parser.add_argument(
         '--version', '-v',
