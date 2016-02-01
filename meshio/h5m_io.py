@@ -220,7 +220,9 @@ def write(
             }
     for key, data in cells.iteritems():
         if key not in meshio_to_h5m_type:
-            warnings.warn('Unsupported H5M element type %s. Skipping.' % key)
+            warnings.warn(
+                    'Unsupported H5M element type \'%s\'. Skipping.' % key
+                    )
             continue
         this_type = meshio_to_h5m_type[key]
         elem_group = elements.create_group(this_type['name'])

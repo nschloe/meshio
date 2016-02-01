@@ -33,20 +33,20 @@ output_filetypes = [
         ]
 
 _extension_to_filetype = {
-    'e': 'exodus',
-    'ex2': 'exodus',
-    'exo': 'exodus',
-    'msh': 'gmsh',
-    'xml': 'dolfin-xml',
-    'post': 'permas',
-    'post.gz': 'permas',
-    'dato': 'permas',
-    'dato.gz': 'permas',
-    'h5m': 'moab',
-    'vtu': 'vtu',
-    'vtk': 'vtk',
-    'xdmf': 'xdmf',
-    'xmf': 'xdmf',
+    '.e': 'exodus',
+    '.ex2': 'exodus',
+    '.exo': 'exodus',
+    '.msh': 'gmsh',
+    '.xml': 'dolfin-xml',
+    '.post': 'permas',
+    '.post.gz': 'permas',
+    '.dato': 'permas',
+    '.dato.gz': 'permas',
+    '.h5m': 'moab',
+    '.vtu': 'vtu',
+    '.vtk': 'vtk',
+    '.xdmf': 'xdmf',
+    '.xmf': 'xdmf',
     }
 
 
@@ -68,7 +68,7 @@ def read(filename, file_format=None):
 
     if not file_format:
         # deduct file format from extension
-        extension = filename.split(os.extsep, 1)[1]
+        _, extension = os.path.splitext(filename)
         file_format = _extension_to_filetype[extension]
 
     if file_format == 'gmsh':
@@ -89,7 +89,8 @@ def read(filename, file_format=None):
         return vtk_io.read('exodus', filename)
     else:
         raise RuntimeError(
-            'Unknown file format \'%s\' of file \'%s\'.' % (file_format, filename)
+            'Unknown file format \'%s\' of file \'%s\'.' %
+            (file_format, filename)
             )
 
 
@@ -113,7 +114,7 @@ def write(filename,
 
     if not file_format:
         # deduct file format from extension
-        extension = filename.split(os.extsep, 1)[1]
+        _, extension = os.path.splitext(filename)
         file_format = _extension_to_filetype[extension]
 
     if file_format == 'moab':
