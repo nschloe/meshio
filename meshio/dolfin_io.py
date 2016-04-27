@@ -6,12 +6,12 @@ I/O for DOLFIN's XML format, cf.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-from lxml import etree as ET
 import numpy
 import warnings
 
 
 def read(filename):
+    from lxml import etree as ET
 
     tree = ET.parse(filename)
     root = tree.getroot()
@@ -67,6 +67,8 @@ def write(
         cell_data=None,
         field_data=None
         ):
+    from lxml import etree as ET
+
     if point_data is None:
         point_data = {}
     if cell_data is None:

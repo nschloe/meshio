@@ -6,7 +6,6 @@ I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 from datetime import datetime
-import h5py
 import numpy
 import warnings
 
@@ -23,6 +22,8 @@ def read(filename):
     '''Reads H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     '''
+    import h5py
+
     f = h5py.File(filename, 'r')
     dset = f['tstt']
 
@@ -121,6 +122,8 @@ def write(
     '''Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     '''
+    import h5py
+
     if point_data is None:
         point_data = {}
     if cell_data is None:
