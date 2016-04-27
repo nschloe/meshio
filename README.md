@@ -5,7 +5,7 @@
 [![codecov.io](https://codecov.io/github/nschloe/meshio/coverage.svg?branch=master)](https://codecov.io/github/nschloe/meshio?branch=master)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.python.org/pypi/meshio)
 [![PyPi Downloads](https://img.shields.io/pypi/dm/meshio.svg)](https://pypi.python.org/pypi/meshio)
-[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=social&label=Star&maxAge=2592000)]()
+[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=social&label=Star&maxAge=2592000)](https://github.com/nschloe/meshio)
 
 ![](https://nschloe.github.io/meshio/pp.png)
 
