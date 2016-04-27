@@ -6,11 +6,67 @@ I/O for VTK, VTU, Exodus etc.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import numpy
-import vtk
-from vtk.util import numpy_support
 
 
 def read(filetype, filename):
+    import vtk
+    from vtk.util import numpy_support
+
+    def _read_data(data):
+        '''Extract numpy arrays from a VTK data set.
+        '''
+        # Go through all arrays, fetch data.
+        out = {}
+        for k in range(data.GetNumberOfArrays()):
+            array = data.GetArray(k)
+            if array:
+                array_name = array.GetName()
+                out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
+
+        return out
+
+    def _read_cells(vtk_mesh):
+        data = vtk.util.numpy_support.vtk_to_numpy(
+                vtk_mesh.GetCells().GetData()
+                )
+        offsets = vtk.util.numpy_support.vtk_to_numpy(
+                vtk_mesh.GetCellLocationsArray()
+                )
+        types = vtk.util.numpy_support.vtk_to_numpy(
+                vtk_mesh.GetCellTypesArray()
+                )
+
+        vtk_to_meshio_type = {
+            vtk.VTK_VERTEX: 'vertex',
+            vtk.VTK_LINE: 'line',
+            vtk.VTK_TRIANGLE: 'triangle',
+            vtk.VTK_QUAD: 'quad',
+            vtk.VTK_TETRA: 'tetra',
+            vtk.VTK_HEXAHEDRON: 'hexahedron',
+            vtk.VTK_WEDGE: 'wedge',
+            vtk.VTK_PYRAMID: 'pyramid'
+            }
+
+        # `data` is a one-dimensional vector with
+        # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+        # Translate it into the cells dictionary.
+        cells = {}
+        for vtk_type, meshio_type in vtk_to_meshio_type.iteritems():
+            # Get all offsets for vtk_type
+            os = offsets[numpy.argwhere(types == vtk_type).transpose()[0]]
+            num_cells = len(os)
+            if num_cells > 0:
+                num_pts = data[os[0]]
+                # instantiate the array
+                arr = numpy.empty((num_cells, num_pts))
+                # sort the num_pts entries after the offsets into the columns
+                # of arr
+                for k in range(num_pts):
+                    arr[:, k] = data[os+k+1]
+                cells[meshio_type] = arr
+
+        return cells
+
     if filetype == 'vtk':
         reader = vtk.vtkUnstructuredGridReader()
         reader.SetFileName(filename)
@@ -126,62 +182,6 @@ def _read_exodusii_mesh(reader, timestep=None):
     return vtk_mesh[0]  # , time_values
 
 
-def _read_cells(vtk_mesh):
-
-    data = vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
-    offsets = vtk.util.numpy_support.vtk_to_numpy(
-            vtk_mesh.GetCellLocationsArray()
-            )
-    types = vtk.util.numpy_support.vtk_to_numpy(
-            vtk_mesh.GetCellTypesArray()
-            )
-
-    vtk_to_meshio_type = {
-        vtk.VTK_VERTEX: 'vertex',
-        vtk.VTK_LINE: 'line',
-        vtk.VTK_TRIANGLE: 'triangle',
-        vtk.VTK_QUAD: 'quad',
-        vtk.VTK_TETRA: 'tetra',
-        vtk.VTK_HEXAHEDRON: 'hexahedron',
-        vtk.VTK_WEDGE: 'wedge',
-        vtk.VTK_PYRAMID: 'pyramid'
-        }
-
-    # `data` is a one-dimensional vector with
-    # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    # Translate it into the cells dictionary.
-    cells = {}
-    for vtk_type, meshio_type in vtk_to_meshio_type.iteritems():
-        # Get all offsets for vtk_type
-        os = offsets[numpy.argwhere(types == vtk_type).transpose()[0]]
-        num_cells = len(os)
-        if num_cells > 0:
-            num_pts = data[os[0]]
-            # instantiate the array
-            arr = numpy.empty((num_cells, num_pts))
-            # sort the num_pts entries after the offsets into the columns of
-            # arr
-            for k in range(num_pts):
-                arr[:, k] = data[os+k+1]
-            cells[meshio_type] = arr
-
-    return cells
-
-
-def _read_data(data):
-    '''Extract numpy arrays from a VTK data set.
-    '''
-    # Go through all arrays, fetch data.
-    out = {}
-    for k in range(data.GetNumberOfArrays()):
-        array = data.GetArray(k)
-        if array:
-            array_name = array.GetName()
-            out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
-
-    return out
-
-
 def write(filetype,
           filename,
           points,
@@ -190,6 +190,14 @@ def write(filetype,
           cell_data=None,
           field_data=None
           ):
+    import vtk
+    from vtk.util import numpy_support
+
+    def _create_vtkarray(X, name):
+        array = vtk.util.numpy_support.numpy_to_vtk(X, deep=1)
+        array.SetName(name)
+        return array
+
     if point_data is None:
         point_data = {}
     if cell_data is None:
@@ -249,6 +257,9 @@ def write(filetype,
 
 
 def _generate_vtk_mesh(points, cells):
+    import vtk
+    from vtk.util import numpy_support
+
     mesh = vtk.vtkUnstructuredGrid()
 
     # set points
@@ -326,9 +337,3 @@ def _generate_vtk_mesh(points, cells):
         )
 
     return mesh
-
-
-def _create_vtkarray(X, name):
-    array = vtk.util.numpy_support.numpy_to_vtk(X, deep=1)
-    array.SetName(name)
-    return array
