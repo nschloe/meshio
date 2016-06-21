@@ -6,7 +6,7 @@ from . import msh_io
 from . import permas_io
 from . import vtk_io
 
-from meta import __version__, __author__, __author_email__, __website__
+from .meta import __version__, __author__, __author_email__, __website__
 
 
 input_filetypes = [
