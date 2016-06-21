@@ -9,7 +9,7 @@ I/O for PERMAS dat format, cf.
 import gzip
 import numpy
 import re
-from meta import __version__, __website__, __author__
+from .meta import __version__, __website__, __author__
 
 
 def read(filename):
@@ -26,7 +26,7 @@ def read(filename):
     elif filename.endswith('post'):
         f = open(filename, 'r')
     else:
-        print 'Unsupported file format'
+        print('Unsupported file format')
 
     cells = {}
     meshio_to_permas_type = {
