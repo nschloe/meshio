@@ -58,7 +58,7 @@ def read(filetype, filename):
             if num_cells > 0:
                 num_pts = data[os[0]]
                 # instantiate the array
-                arr = numpy.empty((num_cells, num_pts))
+                arr = numpy.empty((num_cells, num_pts), dtype=int)
                 # sort the num_pts entries after the offsets into the columns
                 # of arr
                 for k in range(num_pts):
