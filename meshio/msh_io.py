@@ -18,29 +18,29 @@ def read(filename):
     with open(filename) as f:
         while True:
             try:
-                line = islice(f, 1).next()
+                line = next(islice(f, 1))
             except StopIteration:
                 break
             assert(line[0] == '$')
             environ = line[1:].strip()
             if environ == 'MeshFormat':
-                line = islice(f, 1).next()
+                line = next(islice(f, 1))
                 # 2.2 0 8
-                line = islice(f, 1).next()
+                line = next(islice(f, 1))
                 assert(line.strip() == '$EndMeshFormat')
             elif environ == 'Nodes':
                 # The first line is the number of nodes
-                line = islice(f, 1).next()
+                line = next(islice(f, 1))
                 num_nodes = int(line)
                 points = numpy.empty((num_nodes, 3))
                 for k, line in enumerate(islice(f, num_nodes)):
                     # Throw away the index immediately
                     points[k, :] = numpy.array(line.split(), dtype=float)[1:]
-                line = islice(f, 1).next()
+                line = next(islice(f, 1))
                 assert(line.strip() == '$EndNodes')
             elif environ == 'Elements':
                 # The first line is the number of elements
-                line = islice(f, 1).next()
+                line = next(islice(f, 1))
                 num_cells = int(line)
                 cells = {}
                 gmsh_to_meshio_type = {
@@ -63,14 +63,14 @@ def read(filename):
                     else:
                         cells[t[0]] = [data[-t[1]:] - 1]
 
-                line = islice(f, 1).next()
+                line = next(islice(f, 1))
                 assert(line.strip() == '$EndElements')
             elif environ == 'PhysicalNames':
-                line = islice(f, 1).next()
+                line = next(islice(f, 1))
                 num_phys_names = int(line)
                 for k, line in enumerate(islice(f, num_phys_names)):
                     pass
-                line = islice(f, 1).next()
+                line = next(islice(f, 1))
                 assert(line.strip() == '$EndPhysicalNames')
             else:
                 raise RuntimeError('Unknown environment \'%s\'.' % environ)
