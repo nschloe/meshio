@@ -51,7 +51,7 @@ def read(filetype, filename):
         # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
         # Translate it into the cells dictionary.
         cells = {}
-        for vtk_type, meshio_type in vtk_to_meshio_type.iteritems():
+        for vtk_type, meshio_type in vtk_to_meshio_type.items():
             # Get all offsets for vtk_type
             os = offsets[numpy.argwhere(types == vtk_type).transpose()[0]]
             num_cells = len(os)
