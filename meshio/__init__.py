@@ -117,6 +117,24 @@ def write(filename,
         _, extension = os.path.splitext(filename)
         file_format = _extension_to_filetype[extension]
 
+    # check cells for sanity
+    if 'vertex' in cells:
+        assert cells['triangle'].shape[1] == 1
+    if 'line' in cells:
+        assert cells['line'].shape[1] == 2
+    if 'triangle' in cells:
+        assert cells['triangle'].shape[1] == 3
+    if 'quad' in cells:
+        assert cells['quad'].shape[1] == 4
+    if 'tetra' in cells:
+        assert cells['tetra'].shape[1] == 4
+    if 'hexahedron' in cells:
+        assert cells['hexahedron'].shape[1] == 8
+    if 'wedge' in cells:
+        assert cells['wedge'].shape[1] == 6
+    if 'pyramid' in cells:
+        assert cells['pyramid'].shape[1] == 5
+
     if file_format == 'moab':
         h5m_io.write(
             filename, points, cells,

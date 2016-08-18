@@ -13,72 +13,78 @@ import numpy
 def read(filename):
     '''Reads a Gmsh msh file.
     '''
+    with open(filename) as f:
+        points, cells = read_buffer(f)
+
+    return points, cells, {}, {}, {}
+
+
+def read_buffer(f):
     # The format is specified at
     # <http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
-    with open(filename) as f:
-        while True:
-            try:
-                line = next(islice(f, 1))
-            except StopIteration:
-                break
-            assert(line[0] == '$')
-            environ = line[1:].strip()
-            if environ == 'MeshFormat':
-                line = next(islice(f, 1))
-                # 2.2 0 8
-                line = next(islice(f, 1))
-                assert(line.strip() == '$EndMeshFormat')
-            elif environ == 'Nodes':
-                # The first line is the number of nodes
-                line = next(islice(f, 1))
-                num_nodes = int(line)
-                points = numpy.empty((num_nodes, 3))
-                for k, line in enumerate(islice(f, num_nodes)):
-                    # Throw away the index immediately
-                    points[k, :] = numpy.array(line.split(), dtype=float)[1:]
-                line = next(islice(f, 1))
-                assert(line.strip() == '$EndNodes')
-            elif environ == 'Elements':
-                # The first line is the number of elements
-                line = next(islice(f, 1))
-                num_cells = int(line)
-                cells = {}
-                gmsh_to_meshio_type = {
-                        15: ('vertex', 1),
-                        1: ('line', 2),
-                        2: ('triangle', 3),
-                        3: ('quad', 4),
-                        4: ('tetra', 4),
-                        5: ('hexahedron', 8),
-                        6: ('wedge', 6)
-                        }
-                for k, line in enumerate(islice(f, num_cells)):
-                    # Throw away the index immediately;
-                    data = numpy.array(line.split(), dtype=int)
-                    t = gmsh_to_meshio_type[data[1]]
-                    # Subtract one to account for the fact that python indices
-                    # are 0-based.
-                    if t[0] in cells:
-                        cells[t[0]].append(data[-t[1]:] - 1)
-                    else:
-                        cells[t[0]] = [data[-t[1]:] - 1]
+    while True:
+        try:
+            line = next(islice(f, 1))
+        except StopIteration:
+            break
+        assert(line[0] == '$')
+        environ = line[1:].strip()
+        if environ == 'MeshFormat':
+            line = next(islice(f, 1))
+            # 2.2 0 8
+            line = next(islice(f, 1))
+            assert(line.strip() == '$EndMeshFormat')
+        elif environ == 'Nodes':
+            # The first line is the number of nodes
+            line = next(islice(f, 1))
+            num_nodes = int(line)
+            points = numpy.empty((num_nodes, 3))
+            for k, line in enumerate(islice(f, num_nodes)):
+                # Throw away the index immediately
+                points[k, :] = numpy.array(line.split(), dtype=float)[1:]
+            line = next(islice(f, 1))
+            assert(line.strip() == '$EndNodes')
+        elif environ == 'Elements':
+            # The first line is the number of elements
+            line = next(islice(f, 1))
+            num_cells = int(line)
+            cells = {}
+            gmsh_to_meshio_type = {
+                    15: ('vertex', 1),
+                    1: ('line', 2),
+                    2: ('triangle', 3),
+                    3: ('quad', 4),
+                    4: ('tetra', 4),
+                    5: ('hexahedron', 8),
+                    6: ('wedge', 6)
+                    }
+            for k, line in enumerate(islice(f, num_cells)):
+                # Throw away the index immediately;
+                data = numpy.array(line.split(), dtype=int)
+                t = gmsh_to_meshio_type[data[1]]
+                # Subtract one to account for the fact that python indices
+                # are 0-based.
+                if t[0] in cells:
+                    cells[t[0]].append(data[-t[1]:] - 1)
+                else:
+                    cells[t[0]] = [data[-t[1]:] - 1]
 
-                line = next(islice(f, 1))
-                assert(line.strip() == '$EndElements')
-            elif environ == 'PhysicalNames':
-                line = next(islice(f, 1))
-                num_phys_names = int(line)
-                for k, line in enumerate(islice(f, num_phys_names)):
-                    pass
-                line = next(islice(f, 1))
-                assert(line.strip() == '$EndPhysicalNames')
-            else:
-                raise RuntimeError('Unknown environment \'%s\'.' % environ)
+            line = next(islice(f, 1))
+            assert(line.strip() == '$EndElements')
+        elif environ == 'PhysicalNames':
+            line = next(islice(f, 1))
+            num_phys_names = int(line)
+            for k, line in enumerate(islice(f, num_phys_names)):
+                pass
+            line = next(islice(f, 1))
+            assert(line.strip() == '$EndPhysicalNames')
+        else:
+            raise RuntimeError('Unknown environment \'%s\'.' % environ)
 
     for key in cells:
         cells[key] = numpy.vstack(cells[key])
 
-    return points, cells, {}, {}, {}
+    return points, cells
 
 
 def write(
@@ -132,7 +138,7 @@ def write(
                 ' '.join(n * ['%d']) + '\n'
             for k, c in enumerate(data):
                 fh.write(form % ((num_cells+k+1,) + tuple(c + 1)))
-            num_cells += data.shape[0]    
+            num_cells += data.shape[0]
         fh.write('$EndElements')
 
     return
