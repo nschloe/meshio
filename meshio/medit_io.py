@@ -6,12 +6,11 @@ I/O for Medit's format, cf.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
+from itertools import islice
 import numpy
 
 
 def read(filename):
-    '''Reads a Medit file.
-    '''
     with open(filename) as f:
         points, cells = read_buffer(f)
 
@@ -19,7 +18,63 @@ def read(filename):
 
 
 def read_buffer(f):
-    return
+    dim = 0
+    cells = {}
+
+    while True:
+        try:
+            line = next(islice(f, 1))
+        except StopIteration:
+            break
+
+        stripped = line.strip()
+
+        # skip comments and empty lines
+        if len(stripped) == 0 or line.strip()[0] == '#':
+            continue
+
+        assert stripped[0].isalpha()
+        keyword = stripped.split(' ')[0]
+
+        meshio_from_medit = {
+            'Edges': ('line', 2),
+            'Triangles': ('triangle', 3),
+            'Quadrilaterals': ('quad', 4),
+            'Tetrahedra': ('tetra', 4),
+            'Hexahedra': ('hexahedra', 8)
+            }
+
+        if keyword == 'MeshVersionFormatted':
+            assert stripped[-1] == '1'
+        elif keyword == 'Dimension':
+            dim = int(stripped[-1])
+        elif keyword == 'Vertices':
+            assert dim > 0
+            # The first line is the number of nodes
+            line = next(islice(f, 1))
+            num_verts = int(line)
+            points = numpy.empty((num_verts, dim), dtype=float)
+            for k, line in enumerate(islice(f, num_verts)):
+                # Throw away the label immediately
+                points[k] = numpy.array(line.split(), dtype=float)[:-1]
+        elif keyword in meshio_from_medit:
+            meshio_name, num = meshio_from_medit[keyword]
+            # The first line is the number of elements
+            line = next(islice(f, 1))
+            num_cells = int(line)
+            cell_data = numpy.empty((num_cells, num), dtype=int)
+            for k, line in enumerate(islice(f, num_cells)):
+                data = numpy.array(line.split(), dtype=int)
+                # Throw away the label
+                cell_data[k] = data[:-1]
+
+            cells[meshio_name] = cell_data
+        elif keyword == 'End':
+            pass
+        else:
+            raise RuntimeError('Unknown keyword \'%s\'.' % keyword)
+
+    return points, cells
 
 
 def write(
@@ -30,75 +85,38 @@ def write(
         cell_data=None,
         field_data=None
         ):
-    if point_data is None:
-        point_data = {}
-    if cell_data is None:
-        cell_data = {}
-    if field_data is None:
-        field_data = {}
-
     with open(filename, 'w') as fh:
         fh.write('MeshVersionFormatted 1\n')
         fh.write('# Created by meshio\n')
 
         # Dimension info
-        fh.write('\n')
-        fh.write('Dimension\n')
-        fh.write('%d\n' % points.shape[1])
+        fh.write('\nDimension %d\n' % points.shape[1])
 
         # vertices
-        fh.write('\n')
-        fh.write('Vertices\n')
+        fh.write('\nVertices\n')
         fh.write('%d\n' % len(points))
         labels = numpy.ones(len(points), dtype=int)
         data = numpy.c_[points, labels]
         fmt = ' '.join(['%e'] * points.shape[1]) + ' %d'
         numpy.savetxt(fh, data, fmt)
 
-        # edges
-        if 'line' in cells:
-            fh.write('\n')
-            fh.write('Edges\n')
-            fh.write('%d\n' % len(cells['line']))
-            labels = numpy.ones(len(cells['line']), dtype=int)
-            data = numpy.c_[cells['line'], labels]
-            numpy.savetxt(fh, data, '%d %d %d')
+        medit_from_meshio = {
+            'line': ('Edges', 2),
+            'triangle': ('Triangles', 3),
+            'quad': ('Quadrilaterals', 4),
+            'tetra': ('Tetrahedra', 4),
+            'hexahedra': ('Hexahedra', 8)
+            }
 
-        # triangles
-        if 'triangle' in cells:
+        for key, data in cells.items():
+            medit_name, num = medit_from_meshio[key]
             fh.write('\n')
-            fh.write('Triangles\n')
-            fh.write('%d\n' % len(cells['triangle']))
-            labels = numpy.ones(len(cells['triangle']), dtype=int)
-            data = numpy.c_[cells['triangle'], labels]
-            numpy.savetxt(fh, data, '%d %d %d %d')
-
-        # quadrilaterals
-        if 'quad' in cells:
-            fh.write('\n')
-            fh.write('Quadrilaterals\n')
-            fh.write('%d\n' % len(cells['quad']))
-            labels = numpy.ones(len(cells['quad']), dtype=int)
-            data = numpy.c_[cells['quad'], labels]
-            numpy.savetxt(fh, data, '%d %d %d %d %d')
-
-        # tetrahedra
-        if 'tetra' in cells:
-            fh.write('\n')
-            fh.write('Tetrahedra\n')
-            fh.write('%d\n' % len(cells['tetra']))
-            labels = numpy.ones(len(cells['tetra']), dtype=int)
-            data = numpy.c_[cells['tetra'], labels]
-            numpy.savetxt(fh, data, '%d %d %d %d %d')
-
-        # hexahedra
-        if 'hexahedra' in cells:
-            fh.write('\n')
-            fh.write('Hexahedra\n')
-            fh.write('%d\n' % len(cells['hexahedra']))
-            labels = numpy.ones(len(cells['hexahedra']), dtype=int)
-            data = numpy.c_[cells['hexahedra'], labels]
-            numpy.savetxt(fh, data, '%d %d %d %d %d %d %d %d %d')
+            fh.write('%s\n' % medit_name)
+            fh.write('%d\n' % len(data))
+            labels = numpy.ones(len(data), dtype=int)
+            data_with_label = numpy.c_[data, labels]
+            fmt = ' '.join(['%d'] * (num + 1))
+            numpy.savetxt(fh, data_with_label, fmt)
 
         fh.write('\nEnd\n')
 

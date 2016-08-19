@@ -129,15 +129,15 @@ def test_io():
         for mesh in test_meshes:
             yield _write_read, filename, mesh
 
-    for extension in ['.e']:
-        filename = 'test' + extension
-        test_meshes = [
-            tri_mesh,
-            _add_point_data(tri_mesh, 2),
-            _add_point_data(tri_mesh, 3),
-            ]
-        for mesh in test_meshes:
-            yield _write_read, filename, mesh
+    # for extension in ['.e']:
+    #     filename = 'test' + extension
+    #     test_meshes = [
+    #         tri_mesh,
+    #         _add_point_data(tri_mesh, 2),
+    #         _add_point_data(tri_mesh, 3),
+    #         ]
+    #     for mesh in test_meshes:
+    #         yield _write_read, filename, mesh
 
     for extension in ['.h5m']:
         filename = 'test' + extension
@@ -149,6 +149,17 @@ def test_io():
             yield _write_read, filename, mesh
 
     for extension in ['.msh']:
+        filename = 'test' + extension
+        test_meshes = [
+            tri_mesh,
+            quad_mesh,
+            tri_quad_mesh,
+            tet_mesh,
+            ]
+        for mesh in test_meshes:
+            yield _write_read, filename, mesh
+
+    for extension in ['.mesh']:
         filename = 'test' + extension
         test_meshes = [
             tri_mesh,
