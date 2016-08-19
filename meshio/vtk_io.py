@@ -10,6 +10,7 @@ import numpy
 
 def read(filetype, filename):
     import vtk
+    from vtk.util import numpy_support
 
     def _read_data(data):
         '''Extract numpy arrays from a VTK data set.
@@ -190,6 +191,7 @@ def write(filetype,
           field_data=None
           ):
     import vtk
+    from vtk.util import numpy_support
 
     def _create_vtkarray(X, name):
         array = vtk.util.numpy_support.numpy_to_vtk(X, deep=1)

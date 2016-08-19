@@ -2,6 +2,7 @@
 #
 from . import dolfin_io
 from . import h5m_io
+from . import medit_io
 from . import msh_io
 from . import permas_io
 from . import vtk_io
@@ -13,6 +14,7 @@ input_filetypes = [
         'exodus',
         'gmsh',
         'dolfin-xml',
+        'medit',
         'permas',
         'moab',
         'vtk',
@@ -24,6 +26,7 @@ output_filetypes = [
         'exodus',
         'gmsh',
         'dolfin-xml',
+        'medit',
         'permas',
         'moab',
         'vtk-ascii',
@@ -36,6 +39,7 @@ _extension_to_filetype = {
     '.e': 'exodus',
     '.ex2': 'exodus',
     '.exo': 'exodus',
+    '.mesh': 'medit',
     '.msh': 'gmsh',
     '.xml': 'dolfin-xml',
     '.post': 'permas',
@@ -73,6 +77,8 @@ def read(filename, file_format=None):
 
     if file_format == 'gmsh':
         return msh_io.read(filename)
+    elif file_format == 'medit':
+        return medit_io.read(filename)
     elif file_format == 'dolfin-xml':
         return dolfin_io.read(filename)
     elif file_format == 'permas':
@@ -119,7 +125,7 @@ def write(filename,
 
     # check cells for sanity
     if 'vertex' in cells:
-        assert cells['triangle'].shape[1] == 1
+        assert cells['vertex'].shape[1] == 1
     if 'line' in cells:
         assert cells['line'].shape[1] == 2
     if 'triangle' in cells:
@@ -144,6 +150,8 @@ def write(filename,
             )
     elif file_format == 'gmsh':
         msh_io.write(filename, points, cells)
+    elif file_format == 'medit':
+        medit_io.write(filename, points, cells)
     elif file_format == 'dolfin-xml':
         dolfin_io.write(filename, points, cells)
     elif file_format == 'permas':

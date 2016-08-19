@@ -1,0 +1,125 @@
+# -*- coding: utf-8 -*-
+#
+'''
+I/O for Medit's format, cf.
+<https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html>.
+
+.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
+'''
+from itertools import islice
+import numpy
+
+
+def read(filename):
+    with open(filename) as f:
+        points, cells = read_buffer(f)
+
+    return points, cells, {}, {}, {}
+
+
+def read_buffer(f):
+    dim = 0
+    cells = {}
+
+    while True:
+        try:
+            line = next(islice(f, 1))
+        except StopIteration:
+            break
+
+        stripped = line.strip()
+
+        # skip comments and empty lines
+        if len(stripped) == 0 or line.strip()[0] == '#':
+            continue
+
+        assert stripped[0].isalpha()
+        keyword = stripped.split(' ')[0]
+
+        meshio_from_medit = {
+            'Edges': ('line', 2),
+            'Triangles': ('triangle', 3),
+            'Quadrilaterals': ('quad', 4),
+            'Tetrahedra': ('tetra', 4),
+            'Hexahedra': ('hexahedra', 8)
+            }
+
+        if keyword == 'MeshVersionFormatted':
+            assert stripped[-1] == '1'
+        elif keyword == 'Dimension':
+            dim = int(stripped[-1])
+        elif keyword == 'Vertices':
+            assert dim > 0
+            # The first line is the number of nodes
+            line = next(islice(f, 1))
+            num_verts = int(line)
+            points = numpy.empty((num_verts, dim), dtype=float)
+            for k, line in enumerate(islice(f, num_verts)):
+                # Throw away the label immediately
+                points[k] = numpy.array(line.split(), dtype=float)[:-1]
+        elif keyword in meshio_from_medit:
+            meshio_name, num = meshio_from_medit[keyword]
+            # The first line is the number of elements
+            line = next(islice(f, 1))
+            num_cells = int(line)
+            cell_data = numpy.empty((num_cells, num), dtype=int)
+            for k, line in enumerate(islice(f, num_cells)):
+                data = numpy.array(line.split(), dtype=int)
+                # Throw away the label
+                cell_data[k] = data[:-1]
+
+            # adapt 0-base
+            cells[meshio_name] = cell_data - 1
+        elif keyword == 'End':
+            pass
+        else:
+            raise RuntimeError('Unknown keyword \'%s\'.' % keyword)
+
+    return points, cells
+
+
+def write(
+        filename,
+        points,
+        cells,
+        point_data=None,
+        cell_data=None,
+        field_data=None
+        ):
+    with open(filename, 'w') as fh:
+        fh.write('MeshVersionFormatted 1\n')
+        fh.write('# Created by meshio\n')
+
+        # Dimension info
+        fh.write('\nDimension %d\n' % points.shape[1])
+
+        # vertices
+        fh.write('\nVertices\n')
+        fh.write('%d\n' % len(points))
+        labels = numpy.ones(len(points), dtype=int)
+        data = numpy.c_[points, labels]
+        fmt = ' '.join(['%e'] * points.shape[1]) + ' %d'
+        numpy.savetxt(fh, data, fmt)
+
+        medit_from_meshio = {
+            'line': ('Edges', 2),
+            'triangle': ('Triangles', 3),
+            'quad': ('Quadrilaterals', 4),
+            'tetra': ('Tetrahedra', 4),
+            'hexahedra': ('Hexahedra', 8)
+            }
+
+        for key, data in cells.items():
+            medit_name, num = medit_from_meshio[key]
+            fh.write('\n')
+            fh.write('%s\n' % medit_name)
+            fh.write('%d\n' % len(data))
+            labels = numpy.ones(len(data), dtype=int)
+            # adapt 1-base
+            data_with_label = numpy.c_[data + 1, labels]
+            fmt = ' '.join(['%d'] * (num + 1))
+            numpy.savetxt(fh, data_with_label, fmt)
+
+        fh.write('\nEnd\n')
+
+    return
