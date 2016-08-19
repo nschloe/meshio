@@ -68,7 +68,8 @@ def read_buffer(f):
                 # Throw away the label
                 cell_data[k] = data[:-1]
 
-            cells[meshio_name] = cell_data
+            # adapt 0-base
+            cells[meshio_name] = cell_data - 1
         elif keyword == 'End':
             pass
         else:
@@ -114,7 +115,8 @@ def write(
             fh.write('%s\n' % medit_name)
             fh.write('%d\n' % len(data))
             labels = numpy.ones(len(data), dtype=int)
-            data_with_label = numpy.c_[data, labels]
+            # adapt 1-base
+            data_with_label = numpy.c_[data + 1, labels]
             fmt = ' '.join(['%d'] * (num + 1))
             numpy.savetxt(fh, data_with_label, fmt)
 
