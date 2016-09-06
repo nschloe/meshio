@@ -4,6 +4,7 @@ from . import dolfin_io
 from . import h5m_io
 from . import medit_io
 from . import msh_io
+from . import off_io
 from . import permas_io
 from . import vtk_io
 
@@ -17,6 +18,7 @@ input_filetypes = [
         'medit',
         'permas',
         'moab',
+        'off',
         'vtk',
         'vtu',
         'xdmf',
@@ -29,6 +31,7 @@ output_filetypes = [
         'medit',
         'permas',
         'moab',
+        'off',
         'vtk-ascii',
         'vtk-binary',
         'vtu',
@@ -47,6 +50,7 @@ _extension_to_filetype = {
     '.dato': 'permas',
     '.dato.gz': 'permas',
     '.h5m': 'moab',
+    '.off': 'off',
     '.vtu': 'vtu',
     '.vtk': 'vtk',
     '.xdmf': 'xdmf',
@@ -85,6 +89,8 @@ def read(filename, file_format=None):
         return permas_io.read(filename)
     elif file_format == 'moab':
         return h5m_io.read(filename)
+    elif file_format == 'off':
+        return off_io.read(filename)
     elif file_format == 'vtu':
         return vtk_io.read('vtu', filename)
     elif file_format == 'vtk':
@@ -154,6 +160,8 @@ def write(filename,
         medit_io.write(filename, points, cells)
     elif file_format == 'dolfin-xml':
         dolfin_io.write(filename, points, cells)
+    elif file_format == 'off':
+        off_io.write(filename, points, cells)
     elif file_format == 'permas':
         permas_io.write(filename, points, cells)
     elif file_format == 'vtu':  # vtk xml format

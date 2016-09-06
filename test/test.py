@@ -170,6 +170,14 @@ def test_io():
         for mesh in test_meshes:
             yield _write_read, filename, mesh
 
+    for extension in ['.off']:
+        filename = 'test' + extension
+        test_meshes = [
+            tri_mesh
+            ]
+        for mesh in test_meshes:
+            yield _write_read, filename, mesh
+
     for extension in ['.vtk', '.vtu']:
         filename = 'test' + extension
         test_meshes = [
