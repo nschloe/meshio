@@ -16,7 +16,7 @@ def read(filename):
     tree = ET.parse(filename)
     root = tree.getroot()
     mesh = root.getchildren()[0]
-    assert(mesh.tag == 'mesh')
+    assert mesh.tag == 'mesh'
 
     dolfin_to_meshio_type = {
         'triangle': ('triangle', 3),
@@ -24,6 +24,10 @@ def read(filename):
         }
 
     cell_type, npc = dolfin_to_meshio_type[mesh.attrib['celltype']]
+
+    is_2d = mesh.attrib['dim'] == '2'
+    if not is_2d:
+        assert mesh.attrib['dim'] == '3'
 
     points = None
     cells = {
@@ -35,11 +39,14 @@ def read(filename):
             num_verts = int(child.attrib['size'])
             points = numpy.empty((num_verts, 3))
             for vert in child.getchildren():
-                assert(vert.tag == 'vertex')
+                assert vert.tag == 'vertex'
                 idx = int(vert.attrib['index'])
                 points[idx, 0] = vert.attrib['x']
                 points[idx, 1] = vert.attrib['y']
-                points[idx, 2] = vert.attrib['z']
+                if is_2d:
+                    points[idx, 2] = 0.0
+                else:
+                    points[idx, 2] = vert.attrib['z']
 
         elif child.tag == 'cells':
             num_cells = int(child.attrib['size'])
