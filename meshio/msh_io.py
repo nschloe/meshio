@@ -56,7 +56,14 @@ def read_buffer(f):
                     3: ('quad', 4),
                     4: ('tetra', 4),
                     5: ('hexahedron', 8),
-                    6: ('wedge', 6)
+                    6: ('wedge', 6),
+                    7: ('pyramid', 5),
+                    8: ('line3', 3),
+                    9: ('triangle6', 6),
+                    10: ('quad9', 9),
+                    11: ('tetra10', 10),
+                    12: ('hexahedron27', 27),
+                    36: ('quad16', 16)
                     }
             for k, line in enumerate(islice(f, num_cells)):
                 # Throw away the index immediately;
