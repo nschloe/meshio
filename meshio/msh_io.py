@@ -96,7 +96,7 @@ def read_buffer(f):
 
                 # There should be a 1-to-1 match between elements,
                 # assuming that the elements are in consecutive order
-                if bool(field_data) or data[0] != 0:
+                if bool(field_data) or data[3] != 0:
                     if t[0] in cell_data:
                         cell_data[t[0]].append(data[3])
                     else:
