@@ -14,14 +14,20 @@ def read(filename):
     '''Reads a Gmsh msh file.
     '''
     with open(filename) as f:
-        points, cells = read_buffer(f)
+        points, cells, point_data, cell_data, field_data = read_buffer(f)
 
-    return points, cells, {}, {}, {}
+    return points, cells, point_data, cell_data, field_data
 
 
 def read_buffer(f):
     # The format is specified at
     # <http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
+
+    # Initialize the data optional data fields
+    field_data  = {}
+    cell_data   = {}
+    point_data  = {}
+
     while True:
         try:
             line = next(islice(f, 1))
@@ -34,6 +40,15 @@ def read_buffer(f):
             # 2.2 0 8
             line = next(islice(f, 1))
             assert(line.strip() == '$EndMeshFormat')
+        elif environ == 'PhysicalNames':
+            line = next(islice(f, 1))
+            num_phys_names = int(line)
+            for k, line in enumerate(islice(f, num_phys_names)):
+                key = line.split(' ')[2].replace('"','').replace('\n','')
+                phys_group = int(line.split(' ')[1])
+                field_data[key] = phys_group
+            line = next(islice(f, 1))
+            assert(line.strip() == '$EndPhysicalNames')
         elif environ == 'Nodes':
             # The first line is the number of nodes
             line = next(islice(f, 1))
@@ -63,6 +78,9 @@ def read_buffer(f):
                     10: ('quad9', 9),
                     11: ('tetra10', 10),
                     12: ('hexahedron27', 27),
+                    13: ('prism18', 18),
+                    14: ('pyramid14', 14),
+                    26: ('line4', 4),
                     36: ('quad16', 16)
                     }
             for k, line in enumerate(islice(f, num_cells)):
@@ -76,22 +94,23 @@ def read_buffer(f):
                 else:
                     cells[t[0]] = [data[-t[1]:] - 1]
 
+                # There should be a 1-to-1 match between elements,
+                # assuming that the elements are in consecutive order
+                if bool(field_data) or data[3] != 0:
+                    if t[0] in cell_data:
+                        cell_data[t[0]].append(data[3])
+                    else:
+                        cell_data[t[0]] = [data[3]]
+
             line = next(islice(f, 1))
             assert(line.strip() == '$EndElements')
-        elif environ == 'PhysicalNames':
-            line = next(islice(f, 1))
-            num_phys_names = int(line)
-            for k, line in enumerate(islice(f, num_phys_names)):
-                pass
-            line = next(islice(f, 1))
-            assert(line.strip() == '$EndPhysicalNames')
         else:
             raise RuntimeError('Unknown environment \'%s\'.' % environ)
 
     for key in cells:
         cells[key] = numpy.vstack(cells[key])
 
-    return points, cells
+    return points, cells, point_data, cell_data, field_data
 
 
 def write(
