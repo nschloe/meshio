@@ -8,6 +8,7 @@ I/O for Gmsh's msh format, cf.
 '''
 from itertools import islice
 import numpy
+import warnings
 
 
 def read(filename):
@@ -24,31 +25,31 @@ def read_buffer(f):
     # <http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
 
     # Initialize the data optional data fields
-    field_data  = {}
-    cell_data   = {}
-    point_data  = {}
+    field_data = {}
+    cell_data = {}
+    point_data = {}
 
     while True:
         try:
             line = next(islice(f, 1))
         except StopIteration:
             break
-        assert(line[0] == '$')
+        assert line[0] == '$'
         environ = line[1:].strip()
         if environ == 'MeshFormat':
             line = next(islice(f, 1))
             # 2.2 0 8
             line = next(islice(f, 1))
-            assert(line.strip() == '$EndMeshFormat')
+            assert line.strip() == '$EndMeshFormat'
         elif environ == 'PhysicalNames':
             line = next(islice(f, 1))
             num_phys_names = int(line)
             for k, line in enumerate(islice(f, num_phys_names)):
-                key = line.split(' ')[2].replace('"','').replace('\n','')
+                key = line.split(' ')[2].replace('"', '').replace('\n', '')
                 phys_group = int(line.split(' ')[1])
                 field_data[key] = phys_group
             line = next(islice(f, 1))
-            assert(line.strip() == '$EndPhysicalNames')
+            assert line.strip() == '$EndPhysicalNames'
         elif environ == 'Nodes':
             # The first line is the number of nodes
             line = next(islice(f, 1))
@@ -58,7 +59,7 @@ def read_buffer(f):
                 # Throw away the index immediately
                 points[k, :] = numpy.array(line.split(), dtype=float)[1:]
             line = next(islice(f, 1))
-            assert(line.strip() == '$EndNodes')
+            assert line.strip() == '$EndNodes'
         elif environ == 'Elements':
             # The first line is the number of elements
             line = next(islice(f, 1))
@@ -83,32 +84,66 @@ def read_buffer(f):
                     26: ('line4', 4),
                     36: ('quad16', 16)
                     }
+            # For each cell, there are at least two tags: the physical entity
+            # and the elementary geometrical entity the cell belongs to (see
+            # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>).
+            has_additional_tag_data = False
             for k, line in enumerate(islice(f, num_cells)):
-                # Throw away the index immediately;
+                # Throw away the index (data[0]) immediately;
                 data = numpy.array(line.split(), dtype=int)
                 t = gmsh_to_meshio_type[data[1]]
+
+                if t[0] not in cells:
+                    cells[t[0]] = []
+
                 # Subtract one to account for the fact that python indices
                 # are 0-based.
-                if t[0] in cells:
-                    cells[t[0]].append(data[-t[1]:] - 1)
-                else:
-                    cells[t[0]] = [data[-t[1]:] - 1]
+                cells[t[0]].append(data[-t[1]:] - 1)
 
-                # There should be a 1-to-1 match between elements,
-                # assuming that the elements are in consecutive order
-                if bool(field_data) or data[3] != 0:
-                    if t[0] in cell_data:
-                        cell_data[t[0]].append(data[3])
-                    else:
-                        cell_data[t[0]] = [data[3]]
+                # data[2] gives the number of tags. The gmsh manual
+                # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
+                # says:
+                # >>>
+                # By default, the first tag is the number of the physical
+                # entity to which the element belongs; the second is the number
+                # of the elementary geometrical entity to which the element
+                # belongs; the third is the number of mesh partitions to which
+                # the element belongs, followed by the partition ids (negative
+                # partition ids indicate ghost cells). A zero tag is equivalent
+                # to no tag. Gmsh and most codes using the MSH 2 format require
+                # at least the first two tags (physical and elementary tags).
+                # <<<
+
+                # Just remember if there's any more tag data so we can warn. No
+                # idea how to store the data in an array yet since it can be
+                # "sparse", i.e., not all cells need to have the same number of
+                # tags.
+                if data[2] > 2:
+                    has_additional_tag_data = True
+
+                assert data[2] == 2
+
+                if t[0] not in cell_data:
+                    cell_data[t[0]] = {
+                        'physical': [],
+                        'geometrical': [],
+                        }
+
+                cell_data[t[0]]['physical'].append(data[3])
+                cell_data[t[0]]['geometrical'].append(data[4])
 
             line = next(islice(f, 1))
-            assert(line.strip() == '$EndElements')
+            assert line.strip() == '$EndElements'
         else:
             raise RuntimeError('Unknown environment \'%s\'.' % environ)
 
     for key in cells:
         cells[key] = numpy.vstack(cells[key])
+
+    if has_additional_tag_data:
+        warnings.warn(
+            'The file contains tag data that couldn\'t be processed.'
+            )
 
     return points, cells, point_data, cell_data, field_data
 
@@ -153,18 +188,45 @@ def write(
                 'wedge': 6,
                 }
         fh.write('$Elements\n')
+        # count all cells
         num_cells = 0
         for key, data in cells.iteritems():
             num_cells += data.shape[0]
         fh.write('%d\n' % num_cells)
-        num_cells = 0
+
+        for key, array in cell_data:
+            assert len(array) == num_cells
+            # TODO assert that the data type is int
+
+        consecutive_index = 0
         for key, data in cells.iteritems():
+            # put all cell data into one big array
+            # 'physical' and 'geometrical' go first; this is what the gmsh file
+            # format prescribes
+            sorted_keywords = []
+            if 'physical' in cell_data:
+                sorted_keywords.append('physical')
+            if 'geometrical' in cell_data:
+                sorted_keywords.append('geometrical')
+
+            fcd = numpy.concatenate([
+                    cell_data[kw] for kw in sorted_keywords
+                    ])
+
             n = data.shape[1]
-            form = '%d ' + '%d' % meshio_to_gmsh_type[key] + ' 0 ' + \
-                ' '.join(n * ['%d']) + '\n'
+            form = '%d ' + '%d' % meshio_to_gmsh_type[key] \
+                + ' %d ' % len(cell_data) + ' %d' * len(cell_data) \
+                + ' ' + ' '.join(n * ['%d']) \
+                + '\n'
             for k, c in enumerate(data):
-                fh.write(form % ((num_cells+k+1,) + tuple(c + 1)))
-            num_cells += data.shape[0]
+                fh.write(
+                    form % (
+                        (consecutive_index + k + 1,) +
+                        tuple(fcd[consecutive_index + k]) +
+                        tuple(c + 1)
+                        )
+                    )
+            consecutive_index += data.shape[0]
         fh.write('$EndElements')
 
     return
