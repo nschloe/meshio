@@ -248,17 +248,17 @@ def write(filetype,
     all_keys = []
     for cell_type in cell_data:
         all_keys += cell_data[cell_type].keys()
-    num_cells = sum([len(cells[cell_type]) for cell_type in cells])
     # create unified cell data
-    unified_cell_data = {}
     for key in all_keys:
-        unified_cell_data[key] = numpy.empty(num_cells, dtype=int)
-        index = 0
         for cell_type in cell_data:
             assert key in cell_data[cell_type]
-            n = len(cell_data[cell_type][key])
-            unified_cell_data[key][index:index+n] = cell_data[cell_type][key]
-            index += n
+    unified_cell_data = {
+        key: numpy.concatenate([
+            cell_data[cell_type][key]
+            for cell_type in cell_data
+            ])
+        for key in all_keys
+        }
     # add the array data to the mesh
     cd = vtk_mesh.GetCellData()
     for name, array in unified_cell_data.iteritems():
