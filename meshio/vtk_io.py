@@ -95,8 +95,19 @@ def read(filetype, filename):
             )
     cells = _read_cells(vtk_mesh)
     point_data = _read_data(vtk_mesh.GetPointData())
-    cell_data = _read_data(vtk_mesh.GetCellData())
     field_data = _read_data(vtk_mesh.GetFieldData())
+
+    cell_data = _read_data(vtk_mesh.GetCellData())
+    # split cell_data by the cell type
+    cd = {}
+    index = 0
+    for cell_type in cells:
+        num_cells = len(cells[cell_type])
+        cd[cell_type] = {}
+        for name, array in cell_data.iteritems():
+            cd[cell_type][name] = array[index:index+num_cells]
+        index += num_cells
+    cell_data = cd
 
     return points, cells, point_data, cell_data, field_data
 
@@ -237,10 +248,7 @@ def write(filetype,
     all_keys = []
     for cell_type in cell_data:
         all_keys += cell_data[cell_type].keys()
-    # count all cells
-    num_cells = 0
-    for cell_type in cells:
-        num_cells += len(cells[cell_type])
+    num_cells = sum([len(cells[cell_type]) for cell_type in cells])
     # create unified cell data
     unified_cell_data = {}
     for key in all_keys:
