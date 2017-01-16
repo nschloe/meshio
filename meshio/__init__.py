@@ -155,7 +155,11 @@ def write(filename,
             field_data=field_data
             )
     elif file_format == 'gmsh':
-        msh_io.write(filename, points, cells)
+        msh_io.write(
+            filename, points, cells,
+            point_data=point_data,
+            cell_data=cell_data
+            )
     elif file_format == 'medit':
         medit_io.write(filename, points, cells)
     elif file_format == 'dolfin-xml':

@@ -194,38 +194,60 @@ def write(
             num_cells += data.shape[0]
         fh.write('%d\n' % num_cells)
 
-        for key, array in cell_data:
-            assert len(array) == num_cells
-            # TODO assert that the data type is int
-
         consecutive_index = 0
-        for key, data in cells.iteritems():
-            # put all cell data into one big array
-            # 'physical' and 'geometrical' go first; this is what the gmsh file
-            # format prescribes
-            sorted_keywords = []
-            if 'physical' in cell_data:
-                sorted_keywords.append('physical')
-            if 'geometrical' in cell_data:
-                sorted_keywords.append('geometrical')
+        for cell_type, node_idcs in cells.iteritems():
+            if cell_type in cell_data and len(cell_data[cell_type]) > 0:
+                for key in cell_data[cell_type]:
+                    # assert data consistency
+                    assert len(cell_data[cell_type][key]) == len(node_idcs)
+                    # TODO assert that the data type is int
 
-            fcd = numpy.concatenate([
-                    cell_data[kw] for kw in sorted_keywords
-                    ])
+                # if a tag is present, make sure that there are 'physical' and
+                # 'geometrical' as well.
+                if 'physical' not in cell_data[cell_type]:
+                    cell_data[cell_type]['physical'] = \
+                        numpy.ones(len(node_idcs))
+                if 'geometrical' not in cell_data[cell_type]:
+                    cell_data[cell_type]['geometrical'] = \
+                        numpy.ones(len(node_idcs))
 
-            n = data.shape[1]
-            form = '%d ' + '%d' % meshio_to_gmsh_type[key] \
-                + ' %d ' % len(cell_data) + ' %d' * len(cell_data) \
-                + ' ' + ' '.join(n * ['%d']) \
-                + '\n'
-            for k, c in enumerate(data):
-                fh.write(
-                    form % (
-                        (consecutive_index + k + 1,) +
-                        tuple(fcd[consecutive_index + k]) +
-                        tuple(c + 1)
+                # 'physical' and 'geometrical' go first; this is what the gmsh
+                # file format prescribes
+                keywords = cell_data[cell_type].keys()
+                keywords.remove('physical')
+                keywords.remove('geometrical')
+                sorted_keywords = ['physical', 'geometrical'] + keywords
+                fcd = numpy.column_stack([
+                        cell_data[cell_type][key] for key in sorted_keywords
+                        ])
+
+                num_nodes_per_cell = node_idcs.shape[1]
+                form = '%d ' + '%d' % meshio_to_gmsh_type[cell_type] \
+                    + ' %d' % len(cell_data) + ' %d' * len(cell_data) \
+                    + ' ' + ' '.join(num_nodes_per_cell * ['%d']) \
+                    + '\n'
+                for k, c in enumerate(node_idcs):
+                    fh.write(
+                        form % (
+                            (consecutive_index + k + 1,) +
+                            tuple(fcd[k]) +
+                            tuple(c + 1)
+                            )
                         )
-                    )
+            else:  # no cell data
+                num_nodes_per_cell = node_idcs.shape[1]
+
+                form = '%d ' + '%d' % meshio_to_gmsh_type[cell_type] \
+                    + ' 0 ' \
+                    + ' ' + ' '.join(num_nodes_per_cell * ['%d']) \
+                    + '\n'
+                for k, c in enumerate(node_idcs):
+                    fh.write(
+                        form % (
+                            (consecutive_index + k + 1,) +
+                            tuple(c + 1)
+                            )
+                        )
             consecutive_index += data.shape[0]
         fh.write('$EndElements')
 
