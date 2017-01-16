@@ -1,4 +1,4 @@
-# MeshIO
+# meshio
 
 [![Build Status](https://travis-ci.org/nschloe/meshio.svg?branch=master)](https://travis-ci.org/nschloe/meshio)
 [![Code Health](https://landscape.io/github/nschloe/meshio/master/landscape.png)](https://landscape.io/github/nschloe/meshio/master)
@@ -22,7 +22,7 @@ e.g.,
  * [VTU](http://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF](http://www.xdmf.org/)
 
-MeshIO can read and write all of these formats and smoothly converts between
+meshio can read and write all of these formats and smoothly converts between
 them. Simply call
 ```
 meshio-convert input.msh output.vtu
@@ -52,7 +52,7 @@ For both input and output, you can optionally specify the exact `file_format`
 
 #### Python Package Index
 
-MeshIO is [available from the Python Package
+meshio is [available from the Python Package
 Index](https://pypi.python.org/pypi/meshio/), so simply type
 ```
 pip install meshio
@@ -65,7 +65,7 @@ to upgrade.
 
 #### Manual installation
 
-Download MeshIO from [PyPi](https://pypi.python.org/pypi/meshio/)
+Download meshio from [PyPi](https://pypi.python.org/pypi/meshio/)
 or [GitHub](https://github.com/nschloe/meshio) and
 install it with
 ```
@@ -74,7 +74,7 @@ python setup.py install
 
 ### Requirements
 
-MeshIO depends on
+meshio depends on
 
  * [h5py](http://www.h5py.org/),
  * [NumPy](http://www.numpy.org/), and
@@ -91,7 +91,7 @@ and make use of all the goodies the module provides.
 
 ### Testing
 
-To run the MeshIO unit tests, check out this repository and type
+To run the meshio unit tests, check out this repository and type
 ```
 pytest
 ```
@@ -110,4 +110,4 @@ To create a new release
 
 ### License
 
-MeshIO is published under the [MIT license](https://en.wikipedia.org/wiki/MIT_License).
+meshio is published under the [MIT license](https://en.wikipedia.org/wiki/MIT_License).
