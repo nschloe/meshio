@@ -93,11 +93,7 @@ and make use of all the goodies the module provides.
 
 To run the MeshIO unit tests, check out this repository and type
 ```
-nosetests
-```
-or
-```
-nose2 -s test
+pytest
 ```
 
 ### Distribution
