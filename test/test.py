@@ -256,16 +256,18 @@ def _write_read(filename, mesh):
     # have changes. Just compare the sums
     assert numpy.allclose(mesh['points'], points)
 
-    for key, data in mesh['cells'].items():
-        assert numpy.allclose(data, cells[key])
+    for cell_type, data in mesh['cells'].items():
+        assert numpy.allclose(data, cells[cell_type])
     for key, data in input_point_data.items():
         assert numpy.allclose(data, point_data[key])
-    for key, data in input_cell_data.items():
-        assert numpy.allclose(data, cell_data[key])
+    for cell_type, cell_type_data in input_cell_data.items():
+        for key, data in cell_type_data.iteritems():
+            assert numpy.allclose(data, cell_data[cell_type][key])
 
     os.remove(filename)
 
     return
+
 
 if __name__ == '__main__':
     test_io()
