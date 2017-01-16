@@ -103,16 +103,19 @@ def _add_point_data(mesh, dim):
 def _add_cell_data(mesh, dim):
     mesh2 = _clone(mesh)
     numpy.random.seed(0)
-    num_cells = 0
-    for _, cells in mesh2['cells'].iteritems():
-        num_cells += len(cells)
+    cell_data = {}
+    for cell_type in mesh['cells']:
+        num_cells = len(mesh['cells'][cell_type])
+        if dim == 1:
+            cell_data[cell_type] = {
+                'b': numpy.random.rand(num_cells)
+                }
+        else:
+            cell_data[cell_type] = {
+                'b': numpy.random.rand(num_cells, dim)
+                }
 
-    if dim == 1:
-        data = numpy.random.rand(num_cells)
-    else:
-        data = numpy.random.rand(num_cells, dim)
-
-    mesh2['cell_data'] = {'b': data}
+    mesh2['cell_data'] = cell_data
     return mesh2
 
 
