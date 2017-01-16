@@ -52,6 +52,7 @@ def read_buffer(f):
             assert line.strip() == '$EndPhysicalNames'
         elif environ == 'Nodes':
             # The first line is the number of nodes
+            # TODO speed up with <http://stackoverflow.com/a/41642053/353337>
             line = next(islice(f, 1))
             num_nodes = int(line)
             points = numpy.empty((num_nodes, 3))
