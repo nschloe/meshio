@@ -20,6 +20,15 @@ def _main():
     for type, elems in cells.iteritems():
         print('  Number of %ss: %s' % (type, len(elems)))
 
+    if point_data:
+        print('Point data: %s' % ', '.join(point_data.keys()))
+
+    cell_data_keys = set()
+    for cell_type in cell_data:
+        cell_data_keys = cell_data_keys.union(cell_data[cell_type].keys())
+    if cell_data_keys:
+        print('Cell data: %s' % ', '.join(cell_data_keys))
+
     if args.prune:
         cells.pop('vertex', None)
         cells.pop('line', None)
