@@ -95,8 +95,19 @@ def read(filetype, filename):
             )
     cells = _read_cells(vtk_mesh)
     point_data = _read_data(vtk_mesh.GetPointData())
-    cell_data = _read_data(vtk_mesh.GetCellData())
     field_data = _read_data(vtk_mesh.GetFieldData())
+
+    cell_data = _read_data(vtk_mesh.GetCellData())
+    # split cell_data by the cell type
+    cd = {}
+    index = 0
+    for cell_type in cells:
+        num_cells = len(cells[cell_type])
+        cd[cell_type] = {}
+        for name, array in cell_data.iteritems():
+            cd[cell_type][name] = array[index:index+num_cells]
+        index += num_cells
+    cell_data = cd
 
     return points, cells, point_data, cell_data, field_data
 
@@ -218,10 +229,40 @@ def write(filetype,
         # For VT{K,U} files, no underscore is ever added.
         pd.AddArray(_create_vtkarray(X, name))
 
-    # add cell data
+    # Add cell data.
+    # The cell_data is structured like
+    #
+    #  cell_type ->
+    #      key -> array
+    #      key -> array
+    #      [...]
+    #  cell_type ->
+    #      key -> array
+    #      key -> array
+    #      [...]
+    #  [...]
+    #
+    # VTK expects one array for each `key`, so assemble the keys across all
+    # mesh_types. This requires each key to be present for each mesh_type, of
+    # course.
+    all_keys = []
+    for cell_type in cell_data:
+        all_keys += cell_data[cell_type].keys()
+    # create unified cell data
+    for key in all_keys:
+        for cell_type in cell_data:
+            assert key in cell_data[cell_type]
+    unified_cell_data = {
+        key: numpy.concatenate([
+            cell_data[cell_type][key]
+            for cell_type in cell_data
+            ])
+        for key in all_keys
+        }
+    # add the array data to the mesh
     cd = vtk_mesh.GetCellData()
-    for key, value in cell_data.iteritems():
-        cd.AddArray(_create_vtkarray(value, key))
+    for name, array in unified_cell_data.iteritems():
+        cd.AddArray(_create_vtkarray(array, name))
 
     # add field data
     fd = vtk_mesh.GetFieldData()

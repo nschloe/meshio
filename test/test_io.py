@@ -103,16 +103,19 @@ def _add_point_data(mesh, dim):
 def _add_cell_data(mesh, dim):
     mesh2 = _clone(mesh)
     numpy.random.seed(0)
-    num_cells = 0
-    for _, cells in mesh2['cells'].iteritems():
-        num_cells += len(cells)
+    cell_data = {}
+    for cell_type in mesh['cells']:
+        num_cells = len(mesh['cells'][cell_type])
+        if dim == 1:
+            cell_data[cell_type] = {
+                'b': numpy.random.rand(num_cells)
+                }
+        else:
+            cell_data[cell_type] = {
+                'b': numpy.random.rand(num_cells, dim)
+                }
 
-    if dim == 1:
-        data = numpy.random.rand(num_cells)
-    else:
-        data = numpy.random.rand(num_cells, dim)
-
-    mesh2['cell_data'] = {'b': data}
+    mesh2['cell_data'] = cell_data
     return mesh2
 
 
@@ -253,16 +256,18 @@ def _write_read(filename, mesh):
     # have changes. Just compare the sums
     assert numpy.allclose(mesh['points'], points)
 
-    for key, data in mesh['cells'].items():
-        assert numpy.allclose(data, cells[key])
+    for cell_type, data in mesh['cells'].items():
+        assert numpy.allclose(data, cells[cell_type])
     for key, data in input_point_data.items():
         assert numpy.allclose(data, point_data[key])
-    for key, data in input_cell_data.items():
-        assert numpy.allclose(data, cell_data[key])
+    for cell_type, cell_type_data in input_cell_data.items():
+        for key, data in cell_type_data.iteritems():
+            assert numpy.allclose(data, cell_data[cell_type][key])
 
     os.remove(filename)
 
     return
+
 
 if __name__ == '__main__':
     test_io()
