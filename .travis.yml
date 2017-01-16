@@ -28,7 +28,7 @@ install:
 # run tests
 script:
   - cd test
-  - pytest --cov meshio
+  - py.test --cov meshio
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
