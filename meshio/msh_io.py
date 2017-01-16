@@ -118,19 +118,20 @@ def read_buffer(f):
                 # idea how to store the data in an array yet since it can be
                 # "sparse", i.e., not all cells need to have the same number of
                 # tags.
-                if data[2] > 2:
-                    has_additional_tag_data = True
+                if data[2] >= 2:
+                    if data[2] > 2:
+                        has_additional_tag_data = True
 
-                assert data[2] == 2
-
-                if t[0] not in cell_data:
-                    cell_data[t[0]] = {
-                        'physical': [],
-                        'geometrical': [],
-                        }
-
-                cell_data[t[0]]['physical'].append(data[3])
-                cell_data[t[0]]['geometrical'].append(data[4])
+                    if t[0] not in cell_data:
+                        cell_data[t[0]] = {
+                            'physical': [],
+                            'geometrical': [],
+                            }
+                    cell_data[t[0]]['physical'].append(data[3])
+                    cell_data[t[0]]['geometrical'].append(data[4])
+                else:
+                    # TODO handle data[2] == 1
+                    assert data[2] == 0
 
             line = next(islice(f, 1))
             assert line.strip() == '$EndElements'
