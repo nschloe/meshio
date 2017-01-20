@@ -9,7 +9,7 @@ I/O for PERMAS dat format, cf.
 import gzip
 import numpy
 import re
-from .meta import __version__, __website__, __author__
+from .__about__ import __version__, __website__, __author__
 
 
 def read(filename):
