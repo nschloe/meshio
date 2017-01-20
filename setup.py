@@ -37,7 +37,6 @@ setup(
     install_requires=[
         'h5py',
         'numpy',
-        'vtk'
         ],
     scripts=[
       'tools/meshio-convert',
