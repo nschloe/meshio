@@ -36,6 +36,7 @@ setup(
     platforms='any',
     install_requires=[
         'h5py',
+        'lxml',
         'numpy',
         ],
     scripts=[
