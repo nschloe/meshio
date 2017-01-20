@@ -29,7 +29,7 @@ setup(
     download_url='https://pypi.python.org/pypi/meshio',
     license='License :: OSI Approved :: MIT License',
     platforms='any',
-    requires=[
+    install_requires=[
         'h5py',
         'numpy',
         'vtk'
