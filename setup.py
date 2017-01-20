@@ -43,7 +43,7 @@ setup(
       'tools/meshio-convert',
       ],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: MIT License',
         'Intended Audience :: Science/Research',
         'Operating System :: OS Independent',
