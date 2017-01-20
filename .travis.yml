@@ -23,7 +23,7 @@ install:
   - sudo -H pip install .
 
 script:
-  - cd test/ && pytest --cov meshio
+  - cd test/ && py.test --cov meshio
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
