@@ -4,6 +4,7 @@ import meshio
 
 import numpy
 import os
+import pytest
 
 tri_mesh = {
         'points': numpy.array([
@@ -119,115 +120,62 @@ def _add_cell_data(mesh, dim):
     return mesh2
 
 
-def test_io():
-
-    for extension in ['.dato']:
-        filename = 'test' + extension
-        test_meshes = [
-            tri_mesh,
-            quad_mesh,
-            tri_quad_mesh,
-            tet_mesh,
-            ]
-        for mesh in test_meshes:
-            yield _write_read, filename, mesh
-
-    # for extension in ['.e']:
-    #     filename = 'test' + extension
-    #     test_meshes = [
-    #         tri_mesh,
-    #         _add_point_data(tri_mesh, 2),
-    #         _add_point_data(tri_mesh, 3),
-    #         ]
-    #     for mesh in test_meshes:
-    #         yield _write_read, filename, mesh
-
-    for extension in ['.h5m']:
-        filename = 'test' + extension
-        test_meshes = [
-            tri_mesh,
-            tet_mesh,
-            ]
-        for mesh in test_meshes:
-            yield _write_read, filename, mesh
-
-    for extension in ['.msh']:
-        filename = 'test' + extension
-        test_meshes = [
-            tri_mesh,
-            quad_mesh,
-            tri_quad_mesh,
-            tet_mesh,
-            ]
-        for mesh in test_meshes:
-            yield _write_read, filename, mesh
-
-    for extension in ['.mesh']:
-        filename = 'test' + extension
-        test_meshes = [
-            tri_mesh,
-            quad_mesh,
-            tri_quad_mesh,
-            tet_mesh,
-            ]
-        for mesh in test_meshes:
-            yield _write_read, filename, mesh
-
-    for extension in ['.off']:
-        filename = 'test' + extension
-        test_meshes = [
-            tri_mesh
-            ]
-        for mesh in test_meshes:
-            yield _write_read, filename, mesh
-
-    # This test needed to be disabled since travis-ci only offers trusty with
+@pytest.mark.parametrize('extension, meshes', [
+    ('dato', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
+    # ('e', [
+    #     tri_mesh,
+    #     _add_point_data(tri_mesh, 2),
+    #     _add_point_data(tri_mesh, 3)
+    #     ]),
+    ('h5m', [tri_mesh, tet_mesh]),
+    ('msh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
+    ('mesh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
+    ('off', [tri_mesh]),
+    # These tests needed to be disabled since travis-ci only offers trusty with
     # the buggy VTK 6.0.
     # TODO enable once we can use a more recent version of VTK
-    # for extension in ['.vtk', '.vtu']:
-    #     filename = 'test' + extension
-    #     test_meshes = [
-    #         tri_mesh,
-    #         quad_mesh,
-    #         tri_quad_mesh,
-    #         tet_mesh,
-    #         _add_point_data(tri_mesh, 1),
-    #         _add_point_data(tri_mesh, 2),
-    #         _add_point_data(tri_mesh, 3),
-    #         _add_cell_data(tri_mesh, 1),
-    #         _add_cell_data(tri_mesh, 2),
-    #         _add_cell_data(tri_mesh, 3),
-    #         ]
-    #     for mesh in test_meshes:
-    #         yield _write_read, filename, mesh
-
+    # ('vtk', [
+    #      tri_mesh,
+    #      quad_mesh,
+    #      tri_quad_mesh,
+    #      tet_mesh,
+    #      _add_point_data(tri_mesh, 1),
+    #      _add_point_data(tri_mesh, 2),
+    #      _add_point_data(tri_mesh, 3),
+    #      _add_cell_data(tri_mesh, 1),
+    #      _add_cell_data(tri_mesh, 2),
+    #      _add_cell_data(tri_mesh, 3),
+    #      ]),
+    # ('vtu', [
+    #      tri_mesh,
+    #      quad_mesh,
+    #      tri_quad_mesh,
+    #      tet_mesh,
+    #      _add_point_data(tri_mesh, 1),
+    #      _add_point_data(tri_mesh, 2),
+    #      _add_point_data(tri_mesh, 3),
+    #      _add_cell_data(tri_mesh, 1),
+    #      _add_cell_data(tri_mesh, 2),
+    #      _add_cell_data(tri_mesh, 3),
+    #      ]),
+    #
     # 2016-04-27: Temporarily disabled due to vtkXdmfWriter not being available
     #             through VTK
-    if False:
-        for extension in ['.xmf']:
-            filename = 'test' + extension
-            test_meshes = [
-                tri_mesh,
-                quad_mesh,
-                tet_mesh,
-                # The two following tests pass, but errors are emitted on the
-                # console.
-                # _add_point_data(tri_mesh, 1),
-                # _add_cell_data(tri_mesh, 1)
-                ]
-            for mesh in test_meshes:
-                yield _write_read, filename, mesh
-
-    for extension in ['.xml']:
-        filename = 'test' + extension
-        test_meshes = [
-            tri_mesh,
-            tet_mesh,
-            ]
-        for mesh in test_meshes:
-            yield _write_read, filename, mesh
-
-    return
+    # ('xdmf', [
+    #     tri_mesh,
+    #     quad_mesh,
+    #     tet_mesh
+    #     # The two following tests pass, but errors are emitted on the
+    #     # console.
+    #     # _add_point_data(tri_mesh, 1),
+    #     # _add_cell_data(tri_mesh, 1)
+    #     ]),
+    ('xml', [tri_mesh, tet_mesh]),
+    ])
+def test_io(extension, meshes):
+    filename = 'test.' + extension
+    for mesh in meshes:
+        _write_read(filename, mesh)
 
 
 def _write_read(filename, mesh):
@@ -270,7 +218,3 @@ def _write_read(filename, mesh):
     os.remove(filename)
 
     return
-
-
-if __name__ == '__main__':
-    test_io()
