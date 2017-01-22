@@ -38,6 +38,7 @@ setup(
         'h5py',
         'lxml',
         'numpy',
+        'pipdated',
         ],
     scripts=[
       'tools/meshio-convert',

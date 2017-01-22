@@ -15,6 +15,12 @@ from .__about__ import (
     __website__
     )
 
+import pipdated
+if pipdated.needs_checking(__name__):
+    msg = pipdated.check(__name__, __version__)
+    if msg:
+        print(msg)
+
 
 input_filetypes = [
         'exodus',
