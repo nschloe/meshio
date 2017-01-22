@@ -11,6 +11,7 @@
 *.vtu
 *.xmf
 *.xml
+.cache/
 MANIFEST
 README.rst
 build/

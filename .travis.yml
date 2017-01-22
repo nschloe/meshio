@@ -1,5 +1,3 @@
-#sudo: false
-sudo: true
 dist: trusty
 
 language: python
@@ -10,25 +8,21 @@ python:
 virtualenv:
   system_site_packages: true
 
-# install dependencies
+addons:
+  apt:
+    packages:
+      - python-numpy
+      - python-vtk6
+      - python-h5py
+
 before_install:
-  - sudo apt-add-repository -y ppa:nschloe/vtk-nightly
-  - sudo apt-get update -qq
-  - sudo apt-get -y install python-h5py python-lxml python-numpy python-vtk6
-  - sudo apt-get -y install python-pytest python3-pytest
-  - sudo -H pip install -U pytest-cov
+  - pip install -U pytest pytest-cov
 
 install:
-  - export PATH="/home/travis/bin:/home/travis/.local/bin:/home/travis/.gimme/versions/go1.5.1.linux.amd64/bin:/home/travis/.local/bin:/usr/local/rvm/gems/ruby-2.2.3/bin:/usr/local/rvm/gems/ruby-2.2.3@global/bin:/usr/local/rvm/rubies/ruby-2.2.3/bin:/home/travis/.phpenv/shims:/usr/local/phantomjs/bin:/usr/local/phantomjs:/home/travis/perl5/perlbrew/bin:/home/travis/.nvm/versions/node/v4.1.2/bin:./node_modules/.bin:/usr/local/maven-3.1.1/bin:/usr/local/gradle/bin:/usr/local/clang-3.5.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/travis/.phpenv/bin:/usr/local/rvm/bin"
-  - sudo pip install -r requirements.txt
-  # Alternative: setup.py install.
-  # Using pip makes sure that the package is pip-compatible, too.
-  - sudo pip install .
+  - pip install .
 
-# run tests
 script:
-  - cd test
-  - py.test --cov meshio
+  - cd test/ && pytest --cov meshio
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

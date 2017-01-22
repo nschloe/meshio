@@ -9,7 +9,7 @@ from datetime import datetime
 import numpy
 import warnings
 
-from . import meta
+from . import __about__
 
 
 # def _int_to_bool_list(num):
@@ -210,7 +210,7 @@ def write(
         'history',
         data=[
          __name__,
-         meta.__version__,
+         __about__.__version__,
          str(datetime.now())
         ]
         )
