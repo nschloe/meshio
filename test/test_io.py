@@ -6,13 +6,16 @@ import numpy
 import os
 import pytest
 
+# In general:
+# Use values with an infinite decimal representation to test precision.
+
 tri_mesh = {
         'points': numpy.array([
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
             [1.0, 1.0, 0.0],
             [0.0, 1.0, 0.0]
-            ]),
+            ]) / 3.0,
         'cells': {
             'triangle': numpy.array([
                 [0, 1, 2],
@@ -29,7 +32,7 @@ quad_mesh = {
             [2.0, 1.0, 0.0],
             [1.0, 1.0, 0.0],
             [0.0, 1.0, 0.0]
-            ]),
+            ]) / 3.0,
         'cells': {
             'quad': numpy.array([
                 [0, 1, 4, 5],
@@ -46,7 +49,7 @@ tri_quad_mesh = {
             [2.0, 1.0, 0.0],
             [1.0, 1.0, 0.0],
             [0.0, 1.0, 0.0]
-            ]),
+            ]) / 3.0,
         'cells':  {
             'triangle': numpy.array([
                 [0, 1, 4],
@@ -65,7 +68,7 @@ tet_mesh = {
             [1.0, 1.0, 0.0],
             [0.0, 1.0, 0.0],
             [0.5, 0.5, 0.5],
-            ]),
+            ]) / 3.0,
         'cells': {
             'tetra': numpy.array([
                 [0, 1, 2, 4],
@@ -205,15 +208,18 @@ def _write_read(filename, mesh):
 
     # We cannot compare the exact rows here since the order of the points might
     # have changes. Just compare the sums
-    assert numpy.allclose(mesh['points'], points)
+    assert numpy.allclose(mesh['points'], points, atol=1.0e-15, rtol=0.0)
 
     for cell_type, data in mesh['cells'].items():
         assert numpy.allclose(data, cells[cell_type])
     for key, data in input_point_data.items():
-        assert numpy.allclose(data, point_data[key])
+        assert numpy.allclose(data, point_data[key], atol=1.0e-15, rtol=0.0)
     for cell_type, cell_type_data in input_cell_data.items():
         for key, data in cell_type_data.iteritems():
-            assert numpy.allclose(data, cell_data[cell_type][key])
+            assert numpy.allclose(
+                    data, cell_data[cell_type][key],
+                    atol=1.0e-15, rtol=0.0
+                    )
 
     os.remove(filename)
 
