@@ -174,7 +174,7 @@ def write(
         fh.write('$MeshFormat\n2 0 8\n$EndMeshFormat\n')
 
         num_digits = dtype_digits(points.dtype)
-        format_string = '%%d %%.%df %%.%df %%.%df\n' \
+        format_string = '%%d %%.%de %%.%de %%.%de\n' \
             % (num_digits, num_digits, num_digits)
 
         # Write nodes

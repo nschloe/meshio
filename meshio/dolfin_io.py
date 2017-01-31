@@ -9,6 +9,8 @@ I/O for DOLFIN's XML format, cf.
 import numpy
 import warnings
 
+from meshio.helpers import dtype_digits
+
 
 def read(filename):
     from lxml import etree as ET
@@ -127,12 +129,17 @@ def write(
             dim=dim
             )
     vertices = ET.SubElement(mesh, 'vertices', size=str(len(points)))
+
+    num_digits = dtype_digits(points.dtype)
+    float_fmt = '%%.%de' % num_digits
     for k, point in enumerate(points):
         ET.SubElement(
             vertices,
             'vertex',
             index=str(k),
-            x=str(point[0]), y=str(point[1]), z=str(point[2])
+            x=float_fmt % point[0],
+            y=float_fmt % point[1],
+            z=float_fmt % point[2]
             )
 
     num_cells = 0

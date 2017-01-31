@@ -131,10 +131,9 @@ def _add_cell_data(mesh, dim):
     #     _add_point_data(tri_mesh, 3)
     #     ]),
     ('h5m', [tri_mesh, tet_mesh]),
-    # # ('msh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
-    ('msh', [tri_mesh]),
-    # ('mesh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
-    # ('off', [tri_mesh]),
+    ('msh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
+    ('mesh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
+    ('off', [tri_mesh]),
     # These tests needed to be disabled since travis-ci only offers trusty with
     # the buggy VTK 6.0.
     # TODO enable once we can use a more recent version of VTK
@@ -174,7 +173,7 @@ def _add_cell_data(mesh, dim):
     #     # _add_point_data(tri_mesh, 1),
     #     # _add_cell_data(tri_mesh, 1)
     #     ]),
-    # ('xml', [tri_mesh, tet_mesh]),
+    ('xml', [tri_mesh, tet_mesh]),
     ])
 def test_io(extension, meshes):
     filename = 'test.' + extension
@@ -214,10 +213,13 @@ def _write_read(filename, mesh):
     for cell_type, data in mesh['cells'].items():
         assert numpy.allclose(data, cells[cell_type])
     for key, data in input_point_data.items():
-        assert numpy.allclose(data, point_data[key])
+        assert numpy.allclose(data, point_data[key], atol=1.0e-15, rtol=0.0)
     for cell_type, cell_type_data in input_cell_data.items():
         for key, data in cell_type_data.iteritems():
-            assert numpy.allclose(data, cell_data[cell_type][key])
+            assert numpy.allclose(
+                    data, cell_data[cell_type][key],
+                    atol=1.0e-15, rtol=0.0
+                    )
 
     os.remove(filename)
 
