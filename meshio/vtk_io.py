@@ -104,7 +104,7 @@ def read(filetype, filename):
     for cell_type in cells:
         num_cells = len(cells[cell_type])
         cd[cell_type] = {}
-        for name, array in cell_data.iteritems():
+        for name, array in cell_data.items():
             cd[cell_type][name] = array[index:index+num_cells]
         index += num_cells
     cell_data = cd
@@ -220,7 +220,7 @@ def write(filetype,
 
     # add point data
     pd = vtk_mesh.GetPointData()
-    for name, X in point_data.iteritems():
+    for name, X in point_data.items():
         # There is a naming inconsistency in VTK when it comes to multivectors
         # in Exodus files:
         # If a vector 'v' has two components, they are called 'v_x', 'v_y'
@@ -261,12 +261,12 @@ def write(filetype,
         }
     # add the array data to the mesh
     cd = vtk_mesh.GetCellData()
-    for name, array in unified_cell_data.iteritems():
+    for name, array in unified_cell_data.items():
         cd.AddArray(_create_vtkarray(array, name))
 
     # add field data
     fd = vtk_mesh.GetFieldData()
-    for key, value in field_data.iteritems():
+    for key, value in field_data.items():
         fd.AddArray(_create_vtkarray(value, key))
 
     if filetype in 'vtk-ascii':
@@ -328,7 +328,7 @@ def _generate_vtk_mesh(points, cells):
     cell_offsets = []
     cell_connectivity = []
     len_array = 0
-    for meshio_type, data in cells.iteritems():
+    for meshio_type, data in cells.items():
         numcells, num_local_nodes = data.shape
         vtk_type = meshio_to_vtk_type[meshio_type]
         # add cell types

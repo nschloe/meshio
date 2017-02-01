@@ -47,7 +47,7 @@ def read(filename):
         }
     cells = {}
     cell_data = {}
-    for h5m_type, data in dset['elements'].iteritems():
+    for h5m_type, data in dset['elements'].items():
         meshio_type = h5m_to_meshio_type[h5m_type]
         conn = data['connectivity']
         # Note that the indices are off by 1 in h5m.
@@ -221,7 +221,7 @@ def write(
             'triangle': {'name': 'Tri3', 'type': 2},
             'tetra': {'name': 'Tet4', 'type': 5}
             }
-    for key, data in cells.iteritems():
+    for key, data in cells.items():
         if key not in meshio_to_h5m_type:
             warnings.warn(
                     'Unsupported H5M element type \'%s\'. Skipping.' % key

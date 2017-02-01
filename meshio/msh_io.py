@@ -198,12 +198,12 @@ def write(
         fh.write('$Elements\n')
         # count all cells
         num_cells = 0
-        for key, data in cells.iteritems():
+        for key, data in cells.items():
             num_cells += data.shape[0]
         fh.write('%d\n' % num_cells)
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells.iteritems():
+        for cell_type, node_idcs in cells.items():
             if cell_type in cell_data and len(cell_data[cell_type]) > 0:
                 for key in cell_data[cell_type]:
                     # assert data consistency

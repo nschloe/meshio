@@ -148,7 +148,7 @@ def write(
 
     xcells = ET.SubElement(mesh, 'cells', size=str(num_cells))
     idx = 0
-    for cell_type, cls in stripped_cells.iteritems():
+    for cell_type, cls in stripped_cells.items():
         for cell in cls:
             cell_entry = ET.SubElement(
                 xcells,

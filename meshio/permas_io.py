@@ -43,7 +43,7 @@ def read(filename):
         line = f.readline()
         if not line or re.search('\$END STRUCTURE', line):
             break
-        for meshio_type, permas_ele in meshio_to_permas_type.iteritems():
+        for meshio_type, permas_ele in meshio_to_permas_type.items():
             num_nodes = permas_ele[0]
             permas_type = permas_ele[1]
 
@@ -132,7 +132,7 @@ def write(
         #
         num_ele = 0
 
-        for meshio_type, cell in cells.iteritems():
+        for meshio_type, cell in cells.items():
             numcells, num_local_nodes = cell.shape
             permas_type = meshio_to_permas_type[meshio_type]
             fh.write('!\n')
@@ -155,7 +155,7 @@ def write(
         fh.write('    $SYSTEM NAME = NSV\n')
         fh.write('!\n')
         fh.write('        $ELPROP\n')
-        for meshio_type, cell in cells.iteritems():
+        for meshio_type, cell in cells.items():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_3D:
                 fh.write(
@@ -168,7 +168,7 @@ def write(
                 pass
         fh.write('!\n')
         fh.write('        $GEODAT SHELL  CONT = THICK  NODES = ALL\n')
-        for meshio_type, cell in cells.iteritems():
+        for meshio_type, cell in cells.items():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_2D:
                 fh.write('            GD_%s 1.0\n' % permas_type[1])
