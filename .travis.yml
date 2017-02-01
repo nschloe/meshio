@@ -4,6 +4,7 @@ language: python
 
 python:
     - '2.7'
+    - '3.4'
 
 virtualenv:
   system_site_packages: true
@@ -11,9 +12,11 @@ virtualenv:
 addons:
   apt:
     packages:
-      - python-numpy
-      - python-vtk6
       - python-h5py
+      - python3-h5py
+      - python-numpy
+      - python3-numpy
+      - python-vtk6
 
 before_install:
   - pip install -U pytest pytest-cov

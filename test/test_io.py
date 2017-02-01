@@ -83,7 +83,7 @@ def _clone(mesh):
         'points': numpy.copy(mesh['points'])
         }
     mesh2['cells'] = {}
-    for key, data in mesh['cells'].iteritems():
+    for key, data in mesh['cells'].items():
         mesh2['cells'][key] = numpy.copy(data)
     return mesh2
 
@@ -215,7 +215,7 @@ def _write_read(filename, mesh):
     for key, data in input_point_data.items():
         assert numpy.allclose(data, point_data[key], atol=1.0e-15, rtol=0.0)
     for cell_type, cell_type_data in input_cell_data.items():
-        for key, data in cell_type_data.iteritems():
+        for key, data in cell_type_data.items():
             assert numpy.allclose(
                     data, cell_data[cell_type][key],
                     atol=1.0e-15, rtol=0.0

@@ -17,7 +17,7 @@ def _main():
 
     print('Number of points: %d' % len(points))
     print('Elements:')
-    for type, elems in cells.iteritems():
+    for type, elems in cells.items():
         print('  Number of %ss: %s' % (type, len(elems)))
 
     if point_data:

@@ -31,6 +31,7 @@ def read_buffer(f):
     cell_data = {}
     point_data = {}
 
+    has_additional_tag_data = False
     while True:
         try:
             line = next(islice(f, 1))
@@ -90,7 +91,6 @@ def read_buffer(f):
             # For each cell, there are at least two tags: the physical entity
             # and the elementary geometrical entity the cell belongs to (see
             # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>).
-            has_additional_tag_data = False
             for k, line in enumerate(islice(f, num_cells)):
                 # Throw away the index (data[0]) immediately;
                 data = numpy.array(line.split(), dtype=int)
@@ -99,8 +99,8 @@ def read_buffer(f):
                 if t[0] not in cells:
                     cells[t[0]] = []
 
-                # Subtract one to account for the fact that python indices
-                # are 0-based.
+                # Subtract one to account for the fact that python indices are
+                # 0-based.
                 cells[t[0]].append(data[-t[1]:] - 1)
 
                 # data[2] gives the number of tags. The gmsh manual
@@ -138,11 +138,11 @@ def read_buffer(f):
 
             line = next(islice(f, 1))
             assert line.strip() == '$EndElements'
+
+            for key in cells:
+                cells[key] = numpy.vstack(cells[key])
         else:
             raise RuntimeError('Unknown environment \'%s\'.' % environ)
-
-    for key in cells:
-        cells[key] = numpy.vstack(cells[key])
 
     if has_additional_tag_data:
         warnings.warn(
@@ -198,12 +198,12 @@ def write(
         fh.write('$Elements\n')
         # count all cells
         num_cells = 0
-        for key, data in cells.iteritems():
+        for key, data in cells.items():
             num_cells += data.shape[0]
         fh.write('%d\n' % num_cells)
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells.iteritems():
+        for cell_type, node_idcs in cells.items():
             if cell_type in cell_data and len(cell_data[cell_type]) > 0:
                 for key in cell_data[cell_type]:
                     # assert data consistency
