@@ -88,16 +88,17 @@ def write(
         cell_data=None,
         field_data=None
         ):
-    with open(filename, 'w') as fh:
-        fh.write('MeshVersionFormatted 1\n')
-        fh.write('# Created by meshio\n')
+    with open(filename, 'wb') as fh:
+        fh.write(b'MeshVersionFormatted 1\n')
+        fh.write(b'# Created by meshio\n')
 
         # Dimension info
-        fh.write('\nDimension %d\n' % points.shape[1])
+        d = '\nDimension %d\n' % points.shape[1]
+        fh.write(d.encode('utf-8'))
 
         # vertices
-        fh.write('\nVertices\n')
-        fh.write('%d\n' % len(points))
+        fh.write(b'\nVertices\n')
+        fh.write(('%d\n' % len(points)).encode('utf-8'))
         labels = numpy.ones(len(points), dtype=int)
         data = numpy.c_[points, labels]
         num_digits = dtype_digits(points.dtype)
@@ -115,15 +116,15 @@ def write(
 
         for key, data in cells.items():
             medit_name, num = medit_from_meshio[key]
-            fh.write('\n')
-            fh.write('%s\n' % medit_name)
-            fh.write('%d\n' % len(data))
+            fh.write(b'\n')
+            fh.write(('%s\n' % medit_name).encode('utf-8'))
+            fh.write(('%d\n' % len(data)).encode('utf-8'))
             labels = numpy.ones(len(data), dtype=int)
             # adapt 1-base
             data_with_label = numpy.c_[data + 1, labels]
             fmt = ' '.join(['%d'] * (num + 1))
             numpy.savetxt(fh, data_with_label, fmt)
 
-        fh.write('\nEnd\n')
+        fh.write(b'\nEnd\n')
 
     return
