@@ -110,17 +110,16 @@ def write(
 
     tri = cells['triangle']
 
-    with open(filename, 'w') as fh:
-        fh.write('OFF\n')
-        fh.write('# Created by meshio\n\n')
+    with open(filename, 'wb') as fh:
+        fh.write(b'OFF\n')
+        fh.write(b'# Created by meshio\n\n')
 
         # counts
-        fh.write('%d %d %d\n\n' % (len(points), len(tri), 0))
+        c = '%d %d %d\n\n' % (len(points), len(tri), 0)
+        fh.write(c.encode('utf8'))
 
         # vertices
-        num_digits = dtype_digits(points.dtype)
-        float_fmt = '%%.%de' % num_digits
-        fmt = ' '.join([float_fmt] * 3)
+        fmt = '%%.%de' % dtype_digits(points.dtype)
         numpy.savetxt(fh, points, fmt)
 
         # triangles
