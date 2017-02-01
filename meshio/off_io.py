@@ -116,7 +116,7 @@ def write(
 
         # counts
         c = '%d %d %d\n\n' % (len(points), len(tri), 0)
-        fh.write(c.encode('utf8'))
+        fh.write(c.encode('utf-8'))
 
         # vertices
         fmt = '%%.%de' % dtype_digits(points.dtype)
