@@ -209,9 +209,9 @@ def write(
     tstt.create_dataset(
         'history',
         data=[
-         __name__,
-         __about__.__version__,
-         str(datetime.now())
+         __name__.encode('utf8'),
+         __about__.__version__.encode('utf8'),
+         str(datetime.now()).encode('utf8')
         ]
         )
 
