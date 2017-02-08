@@ -35,11 +35,13 @@ setup(
     license='License :: OSI Approved :: MIT License',
     platforms='any',
     install_requires=[
-        'h5py',
-        'lxml',
         'numpy',
         'pipdated',
         ],
+    extras_require={
+        'dolfin': ['lxml'],  # Dolfin's legacy format
+        'h5m': ['h5py'],  # MOAB's format
+        },
     scripts=[
       'tools/meshio-convert',
       ],
