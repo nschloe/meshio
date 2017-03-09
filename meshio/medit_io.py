@@ -9,8 +9,6 @@ I/O for Medit's format, cf.
 from itertools import islice
 import numpy
 
-from meshio.helpers import dtype_digits
-
 
 def read(filename):
     with open(filename) as f:
@@ -101,9 +99,7 @@ def write(
         fh.write(('%d\n' % len(points)).encode('utf-8'))
         labels = numpy.ones(len(points), dtype=int)
         data = numpy.c_[points, labels]
-        num_digits = dtype_digits(points.dtype)
-        float_fmt = '%%.%de' % num_digits
-        fmt = ' '.join([float_fmt] * points.shape[1]) + ' %d'
+        fmt = ' '.join(['%r'] * points.shape[1]) + ' %d'
         numpy.savetxt(fh, data, fmt)
 
         medit_from_meshio = {
