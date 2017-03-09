@@ -9,8 +9,6 @@ I/O for the OFF surface format, cf.
 from itertools import islice
 import numpy
 
-from meshio.helpers import dtype_digits
-
 
 def read(filename):
     with open(filename) as f:
@@ -119,8 +117,7 @@ def write(
         fh.write(c.encode('utf-8'))
 
         # vertices
-        fmt = '%%.%de' % dtype_digits(points.dtype)
-        numpy.savetxt(fh, points, fmt)
+        numpy.savetxt(fh, points, '%r')
 
         # triangles
         data_with_label = numpy.c_[

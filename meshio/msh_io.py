@@ -10,8 +10,6 @@ from itertools import islice
 import numpy
 import warnings
 
-from meshio.helpers import dtype_digits
-
 
 def read(filename):
     '''Reads a Gmsh msh file.
@@ -173,15 +171,11 @@ def write(
     with open(filename, 'w') as fh:
         fh.write('$MeshFormat\n2 0 8\n$EndMeshFormat\n')
 
-        num_digits = dtype_digits(points.dtype)
-        format_string = '%%d %%.%de %%.%de %%.%de\n' \
-            % (num_digits, num_digits, num_digits)
-
         # Write nodes
         fh.write('$Nodes\n')
         fh.write('%d\n' % len(points))
         for k, x in enumerate(points):
-            fh.write(format_string % (k+1, x[0], x[1], x[2]))
+            fh.write('%d %r %r %r\n' % (k+1, x[0], x[1], x[2]))
         fh.write('$EndNodes\n')
 
         # Translate meshio types to gmsh codes
