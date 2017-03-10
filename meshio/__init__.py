@@ -120,10 +120,10 @@ def read(filename, file_format=None):
 def write(filename,
           points,
           cells,
-          file_format=None,
           point_data=None,
           cell_data=None,
-          field_data=None
+          field_data=None,
+          file_format=None
           ):
     '''Writes mesh together with data to a file.
 
