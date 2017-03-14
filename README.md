@@ -50,35 +50,12 @@ For both input and output, you can optionally specify the exact `file_format`
 
 ### Installation
 
-#### Python Package Index
-
 meshio is [available from the Python Package
 Index](https://pypi.python.org/pypi/meshio/), so simply type
 ```
-pip install meshio
+pip install -U meshio
 ```
-to install or
-```
-pip install meshio -U
-```
-to upgrade.
-
-#### Manual installation
-
-Download meshio from [PyPi](https://pypi.python.org/pypi/meshio/)
-or [GitHub](https://github.com/nschloe/meshio) and
-install it with
-```
-python setup.py install
-```
-
-### Requirements
-
-meshio depends on
-
- * [h5py](http://www.h5py.org/),
- * [NumPy](http://www.numpy.org/), and
- * [VTK](http://www.vtk.org/Wiki/VTK/Examples/Python).
+to install or upgrade.
 
 ### Usage
 
