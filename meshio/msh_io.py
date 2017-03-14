@@ -215,7 +215,7 @@ def write(
 
                 # 'physical' and 'geometrical' go first; this is what the gmsh
                 # file format prescribes
-                keywords = cell_data[cell_type].keys()
+                keywords = list(cell_data[cell_type].keys())
                 keywords.remove('physical')
                 keywords.remove('geometrical')
                 sorted_keywords = ['physical', 'geometrical'] + keywords
@@ -225,7 +225,7 @@ def write(
 
                 num_nodes_per_cell = node_idcs.shape[1]
                 form = '%d ' + '%d' % meshio_to_gmsh_type[cell_type] \
-                    + ' %d' % len(cell_data) + ' %d' * len(cell_data) \
+                    + ' %d' % fcd.shape[1] + ' %d' * fcd.shape[1] \
                     + ' ' + ' '.join(num_nodes_per_cell * ['%d']) \
                     + '\n'
                 for k, c in enumerate(node_idcs):
