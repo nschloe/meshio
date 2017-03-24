@@ -95,7 +95,6 @@ def write(
 
     with open(filename, 'w') as fh:
         fh.write('!\n')
-        fh.write('! Author of meshio: %s\n' % __author__)
         fh.write('! File written by meshio version %s\n' % __version__)
         fh.write('! Further information available at %s\n' % __website__)
         fh.write('!\n')
