@@ -17,9 +17,7 @@ from .__about__ import (
 
 import pipdated
 if pipdated.needs_checking(__name__):
-    msg = pipdated.check(__name__, __version__)
-    if msg:
-        print(msg)
+    print(pipdated.check(__name__, __version__))
 
 
 input_filetypes = [
