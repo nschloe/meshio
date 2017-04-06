@@ -4,10 +4,7 @@ language: python
 
 python:
     - '2.7'
-    - '3.4'
-
-virtualenv:
-  system_site_packages: true
+    - '3.6'
 
 addons:
   apt:
