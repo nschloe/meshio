@@ -167,17 +167,18 @@ def _add_cell_data(mesh, dim):
         ],
         1.0e-15
         ),
-    # 2016-04-27: Temporarily disabled due to vtkXdmfWriter not being available
-    #             through VTK
-    # ('xdmf', [
-    #     tri_mesh,
-    #     quad_mesh,
-    #     tet_mesh
-    #     # The two following tests pass, but errors are emitted on the
-    #     # console.
-    #     # _add_point_data(tri_mesh, 1),
-    #     # _add_cell_data(tri_mesh, 1)
-    #     ]),
+    (
+        'xdmf',
+        [
+            tri_mesh,
+            quad_mesh,
+            tet_mesh,
+            _add_point_data(tri_mesh, 1),
+            _add_cell_data(tri_mesh, 1)
+        ],
+        # FIXME data is only stores in single precision
+        1.0e-6
+    ),
     ('xml', [tri_mesh, tet_mesh], 1.0e-15),
     ])
 def test_io(extension, meshes, atol):
