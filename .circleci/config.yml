@@ -1,0 +1,20 @@
+version: 2
+
+jobs:
+  build:
+    working_directory: ~/meshio
+    docker:
+      - image: ubuntu:17.04
+    steps:
+      - run: apt-get update
+      - run: apt-get install software-properties-common
+      - run: apt-add-repository ppa:nschloe/vtk7-nightly
+      - run: apt-get update
+      - run: apt-get install -y git python3-h5py python3-lxml python3-numpy python3-vtk7
+      - run: sudo -H pip install -U pytest pytest-cov
+      - checkout
+      # The actual test
+      - run: PYTHONPATH=$PWD:$PYTHONPATH pytest --cov meshio
+      # submit to codecov
+      - run: apt-get install -y curl
+      - run: bash <(curl -s https://codecov.io/bash)
