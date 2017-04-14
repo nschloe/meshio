@@ -18,7 +18,7 @@ jobs:
       - run: export LANG=C.UTF-8
       #
       - run: apt-get install -y software-properties-common
-      - run: apt-add-repository -y ppa:nschloe/vtk7-nightly
+      - run: LANG=C.UTF-8 apt-add-repository -y ppa:nschloe/vtk7-nightly
       - run: apt-get update
       - run: apt-get install -y git python3-h5py python3-lxml python3-numpy python3-vtk7
       - run: sudo -H pip install -U pytest pytest-cov
