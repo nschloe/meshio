@@ -67,7 +67,7 @@ def read(filetype, filename):
 
         return cells
 
-    if filetype == 'vtk':
+    if filetype in ['vtk', 'vtk-ascii', 'vtk-binary']:
         reader = vtk.vtkUnstructuredGridReader()
         reader.SetFileName(filename)
         reader.Update()
@@ -77,8 +77,13 @@ def read(filetype, filename):
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutput()
-    elif filetype == 'xdmf':
+    elif filetype in ['xdmf', 'xdmf2']:
         reader = vtk.vtkXdmfReader()
+        reader.SetFileName(filename)
+        reader.Update()
+        vtk_mesh = reader.GetOutputDataObject(0)
+    elif filetype == 'xdmf3':
+        reader = vtk.vtkXdmf3Reader()
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
@@ -279,6 +284,8 @@ def write(filetype,
         writer = vtk.vtkXMLUnstructuredGridWriter()
     elif filetype == 'xdmf':
         writer = vtk.vtkXdmfWriter()
+    elif filetype == 'xdmf3':
+        writer = vtk.vtkXdmf3Writer()
     elif filetype == 'exodus':   # exodus ii format
         writer = vtk.vtkExodusIIWriter()
         # if the mesh contains vtkmodeldata information, make use of it

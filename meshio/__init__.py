@@ -28,9 +28,11 @@ input_filetypes = [
         'permas',
         'moab',
         'off',
-        'vtk',
+        'vtk-ascii',
+        'vtk-binary',
         'vtu',
-        'xdmf',
+        'xdmf2',
+        'xdmf3',
         ]
 
 output_filetypes = [
@@ -44,7 +46,8 @@ output_filetypes = [
         'vtk-ascii',
         'vtk-binary',
         'vtu',
-        'xdmf',
+        'xdmf2',
+        'xdmf3',
         ]
 
 _extension_to_filetype = {
@@ -61,9 +64,9 @@ _extension_to_filetype = {
     '.h5m': 'moab',
     '.off': 'off',
     '.vtu': 'vtu',
-    '.vtk': 'vtk',
-    '.xdmf': 'xdmf',
-    '.xmf': 'xdmf',
+    '.vtk': 'vtk-ascii',
+    '.xdmf': 'xdmf3',
+    '.xmf': 'xdmf3',
     }
 
 
@@ -102,10 +105,14 @@ def read(filename, file_format=None):
         return off_io.read(filename)
     elif file_format == 'vtu':
         return vtk_io.read('vtu', filename)
-    elif file_format == 'vtk':
+    elif file_format == 'vtk-ascii':
         return vtk_io.read('vtk', filename)
-    elif file_format == 'xdmf':
-        return vtk_io.read('xdmf', filename)
+    elif file_format == 'vtk-binary':
+        return vtk_io.read('vtk', filename)
+    elif file_format in ['xdmf', 'xdmf2']:
+        return vtk_io.read('xdmf2', filename)
+    elif file_format == 'xdmf3':
+        return vtk_io.read('xdmf3', filename)
     elif file_format == 'exodus':
         return vtk_io.read('exodus', filename)
     else:
@@ -200,9 +207,16 @@ def write(filename,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_format == 'xdmf':  # XDMF
+    elif file_format in ['xdmf', 'xdmf2']:  # XDMF
         vtk_io.write(
             'xdmf', filename, points, cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data
+            )
+    elif file_format == 'xdmf3':  # XDMF
+        vtk_io.write(
+            'xdmf3', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
