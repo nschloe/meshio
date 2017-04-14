@@ -67,7 +67,7 @@ def read(filename):
                 for r in numpy.array(line.split(), dtype=float)[1:]:
                     points.append(r)
     points = numpy.array(points)
-    points = numpy.reshape(points, newshape=(len(points)/3, 3))
+    points = numpy.reshape(points, newshape=(len(points)//3, 3))
     for key in cells:
         # Subtract one to account for the fact that python indices
         # are 0-based.
