@@ -6,15 +6,16 @@ jobs:
     docker:
       - image: ubuntu:17.04
     steps:
+      - run: apt-get update
       # install UTF8 locale (needed for adding a repo with ö)
       # <http://stackoverflow.com/a/38553499/353337>
-      - run: apt-get update
-      - run: apt-get install -y locales
-      - run: sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
-      - run: echo 'LANG="en_US.UTF-8"'>/etc/default/locale
-      - run: dpkg-reconfigure --frontend=noninteractive locales
-      - run: update-locale LANG=en_US.UTF-8
-      - run: locale -a
+      # - run: apt-get install -y locales
+      # - run: sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+      # - run: echo 'LANG="en_US.UTF-8"'>/etc/default/locale
+      # - run: dpkg-reconfigure --frontend=noninteractive locales
+      # - run: update-locale LANG=en_US.UTF-8
+      # - run: locale -a
+      - run: export LANG=C.UTF-8
       #
       - run: apt-get install -y software-properties-common
       - run: apt-add-repository -y ppa:nschloe/vtk7-nightly
