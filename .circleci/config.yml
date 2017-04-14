@@ -13,7 +13,7 @@ jobs:
       - run: apt-get install -y git python3-h5py python3-lxml python3-numpy python3-vtk7 python3-pip
       - run: pip3 install -U pytest pytest-cov
       - checkout
-      - run: pip3 install .
+      - run: LANG=C.UTF-8 pip3 install .
       # The actual test
       - run: cd test/ && pytest --cov meshio
       # submit to codecov
