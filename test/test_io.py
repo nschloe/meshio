@@ -134,34 +134,30 @@ def _add_cell_data(mesh, dim):
     ('msh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
     ('mesh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
     ('off', [tri_mesh]),
-    # These tests needed to be disabled since travis-ci only offers trusty with
-    # the buggy VTK 6.0.
-    # TODO enable once we can use a more recent version of VTK
-    # ('vtk', [
-    #      tri_mesh,
-    #      quad_mesh,
-    #      tri_quad_mesh,
-    #      tet_mesh,
-    #      _add_point_data(tri_mesh, 1),
-    #      _add_point_data(tri_mesh, 2),
-    #      _add_point_data(tri_mesh, 3),
-    #      _add_cell_data(tri_mesh, 1),
-    #      _add_cell_data(tri_mesh, 2),
-    #      _add_cell_data(tri_mesh, 3),
-    #      ]),
-    # ('vtu', [
-    #      tri_mesh,
-    #      quad_mesh,
-    #      tri_quad_mesh,
-    #      tet_mesh,
-    #      _add_point_data(tri_mesh, 1),
-    #      _add_point_data(tri_mesh, 2),
-    #      _add_point_data(tri_mesh, 3),
-    #      _add_cell_data(tri_mesh, 1),
-    #      _add_cell_data(tri_mesh, 2),
-    #      _add_cell_data(tri_mesh, 3),
-    #      ]),
-    #
+    ('vtk', [
+         tri_mesh,
+         quad_mesh,
+         tri_quad_mesh,
+         tet_mesh,
+         _add_point_data(tri_mesh, 1),
+         _add_point_data(tri_mesh, 2),
+         _add_point_data(tri_mesh, 3),
+         _add_cell_data(tri_mesh, 1),
+         _add_cell_data(tri_mesh, 2),
+         _add_cell_data(tri_mesh, 3),
+         ]),
+    ('vtu', [
+         tri_mesh,
+         quad_mesh,
+         tri_quad_mesh,
+         tet_mesh,
+         _add_point_data(tri_mesh, 1),
+         _add_point_data(tri_mesh, 2),
+         _add_point_data(tri_mesh, 3),
+         _add_cell_data(tri_mesh, 1),
+         _add_cell_data(tri_mesh, 2),
+         _add_cell_data(tri_mesh, 3),
+         ]),
     # 2016-04-27: Temporarily disabled due to vtkXdmfWriter not being available
     #             through VTK
     # ('xdmf', [
