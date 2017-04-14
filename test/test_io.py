@@ -123,41 +123,50 @@ def _add_cell_data(mesh, dim):
     return mesh2
 
 
-@pytest.mark.parametrize('extension, meshes', [
-    ('dato', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
+@pytest.mark.parametrize('extension, meshes, atol', [
+    ('dato', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
     # ('e', [
     #     tri_mesh,
     #     _add_point_data(tri_mesh, 2),
     #     _add_point_data(tri_mesh, 3)
     #     ]),
-    ('h5m', [tri_mesh, tet_mesh]),
-    ('msh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
-    ('mesh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh]),
-    ('off', [tri_mesh]),
-    ('vtk', [
-         tri_mesh,
-         quad_mesh,
-         tri_quad_mesh,
-         tet_mesh,
-         _add_point_data(tri_mesh, 1),
-         _add_point_data(tri_mesh, 2),
-         _add_point_data(tri_mesh, 3),
-         _add_cell_data(tri_mesh, 1),
-         _add_cell_data(tri_mesh, 2),
-         _add_cell_data(tri_mesh, 3),
-         ]),
-    ('vtu', [
-         tri_mesh,
-         quad_mesh,
-         tri_quad_mesh,
-         tet_mesh,
-         _add_point_data(tri_mesh, 1),
-         _add_point_data(tri_mesh, 2),
-         _add_point_data(tri_mesh, 3),
-         _add_cell_data(tri_mesh, 1),
-         _add_cell_data(tri_mesh, 2),
-         _add_cell_data(tri_mesh, 3),
-         ]),
+    ('h5m', [tri_mesh, tet_mesh], 1.0e-15),
+    ('msh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
+    ('mesh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
+    ('off', [tri_mesh], 1.0e-15),
+    (
+        'vtk',
+        [
+            tri_mesh,
+            quad_mesh,
+            tri_quad_mesh,
+            tet_mesh,
+            _add_point_data(tri_mesh, 1),
+            _add_point_data(tri_mesh, 2),
+            _add_point_data(tri_mesh, 3),
+            _add_cell_data(tri_mesh, 1),
+            _add_cell_data(tri_mesh, 2),
+            _add_cell_data(tri_mesh, 3),
+        ],
+        # FIXME data is only stores in single precision
+        1.0e-6
+    ),
+    (
+        'vtu',
+        [
+            tri_mesh,
+            quad_mesh,
+            tri_quad_mesh,
+            tet_mesh,
+            _add_point_data(tri_mesh, 1),
+            _add_point_data(tri_mesh, 2),
+            _add_point_data(tri_mesh, 3),
+            _add_cell_data(tri_mesh, 1),
+            _add_cell_data(tri_mesh, 2),
+            _add_cell_data(tri_mesh, 3),
+        ],
+        1.0e-15
+        ),
     # 2016-04-27: Temporarily disabled due to vtkXdmfWriter not being available
     #             through VTK
     # ('xdmf', [
@@ -169,15 +178,16 @@ def _add_cell_data(mesh, dim):
     #     # _add_point_data(tri_mesh, 1),
     #     # _add_cell_data(tri_mesh, 1)
     #     ]),
-    ('xml', [tri_mesh, tet_mesh]),
+    ('xml', [tri_mesh, tet_mesh], 1.0e-15),
     ])
-def test_io(extension, meshes):
+def test_io(extension, meshes, atol):
     filename = 'test.' + extension
     for mesh in meshes:
-        _write_read(filename, mesh)
+        _write_read(filename, mesh, atol)
+    return
 
 
-def _write_read(filename, mesh):
+def _write_read(filename, mesh, atol):
     '''Write and read a file, and make sure the data is the same as before.
     '''
     try:
@@ -204,19 +214,18 @@ def _write_read(filename, mesh):
 
     # We cannot compare the exact rows here since the order of the points might
     # have changes. Just compare the sums
-    assert numpy.allclose(mesh['points'], points, atol=1.0e-15, rtol=0.0)
+    assert numpy.allclose(mesh['points'], points, atol=atol, rtol=0.0)
 
     for cell_type, data in mesh['cells'].items():
         assert numpy.allclose(data, cells[cell_type])
     for key, data in input_point_data.items():
-        assert numpy.allclose(data, point_data[key], atol=1.0e-15, rtol=0.0)
+        assert numpy.allclose(data, point_data[key], atol=atol, rtol=0.0)
     for cell_type, cell_type_data in input_cell_data.items():
         for key, data in cell_type_data.items():
             assert numpy.allclose(
                     data, cell_data[cell_type][key],
-                    atol=1.0e-15, rtol=0.0
+                    atol=atol, rtol=0.0
                     )
 
     os.remove(filename)
-
     return
