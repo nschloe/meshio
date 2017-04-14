@@ -123,19 +123,19 @@ def _add_cell_data(mesh, dim):
     return mesh2
 
 
-@pytest.mark.parametrize('extension, meshes, atol', [
-    ('dato', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
+@pytest.mark.parametrize('extension, file_format, meshes, atol', [
+    ('dato', 'permas', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
     # ('e', [
     #     tri_mesh,
     #     _add_point_data(tri_mesh, 2),
     #     _add_point_data(tri_mesh, 3)
     #     ]),
-    ('h5m', [tri_mesh, tet_mesh], 1.0e-15),
-    ('msh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
-    ('mesh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
-    ('off', [tri_mesh], 1.0e-15),
+    ('h5m', 'moab', [tri_mesh, tet_mesh], 1.0e-15),
+    ('msh', 'gmsh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
+    ('mesh', 'medit', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
+    ('off', 'off', [tri_mesh], 1.0e-15),
     (
-        'vtk',
+        'vtk', 'vtk-ascii',
         [
             tri_mesh,
             quad_mesh,
@@ -152,7 +152,7 @@ def _add_cell_data(mesh, dim):
         1.0e-6
     ),
     (
-        'vtu',
+        'vtu', 'vtu',
         [
             tri_mesh,
             quad_mesh,
@@ -168,7 +168,7 @@ def _add_cell_data(mesh, dim):
         1.0e-15
         ),
     (
-        'xdmf',
+        'xdmf', 'xdmf2',
         [
             tri_mesh,
             quad_mesh,
@@ -176,19 +176,31 @@ def _add_cell_data(mesh, dim):
             _add_point_data(tri_mesh, 1),
             _add_cell_data(tri_mesh, 1)
         ],
-        # FIXME data is only stores in single precision
+        # FIXME data is only stored in single precision
         1.0e-6
     ),
-    ('xml', [tri_mesh, tet_mesh], 1.0e-15),
+    (
+        'xdmf', 'xdmf3',
+        [
+            tri_mesh,
+            quad_mesh,
+            tet_mesh,
+            # _add_point_data(tri_mesh, 1),
+            # _add_cell_data(tri_mesh, 1)
+        ],
+        # FIXME data is only stored in single precision
+        1.0e-6
+    ),
+    ('xml', 'dolfin-xml', [tri_mesh, tet_mesh], 1.0e-15),
     ])
-def test_io(extension, meshes, atol):
+def test_io(extension, file_format, meshes, atol):
     filename = 'test.' + extension
     for mesh in meshes:
-        _write_read(filename, mesh, atol)
+        _write_read(filename, file_format, mesh, atol)
     return
 
 
-def _write_read(filename, mesh, atol):
+def _write_read(filename, file_format, mesh, atol):
     '''Write and read a file, and make sure the data is the same as before.
     '''
     try:
@@ -204,10 +216,11 @@ def _write_read(filename, mesh, atol):
     meshio.write(
         filename,
         mesh['points'], mesh['cells'],
+        file_format=file_format,
         point_data=input_point_data,
         cell_data=input_cell_data
         )
-    points, cells, point_data, cell_data, _ = meshio.read(filename)
+    points, cells, point_data, cell_data, _ = meshio.read(filename, file_format)
 
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
