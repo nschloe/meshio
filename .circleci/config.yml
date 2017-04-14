@@ -14,6 +14,7 @@ jobs:
       - run: echo 'LANG="en_US.UTF-8"'>/etc/default/locale
       - run: dpkg-reconfigure --frontend=noninteractive locales
       - run: update-locale LANG=en_US.UTF-8
+      - run: locale -a
       #
       - run: apt-get install -y software-properties-common
       - run: apt-add-repository -y ppa:nschloe/vtk7-nightly
