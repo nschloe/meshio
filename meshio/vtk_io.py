@@ -6,6 +6,7 @@ I/O for VTK, VTU, Exodus etc.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import numpy
+import warnings
 
 # Make explicit copies of the data; some (all?) of it is quite volatile and
 # contains garbage once the vtk_mesh goes out of scopy.
@@ -280,12 +281,14 @@ def write(filetype,
         fd.AddArray(_create_vtkarray(value, key))
 
     if filetype in 'vtk-ascii':
+        warnings.warn('ASCII files are only meant for debugging.')
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
     elif filetype == 'vtk-binary':
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToBinary()
     elif filetype == 'vtu-ascii':
+        warnings.warn('ASCII files are only meant for debugging.')
         writer = vtk.vtkXMLUnstructuredGridWriter()
         writer.SetDataModeToAscii()
     elif filetype == 'vtu-binary':
