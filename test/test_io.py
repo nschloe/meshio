@@ -177,6 +177,7 @@ def _add_cell_data(mesh, dim):
             _add_cell_data(tri_mesh, 1)
         ],
         # FIXME data is only stored in single precision
+        # <https://gitlab.kitware.com/vtk/vtk/issues/17037>
         1.0e-6
     ),
     (
@@ -185,11 +186,10 @@ def _add_cell_data(mesh, dim):
             tri_mesh,
             quad_mesh,
             tet_mesh,
-            # _add_point_data(tri_mesh, 1),
-            # _add_cell_data(tri_mesh, 1)
+            _add_point_data(tri_mesh, 1),
+            _add_cell_data(tri_mesh, 1)
         ],
-        # FIXME data is only stored in single precision
-        1.0e-6
+        1.0e-15
     ),
     ('xml', 'dolfin-xml', [tri_mesh, tet_mesh], 1.0e-15),
     ])
@@ -233,8 +233,11 @@ def _write_read(filename, file_format, mesh, atol):
 
     for cell_type, data in mesh['cells'].items():
         assert numpy.allclose(data, cells[cell_type])
-    for key, data in input_point_data.items():
-        assert numpy.allclose(data, point_data[key], atol=atol, rtol=0.0)
+    for key in input_point_data.keys():
+        assert numpy.allclose(
+            input_point_data[key], point_data[key],
+            atol=atol, rtol=0.0
+            )
     for cell_type, cell_type_data in input_cell_data.items():
         for key, data in cell_type_data.items():
             assert numpy.allclose(
