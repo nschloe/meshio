@@ -92,13 +92,10 @@ def _add_point_data(mesh, dim):
     numpy.random.seed(0)
     mesh2 = _clone(mesh)
 
-    # Don't use default float64 here because of a bug in VTK that prevents
-    # actual double data from being written out, cf.
-    # <http://www.vtk.org/Bug/view.php?id=15889>.
     if dim == 1:
-        data = numpy.random.rand(len(mesh['points'])).astype('float32')
+        data = numpy.random.rand(len(mesh['points']))
     else:
-        data = numpy.random.rand(len(mesh['points']), dim).astype('float32')
+        data = numpy.random.rand(len(mesh['points']), dim)
 
     mesh2['point_data'] = {'a': data}
     return mesh2
@@ -124,7 +121,10 @@ def _add_cell_data(mesh, dim):
 
 
 @pytest.mark.parametrize('extension, file_format, meshes, atol', [
-    ('dato', 'permas', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
+    (
+        'dato', 'permas',
+        [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15
+    ),
     # ('e', [
     #     tri_mesh,
     #     _add_point_data(tri_mesh, 2),
@@ -220,7 +220,8 @@ def _write_read(filename, file_format, mesh, atol):
         point_data=input_point_data,
         cell_data=input_cell_data
         )
-    points, cells, point_data, cell_data, _ = meshio.read(filename, file_format)
+    points, cells, point_data, cell_data, _ = \
+        meshio.read(filename, file_format)
 
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
