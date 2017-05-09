@@ -148,8 +148,9 @@ def _add_cell_data(mesh, dim):
             _add_cell_data(tri_mesh, 2),
             _add_cell_data(tri_mesh, 3),
         ],
-        # FIXME data is only stores in single precision
-        1.0e-6
+        # FIXME data is only stored up to 11 digits
+        # <https://gitlab.kitware.com/vtk/vtk/issues/17038>
+        1.0e-11
     ),
     (
         'vtu', 'vtu',
