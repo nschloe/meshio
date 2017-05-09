@@ -18,8 +18,8 @@ e.g.,
  * [Gmsh](http://gmsh.info)'s [MSH](http://gmsh.info/doc/texinfo/gmsh.html#File-formats)
  * [OFF](http://segeval.cs.princeton.edu/public/off_format.html)
  * [PERMAS](http://www.intes.de)
- * [VTK](http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
- * [VTU](http://www.vtk.org/Wiki/VTK_XML_Formats)
+ * [VTK](http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf) (ASCII and binary)
+ * [VTU](http://www.vtk.org/Wiki/VTK_XML_Formats) (ASCII and binary)
  * [XDMF/XDMF3](http://www.xdmf.org/)
 
 meshio can read and write all of these formats and smoothly converts between

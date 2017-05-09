@@ -149,6 +149,7 @@ def _add_cell_data(mesh, dim):
             _add_cell_data(tri_mesh, 3),
         ],
         # ASCII files are only meant for debugging, VTK stores only 11 digits
+        # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
         1.0e-11
     ),
     (
@@ -181,7 +182,8 @@ def _add_cell_data(mesh, dim):
             _add_cell_data(tri_mesh, 2),
             _add_cell_data(tri_mesh, 3),
         ],
-        # ASCII files are only meant for debugging, VTK stores only 11 digits
+        # ASCII files are only meant for debugging, VTK stores only 11 digits.
+        # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
         1.0e-11
     ),
     (
