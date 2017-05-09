@@ -148,12 +148,12 @@ def _add_cell_data(mesh, dim):
             _add_cell_data(tri_mesh, 2),
             _add_cell_data(tri_mesh, 3),
         ],
-        # FIXME data is only stored up to 11 digits
-        # <https://gitlab.kitware.com/vtk/vtk/issues/17038>
+        # ASCII files are only meant for debugging, VTK stores only 11 digits
+        # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
         1.0e-11
     ),
     (
-        'vtu', 'vtu',
+        'vtk', 'vtk-binary',
         [
             tri_mesh,
             quad_mesh,
@@ -167,7 +167,41 @@ def _add_cell_data(mesh, dim):
             _add_cell_data(tri_mesh, 3),
         ],
         1.0e-15
-        ),
+    ),
+    (
+        'vtu', 'vtu-ascii',
+        [
+            tri_mesh,
+            quad_mesh,
+            tri_quad_mesh,
+            tet_mesh,
+            _add_point_data(tri_mesh, 1),
+            _add_point_data(tri_mesh, 2),
+            _add_point_data(tri_mesh, 3),
+            _add_cell_data(tri_mesh, 1),
+            _add_cell_data(tri_mesh, 2),
+            _add_cell_data(tri_mesh, 3),
+        ],
+        # ASCII files are only meant for debugging, VTK stores only 11 digits.
+        # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
+        1.0e-11
+    ),
+    (
+        'vtu', 'vtu-binary',
+        [
+            tri_mesh,
+            quad_mesh,
+            tri_quad_mesh,
+            tet_mesh,
+            _add_point_data(tri_mesh, 1),
+            _add_point_data(tri_mesh, 2),
+            _add_point_data(tri_mesh, 3),
+            _add_cell_data(tri_mesh, 1),
+            _add_cell_data(tri_mesh, 2),
+            _add_cell_data(tri_mesh, 3),
+        ],
+        1.0e-15
+    ),
     (
         'xdmf', 'xdmf2',
         [

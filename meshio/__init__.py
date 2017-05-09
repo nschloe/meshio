@@ -30,7 +30,8 @@ input_filetypes = [
         'off',
         'vtk-ascii',
         'vtk-binary',
-        'vtu',
+        'vtu-ascii',
+        'vtu-binary',
         'xdmf2',
         'xdmf3',
         ]
@@ -45,7 +46,8 @@ output_filetypes = [
         'off',
         'vtk-ascii',
         'vtk-binary',
-        'vtu',
+        'vtu-ascii',
+        'vtu-binary',
         'xdmf2',
         'xdmf3',
         ]
@@ -63,8 +65,8 @@ _extension_to_filetype = {
     '.dato.gz': 'permas',
     '.h5m': 'moab',
     '.off': 'off',
-    '.vtu': 'vtu',
-    '.vtk': 'vtk-ascii',
+    '.vtu': 'vtu-binary',
+    '.vtk': 'vtk-binary',
     '.xdmf': 'xdmf3',
     '.xmf': 'xdmf3',
     }
@@ -103,11 +105,9 @@ def read(filename, file_format=None):
         return h5m_io.read(filename)
     elif file_format == 'off':
         return off_io.read(filename)
-    elif file_format == 'vtu':
+    elif file_format in ['vtu-ascii', 'vtu-binary']:
         return vtk_io.read('vtu', filename)
-    elif file_format == 'vtk-ascii':
-        return vtk_io.read('vtk', filename)
-    elif file_format == 'vtk-binary':
+    elif file_format in ['vtk-ascii', 'vtk-binary']:
         return vtk_io.read('vtk', filename)
     elif file_format in ['xdmf', 'xdmf2']:
         return vtk_io.read('xdmf2', filename)
@@ -184,14 +184,21 @@ def write(filename,
         off_io.write(filename, points, cells)
     elif file_format == 'permas':
         permas_io.write(filename, points, cells)
-    elif file_format == 'vtu':  # vtk xml format
+    elif file_format in ['vtu-ascii']:
         vtk_io.write(
-            'vtu', filename, points, cells,
+            'vtu-ascii', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_format in ['vtk', 'vtk-ascii']:
+    elif file_format in ['vtu', 'vtu-binary']:
+        vtk_io.write(
+            'vtu-binary', filename, points, cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data
+            )
+    elif file_format == 'vtk-ascii':
         vtk_io.write(
             'vtk-ascii', filename,
             points, cells,
@@ -199,7 +206,7 @@ def write(filename,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_format == 'vtk-binary':
+    elif file_format in ['vtk', 'vtk-binary']:
         vtk_io.write(
             'vtk-binary', filename,
             points, cells,
