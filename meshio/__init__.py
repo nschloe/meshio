@@ -65,7 +65,7 @@ _extension_to_filetype = {
     '.off': 'off',
     '.vtu': 'vtu',
     '.vtk': 'vtk-ascii',
-    '.xdmf': 'xdmf2',
+    '.xdmf': 'xdmf3',
     '.xmf': 'xdmf3',
     }
 

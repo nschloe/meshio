@@ -92,13 +92,10 @@ def _add_point_data(mesh, dim):
     numpy.random.seed(0)
     mesh2 = _clone(mesh)
 
-    # Don't use default float64 here because of a bug in VTK that prevents
-    # actual double data from being written out, cf.
-    # <http://www.vtk.org/Bug/view.php?id=15889>.
     if dim == 1:
-        data = numpy.random.rand(len(mesh['points'])).astype('float32')
+        data = numpy.random.rand(len(mesh['points']))
     else:
-        data = numpy.random.rand(len(mesh['points']), dim).astype('float32')
+        data = numpy.random.rand(len(mesh['points']), dim)
 
     mesh2['point_data'] = {'a': data}
     return mesh2
@@ -124,7 +121,10 @@ def _add_cell_data(mesh, dim):
 
 
 @pytest.mark.parametrize('extension, file_format, meshes, atol', [
-    ('dato', 'permas', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
+    (
+        'dato', 'permas',
+        [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15
+    ),
     # ('e', [
     #     tri_mesh,
     #     _add_point_data(tri_mesh, 2),
@@ -148,8 +148,9 @@ def _add_cell_data(mesh, dim):
             _add_cell_data(tri_mesh, 2),
             _add_cell_data(tri_mesh, 3),
         ],
-        # FIXME data is only stores in single precision
-        1.0e-6
+        # FIXME data is only stored up to 11 digits
+        # <https://gitlab.kitware.com/vtk/vtk/issues/17038>
+        1.0e-11
     ),
     (
         'vtu', 'vtu',
@@ -177,6 +178,7 @@ def _add_cell_data(mesh, dim):
             _add_cell_data(tri_mesh, 1)
         ],
         # FIXME data is only stored in single precision
+        # <https://gitlab.kitware.com/vtk/vtk/issues/17037>
         1.0e-6
     ),
     (
@@ -185,11 +187,10 @@ def _add_cell_data(mesh, dim):
             tri_mesh,
             quad_mesh,
             tet_mesh,
-            # _add_point_data(tri_mesh, 1),
-            # _add_cell_data(tri_mesh, 1)
+            _add_point_data(tri_mesh, 1),
+            _add_cell_data(tri_mesh, 1)
         ],
-        # FIXME data is only stored in single precision
-        1.0e-6
+        1.0e-15
     ),
     ('xml', 'dolfin-xml', [tri_mesh, tet_mesh], 1.0e-15),
     ])
@@ -220,7 +221,8 @@ def _write_read(filename, file_format, mesh, atol):
         point_data=input_point_data,
         cell_data=input_cell_data
         )
-    points, cells, point_data, cell_data, _ = meshio.read(filename, file_format)
+    points, cells, point_data, cell_data, _ = \
+        meshio.read(filename, file_format)
 
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
@@ -232,8 +234,11 @@ def _write_read(filename, file_format, mesh, atol):
 
     for cell_type, data in mesh['cells'].items():
         assert numpy.allclose(data, cells[cell_type])
-    for key, data in input_point_data.items():
-        assert numpy.allclose(data, point_data[key], atol=atol, rtol=0.0)
+    for key in input_point_data.keys():
+        assert numpy.allclose(
+            input_point_data[key], point_data[key],
+            atol=atol, rtol=0.0
+            )
     for cell_type, cell_type_data in input_cell_data.items():
         for key, data in cell_type_data.items():
             assert numpy.allclose(

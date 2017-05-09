@@ -7,6 +7,9 @@ I/O for VTK, VTU, Exodus etc.
 '''
 import numpy
 
+# Make explicit copies of the data; some (all?) of it is quite volatile and
+# contains garbage once the vtk_mesh goes out of scopy.
+
 
 def read(filetype, filename):
     import vtk
@@ -21,20 +24,21 @@ def read(filetype, filename):
             array = data.GetArray(k)
             if array:
                 array_name = array.GetName()
-                out[array_name] = vtk.util.numpy_support.vtk_to_numpy(array)
-
+                out[array_name] = numpy.copy(
+                    vtk.util.numpy_support.vtk_to_numpy(array)
+                    )
         return out
 
     def _read_cells(vtk_mesh):
-        data = vtk.util.numpy_support.vtk_to_numpy(
+        data = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
                 vtk_mesh.GetCells().GetData()
-                )
-        offsets = vtk.util.numpy_support.vtk_to_numpy(
+                ))
+        offsets = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
                 vtk_mesh.GetCellLocationsArray()
-                )
-        types = vtk.util.numpy_support.vtk_to_numpy(
+                ))
+        types = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
                 vtk_mesh.GetCellTypesArray()
-                )
+                ))
 
         vtk_to_meshio_type = {
             vtk.VTK_VERTEX: 'vertex',
@@ -95,10 +99,11 @@ def read(filetype, filename):
         raise RuntimeError('Unknown file type \'%s\'.' % filename)
 
     # Explicitly extract points, cells, point data, field data
-    points = vtk.util.numpy_support.vtk_to_numpy(
+    points = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
             vtk_mesh.GetPoints().GetData()
-            )
+            ))
     cells = _read_cells(vtk_mesh)
+
     point_data = _read_data(vtk_mesh.GetPointData())
     field_data = _read_data(vtk_mesh.GetFieldData())
 
