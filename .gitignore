@@ -16,5 +16,5 @@ MANIFEST
 README.rst
 build/
 dist/
-pygmsh.egg-info/
 doc/_build/
+*.egg-info/
