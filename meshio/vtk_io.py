@@ -76,7 +76,7 @@ def read(filetype, filename):
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutput()
-    elif filetype == 'vtu':
+    elif filetype in ['vtu', 'vtu-ascii', 'vtu-binary']:
         reader = vtk.vtkXMLUnstructuredGridReader()
         reader.SetFileName(filename)
         reader.Update()
@@ -285,8 +285,12 @@ def write(filetype,
     elif filetype == 'vtk-binary':
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToBinary()
-    elif filetype == 'vtu':  # vtk xml format
+    elif filetype == 'vtu-ascii':
         writer = vtk.vtkXMLUnstructuredGridWriter()
+        writer.SetDataModeToAscii()
+    elif filetype == 'vtu-binary':
+        writer = vtk.vtkXMLUnstructuredGridWriter()
+        writer.SetDataModeToBinary()
     elif filetype == 'xdmf':
         writer = vtk.vtkXdmfWriter()
     elif filetype == 'xdmf3':
