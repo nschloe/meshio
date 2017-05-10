@@ -8,10 +8,11 @@ I/O for DOLFIN's XML format, cf.
 '''
 import numpy
 import os
+import re
 import warnings
 
 
-def read(filename):
+def _read_mesh(filename):
     from lxml import etree as ET
 
     tree = ET.parse(filename)
@@ -61,8 +62,51 @@ def read(filename):
         else:
             raise RuntimeError('Unknown entry \'%s\'.' % child.tag)
 
+    return points, cells, cell_type
+
+
+def _read_cell_data(filename, cell_type):
+    from lxml import etree as ET
+    dolfin_type_to_numpy_type = {
+        'int': numpy.int,
+        'float': numpy.dtype('float64'),
+        }
+
+    cell_data = {cell_type: {}}
+    dir_name = os.path.dirname(filename)
+    if not os.path.dirname(filename):
+        dir_name = os.getcwd()
+
+    # Loop over all files in the same directory as `filename`.
+    basename = os.path.splitext(os.path.basename(filename))[0]
+    for f in os.listdir(dir_name):
+        # Check if there are files by the name "<filename>_*.xml"; if yes,
+        # extract the * pattern and make it the name of the data set.
+        out = re.match('%s_([^\.]+)\.xml' % basename, f)
+        if not out:
+            continue
+        name = out.group(1)
+        tree = ET.parse(f)
+        root = tree.getroot()
+        mesh_function = root.getchildren()[0]
+        assert mesh_function.tag == 'mesh_function'
+        size = int(mesh_function.attrib['size'])
+        dtype = dolfin_type_to_numpy_type[mesh_function.attrib['type']]
+        data = numpy.empty(size, dtype=dtype)
+        for child in mesh_function.getchildren():
+            assert child.tag == 'entity'
+            idx = int(child.attrib['index'])
+            data[idx] = child.attrib['value']
+
+        cell_data[cell_type][name] = data
+    return cell_data
+
+
+def read(filename):
+    points, cells, cell_type = _read_mesh(filename)
+
     point_data = {}
-    cell_data = {}
+    cell_data = _read_cell_data(filename, cell_type)
     field_data = {}
     return points, cells, point_data, cell_data, field_data
 
