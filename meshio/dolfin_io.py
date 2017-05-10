@@ -7,6 +7,7 @@ I/O for DOLFIN's XML format, cf.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import numpy
+import os
 import warnings
 
 
@@ -66,22 +67,15 @@ def read(filename):
     return points, cells, point_data, cell_data, field_data
 
 
-def write(
+def _write_mesh(
         filename,
         points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None
+        cell_type,
+        cells
         ):
     from lxml import etree as ET
 
-    if point_data is None:
-        point_data = {}
-    if cell_data is None:
-        cell_data = {}
-    if field_data is None:
-        field_data = {}
+    stripped_cells = {cell_type: cells[cell_type]}
 
     dolfin = ET.Element(
         'dolfin',
@@ -93,18 +87,6 @@ def write(
             'tetra': 'tetrahedron',
             }
 
-    if 'tetra' in cells:
-        stripped_cells = {'tetra': cells['tetra']}
-        cell_type = 'tetra'
-    elif 'triangle' in cells:
-        stripped_cells = {'triangle': cells['triangle']}
-        cell_type = 'triangle'
-    else:
-        raise RuntimeError(
-          'Dolfin XML can only deal with triangle or tetra. '
-          'The input data contains only ' + ', '.join(cells.keys()) + '.'
-          )
-
     if len(cells) > 1:
         discarded_cells = cells.keys()
         discarded_cells.remove(cell_type)
@@ -115,16 +97,13 @@ def write(
           '.'
           )
 
-    if all(points[:, 2] == 0):
-        dim = '2'
-    else:
-        dim = '3'
+    dim = 2 if all(points[:, 2] == 0) else 3
 
     mesh = ET.SubElement(
             dolfin,
             'mesh',
             celltype=meshio_to_dolfin_type[cell_type],
-            dim=dim
+            dim='%d' % dim
             )
     vertices = ET.SubElement(mesh, 'vertices', size=str(len(points)))
 
@@ -157,4 +136,74 @@ def write(
 
     tree = ET.ElementTree(dolfin)
     tree.write(filename, pretty_print=True)
+    return
+
+
+def _write_cell_data(
+        filename,
+        dim,
+        cell_data
+        ):
+    from lxml import etree as ET
+
+    dolfin = ET.Element(
+        'dolfin',
+        nsmap={'dolfin': 'http://fenicsproject.org/'}
+        )
+
+    numpy_type_to_dolfin_type = {
+        numpy.int: 'int',
+        numpy.dtype('float64'): 'float',
+        }
+
+    mesh_function = ET.SubElement(
+            dolfin,
+            'mesh_function',
+            type=numpy_type_to_dolfin_type[cell_data.dtype],
+            dim='%d' % dim,
+            size='%d' % len(cell_data)
+            )
+
+    for k, value in enumerate(cell_data):
+        ET.SubElement(
+            mesh_function,
+            'entity',
+            index='%d' % k,
+            value='%r' % value,
+            )
+
+    tree = ET.ElementTree(dolfin)
+    tree.write(filename, pretty_print=True)
+    return
+
+
+def write(
+        filename,
+        points,
+        cells,
+        point_data=None,
+        cell_data=None,
+        field_data=None
+        ):
+    if point_data is None:
+        point_data = {}
+    if cell_data is None:
+        cell_data = {}
+    if field_data is None:
+        field_data = {}
+
+    if 'tetra' in cells:
+        cell_type = 'tetra'
+    else:
+        assert 'triangle' in cells
+        cell_type = 'triangle'
+
+    _write_mesh(filename, points, cell_type, cells)
+
+    if cell_type in cell_data:
+        for key, data in cell_data[cell_type].items():
+            cell_data_filename = \
+                '%s_%s.xml' % (os.path.splitext(filename)[0], key)
+            dim = 2 if all(points[:, 2] == 0) else 3
+            _write_cell_data(cell_data_filename, dim, data)
     return
