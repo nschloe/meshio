@@ -68,8 +68,8 @@ def _read_mesh(filename):
 def _read_cell_data(filename, cell_type):
     from lxml import etree as ET
     dolfin_type_to_numpy_type = {
-        'int': numpy.int,
-        'float': numpy.dtype('float64'),
+        'int': numpy.dtype('int'),
+        'float': numpy.dtype('float'),
         }
 
     cell_data = {cell_type: {}}
@@ -196,8 +196,8 @@ def _write_cell_data(
         )
 
     numpy_type_to_dolfin_type = {
-        numpy.int: 'int',
-        numpy.dtype('float64'): 'float',
+        numpy.dtype('int'): 'int',
+        numpy.dtype('float'): 'float',
         }
 
     mesh_function = ET.SubElement(
