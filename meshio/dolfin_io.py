@@ -70,6 +70,7 @@ def _read_cell_data(filename, cell_type):
     dolfin_type_to_numpy_type = {
         'int': numpy.dtype('int'),
         'float': numpy.dtype('float'),
+        'uint': numpy.dtype('uint'),
         }
 
     cell_data = {cell_type: {}}
@@ -198,6 +199,7 @@ def _write_cell_data(
     numpy_type_to_dolfin_type = {
         numpy.dtype('int'): 'int',
         numpy.dtype('float'): 'float',
+        numpy.dtype('uint'): 'uint',
         }
 
     mesh_function = ET.SubElement(
