@@ -179,7 +179,7 @@ def write(filename,
     elif file_format == 'medit':
         medit_io.write(filename, points, cells)
     elif file_format == 'dolfin-xml':
-        dolfin_io.write(filename, points, cells)
+        dolfin_io.write(filename, points, cells, cell_data=cell_data)
     elif file_format == 'off':
         off_io.write(filename, points, cells)
     elif file_format == 'permas':

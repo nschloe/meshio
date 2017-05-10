@@ -226,7 +226,14 @@ def _add_cell_data(mesh, dim):
         ],
         1.0e-15
     ),
-    ('xml', 'dolfin-xml', [tri_mesh, tet_mesh], 1.0e-15),
+    (
+        'xml', 'dolfin-xml', [
+            tri_mesh,
+            tet_mesh,
+            _add_cell_data(tri_mesh, 1),
+        ],
+        1.0e-15
+    ),
     ])
 def test_io(extension, file_format, meshes, atol):
     filename = 'test.' + extension
