@@ -125,11 +125,16 @@ def _add_cell_data(mesh, dim):
         'dato', 'permas',
         [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15
     ),
-    # ('e', [
-    #     tri_mesh,
-    #     _add_point_data(tri_mesh, 2),
-    #     _add_point_data(tri_mesh, 3)
-    #     ]),
+    (
+        'e', 'exodus',
+        [
+            tri_mesh,
+            _add_point_data(tri_mesh, 2),
+            _add_point_data(tri_mesh, 3),
+        ],
+        # TODO report exodus precision failure
+        1.0e-8
+    ),
     ('h5m', 'moab', [tri_mesh, tet_mesh], 1.0e-15),
     ('msh', 'gmsh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
     ('mesh', 'medit', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
