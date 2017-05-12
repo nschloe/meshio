@@ -137,6 +137,13 @@ def _add_cell_data(mesh, dim):
     ),
     ('h5m', 'moab', [tri_mesh, tet_mesh], 1.0e-15),
     ('msh', 'gmsh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
+    (
+        'msh', 'ansys',
+        [
+            tri_mesh
+        ],
+        1.0e-15
+    ),
     ('mesh', 'medit', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
     ('off', 'off', [tri_mesh], 1.0e-15),
     (
