@@ -251,5 +251,5 @@ def write(
             cell_data_filename = \
                 '%s_%s.xml' % (os.path.splitext(filename)[0], key)
             dim = 2 if all(points[:, 2] == 0) else 3
-            _write_cell_data(cell_data_filename, dim, data)
+            _write_cell_data(cell_data_filename, dim, numpy.array(data))
     return
