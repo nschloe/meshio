@@ -46,7 +46,7 @@ def read(filename):
                 # points
                 # (10 (zone-id first-index last-index type ND)
                 out = re.match('\s*\(\s*10\s+\(([^\)]+)\).*', line)
-                a = [int(num) for num in out.group(1).split()]
+                a = [int(num, 16) for num in out.group(1).split()]
                 zone_id = a[0]
                 if zone_id == 0:
                     # a declaration of the total number of points
@@ -74,7 +74,7 @@ def read(filename):
                 # cells
                 # (10 (zone-id first-index last-index type ND)
                 out = re.match('\s*\(\s*12\s+\(([^\)]+)\).*', line)
-                a = [int(num) for num in out.group(1).split()]
+                a = [int(num, 16) for num in out.group(1).split()]
                 zone_id = a[0]
                 if zone_id == 0:
                     # a declaration of the total number of cells
@@ -113,7 +113,7 @@ def read(filename):
                     line = next(islice(f, 1))
                     dat = line.split()
                     assert len(dat) == num_nodes_per_cell
-                    data[k] = [int(d) for d in dat]
+                    data[k] = [int(d, 16) for d in dat]
 
                 cells[key] = data
 

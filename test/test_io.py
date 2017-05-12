@@ -140,7 +140,10 @@ def _add_cell_data(mesh, dim):
     (
         'msh', 'ansys',
         [
-            tri_mesh
+            tri_mesh,
+            quad_mesh,
+            tri_quad_mesh,
+            tet_mesh,
         ],
         1.0e-15
     ),
