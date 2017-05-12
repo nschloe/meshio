@@ -72,7 +72,7 @@ def read(filename):
                 assert re.match('\s*\)\s*\)\s*', line)
             elif index == 12:
                 # cells
-                # (10 (zone-id first-index last-index type ND)
+                # (12 (zone-id first-index last-index type element-type))
                 out = re.match('\s*\(\s*12\s+\(([^\)]+)\).*', line)
                 a = [int(num, 16) for num in out.group(1).split()]
                 zone_id = a[0]
@@ -122,7 +122,13 @@ def read(filename):
                 assert re.match('\s*\)\s*\)\s*', line)
             else:
                 warnings.warn('Unknown index \'%d\'. Skipping.' % index)
-                # TODO skip forward
+                # Skipping ahead to the closing bracket. Assume that, if the
+                # line ends with a closing bracket, that's the one. Otherwise
+                # skip to the next "))" line.
+                if line[-1] == ')':
+                    continue
+                while re.match('\s*\)\s*\)\s*', line) is None:
+                    line = next(islice(f, 1))
 
     return points, cells, point_data, cell_data, field_data
 
