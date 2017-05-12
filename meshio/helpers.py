@@ -4,7 +4,7 @@ from . import ansys_io
 from . import dolfin_io
 from . import h5m_io
 from . import medit_io
-from . import msh_io
+from . import gmsh_io
 from . import off_io
 from . import permas_io
 from . import vtk_io
@@ -87,7 +87,7 @@ def read(filename, file_format=None):
     if file_format == 'ansys':
         return ansys_io.read(filename)
     elif file_format == 'gmsh':
-        return msh_io.read(filename)
+        return gmsh_io.read(filename)
     elif file_format == 'medit':
         return medit_io.read(filename)
     elif file_format == 'dolfin-xml':
@@ -170,7 +170,7 @@ def write(filename,
             cell_data=cell_data
             )
     elif file_format == 'gmsh':
-        msh_io.write(
+        gmsh_io.write(
             filename, points, cells,
             point_data=point_data,
             cell_data=cell_data
