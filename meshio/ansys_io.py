@@ -32,17 +32,17 @@ def read(filename):
             #  (<index> [...]
             out = re.match('\s*\(\s*([0-9]+).*', line)
             assert out
-            index = int(out.group(1))
+            index = out.group(1)
 
-            if index == 1:
+            if index == '1':
                 # header
                 # (1 "<text>")
                 pass
-            elif index == 2:
+            elif index == '2':
                 # dimensionality
                 # (2 3)
                 pass
-            elif index == 10:
+            elif index == '10':
                 # points
                 # (10 (zone-id first-index last-index type ND)
                 out = re.match('\s*\(\s*10\s+\(([^\)]+)\).*', line)
@@ -70,7 +70,7 @@ def read(filename):
                 # make sure that the point data set is properly closed
                 line = next(islice(f, 1))
                 assert re.match('\s*\)\s*\)\s*', line)
-            elif index == 12:
+            elif index == '12':
                 # cells
                 # (12 (zone-id first-index last-index type element-type))
                 out = re.match('\s*\(\s*12\s+\(([^\)]+)\).*', line)
