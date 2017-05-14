@@ -11,7 +11,7 @@
 There are various mesh formats available for representing unstructured meshes,
 e.g.,
 
- * [ANSYS mesh](https://www.sharcnet.ca/Software/TGrid/pdf/ug/appb.pdf)
+ * [ANSYS mesh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
  * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
  * [H5M](https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m)

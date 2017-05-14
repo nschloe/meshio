@@ -2,7 +2,7 @@
 #
 '''
 I/O for Ansys's msh format, cf.
-<https://www.sharcnet.ca/Software/TGrid/pdf/ug/appb.pdf>.
+<http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>.
 '''
 from . __about__ import __version__
 
