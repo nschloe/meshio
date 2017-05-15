@@ -77,6 +77,11 @@ def read(filename):
                 num_points = last_point_index - first_point_index + 1
                 dim = a[4]
 
+                # Skip ahead to the line that opens the data block (might be
+                # the current line already).
+                while line.strip()[-1] != '(':
+                    line = next(islice(f, 1))
+
                 # read point data
                 pts = numpy.empty((num_points, dim))
                 for k in range(num_points):
@@ -110,6 +115,7 @@ def read(filename):
                 element_type = a[4]
 
                 element_type_to_key_num_nodes = {
+                        0: ('mixed', None),
                         1: ('triangle', 3),
                         2: ('tetra', 4),
                         3: ('quad', 4),
@@ -120,6 +126,21 @@ def read(filename):
 
                 key, num_nodes_per_cell = \
                     element_type_to_key_num_nodes[element_type]
+
+                if key == 'mixed':
+                    warnings.warn(
+                        'Cannot deal with mixed element type. Skipping.'
+                        )
+                    # Skipping ahead to the next line with two closing
+                    # brackets.
+                    while re.search('[^\)]*\)\s*\)\s*$', line) is None:
+                        line = next(islice(f, 1))
+                    continue
+
+                # Skip ahead to the line that opens the data block (might be
+                # the current line already).
+                while line.strip()[-1] != '(':
+                    line = next(islice(f, 1))
 
                 # read cell data
                 data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
@@ -153,6 +174,7 @@ def read(filename):
                 element_type = a[4]
 
                 element_type_to_key_num_nodes = {
+                        0: ('mixed', None),
                         2: ('linear', 3),
                         3: ('triangle', 3),
                         4: ('quad', 4)
@@ -160,6 +182,21 @@ def read(filename):
 
                 key, num_nodes_per_cell = \
                     element_type_to_key_num_nodes[element_type]
+
+                if key == 'mixed':
+                    warnings.warn(
+                        'Cannot deal with mixed element type. Skipping.'
+                        )
+                    # Skipping ahead to the next line with two closing
+                    # brackets.
+                    while re.search('[^\)]*\)\s*\)\s*$', line) is None:
+                        line = next(islice(f, 1))
+                    continue
+
+                # Skip ahead to the line that opens the data block (might be
+                # the current line already).
+                while line.strip()[-1] != '(':
+                    line = next(islice(f, 1))
 
                 # read cell data
                 data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
@@ -180,15 +217,11 @@ def read(filename):
                 line = next(islice(f, 1))
                 while line.strip() == '':
                     line = next(islice(f, 1))
-                assert re.match('\s*\)\s*\)\s*', line)
+                assert re.match('\s*\)\s*\)\s*$', line)
             else:
                 warnings.warn('Unknown index \'%s\'. Skipping.' % index)
-                # Skipping ahead to the closing bracket. Assume that, if the
-                # line ends with a closing bracket, that's the one. Otherwise
-                # skip to the next "))" line.
-                if line.strip()[-1] == ')':
-                    continue
-                while re.match('\s*\)\s*\)\s*', line) is None:
+                # Skipping ahead to the next line with two closing brackets.
+                while re.search('[^\)]*\)\s*\)\s*$', line) is None:
                     line = next(islice(f, 1))
 
     points = numpy.concatenate(points)
