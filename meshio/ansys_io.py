@@ -221,14 +221,20 @@ def write(
         fh.write(('(2 %d)\n' % dim).encode('utf8'))
 
         # total number of nodes
-        fh.write(('(10 (0 1 %x 0))\n' % len(points)).encode('utf8'))
+        first_node_index = 1
+        fh.write((
+            '(10 (0 %x %x 0))\n' % (first_node_index, len(points))
+            ).encode('utf8'))
 
         # total number of cells
         total_num_cells = sum([len(c) for c in cells])
         fh.write(('(12 (0 1 %x 0))\n' % total_num_cells).encode('utf8'))
 
         # Write nodes
-        fh.write(('(10 (1 1 %x 1 %d))(\n' % points.shape).encode('utf8'))
+        fh.write((
+            '(10 (1 %x %x 1 %x))(\n' %
+            (first_node_index, points.shape[0], points.shape[1])
+            ).encode('utf8'))
         numpy.savetxt(fh, points, fmt='%.15e')
         fh.write(('))\n').encode('utf8'))
 
@@ -248,7 +254,7 @@ def write(
                 '(12 (1 %x %x 1 %d)(\n' %
                 (first_index, last_index, meshio_to_ansys_type[key])
                 ).encode('utf8'))
-            numpy.savetxt(fh, values, fmt='%x')
+            numpy.savetxt(fh, values + first_node_index, fmt='%x')
             fh.write(('))\n').encode('utf8'))
             first_index = last_index + 1
 
