@@ -38,7 +38,7 @@ def read(filename):
                 # Comment.
                 # If the last character of the line isn't a closing bracket,
                 # skip ahead to a line that consists of only a closing bracket.
-                if line[-1] == ')':
+                if line.strip()[-1] == ')':
                     continue
                 while re.match('\s*\)\s*', line) is None:
                     line = next(islice(f, 1))
@@ -128,7 +128,7 @@ def read(filename):
                 # Skipping ahead to the closing bracket. Assume that, if the
                 # line ends with a closing bracket, that's the one. Otherwise
                 # skip to the next "))" line.
-                if line[-1] == ')':
+                if line.strip()[-1] == ')':
                     continue
                 while re.match('\s*\)\s*\)\s*', line) is None:
                     line = next(islice(f, 1))
