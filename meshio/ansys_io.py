@@ -12,6 +12,24 @@ import re
 import warnings
 
 
+def _skip_till_two_closing_brackets(f):
+    line = next(islice(f, 1))
+    while line.strip() == '':
+        line = next(islice(f, 1))
+
+    if re.match('\s*\)\s*\)\s*$', line):
+        # Two closing brackets: alright, continue.
+        return
+
+    # One closing bracket: skip ahead for the other one.
+    assert line.strip() == ')'
+    line = next(islice(f, 1))
+    while line.strip() == '':
+        line = next(islice(f, 1))
+    assert line.strip() == ')'
+    return
+
+
 def read(filename):
     # Initialize the data optional data fields
     field_data = {}
@@ -30,6 +48,9 @@ def read(filename):
                 line = next(islice(f, 1))
             except StopIteration:  # EOF
                 break
+
+            if line.strip() == '':
+                continue
 
             # expect the line to have the form
             #  (<index> [...]
@@ -59,10 +80,10 @@ def read(filename):
 
                 # If the line is self-contained, it is merely a declaration of
                 # the total number of points.
-                if re.match('^\s*\(\s*10\s+\([^\)]+\)\s*\)\s*$', line):
+                if re.match('^\s*\(\s*10\s*\([^\)]+\)\s*\)\s*$', line):
                     continue
 
-                out = re.match('\s*\(\s*10\s+\(([^\)]*)\).*', line)
+                out = re.match('\s*\(\s*10\s*\(([^\)]*)\).*', line)
                 a = [int(num, 16) for num in out.group(1).split()]
 
                 assert len(a) > 4
@@ -93,19 +114,18 @@ def read(filename):
 
                 points.append(pts)
 
-                # make sure that the point data set is properly closed
-                line = next(islice(f, 1))
-                assert re.match('\s*\)\s*\)\s*', line)
+                # make sure that the data set is properly closed
+                _skip_till_two_closing_brackets(f)
             elif index == '12':
                 # cells
                 # (12 (zone-id first-index last-index type element-type))
 
                 # If the line is self-contained, it is merely a declaration of
                 # the total number of points.
-                if re.match('^\s*\(\s*12\s+\([^\)]+\)\s*\)\s*$', line):
+                if re.match('^\s*\(\s*12\s*\([^\)]+\)\s*\)\s*$', line):
                     continue
 
-                out = re.match('\s*\(\s*12\s+\(([^\)]+)\).*', line)
+                out = re.match('\s*\(\s*12\s*\(([^\)]+)\).*', line)
                 a = [int(num, 16) for num in out.group(1).split()]
 
                 assert len(a) > 4
@@ -152,19 +172,18 @@ def read(filename):
 
                 cells[key] = data
 
-                # make sure that the point data set is properly closed
-                line = next(islice(f, 1))
-                assert re.match('\s*\)\s*\)\s*', line)
+                # make sure that the data set is properly closed
+                _skip_till_two_closing_brackets(f)
             elif index == '13':
                 # cells
                 # (13 (zone-id first-index last-index type element-type))
 
                 # If the line is self-contained, it is merely a declaration of
                 # the total number of points.
-                if re.match('^\s*\(\s*13\s+\([^\)]+\)\s*\)\s*$', line):
+                if re.match('^\s*\(\s*13\s*\([^\)]+\)\s*\)\s*$', line):
                     continue
 
-                out = re.match('\s*\(\s*13\s+\(([^\)]+)\).*', line)
+                out = re.match('\s*\(\s*13\s*\(([^\)]+)\).*', line)
                 a = [int(num, 16) for num in out.group(1).split()]
 
                 assert len(a) > 4
@@ -213,11 +232,8 @@ def read(filename):
 
                 cells[key] = data
 
-                # make sure that the point data set is properly closed
-                line = next(islice(f, 1))
-                while line.strip() == '':
-                    line = next(islice(f, 1))
-                assert re.match('\s*\)\s*\)\s*$', line)
+                # make sure that the data set is properly closed
+                _skip_till_two_closing_brackets(f)
             else:
                 warnings.warn('Unknown index \'%s\'. Skipping.' % index)
                 # Skipping ahead to the next line with two closing brackets.
