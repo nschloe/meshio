@@ -28,7 +28,7 @@ def read(filename):
         while True:
             try:
                 line = next(islice(f, 1))
-            except StopIteration:
+            except StopIteration:  # EOF
                 break
 
             # expect the line to have the form
@@ -57,12 +57,12 @@ def read(filename):
                 # points
                 # (10 (zone-id first-index last-index type ND)
 
-                # Check if the last character is a closing bracket. Then the
-                # line is merely a declaration of the total number of points.
-                if line.strip()[-1] == ')':
+                # If the line is self-contained, it is merely a declaration of
+                # the total number of points.
+                if re.match('^\s*\(\s*10\s+\([^\)]+\)\s*\)\s*$', line):
                     continue
 
-                out = re.match('\s*\(\s*10\s+\(([^\)]+)\).*', line)
+                out = re.match('\s*\(\s*10\s+\(([^\)]*)\).*', line)
                 a = [int(num, 16) for num in out.group(1).split()]
 
                 assert len(a) > 4
@@ -95,9 +95,9 @@ def read(filename):
                 # cells
                 # (12 (zone-id first-index last-index type element-type))
 
-                # Check if the last character is a closing bracket. Then the
-                # line is merely a declaration of the total number of cells.
-                if line.strip()[-1] == ')':
+                # If the line is self-contained, it is merely a declaration of
+                # the total number of points.
+                if re.match('^\s*\(\s*12\s+\([^\)]+\)\s*\)\s*$', line):
                     continue
 
                 out = re.match('\s*\(\s*12\s+\(([^\)]+)\).*', line)
@@ -138,9 +138,9 @@ def read(filename):
                 # cells
                 # (13 (zone-id first-index last-index type element-type))
 
-                # Check if the last character is a closing bracket. Then the
-                # line is merely a declaration of the total number of cells.
-                if line.strip()[-1] == ')':
+                # If the line is self-contained, it is merely a declaration of
+                # the total number of points.
+                if re.match('^\s*\(\s*13\s+\([^\)]+\)\s*\)\s*$', line):
                     continue
 
                 out = re.match('\s*\(\s*13\s+\(([^\)]+)\).*', line)
