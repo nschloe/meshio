@@ -18,8 +18,11 @@ def read(filename):
     cell_data = {}
     point_data = {}
 
-    points = None
+    points = []
     cells = {}
+
+    first_point_index_overall = None
+    last_point_index = None
 
     with open(filename) as f:
         while True:
@@ -63,19 +66,27 @@ def read(filename):
                 a = [int(num, 16) for num in out.group(1).split()]
 
                 assert len(a) > 4
-                first_index = a[1]
-                last_index = a[2]
-                num_points = last_index - first_index + 1
+                first_point_index = a[1]
+                # store the very first point index
+                if first_point_index_overall is None:
+                    first_point_index_overall = first_point_index
+                # make sure that point arrays are subsequent
+                if last_point_index is not None:
+                    assert last_point_index + 1 == first_point_index
+                last_point_index = a[2]
+                num_points = last_point_index - first_point_index + 1
                 dim = a[4]
 
                 # read point data
-                points = numpy.empty((num_points, dim))
+                pts = numpy.empty((num_points, dim))
                 for k in range(num_points):
                     line = next(islice(f, 1))
                     dat = line.split()
                     assert len(dat) == dim
                     for d in range(dim):
-                        points[k][d] = float(dat[d])
+                        pts[k][d] = float(dat[d])
+
+                points.append(pts)
 
                 # make sure that the point data set is properly closed
                 line = next(islice(f, 1))
@@ -123,6 +134,53 @@ def read(filename):
                 # make sure that the point data set is properly closed
                 line = next(islice(f, 1))
                 assert re.match('\s*\)\s*\)\s*', line)
+            elif index == '13':
+                # cells
+                # (13 (zone-id first-index last-index type element-type))
+
+                # Check if the last character is a closing bracket. Then the
+                # line is merely a declaration of the total number of cells.
+                if line.strip()[-1] == ')':
+                    continue
+
+                out = re.match('\s*\(\s*13\s+\(([^\)]+)\).*', line)
+                a = [int(num, 16) for num in out.group(1).split()]
+
+                assert len(a) > 4
+                first_index = a[1]
+                last_index = a[2]
+                num_cells = last_index - first_index + 1
+                element_type = a[4]
+
+                element_type_to_key_num_nodes = {
+                        2: ('linear', 3),
+                        3: ('triangle', 3),
+                        4: ('quad', 4)
+                        }
+
+                key, num_nodes_per_cell = \
+                    element_type_to_key_num_nodes[element_type]
+
+                # read cell data
+                data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
+                for k in range(num_cells):
+                    line = next(islice(f, 1))
+                    dat = line.split()
+                    # The body of a regular face section contains the grid
+                    # connectivity, and each line appears as follows:
+                    #   n0 n1 n2 cr cl
+                    # where n* are the defining nodes (vertices) of the face,
+                    # and c* are the adjacent cells.
+                    assert len(dat) == num_nodes_per_cell + 2
+                    data[k] = [int(d, 16) for d in dat[:num_nodes_per_cell]]
+
+                cells[key] = data
+
+                # make sure that the point data set is properly closed
+                line = next(islice(f, 1))
+                while line.strip() == '':
+                    line = next(islice(f, 1))
+                assert re.match('\s*\)\s*\)\s*', line)
             else:
                 warnings.warn('Unknown index \'%s\'. Skipping.' % index)
                 # Skipping ahead to the closing bracket. Assume that, if the
@@ -132,6 +190,12 @@ def read(filename):
                     continue
                 while re.match('\s*\)\s*\)\s*', line) is None:
                     line = next(islice(f, 1))
+
+    points = numpy.concatenate(points)
+
+    # Gauge the cells with the first point_index.
+    for key in cells:
+        cells[key] -= first_point_index_overall
 
     return points, cells, point_data, cell_data, field_data
 
