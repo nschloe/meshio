@@ -53,12 +53,14 @@ def read(filename):
             elif index == '10':
                 # points
                 # (10 (zone-id first-index last-index type ND)
+
+                # Check if the last character is a closing bracket. Then the
+                # line is merely a declaration of the total number of points.
+                if line.strip()[-1] == ')':
+                    continue
+
                 out = re.match('\s*\(\s*10\s+\(([^\)]+)\).*', line)
                 a = [int(num, 16) for num in out.group(1).split()]
-                zone_id = a[0]
-                if zone_id == 0:
-                    # a declaration of the total number of points
-                    continue
 
                 assert len(a) > 4
                 first_index = a[1]
@@ -81,12 +83,14 @@ def read(filename):
             elif index == '12':
                 # cells
                 # (12 (zone-id first-index last-index type element-type))
+
+                # Check if the last character is a closing bracket. Then the
+                # line is merely a declaration of the total number of cells.
+                if line.strip()[-1] == ')':
+                    continue
+
                 out = re.match('\s*\(\s*12\s+\(([^\)]+)\).*', line)
                 a = [int(num, 16) for num in out.group(1).split()]
-                zone_id = a[0]
-                if zone_id == 0:
-                    # a declaration of the total number of cells
-                    continue
 
                 assert len(a) > 4
                 first_index = a[1]
