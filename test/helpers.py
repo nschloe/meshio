@@ -4,7 +4,6 @@ import meshio
 
 import numpy
 import os
-import pytest
 
 # In general:
 # Use values with an infinite decimal representation to test precision.
@@ -88,7 +87,7 @@ def _clone(mesh):
     return mesh2
 
 
-def _add_point_data(mesh, dim):
+def add_point_data(mesh, dim):
     numpy.random.seed(0)
     mesh2 = _clone(mesh)
 
@@ -101,7 +100,7 @@ def _add_point_data(mesh, dim):
     return mesh2
 
 
-def _add_cell_data(mesh, dim):
+def add_cell_data(mesh, dim):
     mesh2 = _clone(mesh)
     numpy.random.seed(0)
     cell_data = {}
@@ -120,144 +119,7 @@ def _add_cell_data(mesh, dim):
     return mesh2
 
 
-@pytest.mark.parametrize('extension, file_format, meshes, atol', [
-    (
-        'dato', 'permas',
-        [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15
-    ),
-    (
-        'e', 'exodus',
-        [
-            tri_mesh,
-            _add_point_data(tri_mesh, 2),
-            _add_point_data(tri_mesh, 3),
-        ],
-        # TODO report exodus precision failure
-        1.0e-8
-    ),
-    ('h5m', 'moab', [tri_mesh, tet_mesh], 1.0e-15),
-    ('msh', 'gmsh', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
-    (
-        'msh', 'ansys',
-        [
-            tri_mesh,
-            quad_mesh,
-            tri_quad_mesh,
-            tet_mesh,
-        ],
-        1.0e-15
-    ),
-    ('mesh', 'medit', [tri_mesh, quad_mesh, tri_quad_mesh, tet_mesh], 1.0e-15),
-    ('off', 'off', [tri_mesh], 1.0e-15),
-    (
-        'vtk', 'vtk-ascii',
-        [
-            tri_mesh,
-            quad_mesh,
-            tri_quad_mesh,
-            tet_mesh,
-            _add_point_data(tri_mesh, 1),
-            _add_point_data(tri_mesh, 2),
-            _add_point_data(tri_mesh, 3),
-            _add_cell_data(tri_mesh, 1),
-            _add_cell_data(tri_mesh, 2),
-            _add_cell_data(tri_mesh, 3),
-        ],
-        # ASCII files are only meant for debugging, VTK stores only 11 digits
-        # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
-        1.0e-11
-    ),
-    (
-        'vtk', 'vtk-binary',
-        [
-            tri_mesh,
-            quad_mesh,
-            tri_quad_mesh,
-            tet_mesh,
-            _add_point_data(tri_mesh, 1),
-            _add_point_data(tri_mesh, 2),
-            _add_point_data(tri_mesh, 3),
-            _add_cell_data(tri_mesh, 1),
-            _add_cell_data(tri_mesh, 2),
-            _add_cell_data(tri_mesh, 3),
-        ],
-        1.0e-15
-    ),
-    (
-        'vtu', 'vtu-ascii',
-        [
-            tri_mesh,
-            quad_mesh,
-            tri_quad_mesh,
-            tet_mesh,
-            _add_point_data(tri_mesh, 1),
-            _add_point_data(tri_mesh, 2),
-            _add_point_data(tri_mesh, 3),
-            _add_cell_data(tri_mesh, 1),
-            _add_cell_data(tri_mesh, 2),
-            _add_cell_data(tri_mesh, 3),
-        ],
-        # ASCII files are only meant for debugging, VTK stores only 11 digits.
-        # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
-        1.0e-11
-    ),
-    (
-        'vtu', 'vtu-binary',
-        [
-            tri_mesh,
-            quad_mesh,
-            tri_quad_mesh,
-            tet_mesh,
-            _add_point_data(tri_mesh, 1),
-            _add_point_data(tri_mesh, 2),
-            _add_point_data(tri_mesh, 3),
-            _add_cell_data(tri_mesh, 1),
-            _add_cell_data(tri_mesh, 2),
-            _add_cell_data(tri_mesh, 3),
-        ],
-        1.0e-15
-    ),
-    (
-        'xdmf', 'xdmf2',
-        [
-            tri_mesh,
-            quad_mesh,
-            tet_mesh,
-            _add_point_data(tri_mesh, 1),
-            _add_cell_data(tri_mesh, 1)
-        ],
-        # FIXME data is only stored in single precision
-        # <https://gitlab.kitware.com/vtk/vtk/issues/17037>
-        1.0e-6
-    ),
-    (
-        'xdmf', 'xdmf3',
-        [
-            tri_mesh,
-            quad_mesh,
-            tet_mesh,
-            _add_point_data(tri_mesh, 1),
-            _add_cell_data(tri_mesh, 1)
-        ],
-        1.0e-15
-    ),
-    (
-        'xml', 'dolfin-xml', [
-            tri_mesh,
-            tet_mesh,
-            _add_cell_data(tri_mesh, 1),
-        ],
-        1.0e-15
-    ),
-    ])
-def test_io(extension, file_format, meshes, atol):
-    filename = 'test.' + extension
-    for mesh in meshes:
-        _write_read(filename, file_format, mesh, atol)
-    return
-
-
-def _write_read(filename, file_format, mesh, atol):
+def write_read(filename, file_format, mesh, atol):
     '''Write and read a file, and make sure the data is the same as before.
     '''
     try:
