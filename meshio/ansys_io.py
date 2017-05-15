@@ -34,7 +34,15 @@ def read(filename):
             assert out
             index = out.group(1)
 
-            if index == '1':
+            if index == '0':
+                # Comment.
+                # If the last character of the line isn't a closing bracket,
+                # skip ahead to a line that consists of only a closing bracket.
+                if line[-1] == ')':
+                    continue
+                while re.match('\s*\)\s*', line) is None:
+                    line = next(islice(f, 1))
+            elif index == '1':
                 # header
                 # (1 "<text>")
                 pass
@@ -86,26 +94,17 @@ def read(filename):
                 num_cells = last_index - first_index + 1
                 element_type = a[4]
 
-                if element_type == 1:
-                    key = 'triangle'
-                    num_nodes_per_cell = 3
-                elif element_type == 2:
-                    key = 'tetra'
-                    num_nodes_per_cell = 4
-                elif element_type == 3:
-                    key = 'quad'
-                    num_nodes_per_cell = 4
-                elif element_type == 4:
-                    key = 'hexa'
-                    num_nodes_per_cell = 8
-                elif element_type == 5:
-                    key = 'pyra'
-                    num_nodes_per_cell = 5
-                elif element_type == 6:
-                    key = 'wedge'
-                    num_nodes_per_cell = 6
-                else:
-                    raise ValueError('Unknown element type %d.' % element_type)
+                element_type_to_key_num_nodes = {
+                        1: ('triangle', 3),
+                        2: ('tetra', 4),
+                        3: ('quad', 4),
+                        4: ('hexa', 8),
+                        5: ('pyra', 5),
+                        6: ('wedge', 6),
+                        }
+
+                key, num_nodes_per_cell = \
+                    element_type_to_key_num_nodes[element_type]
 
                 # read cell data
                 data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
@@ -121,7 +120,7 @@ def read(filename):
                 line = next(islice(f, 1))
                 assert re.match('\s*\)\s*\)\s*', line)
             else:
-                warnings.warn('Unknown index \'%d\'. Skipping.' % index)
+                warnings.warn('Unknown index \'%s\'. Skipping.' % index)
                 # Skipping ahead to the closing bracket. Assume that, if the
                 # line ends with a closing bracket, that's the one. Otherwise
                 # skip to the next "))" line.
