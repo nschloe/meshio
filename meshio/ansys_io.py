@@ -194,7 +194,7 @@ def read(filename):
 
                 element_type_to_key_num_nodes = {
                         0: ('mixed', None),
-                        2: ('linear', 3),
+                        2: ('linear', 2),
                         3: ('triangle', 3),
                         4: ('quad', 4)
                         }
@@ -202,35 +202,63 @@ def read(filename):
                 key, num_nodes_per_cell = \
                     element_type_to_key_num_nodes[element_type]
 
-                if key == 'mixed':
-                    warnings.warn(
-                        'Cannot deal with mixed element type. Skipping.'
-                        )
-                    # Skipping ahead to the next line with two closing
-                    # brackets.
-                    while re.search('[^\)]*\)\s*\)\s*$', line) is None:
-                        line = next(islice(f, 1))
-                    continue
-
                 # Skip ahead to the line that opens the data block (might be
                 # the current line already).
                 while line.strip()[-1] != '(':
                     line = next(islice(f, 1))
 
-                # read cell data
-                data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
-                for k in range(num_cells):
-                    line = next(islice(f, 1))
-                    dat = line.split()
-                    # The body of a regular face section contains the grid
-                    # connectivity, and each line appears as follows:
-                    #   n0 n1 n2 cr cl
-                    # where n* are the defining nodes (vertices) of the face,
-                    # and c* are the adjacent cells.
-                    assert len(dat) == num_nodes_per_cell + 2
-                    data[k] = [int(d, 16) for d in dat[:num_nodes_per_cell]]
+                if key == 'mixed':
+                    # From
+                    # <http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
+                    # > If the face zone is of mixed type (element-type = 0),
+                    # > the body of the section will include the face type and
+                    # > will appear as follows
+                    # >
+                    # > type v0 v1 v2 c0 c1
+                    # >
+                    data = {}
+                    for k in range(num_cells):
+                        line = next(islice(f, 1))
+                        dat = line.split()
+                        type_index = int(dat[0], 16)
+                        assert type_index != 0
+                        type_string, num_nodes_per_cell = \
+                            element_type_to_key_num_nodes[type_index]
+                        assert len(dat) == num_nodes_per_cell + 3
 
-                cells[key] = data
+                        if type_string not in data:
+                            data[type_string] = []
+
+                        data[type_string].append([
+                            int(d, 16) for d in dat[1:num_nodes_per_cell+1]
+                            ])
+
+                    data = {key: numpy.array(data[key]) for key in data}
+
+                else:
+                    # read cell data
+                    data = numpy.empty(
+                        (num_cells, num_nodes_per_cell), dtype=int
+                        )
+                    for k in range(num_cells):
+                        line = next(islice(f, 1))
+                        dat = line.split()
+                        # The body of a regular face section contains the grid
+                        # connectivity, and each line appears as follows:
+                        #   n0 n1 n2 cr cl
+                        # where n* are the defining nodes (vertices) of the
+                        # face, and c* are the adjacent cells.
+                        assert len(dat) == num_nodes_per_cell + 2
+                        data[k] = [
+                            int(d, 16) for d in dat[:num_nodes_per_cell]
+                            ]
+                    data = {key: data}
+
+                for key in data:
+                    if key in cells:
+                        cells[key] = numpy.concatenate([cells[key], data[key]])
+                    else:
+                        cells[key] = data[key]
 
                 # make sure that the data set is properly closed
                 _skip_till_two_closing_brackets(f)
