@@ -9,25 +9,14 @@ from . __about__ import __version__
 from itertools import islice
 import numpy
 import re
-import struct
 import warnings
 
 
 def _skip_till_two_closing_brackets(f):
-    line = next(islice(f, 1)).decode('utf-8')
-    while line.strip() == '':
-        line = next(islice(f, 1)).decode('utf-8')
-
-    if re.match('\s*\)\s*\)\s*$', line):
-        # Two closing brackets: alright, continue.
-        return
-
-    # One closing bracket: skip ahead for the other one.
-    assert line.strip() == ')'
-    line = next(islice(f, 1)).decode('utf-8')
-    while line.strip() == '':
-        line = next(islice(f, 1)).decode('utf-8')
-    assert line.strip() == ')'
+    bracket_count = 0
+    while bracket_count < 2:
+        if f.read(1).decode('utf-8') == ')':
+            bracket_count += 1
     return
 
 
