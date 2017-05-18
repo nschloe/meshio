@@ -9,13 +9,14 @@ from . __about__ import __version__
 from itertools import islice
 import numpy
 import re
+import struct
 import warnings
 
 
 def _skip_till_two_closing_brackets(f):
-    line = next(islice(f, 1))
+    line = next(islice(f, 1)).decode('utf-8')
     while line.strip() == '':
-        line = next(islice(f, 1))
+        line = next(islice(f, 1)).decode('utf-8')
 
     if re.match('\s*\)\s*\)\s*$', line):
         # Two closing brackets: alright, continue.
@@ -23,11 +24,76 @@ def _skip_till_two_closing_brackets(f):
 
     # One closing bracket: skip ahead for the other one.
     assert line.strip() == ')'
-    line = next(islice(f, 1))
+    line = next(islice(f, 1)).decode('utf-8')
     while line.strip() == '':
-        line = next(islice(f, 1))
+        line = next(islice(f, 1)).decode('utf-8')
     assert line.strip() == ')'
     return
+
+
+def _read_binary_points(f, line, first_point_index_overall, last_point_index):
+    # points
+    # (3010 (zone-id first-index last-index type ND)
+
+    # If the line is self-contained, it is merely a declaration of
+    # the total number of points.
+    if re.match('^\s*\(\s*\d010\s*\([^\)]+\)\s*\)\s*$', line):
+        return None, first_point_index_overall, last_point_index
+
+    out = re.match('\s*\(\s*(\d0)10\s*\(([^\)]*)\).*', line)
+    if out.group(1) == '20':
+        dtype = 'f'
+        bytes_per_item = 4
+    else:
+        assert out.group(1) == '30'
+        dtype = 'd'
+        bytes_per_item = 8
+
+    a = [int(num, 16) for num in out.group(2).split()]
+
+    assert len(a) > 4
+    first_point_index = a[1]
+    # store the very first point index
+    if first_point_index_overall is None:
+        first_point_index_overall = first_point_index
+    # make sure that point arrays are subsequent
+    if last_point_index is not None:
+        assert last_point_index + 1 == first_point_index
+    last_point_index = a[2]
+    num_points = last_point_index - first_point_index + 1
+    dim = a[4]
+
+    # Skip ahead to the line that opens the data block (might be the current
+    # line already).
+    while line.strip()[-1] != '(':
+        line = next(islice(f, 1)).decode('utf-8')
+
+    # read point data
+    total_bytes = dim * bytes_per_item * num_points
+    bfr = b''
+    while len(bfr) < total_bytes:
+        line = next(islice(f, 1))
+        bfr += line
+
+    pts = numpy.empty((num_points, dim))
+    for k in range(num_points):
+        pts[k] = [
+            struct.unpack(
+                dtype,
+                bfr[
+                    bytes_per_item*(dim*k+i):
+                    bytes_per_item*(dim*k+i+1)
+                    ]
+                )[0]
+            for i in range(dim)
+            ]
+
+    line = next(islice(f, 1)).decode('utf-8')
+    assert line.strip() == ')'
+    line = next(islice(f, 1)).decode('utf-8')
+    assert line.strip() == 'End of Binary Section %s10)' % out.group(1)
+
+    return pts, first_point_index_overall, last_point_index
 
 
 def read(filename):
@@ -42,10 +108,10 @@ def read(filename):
     first_point_index_overall = None
     last_point_index = None
 
-    with open(filename) as f:
+    with open(filename, 'rb') as f:
         while True:
             try:
-                line = next(islice(f, 1))
+                line = next(islice(f, 1)).decode('utf-8')
             except StopIteration:  # EOF
                 break
 
@@ -65,7 +131,7 @@ def read(filename):
                 if line.strip()[-1] == ')':
                     continue
                 while re.match('\s*\)\s*', line) is None:
-                    line = next(islice(f, 1))
+                    line = next(islice(f, 1)).decode('utf-8')
             elif index == '1':
                 # header
                 # (1 "<text>")
@@ -101,12 +167,12 @@ def read(filename):
                 # Skip ahead to the line that opens the data block (might be
                 # the current line already).
                 while line.strip()[-1] != '(':
-                    line = next(islice(f, 1))
+                    line = next(islice(f, 1)).decode('utf-8')
 
                 # read point data
                 pts = numpy.empty((num_points, dim))
                 for k in range(num_points):
-                    line = next(islice(f, 1))
+                    line = next(islice(f, 1)).decode('utf-8')
                     dat = line.split()
                     assert len(dat) == dim
                     for d in range(dim):
@@ -116,6 +182,17 @@ def read(filename):
 
                 # make sure that the data set is properly closed
                 _skip_till_two_closing_brackets(f)
+            elif index == '3010':
+                # points
+                # (3010 (zone-id first-index last-index type ND)
+                pts, first_point_index_overall, last_point_index = \
+                        _read_binary_points(
+                            f, line,
+                            first_point_index_overall, last_point_index
+                            )
+                if pts is not None:
+                    points.append(pts)
+
             elif index == '12':
                 # cells
                 # (12 (zone-id first-index last-index type element-type))
@@ -154,18 +231,18 @@ def read(filename):
                     # Skipping ahead to the next line with two closing
                     # brackets.
                     while re.search('[^\)]*\)\s*\)\s*$', line) is None:
-                        line = next(islice(f, 1))
+                        line = next(islice(f, 1)).decode('utf-8')
                     continue
 
                 # Skip ahead to the line that opens the data block (might be
                 # the current line already).
                 while line.strip()[-1] != '(':
-                    line = next(islice(f, 1))
+                    line = next(islice(f, 1)).decode('utf-8')
 
                 # read cell data
                 data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
                 for k in range(num_cells):
-                    line = next(islice(f, 1))
+                    line = next(islice(f, 1)).decode('utf-8')
                     dat = line.split()
                     assert len(dat) == num_nodes_per_cell
                     data[k] = [int(d, 16) for d in dat]
@@ -205,7 +282,7 @@ def read(filename):
                 # Skip ahead to the line that opens the data block (might be
                 # the current line already).
                 while line.strip()[-1] != '(':
-                    line = next(islice(f, 1))
+                    line = next(islice(f, 1)).decode('utf-8')
 
                 if key == 'mixed':
                     # From
@@ -218,7 +295,7 @@ def read(filename):
                     # >
                     data = {}
                     for k in range(num_cells):
-                        line = next(islice(f, 1))
+                        line = next(islice(f, 1)).decode('utf-8')
                         dat = line.split()
                         type_index = int(dat[0], 16)
                         assert type_index != 0
@@ -241,7 +318,7 @@ def read(filename):
                         (num_cells, num_nodes_per_cell), dtype=int
                         )
                     for k in range(num_cells):
-                        line = next(islice(f, 1))
+                        line = next(islice(f, 1)).decode('utf-8')
                         dat = line.split()
                         # The body of a regular face section contains the grid
                         # connectivity, and each line appears as follows:
@@ -266,7 +343,7 @@ def read(filename):
                 warnings.warn('Unknown index \'%s\'. Skipping.' % index)
                 # Skipping ahead to the next line with two closing brackets.
                 while re.search('[^\)]*\)\s*\)\s*$', line) is None:
-                    line = next(islice(f, 1))
+                    line = next(islice(f, 1)).decode('utf-8')
 
     points = numpy.concatenate(points)
 
