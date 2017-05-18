@@ -11,16 +11,16 @@
 There are various mesh formats available for representing unstructured meshes,
 e.g.,
 
- * [ANSYS mesh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
+ * [ANSYS msh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
  * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
  * [H5M](https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m)
  * [Medit](https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html)
- * [Gmsh](http://gmsh.info)'s [MSH](http://gmsh.info/doc/texinfo/gmsh.html#File-formats)
+ * [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats)
  * [OFF](http://segeval.cs.princeton.edu/public/off_format.html)
  * [PERMAS](http://www.intes.de)
- * [VTK](http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf) (ASCII and binary)
- * [VTU](http://www.vtk.org/Wiki/VTK_XML_Formats) (ASCII and binary)
+ * [VTK](http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
+ * [VTU](http://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF/XDMF3](http://www.xdmf.org/)
 
 meshio can read and write all of these formats and smoothly converts between

@@ -6,10 +6,10 @@ I/O for DOLFIN's XML format, cf.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
+import logging
 import numpy
 import os
 import re
-import warnings
 
 
 def _read_mesh(filename):
@@ -135,7 +135,7 @@ def _write_mesh(
     if len(cells) > 1:
         discarded_cells = cells.keys()
         discarded_cells.remove(cell_type)
-        warnings.warn(
+        logging.warn(
           'DOLFIN XML can only handle one cell type at a time. '
           'Using ' + cell_type +
           ', discarding ' + ', '.join(discarded_cells) +

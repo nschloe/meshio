@@ -7,8 +7,8 @@ I/O for Gmsh's msh format, cf.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 from itertools import islice
+import logging
 import numpy
-import warnings
 
 
 def read(filename):
@@ -143,7 +143,7 @@ def read_buffer(f):
             raise RuntimeError('Unknown environment \'%s\'.' % environ)
 
     if has_additional_tag_data:
-        warnings.warn(
+        logging.warn(
             'The file contains tag data that couldn\'t be processed.'
             )
 
