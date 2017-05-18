@@ -25,8 +25,8 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
 
     # If the line is self-contained, it is merely a declaration of
     # the total number of points.
-    if re.match('^\s*\(\s*\d010\s*\([^\)]+\)\s*\)\s*$', line):
-        return None, first_point_index_overall, last_point_index
+    if line.count('(') == line.count(')'):
+        return
 
     out = re.match('\s*\(\s*(\d0)10\s*\(([^\)]*)\).*', line)
     if out.group(1) == '20':
@@ -58,13 +58,12 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
 
     # read point data
     total_bytes = dim * bytes_per_item * num_points
-    pts = numpy.fromstring(f.read(total_bytes), dtype=dtype) \
-        .reshape((num_points, dim))
+    pts = numpy.fromstring(
+            f.read(total_bytes), dtype=dtype
+            ).reshape((num_points, dim))
 
     # now read byte by byte until ')'
-    c = None
-    while c != ')':
-        c = f.read(1).decode('utf-8')
+    _skip_to(f, ')')
 
     line = None
     while line != 'End of Binary Section %s10)' % out.group(1):
@@ -112,8 +111,6 @@ def read(filename):
             assert out
             index = out.group(1)
 
-            print(index)
-
             if index == '0':
                 # Comment.
                 _skip_close(f, line.count('(') - line.count(')'))
@@ -131,7 +128,7 @@ def read(filename):
 
                 # If the line is self-contained, it is merely a declaration of
                 # the total number of points.
-                if re.match('^\s*\(\s*10\s*\([^\)]+\)\s*\)\s*$', line):
+                if line.count('(') == line.count(')'):
                     continue
 
                 out = re.match('\s*\(\s*10\s*\(([^\)]*)\).*', line)
@@ -167,17 +164,8 @@ def read(filename):
 
                 # make sure that the data set is properly closed
                 _skip_close(f, 2)
-            elif index == '2010':
-                # points
-                pts, first_point_index_overall, last_point_index = \
-                        _read_binary_points(
-                            f, line,
-                            first_point_index_overall, last_point_index
-                            )
-                if pts is not None:
-                    points.append(pts)
-            elif index == '3010':
-                # points
+            elif re.match('[2,3]010', index):
+                # binary points
                 pts, first_point_index_overall, last_point_index = \
                         _read_binary_points(
                             f, line,
@@ -192,7 +180,7 @@ def read(filename):
 
                 # If the line is self-contained, it is merely a declaration of
                 # the total number of points.
-                if re.match('^\s*\(\s*12\s*\([^\)]+\)\s*\)\s*$', line):
+                if line.count('(') == line.count(')'):
                     continue
 
                 out = re.match('\s*\(\s*12\s*\(([^\)]+)\).*', line)
@@ -250,7 +238,7 @@ def read(filename):
 
                 # If the line is self-contained, it is merely a declaration of
                 # the total number of points.
-                if re.match('^\s*\(\s*13\s*\([^\)]+\)\s*\)\s*$', line):
+                if line.count('(') == line.count(')'):
                     continue
 
                 out = re.match('\s*\(\s*13\s*\(([^\)]+)\).*', line)
@@ -331,6 +319,71 @@ def read(filename):
                         cells[key] = data[key]
 
                 # make sure that the data set is properly closed
+                _skip_close(f, 2)
+            elif re.match('[2,3]013', index):
+                # binary cells
+                # (2013 (zone-id first-index last-index type element-type))
+
+                # If the line is self-contained, it is merely a declaration of
+                # the total number of points.
+                if line.count('(') == line.count(')'):
+                    continue
+
+                out = re.match('\s*\(\s*([2,3])013\s*\(([^\)]+)\).*', line)
+                a = [int(num, 16) for num in out.group(2).split()]
+
+                assert len(a) > 4
+                first_index = a[1]
+                last_index = a[2]
+                num_cells = last_index - first_index + 1
+                element_type = a[4]
+
+                element_type_to_key_num_nodes = {
+                        0: ('mixed', None),
+                        2: ('linear', 2),
+                        3: ('triangle', 3),
+                        4: ('quad', 4)
+                        }
+
+                key, num_nodes_per_cell = \
+                    element_type_to_key_num_nodes[element_type]
+
+                # Skip ahead to the line that opens the data block (might be
+                # the current line already).
+                if line.strip()[-1] != '(':
+                    _skip_to(f, '(')
+
+                if out.group(1) == '2':
+                    bytes_per_item = 4
+                    dtype = numpy.int32
+                else:
+                    assert out.group(1) == '3'
+                    bytes_per_item = 4
+                    dtype = numpy.int64
+
+                assert key != 'mixed'
+
+                # Read cell data.
+                # The body of a regular face section contains the grid
+                # connectivity, and each line appears as follows:
+                #   n0 n1 n2 cr cl
+                # where n* are the defining nodes (vertices) of the face, and
+                # c* are the adjacent cells.
+                total_bytes = \
+                    num_cells * bytes_per_item * (num_nodes_per_cell + 2)
+                data = numpy.fromstring(
+                    f.read(total_bytes), dtype=dtype
+                    ).reshape((num_cells, num_nodes_per_cell + 2))
+                # Cut off the adjacent cell data.
+                data = data[:, :num_nodes_per_cell]
+                data = {key: data}
+
+                for key in data:
+                    if key in cells:
+                        cells[key] = numpy.concatenate([cells[key], data[key]])
+                    else:
+                        cells[key] = data[key]
+
                 _skip_close(f, 2)
             else:
                 warnings.warn('Unknown index \'%s\'. Skipping.' % index)
