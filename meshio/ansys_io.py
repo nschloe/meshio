@@ -167,6 +167,121 @@ def _read_cells(f, line):
     return key, data
 
 
+def _read_faces(f, line):
+    # faces
+    # (13 (zone-id first-index last-index type element-type))
+
+    # If the line is self-contained, it is merely a declaration of
+    # the total number of points.
+    if line.count('(') == line.count(')'):
+        return {}
+
+    out = re.match('\s*\(\s*(|20|30)13\s*\(([^\)]+)\).*', line)
+    a = [int(num, 16) for num in out.group(2).split()]
+
+    assert len(a) > 4
+    first_index = a[1]
+    last_index = a[2]
+    num_cells = last_index - first_index + 1
+    element_type = a[4]
+
+    element_type_to_key_num_nodes = {
+            0: ('mixed', None),
+            2: ('line', 2),
+            3: ('triangle', 3),
+            4: ('quad', 4)
+            }
+
+    key, num_nodes_per_cell = \
+        element_type_to_key_num_nodes[element_type]
+
+    # Skip ahead to the line that opens the data block (might be
+    # the current line already).
+    if line.strip()[-1] != '(':
+        _skip_to(f, '(')
+
+    data = {}
+    if out.group(1) == '':
+        # ASCII
+        if key == 'mixed':
+            # From
+            # <http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
+            # > If the face zone is of mixed type (element-type =
+            # > 0), the body of the section will include the face
+            # > type and will appear as follows
+            # >
+            # > type v0 v1 v2 c0 c1
+            # >
+            for k in range(num_cells):
+                line = next(islice(f, 1)).decode('utf-8')
+                dat = line.split()
+                type_index = int(dat[0], 16)
+                assert type_index != 0
+                type_string, num_nodes_per_cell = \
+                    element_type_to_key_num_nodes[type_index]
+                assert len(dat) == num_nodes_per_cell + 3
+
+                if type_string not in data:
+                    data[type_string] = []
+
+                data[type_string].append([
+                    int(d, 16) for d in dat[1:num_nodes_per_cell+1]
+                    ])
+
+            data = {key: numpy.array(data[key]) for key in data}
+
+        else:
+            # read cell data
+            data = numpy.empty(
+                (num_cells, num_nodes_per_cell), dtype=int
+                )
+            for k in range(num_cells):
+                line = next(islice(f, 1)).decode('utf-8')
+                dat = line.split()
+                # The body of a regular face section contains the
+                # grid connectivity, and each line appears as
+                # follows:
+                #   n0 n1 n2 cr cl
+                # where n* are the defining nodes (vertices) of the
+                # face, and c* are the adjacent cells.
+                assert len(dat) == num_nodes_per_cell + 2
+                data[k] = [
+                    int(d, 16) for d in dat[:num_nodes_per_cell]
+                    ]
+            data = {key: data}
+    else:
+        # binary
+        if out.group(1) == '20':
+            bytes_per_item = 4
+            dtype = numpy.int32
+        else:
+            assert out.group(1) == '30'
+            bytes_per_item = 8
+            dtype = numpy.int64
+
+        assert key != 'mixed'
+
+        # Read cell data.
+        # The body of a regular face section contains the grid
+        # connectivity, and each line appears as follows:
+        #   n0 n1 n2 cr cl
+        # where n* are the defining nodes (vertices) of the face,
+        # and c* are the adjacent cells.
+        total_bytes = \
+            num_cells * bytes_per_item * (num_nodes_per_cell + 2)
+        data = numpy.fromstring(
+            f.read(total_bytes), dtype=dtype
+            ).reshape((num_cells, num_nodes_per_cell + 2))
+        # Cut off the adjacent cell data.
+        data = data[:, :num_nodes_per_cell]
+        data = {key: data}
+
+    # make sure that the data set is properly closed
+    _skip_close(f, 2)
+
+    return data
+
+
 def read(filename):
     # Initialize the data optional data fields
     field_data = {}
@@ -224,85 +339,8 @@ def read(filename):
                 if data is not None:
                     cells[key] = data
 
-            elif index == '13':
-                # cells
-                # (13 (zone-id first-index last-index type element-type))
-
-                # If the line is self-contained, it is merely a declaration of
-                # the total number of points.
-                if line.count('(') == line.count(')'):
-                    continue
-
-                out = re.match('\s*\(\s*13\s*\(([^\)]+)\).*', line)
-                a = [int(num, 16) for num in out.group(1).split()]
-
-                assert len(a) > 4
-                first_index = a[1]
-                last_index = a[2]
-                num_cells = last_index - first_index + 1
-                element_type = a[4]
-
-                element_type_to_key_num_nodes = {
-                        0: ('mixed', None),
-                        2: ('line', 2),
-                        3: ('triangle', 3),
-                        4: ('quad', 4)
-                        }
-
-                key, num_nodes_per_cell = \
-                    element_type_to_key_num_nodes[element_type]
-
-                # Skip ahead to the line that opens the data block (might be
-                # the current line already).
-                if line.strip()[-1] != '(':
-                    _skip_to(f, '(')
-
-                if key == 'mixed':
-                    # From
-                    # <http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
-                    # > If the face zone is of mixed type (element-type = 0),
-                    # > the body of the section will include the face type and
-                    # > will appear as follows
-                    # >
-                    # > type v0 v1 v2 c0 c1
-                    # >
-                    data = {}
-                    for k in range(num_cells):
-                        line = next(islice(f, 1)).decode('utf-8')
-                        dat = line.split()
-                        type_index = int(dat[0], 16)
-                        assert type_index != 0
-                        type_string, num_nodes_per_cell = \
-                            element_type_to_key_num_nodes[type_index]
-                        assert len(dat) == num_nodes_per_cell + 3
-
-                        if type_string not in data:
-                            data[type_string] = []
-
-                        data[type_string].append([
-                            int(d, 16) for d in dat[1:num_nodes_per_cell+1]
-                            ])
-
-                    data = {key: numpy.array(data[key]) for key in data}
-
-                else:
-                    # read cell data
-                    data = numpy.empty(
-                        (num_cells, num_nodes_per_cell), dtype=int
-                        )
-                    for k in range(num_cells):
-                        line = next(islice(f, 1)).decode('utf-8')
-                        dat = line.split()
-                        # The body of a regular face section contains the grid
-                        # connectivity, and each line appears as follows:
-                        #   n0 n1 n2 cr cl
-                        # where n* are the defining nodes (vertices) of the
-                        # face, and c* are the adjacent cells.
-                        assert len(dat) == num_nodes_per_cell + 2
-                        data[k] = [
-                            int(d, 16) for d in dat[:num_nodes_per_cell]
-                            ]
-                    data = {key: data}
+            elif re.match('(|20|30)13', index):
+                data = _read_faces(f, line)
 
                 for key in data:
                     if key in cells:
@@ -310,73 +348,6 @@ def read(filename):
                     else:
                         cells[key] = data[key]
 
-                # make sure that the data set is properly closed
-                _skip_close(f, 2)
-            elif re.match('(20|30)13', index):
-                # binary cells
-                # (2013 (zone-id first-index last-index type element-type))
-
-                # If the line is self-contained, it is merely a declaration of
-                # the total number of points.
-                if line.count('(') == line.count(')'):
-                    continue
-
-                out = re.match('\s*\(\s*(20|30)13\s*\(([^\)]+)\).*', line)
-                a = [int(num, 16) for num in out.group(2).split()]
-
-                assert len(a) > 4
-                first_index = a[1]
-                last_index = a[2]
-                num_cells = last_index - first_index + 1
-                element_type = a[4]
-
-                element_type_to_key_num_nodes = {
-                        0: ('mixed', None),
-                        2: ('line', 2),
-                        3: ('triangle', 3),
-                        4: ('quad', 4)
-                        }
-
-                key, num_nodes_per_cell = \
-                    element_type_to_key_num_nodes[element_type]
-
-                # Skip ahead to the line that opens the data block (might be
-                # the current line already).
-                if line.strip()[-1] != '(':
-                    _skip_to(f, '(')
-
-                if out.group(1) == '20':
-                    bytes_per_item = 4
-                    dtype = numpy.int32
-                else:
-                    assert out.group(1) == '30'
-                    bytes_per_item = 8
-                    dtype = numpy.int64
-
-                assert key != 'mixed'
-
-                # Read cell data.
-                # The body of a regular face section contains the grid
-                # connectivity, and each line appears as follows:
-                #   n0 n1 n2 cr cl
-                # where n* are the defining nodes (vertices) of the face, and
-                # c* are the adjacent cells.
-                total_bytes = \
-                    num_cells * bytes_per_item * (num_nodes_per_cell + 2)
-                data = numpy.fromstring(
-                    f.read(total_bytes), dtype=dtype
-                    ).reshape((num_cells, num_nodes_per_cell + 2))
-                # Cut off the adjacent cell data.
-                data = data[:, :num_nodes_per_cell]
-                data = {key: data}
-
-                for key in data:
-                    if key in cells:
-                        cells[key] = numpy.concatenate([cells[key], data[key]])
-                    else:
-                        cells[key] = data[key]
-
-                _skip_close(f, 2)
             else:
                 logging.warn('Unknown index \'%s\'. Skipping.' % index)
                 # Skipping ahead to the next line with two closing brackets.
