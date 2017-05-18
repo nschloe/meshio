@@ -42,11 +42,13 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
 
     out = re.match('\s*\(\s*(\d0)10\s*\(([^\)]*)\).*', line)
     if out.group(1) == '20':
-        dtype = 'f'
+        dchar = 'f'
+        dtype = numpy.float32
         bytes_per_item = 4
     else:
         assert out.group(1) == '30'
-        dtype = 'd'
+        dchar = 'd'
+        dtype = numpy.float64
         bytes_per_item = 8
 
     a = [int(num, 16) for num in out.group(2).split()]
@@ -63,23 +65,21 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
     num_points = last_point_index - first_point_index + 1
     dim = a[4]
 
-    # Skip ahead to the line that opens the data block (might be the current
-    # line already).
-    while line.strip()[-1] != '(':
-        line = next(islice(f, 1)).decode('utf-8')
+    # read byte by byte until the next '('
+    last_char = line.strip()[-1]
+    while last_char != '(':
+        last_char = f.read(1).decode('utf-8')
 
     # read point data
     total_bytes = dim * bytes_per_item * num_points
-    bfr = b''
-    while len(bfr) < total_bytes:
-        line = next(islice(f, 1))
-        bfr += line
+    bfr = f.read(total_bytes)
 
-    pts = numpy.empty((num_points, dim))
+    # convert to points array
+    pts = numpy.empty((num_points, dim), dtype=dtype)
     for k in range(num_points):
         pts[k] = [
             struct.unpack(
-                dtype,
+                dchar,
                 bfr[
                     bytes_per_item*(dim*k+i):
                     bytes_per_item*(dim*k+i+1)
@@ -88,10 +88,14 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
             for i in range(dim)
             ]
 
-    line = next(islice(f, 1)).decode('utf-8')
-    assert line.strip() == ')'
-    line = next(islice(f, 1)).decode('utf-8')
-    assert line.strip() == 'End of Binary Section %s10)' % out.group(1)
+    # now read byte by byte until ')'
+    c = None
+    while c != ')':
+        c = f.read(1).decode('utf-8')
+
+    line = None
+    while line != 'End of Binary Section %s10)' % out.group(1):
+        line = next(islice(f, 1)).decode('utf-8').strip()
 
     return pts, first_point_index_overall, last_point_index
 
