@@ -213,7 +213,9 @@ def _read_faces(f, line):
             # > type v0 v1 v2 c0 c1
             # >
             for k in range(num_cells):
-                line = next(islice(f, 1)).decode('utf-8')
+                line = ''
+                while line.strip() == '':
+                    line = next(islice(f, 1)).decode('utf-8')
                 dat = line.split()
                 type_index = int(dat[0], 16)
                 assert type_index != 0
@@ -323,6 +325,7 @@ def read(filename):
                 # (2 3)
                 _skip_close(f, line.count('(') - line.count(')'))
             elif re.match('(|20|30)10', index):
+                # points
                 pts, first_point_index_overall, last_point_index = \
                         _read_points(
                                 f, line, first_point_index_overall,
