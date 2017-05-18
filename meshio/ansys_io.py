@@ -28,7 +28,7 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
     if line.count('(') == line.count(')'):
         return
 
-    out = re.match('\s*\(\s*(\d0)10\s*\(([^\)]*)\).*', line)
+    out = re.match('\s*\(\s*(20|30)10\s*\(([^\)]*)\).*', line)
     if out.group(1) == '20':
         dtype = numpy.float32
         bytes_per_item = 4
@@ -96,7 +96,7 @@ def _read_binary_cells(f, line):
                 _skip_to(f, ')')
                 return None, None
 
-    out = re.match('\s*\(\s*([2,3])012\s*\(([^\)]+)\).*', line)
+    out = re.match('\s*\(\s*(20|30)12\s*\(([^\)]+)\).*', line)
     a = [int(num, 16) for num in out.group(2).split()]
 
     assert len(a) > 4
@@ -236,7 +236,7 @@ def read(filename):
 
                 # make sure that the data set is properly closed
                 _skip_close(f, 2)
-            elif re.match('[2,3]010', index):
+            elif re.match('(20|30)10', index):
                 # binary points
                 pts, first_point_index_overall, last_point_index = \
                         _read_binary_points(
@@ -305,7 +305,7 @@ def read(filename):
                 # make sure that the data set is properly closed
                 _skip_close(f, 2)
 
-            elif re.match('[2,3]012', index):
+            elif re.match('(20|30)12', index):
                 key, data = _read_binary_cells(f, line)
                 if data:
                     cells[key] = data
@@ -398,7 +398,7 @@ def read(filename):
 
                 # make sure that the data set is properly closed
                 _skip_close(f, 2)
-            elif re.match('[2,3]013', index):
+            elif re.match('(20|30)13', index):
                 # binary cells
                 # (2013 (zone-id first-index last-index type element-type))
 
@@ -407,7 +407,7 @@ def read(filename):
                 if line.count('(') == line.count(')'):
                     continue
 
-                out = re.match('\s*\(\s*([2,3])013\s*\(([^\)]+)\).*', line)
+                out = re.match('\s*\(\s*(20|30)13\s*\(([^\)]+)\).*', line)
                 a = [int(num, 16) for num in out.group(2).split()]
 
                 assert len(a) > 4
@@ -431,11 +431,11 @@ def read(filename):
                 if line.strip()[-1] != '(':
                     _skip_to(f, '(')
 
-                if out.group(1) == '2':
+                if out.group(1) == '20':
                     bytes_per_item = 4
                     dtype = numpy.int32
                 else:
-                    assert out.group(1) == '3'
+                    assert out.group(1) == '30'
                     bytes_per_item = 8
                     dtype = numpy.int64
 
