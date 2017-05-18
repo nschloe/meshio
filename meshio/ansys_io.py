@@ -19,59 +19,6 @@ def _skip_to(f, char):
     return
 
 
-def _read_binary_points(f, line, first_point_index_overall, last_point_index):
-    # points
-    # (3010 (zone-id first-index last-index type ND)
-
-    # If the line is self-contained, it is merely a declaration of
-    # the total number of points.
-    if line.count('(') == line.count(')'):
-        return
-
-    out = re.match('\s*\(\s*(20|30)10\s*\(([^\)]*)\).*', line)
-    if out.group(1) == '20':
-        dtype = numpy.float32
-        bytes_per_item = 4
-    else:
-        assert out.group(1) == '30'
-        dtype = numpy.float64
-        bytes_per_item = 8
-
-    a = [int(num, 16) for num in out.group(2).split()]
-
-    assert len(a) > 4
-    first_point_index = a[1]
-    # store the very first point index
-    if first_point_index_overall is None:
-        first_point_index_overall = first_point_index
-    # make sure that point arrays are subsequent
-    if last_point_index is not None:
-        assert last_point_index + 1 == first_point_index
-    last_point_index = a[2]
-    num_points = last_point_index - first_point_index + 1
-    dim = a[4]
-
-    # read byte by byte until the next '('
-    last_char = line.strip()[-1]
-    while last_char != '(':
-        last_char = f.read(1).decode('utf-8')
-
-    # read point data
-    total_bytes = dim * bytes_per_item * num_points
-    pts = numpy.fromstring(
-            f.read(total_bytes), dtype=dtype
-            ).reshape((num_points, dim))
-
-    # now read byte by byte until ')'
-    _skip_to(f, ')')
-
-    line = None
-    while line != 'End of Binary Section %s10)' % out.group(1):
-        line = next(islice(f, 1)).decode('utf-8').strip()
-
-    return pts, first_point_index_overall, last_point_index
-
-
 def _read_binary_cells(f, line):
     # cells
     # (2012 (zone-id first-index last-index type element-type))
@@ -118,11 +65,11 @@ def _read_binary_cells(f, line):
     key, num_nodes_per_cell = \
         element_type_to_key_num_nodes[element_type]
 
-    if out.group(1) == '2':
+    if out.group(1) == '20':
         bytes_per_item = 4
         dtype = numpy.int32
     else:
-        assert out.group(1) == '3'
+        assert out.group(1) == '30'
         bytes_per_item = 8
         dtype = numpy.int64
 
@@ -191,17 +138,15 @@ def read(filename):
                 # dimensionality
                 # (2 3)
                 _skip_close(f, line.count('(') - line.count(')'))
-            elif index == '10':
-                # points
-                # (10 (zone-id first-index last-index type ND)
-
-                # If the line is self-contained, it is merely a declaration of
-                # the total number of points.
+            elif re.match('(|20|30)10', index):
+                # If the line is self-contained, it is merely a declaration
+                # of the total number of points.
                 if line.count('(') == line.count(')'):
                     continue
 
-                out = re.match('\s*\(\s*10\s*\(([^\)]*)\).*', line)
-                a = [int(num, 16) for num in out.group(1).split()]
+                # (3010 (zone-id first-index last-index type ND)
+                out = re.match('\s*\(\s*(|20|30)10\s*\(([^\)]*)\).*', line)
+                a = [int(num, 16) for num in out.group(2).split()]
 
                 assert len(a) > 4
                 first_point_index = a[1]
@@ -215,37 +160,43 @@ def read(filename):
                 num_points = last_point_index - first_point_index + 1
                 dim = a[4]
 
-                # Skip ahead to the line that opens the data block (might be
-                # the current line already).
-                while line.strip()[-1] != '(':
-                    line = next(islice(f, 1)).decode('utf-8')
+                # Skip ahead to the byte that opens the data block (might
+                # be the current line already).
+                last_char = line.strip()[-1]
+                while last_char != '(':
+                    last_char = f.read(1).decode('utf-8')
 
-                # read point data
-                pts = numpy.empty((num_points, dim))
-                for k in range(num_points):
-                    # skip ahead to the first line with data
-                    line = ''
-                    while line.strip() == '':
-                        line = next(islice(f, 1)).decode('utf-8')
-                    dat = line.split()
-                    assert len(dat) == dim
-                    for d in range(dim):
-                        pts[k][d] = float(dat[d])
-
-                points.append(pts)
+                if out.group(1) == '':
+                    # ASCII data
+                    pts = numpy.empty((num_points, dim))
+                    for k in range(num_points):
+                        # skip ahead to the first line with data
+                        line = ''
+                        while line.strip() == '':
+                            line = next(islice(f, 1)).decode('utf-8')
+                        dat = line.split()
+                        assert len(dat) == dim
+                        for d in range(dim):
+                            pts[k][d] = float(dat[d])
+                else:
+                    # binary data
+                    if out.group(1) == '20':
+                        dtype = numpy.float32
+                        bytes_per_item = 4
+                    else:
+                        assert out.group(1) == '30'
+                        dtype = numpy.float64
+                        bytes_per_item = 8
+                    # read point data
+                    total_bytes = dim * bytes_per_item * num_points
+                    pts = numpy.fromstring(
+                            f.read(total_bytes), dtype=dtype
+                            ).reshape((num_points, dim))
 
                 # make sure that the data set is properly closed
                 _skip_close(f, 2)
-            elif re.match('(20|30)10', index):
-                # binary points
-                pts, first_point_index_overall, last_point_index = \
-                        _read_binary_points(
-                            f, line,
-                            first_point_index_overall, last_point_index
-                            )
-                if pts is not None:
-                    points.append(pts)
 
+                points.append(pts)
             elif index == '12':
                 # cells
                 # (12 (zone-id first-index last-index type element-type))
