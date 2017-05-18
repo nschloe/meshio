@@ -6,8 +6,8 @@ I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 from datetime import datetime
+import logging
 import numpy
-import warnings
 
 from . import __about__
 
@@ -223,7 +223,7 @@ def write(
             }
     for key, data in cells.items():
         if key not in meshio_to_h5m_type:
-            warnings.warn(
+            logging.warn(
                     'Unsupported H5M element type \'%s\'. Skipping.' % key
                     )
             continue

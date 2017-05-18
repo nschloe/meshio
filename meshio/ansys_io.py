@@ -9,7 +9,7 @@ from . __about__ import __version__
 from itertools import islice
 import numpy
 import re
-import warnings
+import logging
 
 
 def _skip_to(f, char):
@@ -278,7 +278,7 @@ def read(filename):
                     element_type_to_key_num_nodes[element_type]
 
                 if key == 'mixed':
-                    warnings.warn(
+                    logging.warn(
                         'Cannot deal with mixed element type. Skipping.'
                         )
                     # Skipping ahead to the next line with two closing
@@ -464,7 +464,7 @@ def read(filename):
 
                 _skip_close(f, 2)
             else:
-                warnings.warn('Unknown index \'%s\'. Skipping.' % index)
+                logging.warn('Unknown index \'%s\'. Skipping.' % index)
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count('(') - line.count(')'))
 
