@@ -167,9 +167,17 @@ def read(filename):
 
                 # make sure that the data set is properly closed
                 _skip_close(f, 2)
+            elif index == '2010':
+                # points
+                pts, first_point_index_overall, last_point_index = \
+                        _read_binary_points(
+                            f, line,
+                            first_point_index_overall, last_point_index
+                            )
+                if pts is not None:
+                    points.append(pts)
             elif index == '3010':
                 # points
-                # (3010 (zone-id first-index last-index type ND)
                 pts, first_point_index_overall, last_point_index = \
                         _read_binary_points(
                             f, line,
