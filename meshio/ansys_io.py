@@ -154,7 +154,10 @@ def read(filename):
                 # read point data
                 pts = numpy.empty((num_points, dim))
                 for k in range(num_points):
-                    line = next(islice(f, 1)).decode('utf-8')
+                    # skip ahead to the first line with data
+                    line = ''
+                    while line.strip() == '':
+                        line = next(islice(f, 1)).decode('utf-8')
                     dat = line.split()
                     assert len(dat) == dim
                     for d in range(dim):
