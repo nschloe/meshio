@@ -72,6 +72,75 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
     return pts, first_point_index_overall, last_point_index
 
 
+def _read_binary_cells(f, line):
+    # cells
+    # (2012 (zone-id first-index last-index type element-type))
+
+    # If the line is self-contained, it is merely a declaration of
+    # the total number of points.
+    if line.count('(') == line.count(')'):
+        return None, None
+
+    # Skip to the opening `(` and make sure that there's no
+    # non-whitespace character between the last closing bracket and
+    # the `(`.
+    if line.strip()[-1] != '(':
+        c = None
+        while True:
+            c = f.read(1).decode('utf-8')
+            if c == '(':
+                break
+            if not re.match('\s', c):
+                # Found a non-whitespace character before `(`. Assume this is
+                # just a declaration line then and skip to the closing bracket.
+                _skip_to(f, ')')
+                return None, None
+
+    out = re.match('\s*\(\s*([2,3])012\s*\(([^\)]+)\).*', line)
+    a = [int(num, 16) for num in out.group(2).split()]
+
+    assert len(a) > 4
+    first_index = a[1]
+    last_index = a[2]
+    num_cells = last_index - first_index + 1
+    element_type = a[4]
+
+    element_type_to_key_num_nodes = {
+            0: ('mixed', None),
+            1: ('triangle', 3),
+            2: ('tetra', 4),
+            3: ('quad', 4),
+            4: ('hexa', 8),
+            5: ('pyra', 5),
+            6: ('wedge', 6),
+            }
+
+    key, num_nodes_per_cell = \
+        element_type_to_key_num_nodes[element_type]
+
+    if out.group(1) == '2':
+        bytes_per_item = 4
+        dtype = numpy.int32
+    else:
+        assert out.group(1) == '3'
+        bytes_per_item = 8
+        dtype = numpy.int64
+
+    assert key != 'mixed'
+
+    # read cell data
+    total_bytes = bytes_per_item * num_nodes_per_cell * num_cells
+    data = numpy.fromstring(
+            f.read(total_bytes),
+            count=(num_nodes_per_cell*num_cells),
+            dtype=dtype
+            ).reshape((num_cells, num_nodes_per_cell))
+
+    # make sure that the data set is properly closed
+    _skip_close(f, 2)
+    return key, data
+
+
 def _skip_close(f, num_open_brackets):
     while num_open_brackets > 0:
         char = f.read(1).decode('utf-8')
@@ -237,63 +306,10 @@ def read(filename):
                 _skip_close(f, 2)
 
             elif re.match('[2,3]012', index):
-                # cells
-                # (2012 (zone-id first-index last-index type element-type))
+                key, data = _read_binary_cells(f, line)
+                if data:
+                    cells[key] = data
 
-                # If the line is self-contained, it is merely a declaration of
-                # the total number of points.
-                if line.count('(') == line.count(')'):
-                    continue
-
-                out = re.match('\s*\(\s*([2,3])012\s*\(([^\)]+)\).*', line)
-                a = [int(num, 16) for num in out.group(2).split()]
-
-                assert len(a) > 4
-                first_index = a[1]
-                last_index = a[2]
-                num_cells = last_index - first_index + 1
-                element_type = a[4]
-
-                element_type_to_key_num_nodes = {
-                        0: ('mixed', None),
-                        1: ('triangle', 3),
-                        2: ('tetra', 4),
-                        3: ('quad', 4),
-                        4: ('hexa', 8),
-                        5: ('pyra', 5),
-                        6: ('wedge', 6),
-                        }
-
-                key, num_nodes_per_cell = \
-                    element_type_to_key_num_nodes[element_type]
-
-                if out.group(1) == '2':
-                    bytes_per_item = 4
-                    dtype = numpy.int32
-                else:
-                    assert out.group(1) == '3'
-                    bytes_per_item = 8
-                    dtype = numpy.int64
-
-                assert key != 'mixed'
-
-                # Skip ahead to the line that opens the data block (might be
-                # the current line already).
-                if line.strip()[-1] != '(':
-                    _skip_to(f, '(')
-
-                # read cell data
-                total_bytes = bytes_per_item * num_nodes_per_cell * num_cells
-                data = numpy.fromstring(
-                        f.read(total_bytes),
-                        count=(num_nodes_per_cell*num_cells),
-                        dtype=dtype
-                        ).reshape((num_cells, num_nodes_per_cell))
-
-                cells[key] = data
-
-                # make sure that the data set is properly closed
-                _skip_close(f, 2)
             elif index == '13':
                 # cells
                 # (13 (zone-id first-index last-index type element-type))
