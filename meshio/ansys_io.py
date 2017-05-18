@@ -19,33 +19,84 @@ def _skip_to(f, char):
     return
 
 
-def _read_binary_cells(f, line):
-    # cells
-    # (2012 (zone-id first-index last-index type element-type))
+def _skip_close(f, num_open_brackets):
+    while num_open_brackets > 0:
+        char = f.read(1).decode('utf-8')
+        if char == '(':
+            num_open_brackets += 1
+        elif char == ')':
+            num_open_brackets -= 1
+    return
 
-    # If the line is self-contained, it is merely a declaration of
-    # the total number of points.
+
+def _read_points(f, line, first_point_index_overall, last_point_index):
+    # If the line is self-contained, it is merely a declaration
+    # of the total number of points.
+    if line.count('(') == line.count(')'):
+        return None, None, None
+
+    # (3010 (zone-id first-index last-index type ND)
+    out = re.match('\s*\(\s*(|20|30)10\s*\(([^\)]*)\).*', line)
+    a = [int(num, 16) for num in out.group(2).split()]
+
+    assert len(a) > 4
+    first_point_index = a[1]
+    # store the very first point index
+    if first_point_index_overall is None:
+        first_point_index_overall = first_point_index
+    # make sure that point arrays are subsequent
+    if last_point_index is not None:
+        assert last_point_index + 1 == first_point_index
+    last_point_index = a[2]
+    num_points = last_point_index - first_point_index + 1
+    dim = a[4]
+
+    # Skip ahead to the byte that opens the data block (might
+    # be the current line already).
+    last_char = line.strip()[-1]
+    while last_char != '(':
+        last_char = f.read(1).decode('utf-8')
+
+    if out.group(1) == '':
+        # ASCII data
+        pts = numpy.empty((num_points, dim))
+        for k in range(num_points):
+            # skip ahead to the first line with data
+            line = ''
+            while line.strip() == '':
+                line = next(islice(f, 1)).decode('utf-8')
+            dat = line.split()
+            assert len(dat) == dim
+            for d in range(dim):
+                pts[k][d] = float(dat[d])
+    else:
+        # binary data
+        if out.group(1) == '20':
+            dtype = numpy.float32
+            bytes_per_item = 4
+        else:
+            assert out.group(1) == '30'
+            dtype = numpy.float64
+            bytes_per_item = 8
+        # read point data
+        total_bytes = dim * bytes_per_item * num_points
+        pts = numpy.fromstring(
+                f.read(total_bytes), dtype=dtype
+                ).reshape((num_points, dim))
+
+    # make sure that the data set is properly closed
+    _skip_close(f, 2)
+    return pts, first_point_index_overall, last_point_index
+
+
+def _read_cells(f, line):
+    # If the line is self-contained, it is merely a declaration of the total
+    # number of points.
     if line.count('(') == line.count(')'):
         return None, None
 
-    # Skip to the opening `(` and make sure that there's no
-    # non-whitespace character between the last closing bracket and
-    # the `(`.
-    if line.strip()[-1] != '(':
-        c = None
-        while True:
-            c = f.read(1).decode('utf-8')
-            if c == '(':
-                break
-            if not re.match('\s', c):
-                # Found a non-whitespace character before `(`. Assume this is
-                # just a declaration line then and skip to the closing bracket.
-                _skip_to(f, ')')
-                return None, None
-
-    out = re.match('\s*\(\s*(20|30)12\s*\(([^\)]+)\).*', line)
+    out = re.match('\s*\(\s*(|20|30)12\s*\(([^\)]+)\).*', line)
     a = [int(num, 16) for num in out.group(2).split()]
-
     assert len(a) > 4
     first_index = a[1]
     last_index = a[2]
@@ -65,37 +116,55 @@ def _read_binary_cells(f, line):
     key, num_nodes_per_cell = \
         element_type_to_key_num_nodes[element_type]
 
-    if out.group(1) == '20':
-        bytes_per_item = 4
-        dtype = numpy.int32
-    else:
-        assert out.group(1) == '30'
-        bytes_per_item = 8
-        dtype = numpy.int64
+    # Skip to the opening `(` and make sure that there's no non-whitespace
+    # character between the last closing bracket and the `(`.
+    if line.strip()[-1] != '(':
+        c = None
+        while True:
+            c = f.read(1).decode('utf-8')
+            if c == '(':
+                break
+            if not re.match('\s', c):
+                # Found a non-whitespace character before `(`.
+                # Assume this is just a declaration line then and
+                # skip to the closing bracket.
+                _skip_to(f, ')')
+                return None, None
 
     assert key != 'mixed'
 
     # read cell data
-    total_bytes = bytes_per_item * num_nodes_per_cell * num_cells
-    data = numpy.fromstring(
-            f.read(total_bytes),
-            count=(num_nodes_per_cell*num_cells),
-            dtype=dtype
-            ).reshape((num_cells, num_nodes_per_cell))
+    if out.group(1) == '':
+        # ASCII cells
+        data = numpy.empty(
+            (num_cells, num_nodes_per_cell),
+            dtype=int
+            )
+        for k in range(num_cells):
+            line = next(islice(f, 1)).decode('utf-8')
+            dat = line.split()
+            assert len(dat) == num_nodes_per_cell
+            data[k] = [int(d, 16) for d in dat]
+    else:
+        # binary cells
+        if out.group(1) == '20':
+            bytes_per_item = 4
+            dtype = numpy.int32
+        else:
+            assert out.group(1) == '30'
+            bytes_per_item = 8
+            dtype = numpy.int64
+        total_bytes = \
+            bytes_per_item * num_nodes_per_cell * num_cells
+        data = numpy.fromstring(
+                f.read(total_bytes),
+                count=(num_nodes_per_cell*num_cells),
+                dtype=dtype
+                ).reshape((num_cells, num_nodes_per_cell))
 
     # make sure that the data set is properly closed
     _skip_close(f, 2)
     return key, data
-
-
-def _skip_close(f, num_open_brackets):
-    while num_open_brackets > 0:
-        char = f.read(1).decode('utf-8')
-        if char == '(':
-            num_open_brackets += 1
-        elif char == ')':
-            num_open_brackets -= 1
-    return
 
 
 def read(filename):
@@ -139,126 +208,20 @@ def read(filename):
                 # (2 3)
                 _skip_close(f, line.count('(') - line.count(')'))
             elif re.match('(|20|30)10', index):
-                # If the line is self-contained, it is merely a declaration
-                # of the total number of points.
-                if line.count('(') == line.count(')'):
-                    continue
+                pts, first_point_index_overall, last_point_index = \
+                        _read_points(
+                                f, line, first_point_index_overall,
+                                last_point_index
+                                )
 
-                # (3010 (zone-id first-index last-index type ND)
-                out = re.match('\s*\(\s*(|20|30)10\s*\(([^\)]*)\).*', line)
-                a = [int(num, 16) for num in out.group(2).split()]
+                if pts is not None:
+                    points.append(pts)
 
-                assert len(a) > 4
-                first_point_index = a[1]
-                # store the very first point index
-                if first_point_index_overall is None:
-                    first_point_index_overall = first_point_index
-                # make sure that point arrays are subsequent
-                if last_point_index is not None:
-                    assert last_point_index + 1 == first_point_index
-                last_point_index = a[2]
-                num_points = last_point_index - first_point_index + 1
-                dim = a[4]
-
-                # Skip ahead to the byte that opens the data block (might
-                # be the current line already).
-                last_char = line.strip()[-1]
-                while last_char != '(':
-                    last_char = f.read(1).decode('utf-8')
-
-                if out.group(1) == '':
-                    # ASCII data
-                    pts = numpy.empty((num_points, dim))
-                    for k in range(num_points):
-                        # skip ahead to the first line with data
-                        line = ''
-                        while line.strip() == '':
-                            line = next(islice(f, 1)).decode('utf-8')
-                        dat = line.split()
-                        assert len(dat) == dim
-                        for d in range(dim):
-                            pts[k][d] = float(dat[d])
-                else:
-                    # binary data
-                    if out.group(1) == '20':
-                        dtype = numpy.float32
-                        bytes_per_item = 4
-                    else:
-                        assert out.group(1) == '30'
-                        dtype = numpy.float64
-                        bytes_per_item = 8
-                    # read point data
-                    total_bytes = dim * bytes_per_item * num_points
-                    pts = numpy.fromstring(
-                            f.read(total_bytes), dtype=dtype
-                            ).reshape((num_points, dim))
-
-                # make sure that the data set is properly closed
-                _skip_close(f, 2)
-
-                points.append(pts)
-            elif index == '12':
+            elif re.match('(|20|30)12', index):
                 # cells
-                # (12 (zone-id first-index last-index type element-type))
-
-                # If the line is self-contained, it is merely a declaration of
-                # the total number of points.
-                if line.count('(') == line.count(')'):
-                    continue
-
-                out = re.match('\s*\(\s*12\s*\(([^\)]+)\).*', line)
-                a = [int(num, 16) for num in out.group(1).split()]
-
-                assert len(a) > 4
-                first_index = a[1]
-                last_index = a[2]
-                num_cells = last_index - first_index + 1
-                element_type = a[4]
-
-                element_type_to_key_num_nodes = {
-                        0: ('mixed', None),
-                        1: ('triangle', 3),
-                        2: ('tetra', 4),
-                        3: ('quad', 4),
-                        4: ('hexa', 8),
-                        5: ('pyra', 5),
-                        6: ('wedge', 6),
-                        }
-
-                key, num_nodes_per_cell = \
-                    element_type_to_key_num_nodes[element_type]
-
-                if key == 'mixed':
-                    logging.warn(
-                        'Cannot deal with mixed element type. Skipping.'
-                        )
-                    # Skipping ahead to the next line with two closing
-                    # brackets.
-                    while re.search('[^\)]*\)\s*\)\s*$', line) is None:
-                        line = next(islice(f, 1)).decode('utf-8')
-                    continue
-
-                # Skip ahead to the line that opens the data block (might be
-                # the current line already).
-                if line.strip()[-1] != '(':
-                    _skip_to(f, '(')
-
-                # read cell data
-                data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
-                for k in range(num_cells):
-                    line = next(islice(f, 1)).decode('utf-8')
-                    dat = line.split()
-                    assert len(dat) == num_nodes_per_cell
-                    data[k] = [int(d, 16) for d in dat]
-
-                cells[key] = data
-
-                # make sure that the data set is properly closed
-                _skip_close(f, 2)
-
-            elif re.match('(20|30)12', index):
-                key, data = _read_binary_cells(f, line)
-                if data:
+                # (2012 (zone-id first-index last-index type element-type))
+                key, data = _read_cells(f, line)
+                if data is not None:
                     cells[key] = data
 
             elif index == '13':
