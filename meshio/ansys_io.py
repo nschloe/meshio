@@ -12,11 +12,10 @@ import re
 import warnings
 
 
-def _skip_till_two_closing_brackets(f):
-    bracket_count = 0
-    while bracket_count < 2:
-        if f.read(1).decode('utf-8') == ')':
-            bracket_count += 1
+def _skip_to(f, char):
+    c = None
+    while c != char:
+        c = f.read(1).decode('utf-8')
     return
 
 
@@ -31,12 +30,10 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
 
     out = re.match('\s*\(\s*(\d0)10\s*\(([^\)]*)\).*', line)
     if out.group(1) == '20':
-        dchar = 'f'
         dtype = numpy.float32
         bytes_per_item = 4
     else:
         assert out.group(1) == '30'
-        dchar = 'd'
         dtype = numpy.float64
         bytes_per_item = 8
 
@@ -76,6 +73,16 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
     return pts, first_point_index_overall, last_point_index
 
 
+def _skip_close(f, num_open_brackets):
+    while num_open_brackets > 0:
+        char = f.read(1).decode('utf-8')
+        if char == '(':
+            num_open_brackets += 1
+        elif char == ')':
+            num_open_brackets -= 1
+    return
+
+
 def read(filename):
     # Initialize the data optional data fields
     field_data = {}
@@ -88,6 +95,7 @@ def read(filename):
     first_point_index_overall = None
     last_point_index = None
 
+    # read file in binary mode since some data might be binary
     with open(filename, 'rb') as f:
         while True:
             try:
@@ -104,22 +112,19 @@ def read(filename):
             assert out
             index = out.group(1)
 
+            print(index)
+
             if index == '0':
                 # Comment.
-                # If the last character of the line isn't a closing bracket,
-                # skip ahead to a line that consists of only a closing bracket.
-                if line.strip()[-1] == ')':
-                    continue
-                while re.match('\s*\)\s*', line) is None:
-                    line = next(islice(f, 1)).decode('utf-8')
+                _skip_close(f, line.count('(') - line.count(')'))
             elif index == '1':
                 # header
                 # (1 "<text>")
-                pass
+                _skip_close(f, line.count('(') - line.count(')'))
             elif index == '2':
                 # dimensionality
                 # (2 3)
-                pass
+                _skip_close(f, line.count('(') - line.count(')'))
             elif index == '10':
                 # points
                 # (10 (zone-id first-index last-index type ND)
@@ -161,7 +166,7 @@ def read(filename):
                 points.append(pts)
 
                 # make sure that the data set is properly closed
-                _skip_till_two_closing_brackets(f)
+                _skip_close(f, 2)
             elif index == '3010':
                 # points
                 # (3010 (zone-id first-index last-index type ND)
@@ -216,8 +221,7 @@ def read(filename):
 
                 # Skip ahead to the line that opens the data block (might be
                 # the current line already).
-                while line.strip()[-1] != '(':
-                    line = next(islice(f, 1)).decode('utf-8')
+                _skip_to(f, '(')
 
                 # read cell data
                 data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
@@ -230,7 +234,7 @@ def read(filename):
                 cells[key] = data
 
                 # make sure that the data set is properly closed
-                _skip_till_two_closing_brackets(f)
+                _skip_close(f, 2)
             elif index == '13':
                 # cells
                 # (13 (zone-id first-index last-index type element-type))
@@ -261,8 +265,7 @@ def read(filename):
 
                 # Skip ahead to the line that opens the data block (might be
                 # the current line already).
-                while line.strip()[-1] != '(':
-                    line = next(islice(f, 1)).decode('utf-8')
+                _skip_to(f, '(')
 
                 if key == 'mixed':
                     # From
@@ -318,12 +321,11 @@ def read(filename):
                         cells[key] = data[key]
 
                 # make sure that the data set is properly closed
-                _skip_till_two_closing_brackets(f)
+                _skip_close(f, 2)
             else:
                 warnings.warn('Unknown index \'%s\'. Skipping.' % index)
                 # Skipping ahead to the next line with two closing brackets.
-                while re.search('[^\)]*\)\s*\)\s*$', line) is None:
-                    line = next(islice(f, 1)).decode('utf-8')
+                _skip_close(f, line.count('(') - line.count(')'))
 
     points = numpy.concatenate(points)
 
