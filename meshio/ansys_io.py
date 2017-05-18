@@ -221,7 +221,8 @@ def read(filename):
 
                 # Skip ahead to the line that opens the data block (might be
                 # the current line already).
-                _skip_to(f, '(')
+                if line.strip()[-1] != '(':
+                    _skip_to(f, '(')
 
                 # read cell data
                 data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
@@ -265,7 +266,8 @@ def read(filename):
 
                 # Skip ahead to the line that opens the data block (might be
                 # the current line already).
-                _skip_to(f, '(')
+                if line.strip()[-1] != '(':
+                    _skip_to(f, '(')
 
                 if key == 'mixed':
                     # From
