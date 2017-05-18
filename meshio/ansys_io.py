@@ -72,21 +72,8 @@ def _read_binary_points(f, line, first_point_index_overall, last_point_index):
 
     # read point data
     total_bytes = dim * bytes_per_item * num_points
-    bfr = f.read(total_bytes)
-
-    # convert to points array
-    pts = numpy.empty((num_points, dim), dtype=dtype)
-    for k in range(num_points):
-        pts[k] = [
-            struct.unpack(
-                dchar,
-                bfr[
-                    bytes_per_item*(dim*k+i):
-                    bytes_per_item*(dim*k+i+1)
-                    ]
-                )[0]
-            for i in range(dim)
-            ]
+    pts = numpy.fromstring(f.read(total_bytes), dtype=dtype) \
+        .reshape((num_points, dim))
 
     # now read byte by byte until ')'
     c = None
