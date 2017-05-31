@@ -250,7 +250,7 @@ def write(
                             tuple(c + 1)
                             )
                         )
-            consecutive_index += data.shape[0]
+            consecutive_index += len(node_idcs)
         fh.write('$EndElements')
 
     return
