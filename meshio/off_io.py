@@ -26,7 +26,7 @@ def read_buffer(f):
     while True:
         line = next(islice(f, 1))
         stripped = line.strip()
-        if len(stripped) > 0 and stripped[0] != '#':
+        if stripped and stripped[0] != '#':
             break
 
     # This next line contains:
@@ -51,7 +51,7 @@ def read_buffer(f):
             break
         stripped = line.strip()
         # skip comments and empty lines
-        if len(stripped) == 0 or stripped[0] == '#':
+        if not stripped or stripped[0] == '#':
             continue
 
         x, y, z = stripped.split()
@@ -73,7 +73,7 @@ def read_buffer(f):
         stripped = line.strip()
 
         # skip comments and empty lines
-        if len(stripped) == 0 or stripped[0] == '#':
+        if not stripped or stripped[0] == '#':
             continue
 
         data = stripped.split()
@@ -85,7 +85,7 @@ def read_buffer(f):
         triangles.append(data)
 
     cells = {}
-    if len(triangles):
+    if triangles:
         cells['triangle'] = numpy.array(triangles)
 
     return verts, cells

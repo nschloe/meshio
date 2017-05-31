@@ -15,6 +15,8 @@ jobs:
       - checkout
       - run: LANG=C.UTF-8 pip3 install .
       # The actual test
+      - run: pylint meshio/
+      - run: pylint test/*py
       - run: cd test/ && pytest --cov meshio
       # submit to codecov
       - run: apt-get install -y curl

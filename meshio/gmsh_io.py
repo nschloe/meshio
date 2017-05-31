@@ -198,7 +198,7 @@ def write(
 
         consecutive_index = 0
         for cell_type, node_idcs in cells.items():
-            if cell_type in cell_data and len(cell_data[cell_type]) > 0:
+            if cell_type in cell_data and cell_data[cell_type]:
                 for key in cell_data[cell_type]:
                     # assert data consistency
                     assert len(cell_data[cell_type][key]) == len(node_idcs)

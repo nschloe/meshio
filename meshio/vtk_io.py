@@ -184,7 +184,7 @@ def _read_exodusii_mesh(reader, timestep=None):
             if sub_block.IsA('vtkUnstructuredGrid'):
                 vtk_mesh.append(sub_block)
 
-    if len(vtk_mesh) == 0:
+    if not vtk_mesh:
         raise IOError('No \'vtkUnstructuredGrid\' found!')
     elif len(vtk_mesh) > 1:
         raise IOError('More than one \'vtkUnstructuredGrid\' found!')

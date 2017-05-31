@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #
+from __future__ import print_function
+
 import pipdated
 
 from .__about__ import (

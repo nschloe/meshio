@@ -168,11 +168,11 @@ def _write_mesh(
 
     xcells = ET.SubElement(mesh, 'cells', size=str(num_cells))
     idx = 0
-    for cell_type, cls in stripped_cells.items():
+    for ct, cls in stripped_cells.items():
         for cell in cls:
             cell_entry = ET.SubElement(
                 xcells,
-                meshio_to_dolfin_type[cell_type],
+                meshio_to_dolfin_type[ct],
                 index=str(idx)
                 )
             for k, c in enumerate(cell):
