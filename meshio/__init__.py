@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import pipdated
 
 from .__about__ import (
     __version__,
@@ -10,6 +11,5 @@ from .__about__ import (
 
 from .helpers import *
 
-import pipdated
 if pipdated.needs_checking(__name__):
     print(pipdated.check(__name__, __version__))

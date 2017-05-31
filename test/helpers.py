@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-import meshio
-
-import numpy
 import os
+
+import meshio
+import numpy
 
 # In general:
 # Use values with an infinite decimal representation to test precision.

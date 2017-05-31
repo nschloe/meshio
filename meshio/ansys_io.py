@@ -37,7 +37,7 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
         return None, None, None
 
     # (3010 (zone-id first-index last-index type ND)
-    out = re.match('\s*\(\s*(|20|30)10\s*\(([^\)]*)\).*', line)
+    out = re.match('\\s*\\(\\s*(|20|30)10\\s*\\(([^\\)]*)\\).*', line)
     a = [int(num, 16) for num in out.group(2).split()]
 
     assert len(a) > 4
@@ -96,7 +96,7 @@ def _read_cells(f, line):
     if line.count('(') == line.count(')'):
         return None, None
 
-    out = re.match('\s*\(\s*(|20|30)12\s*\(([^\)]+)\).*', line)
+    out = re.match('\\s*\\(\\s*(|20|30)12\\s*\\(([^\\)]+)\\).*', line)
     a = [int(num, 16) for num in out.group(2).split()]
     assert len(a) > 4
     first_index = a[1]
@@ -125,7 +125,7 @@ def _read_cells(f, line):
             c = f.read(1).decode('utf-8')
             if c == '(':
                 break
-            if not re.match('\s', c):
+            if not re.match('\\s', c):
                 # Found a non-whitespace character before `(`.
                 # Assume this is just a declaration line then and
                 # skip to the closing bracket.
@@ -177,7 +177,7 @@ def _read_faces(f, line):
     if line.count('(') == line.count(')'):
         return {}
 
-    out = re.match('\s*\(\s*(|20|30)13\s*\(([^\)]+)\).*', line)
+    out = re.match('\\s*\\(\\s*(|20|30)13\\s*\\(([^\\)]+)\\).*', line)
     a = [int(num, 16) for num in out.group(2).split()]
 
     assert len(a) > 4
@@ -310,7 +310,7 @@ def read(filename):
 
             # expect the line to have the form
             #  (<index> [...]
-            out = re.match('\s*\(\s*([0-9]+).*', line)
+            out = re.match('\\s*\\(\\s*([0-9]+).*', line)
             assert out
             index = out.group(1)
 
@@ -353,7 +353,7 @@ def read(filename):
                         cells[key] = data[key]
 
             else:
-                logging.warning('Unknown index \'%s\'. Skipping.' % index)
+                logging.warning('Unknown index \'%s\'. Skipping.', index)
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count('(') - line.count(')'))
 
