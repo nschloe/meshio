@@ -85,34 +85,32 @@ def read(filename, file_format=None):
         file_format = _extension_to_filetype[extension]
 
     if file_format == 'ansys':
-        return ansys_io.read(filename)
+        out = ansys_io.read(filename)
     elif file_format == 'gmsh':
-        return gmsh_io.read(filename)
+        out = gmsh_io.read(filename)
     elif file_format == 'medit':
-        return medit_io.read(filename)
+        out = medit_io.read(filename)
     elif file_format == 'dolfin-xml':
-        return dolfin_io.read(filename)
+        out = dolfin_io.read(filename)
     elif file_format == 'permas':
-        return permas_io.read(filename)
+        out = permas_io.read(filename)
     elif file_format == 'moab':
-        return h5m_io.read(filename)
+        out = h5m_io.read(filename)
     elif file_format == 'off':
-        return off_io.read(filename)
+        out = off_io.read(filename)
     elif file_format in ['vtu-ascii', 'vtu-binary']:
-        return vtk_io.read('vtu', filename)
+        out = vtk_io.read('vtu', filename)
     elif file_format in ['vtk-ascii', 'vtk-binary']:
-        return vtk_io.read('vtk', filename)
+        out = vtk_io.read('vtk', filename)
     elif file_format in ['xdmf', 'xdmf2']:
-        return vtk_io.read('xdmf2', filename)
+        out = vtk_io.read('xdmf2', filename)
     elif file_format == 'xdmf3':
-        return vtk_io.read('xdmf3', filename)
-    elif file_format == 'exodus':
-        return vtk_io.read('exodus', filename)
+        out = vtk_io.read('xdmf3', filename)
     else:
-        raise RuntimeError(
-            'Unknown file format \'%s\' of file \'%s\'.' %
-            (file_format, filename)
-            )
+        assert file_format == 'exodus'
+        out = vtk_io.read('exodus', filename)
+
+    return out
 
 
 def write(filename,

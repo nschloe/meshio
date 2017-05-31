@@ -9,6 +9,7 @@ from .__about__ import (
     __website__
     )
 
+# pylint: disable=wildcard-import
 from .helpers import *
 
 if pipdated.needs_checking(__name__):
