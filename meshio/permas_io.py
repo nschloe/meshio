@@ -5,10 +5,10 @@ I/O for PERMAS dat format, cf.
 
 .. moduleauthor:: Nils Wagner
 '''
+import re
 
 import gzip
 import numpy
-import re
 from .__about__ import __version__, __website__
 
 
@@ -102,7 +102,10 @@ def write(
         fh.write('$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH\n')
         fh.write('! \n')
         fh.write('    $SITUATION NAME = REAL_MODES\n')
-        fh.write('        DFLT_COMP SYSTEM = NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1\n')
+        fh.write(
+            '        DFLT_COMP SYSTEM ='
+            ' NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1\n'
+            )
         fh.write('    $END SITUATION\n')
         fh.write('! \n')
         fh.write('    $STRUCTURE\n')
@@ -163,7 +166,10 @@ def write(
                     permas_type[1]
                     )
             elif permas_type[1] in elem_2D:
-                fh.write('            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n' %(permas_type[1],permas_type[1]))
+                fh.write(
+                    '            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n'
+                    % (permas_type[1], permas_type[1])
+                    )
             else:
                 pass
         fh.write('!\n')

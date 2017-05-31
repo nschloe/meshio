@@ -54,7 +54,7 @@ def _read_mesh(filename):
             num_cells = int(child.attrib['size'])
             cells[cell_type] = numpy.empty((num_cells, npc), dtype=int)
             for cell in child.getchildren():
-                assert(dolfin_to_meshio_type[cell.tag][0] == cell_type)
+                assert dolfin_to_meshio_type[cell.tag][0] == cell_type
                 idx = int(cell.attrib['index'])
                 for k in range(npc):
                     cells[cell_type][idx, k] = cell.attrib['v%s' % k]
@@ -83,7 +83,7 @@ def _read_cell_data(filename, cell_type):
     for f in os.listdir(dir_name):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
-        out = re.match('%s_([^\.]+)\.xml' % basename, f)
+        out = re.match('%s_([^\.]+)\\.xml' % basename, f)
         if not out:
             continue
         name = out.group(1)
@@ -105,7 +105,6 @@ def _read_cell_data(filename, cell_type):
 
 def read(filename):
     points, cells, cell_type = _read_mesh(filename)
-
     point_data = {}
     cell_data = _read_cell_data(filename, cell_type)
     field_data = {}
