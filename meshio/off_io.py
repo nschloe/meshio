@@ -79,9 +79,7 @@ def read_buffer(f):
         data = stripped.split()
         num_points = int(data[0])
         assert num_points == len(data) - 1
-
-        if not num_points == 3:
-            raise RuntimeError('Can only handle triangular faces')
+        assert num_points == 3, 'Can only handle triangular faces'
 
         data = [int(data[1]), int(data[2]), int(data[3])]
         triangles.append(data)
@@ -103,8 +101,7 @@ def write(
         ):
 
     for key in cells:
-        if key not in ['triangle']:
-            raise RuntimeError('Can only deal with triangular faces')
+        assert key in ['triangle'], 'Can only deal with triangular faces'
 
     tri = cells['triangle']
 

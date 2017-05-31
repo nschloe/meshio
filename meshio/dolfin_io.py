@@ -7,9 +7,10 @@ I/O for DOLFIN's XML format, cf.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import logging
-import numpy
 import os
 import re
+
+import numpy
 
 
 def _read_mesh(filename):
@@ -83,7 +84,7 @@ def _read_cell_data(filename, cell_type):
     for f in os.listdir(dir_name):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
-        out = re.match('%s_([^\.]+)\\.xml' % basename, f)
+        out = re.match('%s_([^\\.]+)\\.xml' % basename, f)
         if not out:
             continue
         name = out.group(1)
@@ -134,7 +135,7 @@ def _write_mesh(
     if len(cells) > 1:
         discarded_cells = cells.keys()
         discarded_cells.remove(cell_type)
-        logging.warn(
+        logging.warning(
           'DOLFIN XML can only handle one cell type at a time. '
           'Using ' + cell_type +
           ', discarding ' + ', '.join(discarded_cells) +

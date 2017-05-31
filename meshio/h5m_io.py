@@ -223,7 +223,7 @@ def write(
             }
     for key, data in cells.items():
         if key not in meshio_to_h5m_type:
-            logging.warn(
+            logging.warning(
                     'Unsupported H5M element type \'%s\'. Skipping.' % key
                     )
             continue

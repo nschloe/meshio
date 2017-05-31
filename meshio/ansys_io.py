@@ -4,12 +4,13 @@
 I/O for Ansys's msh format, cf.
 <http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>.
 '''
-from . __about__ import __version__
-
 from itertools import islice
-import numpy
-import re
 import logging
+import re
+
+import numpy
+
+from . __about__ import __version__
 
 
 def _skip_to(f, char):
@@ -352,7 +353,7 @@ def read(filename):
                         cells[key] = data[key]
 
             else:
-                logging.warn('Unknown index \'%s\'. Skipping.' % index)
+                logging.warning('Unknown index \'%s\'. Skipping.' % index)
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count('(') - line.count(')'))
 

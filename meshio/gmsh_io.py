@@ -143,7 +143,7 @@ def read_buffer(f):
             raise RuntimeError('Unknown environment \'%s\'.' % environ)
 
     if has_additional_tag_data:
-        logging.warn(
+        logging.warning(
             'The file contains tag data that couldn\'t be processed.'
             )
 
