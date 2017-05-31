@@ -9,7 +9,7 @@ I/O for PERMAS dat format, cf.
 import gzip
 import numpy
 import re
-from .__about__ import __version__, __website__, __author__
+from .__about__ import __version__, __website__
 
 
 def read(filename):
@@ -41,13 +41,13 @@ def read(filename):
 
     while True:
         line = f.readline()
-        if not line or re.search('\$END STRUCTURE', line):
+        if not line or re.search('\\$END STRUCTURE', line):
             break
         for meshio_type, permas_ele in meshio_to_permas_type.items():
             num_nodes = permas_ele[0]
             permas_type = permas_ele[1]
 
-            if re.search('\$ELEMENT TYPE = %s' % permas_type, line):
+            if re.search('\\$ELEMENT TYPE = %s' % permas_type, line):
                 while True:
                     line = f.readline()
                     if not line or line.startswith('!'):
@@ -58,7 +58,7 @@ def read(filename):
                     else:
                         cells[meshio_type] = [data[-num_nodes:]]
 
-        if re.search('\$COOR', line):
+        if re.search('\\$COOR', line):
             points = []
             while True:
                 line = f.readline()
