@@ -64,6 +64,27 @@ _extension_to_filetype = {
     '.xmf': 'xdmf3',
     }
 
+num_nodes_per_cell = {
+    'vertex': 1,
+    'line': 2,
+    'triangle': 3,
+    'quad': 4,
+    'tetra': 4,
+    'hexahedron': 8,
+    'wedge': 6,
+    'pyramid': 5,
+    #
+    'line3': 3,
+    'triangle6': 6,
+    'quad9': 9,
+    'tetra10': 10,
+    'hexahedron27': 27,
+    'prism18': 18,
+    'pyramid14': 14,
+    'line4': 4,
+    'quad16': 16,
+    }
+
 
 def read(filename, file_format=None):
     '''Reads an unstructured mesh with added data.
@@ -139,22 +160,8 @@ def write(filename,
         file_format = _extension_to_filetype[extension]
 
     # check cells for sanity
-    if 'vertex' in cells:
-        assert cells['vertex'].shape[1] == 1
-    if 'line' in cells:
-        assert cells['line'].shape[1] == 2
-    if 'triangle' in cells:
-        assert cells['triangle'].shape[1] == 3
-    if 'quad' in cells:
-        assert cells['quad'].shape[1] == 4
-    if 'tetra' in cells:
-        assert cells['tetra'].shape[1] == 4
-    if 'hexahedron' in cells:
-        assert cells['hexahedron'].shape[1] == 8
-    if 'wedge' in cells:
-        assert cells['wedge'].shape[1] == 6
-    if 'pyramid' in cells:
-        assert cells['pyramid'].shape[1] == 5
+    for key in cells:
+        assert cells[key].shape[1] == num_nodes_per_cell[key]
 
     if file_format == 'moab':
         h5m_io.write(

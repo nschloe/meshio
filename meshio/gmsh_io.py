@@ -11,6 +11,8 @@ import logging
 import numpy
 import struct
 
+from . import helpers
+
 
 def read(filename):
     '''Reads a Gmsh msh file.
@@ -26,6 +28,7 @@ def read_buffer(f):
     # <http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
 
     # Initialize the data optional data fields
+    cells = {}
     field_data = {}
     cell_data = {}
     point_data = {}
@@ -47,9 +50,10 @@ def read_buffer(f):
             # 2.2 0 8
             # into its components.
             str_list = list(filter(None, line.split()))
+            assert str_list[0][0] == '2', 'Need mesh format 2'
             assert str_list[1] in ['0', '1']
-            data_size = int(str_list[2])
             is_ascii = str_list[1] == '0'
+            data_size = int(str_list[2])
             if not is_ascii:
                 # The next line is the integer one in bytes. Useful to check
                 # endianness. Just assert that we get 1 here.
@@ -96,81 +100,126 @@ def read_buffer(f):
             assert environ == 'Elements', \
                 'Unknown environment \'%s\'.' % environ
             # The first line is the number of elements
-            line = next(islice(f, 1))
-            num_cells = int(line)
-            cells = {}
+            line = next(islice(f, 1)).decode('utf-8')
+            total_num_cells = int(line)
             gmsh_to_meshio_type = {
-                    15: ('vertex', 1),
-                    1: ('line', 2),
-                    2: ('triangle', 3),
-                    3: ('quad', 4),
-                    4: ('tetra', 4),
-                    5: ('hexahedron', 8),
-                    6: ('wedge', 6),
-                    7: ('pyramid', 5),
-                    8: ('line3', 3),
-                    9: ('triangle6', 6),
-                    10: ('quad9', 9),
-                    11: ('tetra10', 10),
-                    12: ('hexahedron27', 27),
-                    13: ('prism18', 18),
-                    14: ('pyramid14', 14),
-                    26: ('line4', 4),
-                    36: ('quad16', 16)
+                    15: 'vertex',
+                    1: 'line',
+                    2: 'triangle',
+                    3: 'quad',
+                    4: 'tetra',
+                    5: 'hexahedron',
+                    6: 'wedge',
+                    7: 'pyramid',
+                    8: 'line3',
+                    9: 'triangle6',
+                    10: 'quad9',
+                    11: 'tetra10',
+                    12: 'hexahedron27',
+                    13: 'prism18',
+                    14: 'pyramid14',
+                    26: 'line4',
+                    36: 'quad16',
                     }
             # For each cell, there are at least two tags: the physical entity
             # and the elementary geometrical entity the cell belongs to (see
             # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>).
-            for k, line in enumerate(islice(f, num_cells)):
-                # Throw away the index (data[0]) immediately;
-                data = numpy.array(line.split(), dtype=int)
-                t = gmsh_to_meshio_type[data[1]]
+            if is_ascii:
+                for k, line in enumerate(islice(f, total_num_cells)):
+                    data = [int[k] for k in filter(None, line.split())]
+                    t = gmsh_to_meshio_type[data[1]][0]
+                    num_nodes_per_elem = helpers.num_nodes_per_cell[t]
 
-                if t[0] not in cells:
-                    cells[t[0]] = []
+                    if t not in cells:
+                        cells[t] = []
+                    cells[t].append(data[num_nodes_per_elem:-1])
 
-                # Subtract one to account for the fact that python indices are
-                # 0-based.
-                cells[t[0]].append(data[-t[1]:] - 1)
+                    # data[2] gives the number of tags. The gmsh manual
+                    # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
+                    # says:
+                    # >>>
+                    # By default, the first tag is the number of the physical
+                    # entity to which the element belongs; the second is the
+                    # number of the elementary geometrical entity to which the
+                    # element belongs; the third is the number of mesh
+                    # partitions to which the element belongs, followed by the
+                    # partition ids (negative partition ids indicate ghost
+                    # cells). A zero tag is equivalent to no tag. Gmsh and most
+                    # codes using the MSH 2 format require at least the first
+                    # two tags (physical and elementary tags).
+                    # <<<
+                    num_tags = data[2]
+                    if t not in cell_data:
+                        cell_data[t] = []
+                    cell_data[t].append(data[3:3+num_tags])
 
-                # data[2] gives the number of tags. The gmsh manual
-                # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
-                # says:
-                # >>>
-                # By default, the first tag is the number of the physical
-                # entity to which the element belongs; the second is the number
-                # of the elementary geometrical entity to which the element
-                # belongs; the third is the number of mesh partitions to which
-                # the element belongs, followed by the partition ids (negative
-                # partition ids indicate ghost cells). A zero tag is equivalent
-                # to no tag. Gmsh and most codes using the MSH 2 format require
-                # at least the first two tags (physical and elementary tags).
-                # <<<
+                # convert to numpy arrays
+                for key in cells:
+                    cells[key] = numpy.array(cells[key], dtype=int)
+                for key in cell_data:
+                    cell_data[key] = numpy.array(cell_data[key], dtype=int)
+            else:
+                # binary
+                num_elems = 0
+                while num_elems < total_num_cells:
+                    # read element header
+                    elem_type = struct.unpack('i', f.read(int_size))[0]
+                    t = gmsh_to_meshio_type[elem_type]
+                    num_nodes_per_elem = helpers.num_nodes_per_cell[t]
+                    num_elems0 = struct.unpack('i', f.read(int_size))[0]
+                    num_tags = struct.unpack('i', f.read(int_size))[0]
+                    assert num_tags >= 2
 
-                # Just remember if there's any more tag data so we can warn. No
-                # idea how to store the data in an array yet since it can be
-                # "sparse", i.e., not all cells need to have the same number of
-                # tags.
-                if data[2] >= 2:
-                    if data[2] > 2:
-                        has_additional_tag_data = True
+                    # read element data
+                    num_bytes = 4 * (
+                        num_elems0 * (1 + num_tags + num_nodes_per_elem)
+                        )
+                    shape = \
+                        (num_elems0, 1 + num_tags + num_nodes_per_elem)
+                    data = numpy.fromstring(
+                        f.read(num_bytes), dtype=numpy.int32
+                        ).reshape(shape)
 
-                    if t[0] not in cell_data:
-                        cell_data[t[0]] = {
-                            'physical': [],
-                            'geometrical': [],
-                            }
-                    cell_data[t[0]]['physical'].append(data[3])
-                    cell_data[t[0]]['geometrical'].append(data[4])
-                else:
-                    # TODO handle data[2] == 1
-                    assert data[2] == 0
+                    if t not in cells:
+                        cells[t] = []
+                    cells[t].append(data[num_nodes_per_elem:-1])
 
-            line = next(islice(f, 1))
+                    if t not in cell_data:
+                        cell_data[t] = []
+                    cell_data[t].append(data[1:num_tags+1])
+
+                    num_elems += num_elems0
+
+                # collect cells
+                for key in cells:
+                    cells[key] = numpy.vstack(cells[key])
+
+                # collect cell data
+                for key in cell_data:
+                    cell_data[key] = numpy.vstack(cell_data[key])
+
+                assert next(islice(f, 1)).decode('utf-8') == '\n'
+
+            line = next(islice(f, 1)).decode('utf-8')
             assert line.strip() == '$EndElements'
 
+            # Subtract one to account for the fact that python indices are
+            # 0-based.
             for key in cells:
-                cells[key] = numpy.vstack(cells[key])
+                cells[key] -= 1
+
+            # restrict to the standard two data items
+            for key in cell_data:
+                if cell_data[key].shape[1] > 2:
+                    has_additional_tag_data = True
+                cell_data[key] = {
+                        'physical': data[:, 0],
+                        'geometrical': data[:, 1],
+                        }
+
+            print(cells)
+            print(cell_data)
+            exit(1)
 
     if has_additional_tag_data:
         logging.warning(
