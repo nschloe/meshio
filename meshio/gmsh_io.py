@@ -182,11 +182,11 @@ def read_buffer(f):
 
                     if t not in cells:
                         cells[t] = []
-                    cells[t].append(data[num_nodes_per_elem:-1])
+                    cells[t].append(data[:, -num_nodes_per_elem:])
 
                     if t not in cell_data:
                         cell_data[t] = []
-                    cell_data[t].append(data[1:num_tags+1])
+                    cell_data[t].append(data[:, 1:num_tags+1])
 
                     num_elems += num_elems0
 
@@ -213,13 +213,9 @@ def read_buffer(f):
                 if cell_data[key].shape[1] > 2:
                     has_additional_tag_data = True
                 cell_data[key] = {
-                        'physical': data[:, 0],
-                        'geometrical': data[:, 1],
+                        'physical': cell_data[key][:, 0],
+                        'geometrical': cell_data[key][:, 1],
                         }
-
-            print(cells)
-            print(cell_data)
-            exit(1)
 
     if has_additional_tag_data:
         logging.warning(
