@@ -14,6 +14,7 @@ import numpy
 
 def read(filetype, filename):
     import vtk
+    from vtk.util import numpy_support
 
     def _read_data(data):
         '''Extract numpy arrays from a VTK data set.
@@ -99,7 +100,7 @@ def read(filetype, filename):
         raise RuntimeError('Unknown file type \'%s\'.' % filename)
 
     # Explicitly extract points, cells, point data, field data
-    points = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
+    points = numpy.copy(numpy_support.vtk_to_numpy(
             vtk_mesh.GetPoints().GetData()
             ))
     cells = _read_cells(vtk_mesh)

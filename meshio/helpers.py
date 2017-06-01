@@ -12,7 +12,8 @@ from . import vtk_io
 input_filetypes = [
         'ansys',
         'exodus',
-        'gmsh',
+        'gmsh-ascii',
+        'gmsh-binary',
         'dolfin-xml',
         'medit',
         'permas',
@@ -29,7 +30,8 @@ input_filetypes = [
 output_filetypes = [
         'ansys',
         'exodus',
-        'gmsh',
+        'gmsh-ascii',
+        'gmsh-binary',
         'dolfin-xml',
         'medit',
         'permas',
@@ -48,7 +50,7 @@ _extension_to_filetype = {
     '.ex2': 'exodus',
     '.exo': 'exodus',
     '.mesh': 'medit',
-    '.msh': 'gmsh',
+    '.msh': 'gmsh-binary',
     '.xml': 'dolfin-xml',
     '.post': 'permas',
     '.post.gz': 'permas',
@@ -86,7 +88,7 @@ def read(filename, file_format=None):
 
     if file_format == 'ansys':
         out = ansys_io.read(filename)
-    elif file_format == 'gmsh':
+    elif file_format in ['gmsh-ascii', 'gmsh-binary']:
         out = gmsh_io.read(filename)
     elif file_format == 'medit':
         out = medit_io.read(filename)
@@ -163,13 +165,19 @@ def write(filename,
             )
     elif file_format == 'ansys':
         ansys_io.write(
-            filename, points, cells,
+            'ascii', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data
             )
-    elif file_format == 'gmsh':
+    elif file_format == 'gmsh-binary':
         gmsh_io.write(
-            filename, points, cells,
+            'binary', filename, points, cells,
+            point_data=point_data,
+            cell_data=cell_data
+            )
+    elif file_format == 'gmsh-ascii':
+        gmsh_io.write(
+            'ascii', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data
             )
@@ -225,15 +233,14 @@ def write(filename,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_format == 'exodus':  # exodus ii format
+    else:
+        assert file_format == 'exodus', (
+            'unknown file format \'%s\' of \'%s\'.' % (file_format, filename)
+            )
         vtk_io.write(
             'exodus', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
-            )
-    else:
-        raise RuntimeError(
-            'unknown file format \'%s\' of \'%s\'.' % (file_format, filename)
             )
     return
