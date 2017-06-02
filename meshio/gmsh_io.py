@@ -183,7 +183,7 @@ def read_buffer(f):
                     num_nodes_per_elem = num_nodes_per_cell[t]
                     num_elems0 = struct.unpack('i', f.read(int_size))[0]
                     num_tags = struct.unpack('i', f.read(int_size))[0]
-                    assert num_tags >= 2
+                    # assert num_tags >= 2
 
                     # read element data
                     num_bytes = 4 * (
@@ -213,7 +213,8 @@ def read_buffer(f):
                 for key in cell_data:
                     cell_data[key] = numpy.vstack(cell_data[key])
 
-                assert f.readline().decode('utf-8') == '\n'
+                line = f.readline().decode('utf-8')
+                assert line == '\n'
 
             line = f.readline().decode('utf-8')
             assert line.strip() == '$EndElements'
@@ -357,14 +358,14 @@ def write(
                 fh.write(struct.pack('i', meshio_to_gmsh_type[cell_type]))
                 fh.write(struct.pack('i', node_idcs.shape[0]))
                 fh.write(struct.pack('i', fcd.shape[1]))
-                # fh.write('\n'.encode('utf-8'))
                 # actual data
                 # TODO write at once
                 for k, c in enumerate(node_idcs):
                     fh.write(struct.pack('i', consecutive_index + k + 1))
-                    fh.write(fcd[k].tobytes())
-                    fh.write((c + 1).tobytes())
-                    break
+                    for v in fcd[k]:
+                        fh.write(struct.pack('i', v))
+                    for cc in c:
+                        fh.write(struct.pack('i', cc + 1))
                 fh.write('\n'.encode('utf-8'))
             consecutive_index += len(node_idcs)
         fh.write('$EndElements'.encode('utf-8'))
