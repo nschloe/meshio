@@ -32,6 +32,29 @@ num_nodes_per_cell = {
     'quad16': 16,
     }
 
+# Translate meshio types to gmsh codes
+# http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
+_gmsh_to_meshio_type = {
+        15: 'vertex',
+        1: 'line',
+        2: 'triangle',
+        3: 'quad',
+        4: 'tetra',
+        5: 'hexahedron',
+        6: 'wedge',
+        7: 'pyramid',
+        8: 'line3',
+        9: 'triangle6',
+        10: 'quad9',
+        11: 'tetra10',
+        12: 'hexahedron27',
+        13: 'prism18',
+        14: 'pyramid14',
+        26: 'line4',
+        36: 'quad16',
+        }
+_meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
+
 
 def read(filename):
     '''Reads a Gmsh msh file.
@@ -120,29 +143,10 @@ def read_buffer(f):
             # The first line is the number of elements
             line = f.readline().decode('utf-8')
             total_num_cells = int(line)
-            gmsh_to_meshio_type = {
-                    15: 'vertex',
-                    1: 'line',
-                    2: 'triangle',
-                    3: 'quad',
-                    4: 'tetra',
-                    5: 'hexahedron',
-                    6: 'wedge',
-                    7: 'pyramid',
-                    8: 'line3',
-                    9: 'triangle6',
-                    10: 'quad9',
-                    11: 'tetra10',
-                    12: 'hexahedron27',
-                    13: 'prism18',
-                    14: 'pyramid14',
-                    26: 'line4',
-                    36: 'quad16',
-                    }
             if is_ascii:
                 for k, line in enumerate(islice(f, total_num_cells)):
                     data = [int(k) for k in filter(None, line.split())]
-                    t = gmsh_to_meshio_type[data[1]]
+                    t = _gmsh_to_meshio_type[data[1]]
                     num_nodes_per_elem = num_nodes_per_cell[t]
 
                     if t not in cells:
@@ -179,7 +183,7 @@ def read_buffer(f):
                 while num_elems < total_num_cells:
                     # read element header
                     elem_type = struct.unpack('i', f.read(int_size))[0]
-                    t = gmsh_to_meshio_type[elem_type]
+                    t = _gmsh_to_meshio_type[elem_type]
                     num_nodes_per_elem = num_nodes_per_cell[t]
                     num_elems0 = struct.unpack('i', f.read(int_size))[0]
                     num_tags = struct.unpack('i', f.read(int_size))[0]
@@ -300,17 +304,6 @@ def write(
             fh.write('\n'.encode('utf-8'))
         fh.write('$EndNodes\n'.encode('utf-8'))
 
-        # Translate meshio types to gmsh codes
-        # http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
-        meshio_to_gmsh_type = {
-                'vertex': 15,
-                'line': 1,
-                'triangle': 2,
-                'quad': 3,
-                'tetra': 4,
-                'hexahedron': 5,
-                'wedge': 6,
-                }
         fh.write('$Elements\n'.encode('utf-8'))
         # count all cells
         total_num_cells = sum([data.shape[0] for _, data in cells.items()])
@@ -349,7 +342,7 @@ def write(
 
             num_nodes_per_cell = node_idcs.shape[1]
             if is_ascii:
-                form = '%d ' + '%d' % meshio_to_gmsh_type[cell_type] \
+                form = '%d ' + '%d' % _meshio_to_gmsh_type[cell_type] \
                     + ' %d' % fcd.shape[1] + ' %d' * fcd.shape[1] \
                     + ' ' + ' '.join(num_nodes_per_cell * ['%d']) \
                     + '\n'
@@ -363,7 +356,7 @@ def write(
                         ).encode('utf-8'))
             else:
                 # header
-                fh.write(struct.pack('i', meshio_to_gmsh_type[cell_type]))
+                fh.write(struct.pack('i', _meshio_to_gmsh_type[cell_type]))
                 fh.write(struct.pack('i', node_idcs.shape[0]))
                 fh.write(struct.pack('i', fcd.shape[1]))
                 # actual data

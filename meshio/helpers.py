@@ -177,7 +177,7 @@ def write(filename,
         off_io.write(filename, points, cells)
     elif file_format == 'permas':
         permas_io.write(filename, points, cells)
-    elif file_format in ['vtu-ascii']:
+    elif file_format == 'vtu-ascii':
         vtk_io.write(
             'vtu-ascii', filename, points, cells,
             point_data=point_data,
