@@ -139,9 +139,6 @@ def read_buffer(f):
                     26: 'line4',
                     36: 'quad16',
                     }
-            # For each cell, there are at least two tags: the physical entity
-            # and the elementary geometrical entity the cell belongs to (see
-            # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>).
             if is_ascii:
                 for k, line in enumerate(islice(f, total_num_cells)):
                     data = [int(k) for k in filter(None, line.split())]
@@ -227,13 +224,16 @@ def read_buffer(f):
                 cells[key] -= 1
 
             # restrict to the standard two data items
+            output_cell_data = {}
             for key in cell_data:
                 if cell_data[key].shape[1] > 2:
                     has_additional_tag_data = True
-                cell_data[key] = {
-                        'physical': cell_data[key][:, 0],
-                        'geometrical': cell_data[key][:, 1],
-                        }
+                output_cell_data[key] = {}
+                if cell_data[key].shape[1] > 0:
+                    output_cell_data[key]['physical'] = cell_data[key][:, 0]
+                if cell_data[key].shape[1] > 1:
+                    output_cell_data[key]['geometrical'] = cell_data[key][:, 0]
+            cell_data = output_cell_data
 
     if has_additional_tag_data:
         logging.warning(
