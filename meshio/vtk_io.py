@@ -13,6 +13,7 @@ import numpy
 
 
 def read(filetype, filename):
+    # pylint: disable=import-error
     import vtk
     from vtk.util import numpy_support
 
@@ -212,6 +213,7 @@ def write(filetype,
           cell_data=None,
           field_data=None
           ):
+    # pylint: disable=import-error
     import vtk
 
     def _create_vtkarray(X, name):
@@ -326,6 +328,7 @@ def write(filetype,
 
 
 def _generate_vtk_mesh(points, cells):
+    # pylint: disable=import-error
     import vtk
     from vtk.util import numpy_support
 

@@ -8,8 +8,9 @@ I/O for Gmsh's msh format, cf.
 '''
 from itertools import islice
 import logging
-import numpy
 import struct
+
+import numpy
 
 num_nodes_per_cell = {
     'vertex': 1,
@@ -80,7 +81,7 @@ def read_buffer(f):
     data_size = None
     while True:
         line = f.readline().decode('utf-8')
-        if len(line) == 0:
+        if not line:
             # EOF
             break
         assert line[0] == '$'
@@ -340,11 +341,11 @@ def write(
                 # no cell data
                 fcd = numpy.empty([len(node_idcs), 0], dtype=numpy.int32)
 
-            num_nodes_per_cell = node_idcs.shape[1]
+            nnpc = node_idcs.shape[1]
             if is_ascii:
                 form = '%d ' + '%d' % _meshio_to_gmsh_type[cell_type] \
                     + ' %d' % fcd.shape[1] + ' %d' * fcd.shape[1] \
-                    + ' ' + ' '.join(num_nodes_per_cell * ['%d']) \
+                    + ' ' + ' '.join(nnpc * ['%d']) \
                     + '\n'
                 for k, c in enumerate(node_idcs):
                     fh.write((
