@@ -11,16 +11,34 @@ import logging
 import numpy
 import struct
 
-from . import helpers
+num_nodes_per_cell = {
+    'vertex': 1,
+    'line': 2,
+    'triangle': 3,
+    'quad': 4,
+    'tetra': 4,
+    'hexahedron': 8,
+    'wedge': 6,
+    'pyramid': 5,
+    #
+    'line3': 3,
+    'triangle6': 6,
+    'quad9': 9,
+    'tetra10': 10,
+    'hexahedron27': 27,
+    'prism18': 18,
+    'pyramid14': 14,
+    'line4': 4,
+    'quad16': 16,
+    }
 
 
 def read(filename):
     '''Reads a Gmsh msh file.
     '''
     with open(filename, 'rb') as f:
-        points, cells, point_data, cell_data, field_data = read_buffer(f)
-
-    return points, cells, point_data, cell_data, field_data
+        out = read_buffer(f)
+    return out
 
 
 def read_buffer(f):
@@ -38,14 +56,14 @@ def read_buffer(f):
     int_size = 4
     data_size = None
     while True:
-        try:
-            line = next(islice(f, 1)).decode('utf-8')
-        except StopIteration:
+        line = f.readline().decode('utf-8')
+        if len(line) == 0:
+            # EOF
             break
         assert line[0] == '$'
         environ = line[1:].strip()
         if environ == 'MeshFormat':
-            line = next(islice(f, 1)).decode('utf-8')
+            line = f.readline().decode('utf-8')
             # Split the line
             # 2.2 0 8
             # into its components.
@@ -55,26 +73,26 @@ def read_buffer(f):
             is_ascii = str_list[1] == '0'
             data_size = int(str_list[2])
             if not is_ascii:
-                # The next line is the integer one in bytes. Useful to check
+                # The next line is the integer 1 in bytes. Useful to check
                 # endianness. Just assert that we get 1 here.
                 one = f.read(int_size)
                 assert struct.unpack('i', one)[0] == 1
-                line = next(islice(f, 1)).decode('utf-8')
+                line = f.readline().decode('utf-8')
                 assert line == '\n'
-            line = next(islice(f, 1)).decode('utf-8')
+            line = f.readline().decode('utf-8')
             assert line.strip() == '$EndMeshFormat'
         elif environ == 'PhysicalNames':
-            line = next(islice(f, 1))
+            line = f.readline().decode('utf-8')
             num_phys_names = int(line)
             for k, line in enumerate(islice(f, num_phys_names)):
                 key = line.split(' ')[2].replace('"', '').replace('\n', '')
                 phys_group = int(line.split(' ')[1])
                 field_data[key] = phys_group
-            line = next(islice(f, 1))
+            line = f.readline().decode('utf-8')
             assert line.strip() == '$EndPhysicalNames'
         elif environ == 'Nodes':
             # The first line is the number of nodes
-            line = next(islice(f, 1))
+            line = f.readline().decode('utf-8')
             num_nodes = int(line)
             points = numpy.empty((num_nodes, 3))
             if is_ascii:
@@ -91,16 +109,16 @@ def read_buffer(f):
                 data = numpy.fromstring(f.read(num_bytes), dtype=dtype)
                 assert (data['index'] == range(1, num_nodes+1)).all()
                 points = data['x']
-                line = next(islice(f, 1)).decode('utf-8')
+                line = f.readline().decode('utf-8')
                 assert line == '\n'
 
-            line = next(islice(f, 1)).decode('utf-8')
+            line = f.readline().decode('utf-8')
             assert line.strip() == '$EndNodes'
         else:
             assert environ == 'Elements', \
                 'Unknown environment \'%s\'.' % environ
             # The first line is the number of elements
-            line = next(islice(f, 1)).decode('utf-8')
+            line = f.readline().decode('utf-8')
             total_num_cells = int(line)
             gmsh_to_meshio_type = {
                     15: 'vertex',
@@ -126,9 +144,9 @@ def read_buffer(f):
             # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>).
             if is_ascii:
                 for k, line in enumerate(islice(f, total_num_cells)):
-                    data = [int[k] for k in filter(None, line.split())]
-                    t = gmsh_to_meshio_type[data[1]][0]
-                    num_nodes_per_elem = helpers.num_nodes_per_cell[t]
+                    data = [int(k) for k in filter(None, line.split())]
+                    t = gmsh_to_meshio_type[data[1]]
+                    num_nodes_per_elem = num_nodes_per_cell[t]
 
                     if t not in cells:
                         cells[t] = []
@@ -165,7 +183,7 @@ def read_buffer(f):
                     # read element header
                     elem_type = struct.unpack('i', f.read(int_size))[0]
                     t = gmsh_to_meshio_type[elem_type]
-                    num_nodes_per_elem = helpers.num_nodes_per_cell[t]
+                    num_nodes_per_elem = num_nodes_per_cell[t]
                     num_elems0 = struct.unpack('i', f.read(int_size))[0]
                     num_tags = struct.unpack('i', f.read(int_size))[0]
                     assert num_tags >= 2
@@ -198,9 +216,9 @@ def read_buffer(f):
                 for key in cell_data:
                     cell_data[key] = numpy.vstack(cell_data[key])
 
-                assert next(islice(f, 1)).decode('utf-8') == '\n'
+                assert f.readline().decode('utf-8') == '\n'
 
-            line = next(islice(f, 1)).decode('utf-8')
+            line = f.readline().decode('utf-8')
             assert line.strip() == '$EndElements'
 
             # Subtract one to account for the fact that python indices are
