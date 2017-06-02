@@ -30,7 +30,7 @@ def read_buffer(f):
         stripped = line.strip()
 
         # skip comments and empty lines
-        if len(stripped) == 0 or stripped[0] == '#':
+        if not stripped or stripped[0] == '#':
             continue
 
         assert stripped[0].isalpha()

@@ -11,10 +11,12 @@ jobs:
       - run: LANG=C.UTF-8 apt-add-repository -y ppa:nschloe/vtk7-nightly
       - run: apt-get update
       - run: apt-get install -y git python3-h5py python3-lxml python3-numpy python3-vtk7 python3-pip
-      - run: pip3 install -U pytest pytest-cov
+      - run: pip3 install -U pytest pytest-cov pylint
       - checkout
       - run: LANG=C.UTF-8 pip3 install .
       # The actual test
+      - run: pylint meshio/
+      - run: pylint test/*py
       - run: cd test/ && pytest --cov meshio
       # submit to codecov
       - run: apt-get install -y curl

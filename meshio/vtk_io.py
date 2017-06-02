@@ -13,6 +13,7 @@ import numpy
 
 
 def read(filetype, filename):
+    # pylint: disable=import-error
     import vtk
     from vtk.util import numpy_support
 
@@ -100,7 +101,7 @@ def read(filetype, filename):
         raise RuntimeError('Unknown file type \'%s\'.' % filename)
 
     # Explicitly extract points, cells, point data, field data
-    points = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
+    points = numpy.copy(numpy_support.vtk_to_numpy(
             vtk_mesh.GetPoints().GetData()
             ))
     cells = _read_cells(vtk_mesh)
@@ -185,7 +186,7 @@ def _read_exodusii_mesh(reader, timestep=None):
             if sub_block.IsA('vtkUnstructuredGrid'):
                 vtk_mesh.append(sub_block)
 
-    if len(vtk_mesh) == 0:
+    if not vtk_mesh:
         raise IOError('No \'vtkUnstructuredGrid\' found!')
     elif len(vtk_mesh) > 1:
         raise IOError('More than one \'vtkUnstructuredGrid\' found!')
@@ -212,8 +213,8 @@ def write(filetype,
           cell_data=None,
           field_data=None
           ):
+    # pylint: disable=import-error
     import vtk
-    from vtk.util import numpy_support
 
     def _create_vtkarray(X, name):
         array = vtk.util.numpy_support.numpy_to_vtk(X, deep=1)
@@ -226,6 +227,16 @@ def write(filetype,
         cell_data = {}
     if field_data is None:
         field_data = {}
+
+    # assert data integrity
+    for key in point_data:
+        assert len(point_data[key]) == len(points), \
+                'Point data mismatch.'
+    for key in cell_data:
+        assert key in cells, 'Cell data without cell'
+        for key2 in cell_data[key]:
+            assert len(cell_data[key][key2]) == len(cells[key]), \
+                    'Cell data mismatch.'
 
     vtk_mesh = _generate_vtk_mesh(points, cells)
 
@@ -281,14 +292,14 @@ def write(filetype,
         fd.AddArray(_create_vtkarray(value, key))
 
     if filetype in 'vtk-ascii':
-        logging.warn('ASCII files are only meant for debugging.')
+        logging.warning('ASCII files are only meant for debugging.')
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
     elif filetype == 'vtk-binary':
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToBinary()
     elif filetype == 'vtu-ascii':
-        logging.warn('ASCII files are only meant for debugging.')
+        logging.warning('ASCII files are only meant for debugging.')
         writer = vtk.vtkXMLUnstructuredGridWriter()
         writer.SetDataModeToAscii()
     elif filetype == 'vtu-binary':
@@ -317,6 +328,7 @@ def write(filetype,
 
 
 def _generate_vtk_mesh(points, cells):
+    # pylint: disable=import-error
     import vtk
     from vtk.util import numpy_support
 

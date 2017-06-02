@@ -5,11 +5,11 @@ I/O for PERMAS dat format, cf.
 
 .. moduleauthor:: Nils Wagner
 '''
+import re
 
 import gzip
 import numpy
-import re
-from .__about__ import __version__, __website__, __author__
+from .__about__ import __version__, __website__
 
 
 def read(filename):
@@ -17,16 +17,11 @@ def read(filename):
     '''
     # The format is specified at
     # <http://www.intes.de>.
-    if filename.endswith('post.gz'):
-        f = gzip.open(filename, 'r')
-    elif filename.endswith('dato.gz'):
-        f = gzip.open(filename, 'r')
-    elif filename.endswith('dato'):
-        f = open(filename, 'r')
-    elif filename.endswith('post'):
-        f = open(filename, 'r')
+    if filename.endswith('post.gz') or filename.endswith('dato.gz'):
+        opener = gzip.open
     else:
-        print('Unsupported file format')
+        assert filename.endswith('dato') or filename.endswith('post')
+        opener = open
 
     cells = {}
     meshio_to_permas_type = {
@@ -38,34 +33,35 @@ def read(filename):
         'wedge': (6, 'PENTA6'),
         'pyramid': (5, 'PYRA5')
         }
+    with opener(filename, 'r') as f:
+        while True:
+            line = f.readline()
+            if not line or re.search('\\$END STRUCTURE', line):
+                break
+            for meshio_type, permas_ele in meshio_to_permas_type.items():
+                num_nodes = permas_ele[0]
+                permas_type = permas_ele[1]
 
-    while True:
-        line = f.readline()
-        if not line or re.search('\$END STRUCTURE', line):
-            break
-        for meshio_type, permas_ele in meshio_to_permas_type.items():
-            num_nodes = permas_ele[0]
-            permas_type = permas_ele[1]
+                if re.search('\\$ELEMENT TYPE = %s' % permas_type, line):
+                    while True:
+                        line = f.readline()
+                        if not line or line.startswith('!'):
+                            break
+                        data = numpy.array(line.split(), dtype=int)
+                        if meshio_type in cells:
+                            cells[meshio_type].append(data[-num_nodes:])
+                        else:
+                            cells[meshio_type] = [data[-num_nodes:]]
 
-            if re.search('\$ELEMENT TYPE = %s' % permas_type, line):
+            if re.search('\\$COOR', line):
+                points = []
                 while True:
                     line = f.readline()
                     if not line or line.startswith('!'):
                         break
-                    data = numpy.array(line.split(), dtype=int)
-                    if meshio_type in cells:
-                        cells[meshio_type].append(data[-num_nodes:])
-                    else:
-                        cells[meshio_type] = [data[-num_nodes:]]
+                    for r in numpy.array(line.split(), dtype=float)[1:]:
+                        points.append(r)
 
-        if re.search('\$COOR', line):
-            points = []
-            while True:
-                line = f.readline()
-                if not line or line.startswith('!'):
-                    break
-                for r in numpy.array(line.split(), dtype=float)[1:]:
-                    points.append(r)
     points = numpy.array(points)
     points = numpy.reshape(points, newshape=(len(points)//3, 3))
     for key in cells:
@@ -102,7 +98,10 @@ def write(
         fh.write('$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH\n')
         fh.write('! \n')
         fh.write('    $SITUATION NAME = REAL_MODES\n')
-        fh.write('        DFLT_COMP SYSTEM = NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1\n')
+        fh.write(
+            '        DFLT_COMP SYSTEM ='
+            ' NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1\n'
+            )
         fh.write('    $END SITUATION\n')
         fh.write('! \n')
         fh.write('    $STRUCTURE\n')
@@ -163,7 +162,10 @@ def write(
                     permas_type[1]
                     )
             elif permas_type[1] in elem_2D:
-                fh.write('            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n' %(permas_type[1],permas_type[1]))
+                fh.write(
+                    '            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n'
+                    % (permas_type[1], permas_type[1])
+                    )
             else:
                 pass
         fh.write('!\n')
