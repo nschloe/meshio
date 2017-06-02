@@ -366,8 +366,9 @@ def write(
                         fh.write(struct.pack('i', v))
                     for cc in c:
                         fh.write(struct.pack('i', cc + 1))
-                fh.write('\n'.encode('utf-8'))
             consecutive_index += len(node_idcs)
+        if not is_ascii:
+            fh.write('\n'.encode('utf-8'))
         fh.write('$EndElements'.encode('utf-8'))
 
     return
