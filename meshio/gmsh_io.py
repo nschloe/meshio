@@ -244,10 +244,10 @@ def read_buffer(f):
 
 
 def write(
-        mode,
         filename,
         points,
         cells,
+        is_ascii=False,
         point_data=None,
         cell_data=None,
         field_data=None
@@ -262,15 +262,13 @@ def write(
     if field_data is None:
         field_data = {}
 
-    assert mode in ['ascii', 'binary']
-
     with open(filename, 'wb') as fh:
-        mode_idx = 0 if mode == 'ascii' else 1
+        mode_idx = 0 if is_ascii else 1
         size_of_double = 8
         fh.write((
             '$MeshFormat\n2.2 %d %d\n' % (mode_idx, size_of_double)
             ).encode('utf-8'))
-        if mode == 'binary':
+        if not is_ascii:  # binary
             fh.write(struct.pack('i', 1))
             fh.write('\n'.encode('utf-8'))
         fh.write('$EndMeshFormat\n'.encode('utf-8'))
@@ -278,13 +276,12 @@ def write(
         # Write nodes
         fh.write('$Nodes\n'.encode('utf-8'))
         fh.write(('%d\n' % len(points)).encode('utf-8'))
-        if mode == 'ascii':
+        if is_ascii:
             for k, x in enumerate(points):
                 fh.write(
                     ('%d %r %r %r\n' % (k+1, x[0], x[1], x[2])).encode('utf-8')
                     )
         else:
-            assert mode == 'binary'
             # TODO write at once
             for k, x in enumerate(points):
                 fh.write(struct.pack('i', k+1))
@@ -342,7 +339,7 @@ def write(
                 fcd = numpy.empty([len(node_idcs), 0])
 
             num_nodes_per_cell = node_idcs.shape[1]
-            if mode == 'ascii':
+            if is_ascii:
                 form = '%d ' + '%d' % meshio_to_gmsh_type[cell_type] \
                     + ' %d' % fcd.shape[1] + ' %d' * fcd.shape[1] \
                     + ' ' + ' '.join(num_nodes_per_cell * ['%d']) \
@@ -356,7 +353,6 @@ def write(
                             )
                         ).encode('utf-8'))
             else:
-                assert mode == 'binary'
                 # header
                 fh.write(struct.pack('i', meshio_to_gmsh_type[cell_type]))
                 fh.write(struct.pack('i', node_idcs.shape[0]))

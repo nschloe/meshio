@@ -172,19 +172,21 @@ def write(filename,
             )
     elif file_format == 'ansys':
         ansys_io.write(
-            'ascii', filename, points, cells,
+            filename, points, cells,
             point_data=point_data,
             cell_data=cell_data
             )
     elif file_format == 'gmsh-binary':
         gmsh_io.write(
-            'binary', filename, points, cells,
+            filename, points, cells,
+            is_ascii=False,
             point_data=point_data,
             cell_data=cell_data
             )
     elif file_format == 'gmsh-ascii':
         gmsh_io.write(
-            'ascii', filename, points, cells,
+            filename, points, cells,
+            is_ascii=True,
             point_data=point_data,
             cell_data=cell_data
             )
