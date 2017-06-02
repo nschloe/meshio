@@ -226,6 +226,16 @@ def write(filetype,
     if field_data is None:
         field_data = {}
 
+    # assert data integrity
+    for key in point_data:
+        assert len(point_data[key]) == len(points), \
+                'Point data mismatch.'
+    for key in cell_data:
+        assert key in cells, 'Cell data without cell'
+        for key2 in cell_data[key]:
+            assert len(cell_data[key][key2]) == len(cells[key]), \
+                    'Cell data mismatch.'
+
     vtk_mesh = _generate_vtk_mesh(points, cells)
 
     # add point data
