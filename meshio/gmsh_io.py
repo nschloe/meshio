@@ -292,12 +292,11 @@ def write(
                     ('%d %r %r %r\n' % (k+1, x[0], x[1], x[2])).encode('utf-8')
                     )
         else:
-            # TODO write at once
-            for k, x in enumerate(points):
-                fh.write(struct.pack('i', k+1))
-                fh.write(struct.pack('d', x[0]))
-                fh.write(struct.pack('d', x[1]))
-                fh.write(struct.pack('d', x[2]))
+            dtype = [('index', numpy.int32), ('x', numpy.float64, (3,))]
+            tmp = numpy.empty(len(points), dtype=dtype)
+            tmp['index'] = 1 + numpy.arange(len(points))
+            tmp['x'] = points
+            fh.write(tmp.tostring())
             fh.write('\n'.encode('utf-8'))
         fh.write('$EndNodes\n'.encode('utf-8'))
 
