@@ -191,8 +191,9 @@ def read_buffer(f):
                         )
                     shape = \
                         (num_elems0, 1 + num_tags + num_nodes_per_elem)
+                    b = f.read(num_bytes)
                     data = numpy.fromstring(
-                        f.read(num_bytes), dtype=numpy.int32
+                        b, dtype=numpy.int32
                         ).reshape(shape)
 
                     if t not in cells:
@@ -263,6 +264,14 @@ def write(
     if field_data is None:
         field_data = {}
 
+    if not is_ascii:
+        for key in cells:
+            if cells[key].dtype != numpy.int32:
+                logging.warning(
+                    'Binary Gmsh needs 32-bit integers. Converting.'
+                    )
+                cells[key] = numpy.array(cells[key], dtype=numpy.int32)
+
     with open(filename, 'wb') as fh:
         mode_idx = 0 if is_ascii else 1
         size_of_double = 8
@@ -321,10 +330,10 @@ def write(
                 # 'geometrical' as well.
                 if 'physical' not in cell_data[cell_type]:
                     cell_data[cell_type]['physical'] = \
-                        numpy.ones(len(node_idcs))
+                        numpy.ones(len(node_idcs), dtype=numpy.int32)
                 if 'geometrical' not in cell_data[cell_type]:
                     cell_data[cell_type]['geometrical'] = \
-                        numpy.ones(len(node_idcs))
+                        numpy.ones(len(node_idcs), dtype=numpy.int32)
 
                 # 'physical' and 'geometrical' go first; this is what the gmsh
                 # file format prescribes
@@ -337,7 +346,7 @@ def write(
                         ])
             else:
                 # no cell data
-                fcd = numpy.empty([len(node_idcs), 0])
+                fcd = numpy.empty([len(node_idcs), 0], dtype=numpy.int32)
 
             num_nodes_per_cell = node_idcs.shape[1]
             if is_ascii:
@@ -359,13 +368,13 @@ def write(
                 fh.write(struct.pack('i', node_idcs.shape[0]))
                 fh.write(struct.pack('i', fcd.shape[1]))
                 # actual data
-                # TODO write at once
-                for k, c in enumerate(node_idcs):
-                    fh.write(struct.pack('i', consecutive_index + k + 1))
-                    for v in fcd[k]:
-                        fh.write(struct.pack('i', v))
-                    for cc in c:
-                        fh.write(struct.pack('i', cc + 1))
+                a = numpy.arange(
+                    len(node_idcs), dtype=numpy.int32
+                    )[:, numpy.newaxis]
+                a += 1 + consecutive_index
+                array = numpy.hstack([a, fcd, node_idcs + 1])
+                fh.write(array.tostring())
+
             consecutive_index += len(node_idcs)
         if not is_ascii:
             fh.write('\n'.encode('utf-8'))
