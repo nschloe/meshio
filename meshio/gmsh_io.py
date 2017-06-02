@@ -150,7 +150,7 @@ def read_buffer(f):
 
                     if t not in cells:
                         cells[t] = []
-                    cells[t].append(data[num_nodes_per_elem:-1])
+                    cells[t].append(data[-num_nodes_per_elem:])
 
                     # data[2] gives the number of tags. The gmsh manual
                     # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
