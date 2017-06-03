@@ -262,12 +262,9 @@ def write(
     '''Writes msh files, cf.
     http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
     '''
-    if point_data is None:
-        point_data = {}
-    if cell_data is None:
-        cell_data = {}
-    if field_data is None:
-        field_data = {}
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
 
     if not is_ascii:
         for key in cells:

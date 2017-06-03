@@ -70,10 +70,8 @@ def read_buffer(f):
 
             # adapt 0-base
             cells[meshio_name] = cell_data - 1
-        elif keyword == 'End':
-            pass
         else:
-            raise RuntimeError('Unknown keyword \'%s\'.' % keyword)
+            assert keyword == 'End', 'Unknown keyword \'%s\'.' % keyword
 
     return points, cells
 

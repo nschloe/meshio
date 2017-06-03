@@ -93,12 +93,11 @@ def read(filetype, filename):
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
-    elif filetype == 'exodus':
+    else:
+        assert filetype == 'exodus', 'Unknown file type \'%s\'.' % filename
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
         vtk_mesh = _read_exodusii_mesh(reader)
-    else:
-        raise RuntimeError('Unknown file type \'%s\'.' % filename)
 
     # Explicitly extract points, cells, point data, field data
     points = numpy.copy(numpy_support.vtk_to_numpy(
@@ -186,10 +185,8 @@ def _read_exodusii_mesh(reader, timestep=None):
             if sub_block.IsA('vtkUnstructuredGrid'):
                 vtk_mesh.append(sub_block)
 
-    if not vtk_mesh:
-        raise IOError('No \'vtkUnstructuredGrid\' found!')
-    elif len(vtk_mesh) > 1:
-        raise IOError('More than one \'vtkUnstructuredGrid\' found!')
+    assert vtk_mesh, 'No \'vtkUnstructuredGrid\' found!'
+    assert len(vtk_mesh) == 1, 'More than one \'vtkUnstructuredGrid\' found!'
 
     # Cut off trailing '_' from array names.
     for k in range(vtk_mesh[0].GetPointData().GetNumberOfArrays()):
@@ -221,12 +218,9 @@ def write(filetype,
         array.SetName(name)
         return array
 
-    if point_data is None:
-        point_data = {}
-    if cell_data is None:
-        cell_data = {}
-    if field_data is None:
-        field_data = {}
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
 
     # assert data integrity
     for key in point_data:
@@ -309,13 +303,12 @@ def write(filetype,
         writer = vtk.vtkXdmfWriter()
     elif filetype == 'xdmf3':
         writer = vtk.vtkXdmf3Writer()
-    elif filetype == 'exodus':   # exodus ii format
+    else:
+        assert filetype == 'exodus', 'Unknown file type \'%s\'.' % filetype
         writer = vtk.vtkExodusIIWriter()
         # if the mesh contains vtkmodeldata information, make use of it
         # and write out all time steps.
         writer.WriteAllTimeStepsOn()
-    else:
-        raise RuntimeError('unknown file type \'%s\'.' % filetype)
 
     writer.SetFileName(filename)
     try:
