@@ -135,7 +135,8 @@ def _write_mesh(
         discarded_cells.remove(cell_type)
         logging.warning(
           'DOLFIN XML can only handle one cell type at a time. '
-          'Using %s, discarding %s.' % (cell_type, ', '.join(discarded_cells))
+          'Using %s, discarding %s.',
+          cell_type, ', '.join(discarded_cells)
           )
 
     dim = 2 if all(points[:, 2] == 0) else 3
