@@ -161,13 +161,12 @@ def write(
                     '            %s MATERIAL = DUMMY_MATERIAL\n' %
                     permas_type[1]
                     )
-            elif permas_type[1] in elem_2D:
+            else:
+                assert permas_type[1] in elem_2D
                 fh.write(
                     '            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n'
                     % (permas_type[1], permas_type[1])
                     )
-            else:
-                pass
         fh.write('!\n')
         fh.write('        $GEODAT SHELL  CONT = THICK  NODES = ALL\n')
         for meshio_type, cell in cells.items():

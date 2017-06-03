@@ -51,7 +51,8 @@ def _read_mesh(filename):
                 else:
                     points[idx, 2] = vert.attrib['z']
 
-        elif child.tag == 'cells':
+        else:
+            assert child.tag == 'cells', 'Unknown entry \'%s\'.' % child.tag
             num_cells = int(child.attrib['size'])
             cells[cell_type] = numpy.empty((num_cells, npc), dtype=int)
             for cell in child.getchildren():
@@ -59,9 +60,6 @@ def _read_mesh(filename):
                 idx = int(cell.attrib['index'])
                 for k in range(npc):
                     cells[cell_type][idx, k] = cell.attrib['v%s' % k]
-
-        else:
-            raise RuntimeError('Unknown entry \'%s\'.' % child.tag)
 
     return points, cells, cell_type
 
@@ -137,9 +135,7 @@ def _write_mesh(
         discarded_cells.remove(cell_type)
         logging.warning(
           'DOLFIN XML can only handle one cell type at a time. '
-          'Using ' + cell_type +
-          ', discarding ' + ', '.join(discarded_cells) +
-          '.'
+          'Using %s, discarding %s.' % (cell_type, ', '.join(discarded_cells))
           )
 
     dim = 2 if all(points[:, 2] == 0) else 3
@@ -231,12 +227,9 @@ def write(
         cell_data=None,
         field_data=None
         ):
-    if point_data is None:
-        point_data = {}
-    if cell_data is None:
-        cell_data = {}
-    if field_data is None:
-        field_data = {}
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
 
     if 'tetra' in cells:
         cell_type = 'tetra'
