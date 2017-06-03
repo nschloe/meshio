@@ -28,7 +28,8 @@ input_filetypes = [
         ]
 
 output_filetypes = [
-        'ansys',
+        'ansys-ascii',
+        'ansys-binary',
         'exodus',
         'gmsh-ascii',
         'gmsh-binary',
@@ -86,9 +87,9 @@ def read(filename, file_format=None):
         _, extension = os.path.splitext(filename)
         file_format = _extension_to_filetype[extension]
 
-    if file_format == 'ansys':
+    if file_format in ['ansys', 'ansys-ascii', 'ansys-binary']:
         out = ansys_io.read(filename)
-    elif file_format in ['gmsh-ascii', 'gmsh-binary']:
+    elif file_format in ['gmsh', 'gmsh-ascii', 'gmsh-binary']:
         out = gmsh_io.read(filename)
     elif file_format == 'medit':
         out = medit_io.read(filename)
@@ -149,23 +150,17 @@ def write(filename,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_format == 'ansys':
+    elif file_format in ['ansys-ascii', 'ansys-binary']:
         ansys_io.write(
             filename, points, cells,
+            is_ascii=(file_format == 'ansys-ascii'),
             point_data=point_data,
             cell_data=cell_data
             )
-    elif file_format == 'gmsh-binary':
+    elif file_format in ['gmsh-ascii', 'gmsh-binary']:
         gmsh_io.write(
             filename, points, cells,
-            is_ascii=False,
-            point_data=point_data,
-            cell_data=cell_data
-            )
-    elif file_format == 'gmsh-ascii':
-        gmsh_io.write(
-            filename, points, cells,
-            is_ascii=True,
+            is_ascii=(file_format == 'gmsh-ascii'),
             point_data=point_data,
             cell_data=cell_data
             )

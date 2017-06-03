@@ -370,6 +370,7 @@ def write(
         filename,
         points,
         cells,
+        is_ascii=False,
         point_data=None,
         cell_data=None,
         field_data=None
@@ -397,12 +398,18 @@ def write(
         fh.write(('(12 (0 1 %x 0))\n' % total_num_cells).encode('utf8'))
 
         # Write nodes
+        key = '10' if is_ascii else '3010'
         fh.write((
-            '(10 (1 %x %x 1 %x))(\n' %
-            (first_node_index, points.shape[0], points.shape[1])
+            '(%s (1 %x %x 1 %x))(\n' %
+            (key, first_node_index, points.shape[0], points.shape[1])
             ).encode('utf8'))
-        numpy.savetxt(fh, points, fmt='%.15e')
-        fh.write(('))\n').encode('utf8'))
+        if is_ascii:
+            numpy.savetxt(fh, points, fmt='%.15e')
+            fh.write(('))\n').encode('utf8'))
+        else:
+            fh.write(points.tostring())
+            fh.write('\n)'.encode('utf8'))
+            fh.write('End of Binary Section 3010)\n'.encode('utf8'))
 
         # Write cells
         meshio_to_ansys_type = {
@@ -414,14 +421,20 @@ def write(
                 'wedge': 6,
                 }
         first_index = 0
-        for key, values in cells.items():
+        key = '12' if is_ascii else '3012'
+        for cell_type, values in cells.items():
             last_index = first_index + len(values) - 1
             fh.write((
-                '(12 (1 %x %x 1 %d)(\n' %
-                (first_index, last_index, meshio_to_ansys_type[key])
+                '(%s (1 %x %x 1 %d)(\n' %
+                (key, first_index, last_index, meshio_to_ansys_type[cell_type])
                 ).encode('utf8'))
-            numpy.savetxt(fh, values + first_node_index, fmt='%x')
-            fh.write(('))\n').encode('utf8'))
+            if is_ascii:
+                numpy.savetxt(fh, values + first_node_index, fmt='%x')
+                fh.write(('))\n').encode('utf8'))
+            else:
+                fh.write((values + first_node_index).tostring())
+                fh.write('\n)'.encode('utf8'))
+                fh.write('End of Binary Section 3012)\n'.encode('utf8'))
             first_index = last_index + 1
 
     return

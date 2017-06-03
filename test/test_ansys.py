@@ -11,6 +11,17 @@ import pytest
         helpers.tri_quad_mesh,
         helpers.tet_mesh,
         ])
-def test_io(mesh):
-    helpers.write_read('test.msh', 'ansys', mesh, 1.0e-15)
+def test_ascii(mesh):
+    helpers.write_read('test.msh', 'ansys-ascii', mesh, 1.0e-15)
+    return
+
+
+@pytest.mark.parametrize('mesh', [
+        helpers.tri_mesh,
+        helpers.quad_mesh,
+        helpers.tri_quad_mesh,
+        helpers.tet_mesh,
+        ])
+def test_binary(mesh):
+    helpers.write_read('test.msh', 'ansys-binary', mesh, 1.0e-15)
     return
