@@ -181,6 +181,15 @@ def _write_mesh(
     return
 
 
+def _numpy_type_to_dolfin_type(dtype):
+    types = ['int', 'uint', 'float']
+    for t in types:
+        # issubtype handles all of int8, int16, float64 etc.
+        if numpy.issubdtype(dtype, numpy.dtype(t)):
+            return t
+    return
+
+
 def _write_cell_data(
         filename,
         dim,
@@ -193,16 +202,10 @@ def _write_cell_data(
         nsmap={'dolfin': 'http://fenicsproject.org/'}
         )
 
-    numpy_type_to_dolfin_type = {
-        numpy.dtype('int'): 'int',
-        numpy.dtype('float'): 'float',
-        numpy.dtype('uint'): 'uint',
-        }
-
     mesh_function = ET.SubElement(
             dolfin,
             'mesh_function',
-            type=numpy_type_to_dolfin_type[cell_data.dtype],
+            type=_numpy_type_to_dolfin_type(cell_data.dtype),
             dim='%d' % dim,
             size='%d' % len(cell_data)
             )
