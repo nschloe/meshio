@@ -109,6 +109,7 @@ def read_buffer(f):
             line = f.readline().decode('utf-8')
             num_phys_names = int(line)
             for k, line in enumerate(islice(f, num_phys_names)):
+                line = line.decode('utf-8')
                 key = line.split(' ')[2].replace('"', '').replace('\n', '')
                 phys_group = int(line.split(' ')[1])
                 field_data[key] = phys_group
