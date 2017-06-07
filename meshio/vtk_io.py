@@ -94,7 +94,8 @@ def read(filetype, filename):
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
     else:
-        assert filetype == 'exodus', 'Unknown file type \'%s\'.' % filename
+        assert filetype == 'exodus', \
+            'Unknown file type \'{}\'.'.format(filename)
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
         vtk_mesh = _read_exodusii_mesh(reader)
@@ -304,7 +305,8 @@ def write(filetype,
     elif filetype == 'xdmf3':
         writer = vtk.vtkXdmf3Writer()
     else:
-        assert filetype == 'exodus', 'Unknown file type \'%s\'.' % filetype
+        assert filetype == 'exodus', \
+            'Unknown file type \'{}\'.'.format(filename)
         writer = vtk.vtkExodusIIWriter()
         # if the mesh contains vtkmodeldata information, make use of it
         # and write out all time steps.

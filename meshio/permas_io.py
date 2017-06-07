@@ -42,7 +42,7 @@ def read(filename):
                 num_nodes = permas_ele[0]
                 permas_type = permas_ele[1]
 
-                if re.search('\\$ELEMENT TYPE = %s' % permas_type, line):
+                if re.search('\\$ELEMENT TYPE = {}'.format(permas_type), line):
                     while True:
                         line = f.readline()
                         if not line or line.startswith('!'):
@@ -92,8 +92,8 @@ def write(
 
     with open(filename, 'w') as fh:
         fh.write('!\n')
-        fh.write('! File written by meshio version %s\n' % __version__)
-        fh.write('! Further information available at %s\n' % __website__)
+        fh.write('! File written by meshio version {}\n'.format(__version__))
+        fh.write('! Further information available at {}\n'.format(__website__))
         fh.write('!\n')
         fh.write('$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH\n')
         fh.write('! \n')
@@ -111,9 +111,9 @@ def write(
         fh.write('        $COOR NSET = ALL_NODES\n')
         for k, x in enumerate(points):
             fh.write(
-                '        %8d %+.15f %+.15f %+.15f\n' %
-                (k+1, x[0], x[1], x[2])
-                )
+                '        {:8d} {:+.15f} {:+.15f} {:+.15f}\n'.format(
+                    k+1, x[0], x[1], x[2]
+                ))
 
         meshio_to_permas_type = {
             'line': (2, 'PLOTL2'),
@@ -136,9 +136,9 @@ def write(
             permas_type = meshio_to_permas_type[meshio_type]
             fh.write('!\n')
             fh.write(
-                '        $ELEMENT TYPE = %s ESET = %s\n' %
-                (permas_type[1], permas_type[1])
-                )
+                '        $ELEMENT TYPE = {} ESET = {}\n'.format(
+                    permas_type[1], permas_type[1]
+                ))
             for k, c in enumerate(cell):
                 form = '        %8d ' + \
                     ' '.join(num_local_nodes * ['%8d']) + \
@@ -158,48 +158,51 @@ def write(
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_3D:
                 fh.write(
-                    '            %s MATERIAL = DUMMY_MATERIAL\n' %
-                    permas_type[1]
-                    )
+                    '            {} MATERIAL = DUMMY_MATERIAL\n'.format(
+                        permas_type[1]
+                    ))
             else:
                 assert permas_type[1] in elem_2D
                 fh.write(
-                    '            %s GEODAT = GD_%s MATERIAL = DUMMY_MATERIAL\n'
-                    % (permas_type[1], permas_type[1])
-                    )
+                    12 * ' ' +
+                    '{} GEODAT = GD_{} MATERIAL = DUMMY_MATERIAL\n'.format(
+                        permas_type[1], permas_type[1]
+                    ))
         fh.write('!\n')
         fh.write('        $GEODAT SHELL  CONT = THICK  NODES = ALL\n')
         for meshio_type, cell in cells.items():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_2D:
-                fh.write('            GD_%s 1.0\n' % permas_type[1])
-        fh.write('!\n')
-        fh.write('    $END SYSTEM\n')
-        fh.write('!\n')
-        fh.write('    $CONSTRAINTS NAME = SPCVAR_1\n')
-        fh.write('    $END CONSTRAINTS\n')
-        fh.write('!\n')
-        fh.write('    $LOADING NAME = LOADVAR_1\n')
-        fh.write('    $END LOADING\n')
-        fh.write('!\n')
-        fh.write('$EXIT COMPONENT\n')
-        fh.write('!\n')
-        fh.write('$ENTER MATERIAL\n')
-        fh.write('!\n')
-        fh.write('    $MATERIAL NAME = DUMMY_MATERIAL TYPE = ISO\n')
-        fh.write('!\n')
-        fh.write('        $ELASTIC  GENERAL  INPUT = DATA\n')
-        fh.write('            0.0 0.0\n')
-        fh.write('!\n')
-        fh.write('        $DENSITY  GENERAL  INPUT = DATA\n')
-        fh.write('            0.0\n')
-        fh.write('!\n')
-        fh.write('        $THERMEXP  GENERAL  INPUT = DATA\n')
-        fh.write('            0.0\n')
-        fh.write('!\n')
-        fh.write('    $END MATERIAL\n')
-        fh.write('!\n')
-        fh.write('$EXIT MATERIAL\n')
-        fh.write('!\n')
-        fh.write('$FIN\n')
+                fh.write(12 * ' ' + 'GD_{} 1.0\n'.format(permas_type[1]))
+        fh.write('''!
+!
+    $END SYSTEM
+!
+    $CONSTRAINTS NAME = SPCVAR_1
+    $END CONSTRAINTS
+!
+    $LOADING NAME = LOADVAR_1
+    $END LOADING
+!
+$EXIT COMPONENT
+!
+$ENTER MATERIAL
+!
+    $MATERIAL NAME = DUMMY_MATERIAL TYPE = ISO
+!
+        $ELASTIC  GENERAL  INPUT = DATA
+            0.0 0.0
+!
+        $DENSITY  GENERAL  INPUT = DATA
+            0.0
+!
+        $THERMEXP  GENERAL  INPUT = DATA
+            0.0
+!
+    $END MATERIAL
+!
+$EXIT MATERIAL
+!
+$FIN
+''')
     return

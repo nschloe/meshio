@@ -110,7 +110,7 @@ def write(
         fh.write(b'# Created by meshio\n\n')
 
         # counts
-        c = '%d %d %d\n\n' % (len(points), len(tri), 0)
+        c = '{} {} {}\n\n'.format(len(points), len(tri), 0)
         fh.write(c.encode('utf-8'))
 
         # vertices

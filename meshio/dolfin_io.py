@@ -52,14 +52,15 @@ def _read_mesh(filename):
                     points[idx, 2] = vert.attrib['z']
 
         else:
-            assert child.tag == 'cells', 'Unknown entry \'%s\'.' % child.tag
+            assert child.tag == 'cells', \
+                'Unknown entry \'{}\'.'.format(child.tag)
             num_cells = int(child.attrib['size'])
             cells[cell_type] = numpy.empty((num_cells, npc), dtype=int)
             for cell in child.getchildren():
                 assert dolfin_to_meshio_type[cell.tag][0] == cell_type
                 idx = int(cell.attrib['index'])
                 for k in range(npc):
-                    cells[cell_type][idx, k] = cell.attrib['v%s' % k]
+                    cells[cell_type][idx, k] = cell.attrib['v{}'.format(k)]
 
     return points, cells, cell_type
 
@@ -82,7 +83,7 @@ def _read_cell_data(filename, cell_type):
     for f in os.listdir(dir_name):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
-        out = re.match('%s_([^\\.]+)\\.xml' % basename, f)
+        out = re.match('{}_([^\\.]+)\\.xml'.format(basename), f)
         if not out:
             continue
         name = out.group(1)
@@ -145,7 +146,7 @@ def _write_mesh(
             dolfin,
             'mesh',
             celltype=meshio_to_dolfin_type[cell_type],
-            dim='%d' % dim
+            dim=str(dim)
             )
     vertices = ET.SubElement(mesh, 'vertices', size=str(len(points)))
 
@@ -154,9 +155,9 @@ def _write_mesh(
             vertices,
             'vertex',
             index=str(k),
-            x='%r' % point[0],
-            y='%r' % point[1],
-            z='%r' % point[2]
+            x=repr(point[0]),
+            y=repr(point[1]),
+            z=repr(point[2])
             )
 
     num_cells = 0
@@ -173,7 +174,7 @@ def _write_mesh(
                 index=str(idx)
                 )
             for k, c in enumerate(cell):
-                cell_entry.attrib['v%d' % k] = str(c)
+                cell_entry.attrib['v{}'.format(k)] = str(c)
             idx += 1
 
     tree = ET.ElementTree(dolfin)
@@ -206,16 +207,16 @@ def _write_cell_data(
             dolfin,
             'mesh_function',
             type=_numpy_type_to_dolfin_type(cell_data.dtype),
-            dim='%d' % dim,
-            size='%d' % len(cell_data)
+            dim=str(dim),
+            size=str(len(cell_data))
             )
 
     for k, value in enumerate(cell_data):
         ET.SubElement(
             mesh_function,
             'entity',
-            index='%d' % k,
-            value='%r' % value,
+            index=str(k),
+            value=repr(value),
             )
 
     tree = ET.ElementTree(dolfin)
@@ -246,7 +247,7 @@ def write(
     if cell_type in cell_data:
         for key, data in cell_data[cell_type].items():
             cell_data_filename = \
-                '%s_%s.xml' % (os.path.splitext(filename)[0], key)
+                '{}_{}.xml'.format(os.path.splitext(filename)[0], key)
             dim = 2 if all(points[:, 2] == 0) else 3
             _write_cell_data(cell_data_filename, dim, numpy.array(data))
     return

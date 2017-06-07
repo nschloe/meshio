@@ -218,7 +218,8 @@ def write(filename,
             )
     else:
         assert file_format == 'exodus', (
-            'unknown file format \'%s\' of \'%s\'.' % (file_format, filename)
+            'Unknown file format \'{}\' of \'{}\'.'
+            .format(file_format, filename)
             )
         vtk_io.write(
             'exodus', filename, points, cells,
