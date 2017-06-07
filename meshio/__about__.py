@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-__version__ = '1.8.7'
+__version__ = '1.8.8'
 __author__ = u'Nico Schlömer'
 __author_email__ = 'nico.schloemer@gmail.com'
 __website__ = 'https://github.com/nschloe/meshio'

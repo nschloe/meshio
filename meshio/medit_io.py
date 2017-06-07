@@ -71,7 +71,7 @@ def read_buffer(f):
             # adapt 0-base
             cells[meshio_name] = cell_data - 1
         else:
-            assert keyword == 'End', 'Unknown keyword \'%s\'.' % keyword
+            assert keyword == 'End', 'Unknown keyword \'{}\'.'.format(keyword)
 
     return points, cells
 
@@ -89,12 +89,12 @@ def write(
         fh.write(b'# Created by meshio\n')
 
         # Dimension info
-        d = '\nDimension %d\n' % points.shape[1]
+        d = '\nDimension {}\n'.format(points.shape[1])
         fh.write(d.encode('utf-8'))
 
         # vertices
         fh.write(b'\nVertices\n')
-        fh.write(('%d\n' % len(points)).encode('utf-8'))
+        fh.write('{}\n'.format(len(points)).encode('utf-8'))
         labels = numpy.ones(len(points), dtype=int)
         data = numpy.c_[points, labels]
         fmt = ' '.join(['%r'] * points.shape[1]) + ' %d'
@@ -111,8 +111,8 @@ def write(
         for key, data in cells.items():
             medit_name, num = medit_from_meshio[key]
             fh.write(b'\n')
-            fh.write(('%s\n' % medit_name).encode('utf-8'))
-            fh.write(('%d\n' % len(data)).encode('utf-8'))
+            fh.write('{}\n'.format(medit_name).encode('utf-8'))
+            fh.write('{}\n'.format(len(data)).encode('utf-8'))
             labels = numpy.ones(len(data), dtype=int)
             # adapt 1-base
             data_with_label = numpy.c_[data + 1, labels]

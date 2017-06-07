@@ -141,7 +141,7 @@ def read_buffer(f):
             assert line.strip() == '$EndNodes'
         else:
             assert environ == 'Elements', \
-                'Unknown environment \'%s\'.' % environ
+                'Unknown environment \'{}\'.'.format(environ)
             # The first line is the number of elements
             line = f.readline().decode('utf-8')
             total_num_cells = int(line)
@@ -279,7 +279,7 @@ def write(
         mode_idx = 0 if is_ascii else 1
         size_of_double = 8
         fh.write((
-            '$MeshFormat\n2.2 %d %d\n' % (mode_idx, size_of_double)
+            '$MeshFormat\n2.2 {} {}\n'.format(mode_idx, size_of_double)
             ).encode('utf-8'))
         if not is_ascii:  # binary
             fh.write(struct.pack('i', 1))
@@ -288,11 +288,12 @@ def write(
 
         # Write nodes
         fh.write('$Nodes\n'.encode('utf-8'))
-        fh.write(('%d\n' % len(points)).encode('utf-8'))
+        fh.write('{}\n'.format(len(points)).encode('utf-8'))
         if is_ascii:
             for k, x in enumerate(points):
                 fh.write(
-                    ('%d %r %r %r\n' % (k+1, x[0], x[1], x[2])).encode('utf-8')
+                    '{} {!r} {!r} {!r}\n'.format(k+1, x[0], x[1], x[2])
+                    .encode('utf-8')
                     )
         else:
             dtype = [('index', numpy.int32), ('x', numpy.float64, (3,))]
@@ -306,7 +307,7 @@ def write(
         fh.write('$Elements\n'.encode('utf-8'))
         # count all cells
         total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-        fh.write(('%d\n' % total_num_cells).encode('utf-8'))
+        fh.write('{}\n'.format(total_num_cells).encode('utf-8'))
 
         consecutive_index = 0
         for cell_type, node_idcs in cells.items():
@@ -339,20 +340,18 @@ def write(
                 # no cell data
                 fcd = numpy.empty([len(node_idcs), 0], dtype=numpy.int32)
 
-            nnpc = node_idcs.shape[1]
             if is_ascii:
-                form = '%d ' + '%d' % _meshio_to_gmsh_type[cell_type] \
-                    + ' %d' % fcd.shape[1] + ' %d' * fcd.shape[1] \
-                    + ' ' + ' '.join(nnpc * ['%d']) \
-                    + '\n'
+                form = '{} ' + str(_meshio_to_gmsh_type[cell_type]) \
+                    + ' ' + str(fcd.shape[1]) \
+                    + ' {} {}\n'
                 for k, c in enumerate(node_idcs):
-                    fh.write((
-                        form % (
-                            (consecutive_index + k + 1,) +
-                            tuple(fcd[k]) +
-                            tuple(c + 1)
-                            )
-                        ).encode('utf-8'))
+                    fh.write(
+                        form.format(
+                            consecutive_index + k + 1,
+                            ' '.join([str(val) for val in fcd[k]]),
+                            ' '.join([str(cc + 1) for cc in c])
+                            ).encode('utf-8')
+                        )
             else:
                 # header
                 fh.write(struct.pack('i', _meshio_to_gmsh_type[cell_type]))

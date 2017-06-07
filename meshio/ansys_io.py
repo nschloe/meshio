@@ -353,7 +353,7 @@ def read(filename):
                         cells[key] = data[key]
 
             else:
-                logging.warning('Unknown index \'%s\'. Skipping.', index)
+                logging.warning('Unknown index \'%d\'. Skipping.', index)
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count('(') - line.count(')'))
 
@@ -381,28 +381,30 @@ def write(
 
     with open(filename, 'wb') as fh:
         # header
-        fh.write(('(1 "meshio %s")\n' % __version__).encode('utf8'))
+        fh.write(('(1 "meshio {}")\n'.format(__version__)).encode('utf8'))
 
         # dimension
         dim = 2 if all(points[:, 2] == 0.0) else 3
-        fh.write(('(2 %d)\n' % dim).encode('utf8'))
+        fh.write(('(2 {})\n'.format(dim)).encode('utf8'))
 
         # total number of nodes
         first_node_index = 1
         fh.write((
-            '(10 (0 %x %x 0))\n' % (first_node_index, len(points))
+            '(10 (0 {:x} {:x} 0))\n'.format(first_node_index, len(points))
             ).encode('utf8'))
 
         # total number of cells
         total_num_cells = sum([len(c) for c in cells])
-        fh.write(('(12 (0 1 %x 0))\n' % total_num_cells).encode('utf8'))
+        fh.write((
+            '(12 (0 1 {:x} 0))\n'.format(total_num_cells)
+            ).encode('utf8'))
 
         # Write nodes
         key = '10' if is_ascii else '3010'
         fh.write((
-            '(%s (1 %x %x 1 %x))(\n' %
-            (key, first_node_index, points.shape[0], points.shape[1])
-            ).encode('utf8'))
+            '({} (1 {:x} {:x} 1 {:x}))(\n'.format(
+                key, first_node_index, points.shape[0], points.shape[1]
+            )).encode('utf8'))
         if is_ascii:
             numpy.savetxt(fh, points, fmt='%.15e')
             fh.write(('))\n').encode('utf8'))
@@ -425,8 +427,10 @@ def write(
         for cell_type, values in cells.items():
             last_index = first_index + len(values) - 1
             fh.write((
-                '(%s (1 %x %x 1 %d)(\n' %
-                (key, first_index, last_index, meshio_to_ansys_type[cell_type])
+                '({} (1 {:x} {:x} 1 {})(\n'.format(
+                    key, first_index, last_index,
+                    meshio_to_ansys_type[cell_type]
+                    )
                 ).encode('utf8'))
             if is_ascii:
                 numpy.savetxt(fh, values + first_node_index, fmt='%x')
