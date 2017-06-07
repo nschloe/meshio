@@ -353,7 +353,7 @@ def read(filename):
                         cells[key] = data[key]
 
             else:
-                logging.warning('Unknown index \'{}\'. Skipping.', index)
+                logging.warning('Unknown index \'%d\'. Skipping.', index)
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count('(') - line.count(')'))
 
