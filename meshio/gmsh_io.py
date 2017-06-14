@@ -119,12 +119,12 @@ def read_buffer(f):
             # The first line is the number of nodes
             line = f.readline().decode('utf-8')
             num_nodes = int(line)
-            points = numpy.empty((num_nodes, 3))
             if is_ascii:
-                # TODO speed up with http://stackoverflow.com/a/41642053/353337
-                for k, line in enumerate(islice(f, num_nodes)):
-                    # Throw away the index immediately
-                    points[k, :] = numpy.array(line.split(), dtype=float)[1:]
+                points = numpy.fromfile(
+                    f, count=num_nodes*4, sep=' '
+                    ).reshape((num_nodes, 4))
+                # The first number is the index
+                points = points[:, 1:]
             else:
                 # binary
                 num_bytes = num_nodes * (int_size + 3 * data_size)
