@@ -6,7 +6,6 @@ I/O for Gmsh's msh format, cf.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-from itertools import islice
 import logging
 import struct
 
@@ -146,7 +145,8 @@ def read_buffer(f):
             line = f.readline().decode('utf-8')
             total_num_cells = int(line)
             if is_ascii:
-                for k, line in enumerate(islice(f, total_num_cells)):
+                for k in range(total_num_cells):
+                    line = f.readline().decode('utf-8')
                     data = [int(k) for k in filter(None, line.split())]
                     t = _gmsh_to_meshio_type[data[1]]
                     num_nodes_per_elem = num_nodes_per_cell[t]
