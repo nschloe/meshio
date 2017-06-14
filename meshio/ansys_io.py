@@ -4,7 +4,6 @@
 I/O for Ansys's msh format, cf.
 <http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>.
 '''
-from itertools import islice
 import logging
 import re
 
@@ -65,7 +64,7 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
             # skip ahead to the first line with data
             line = ''
             while line.strip() == '':
-                line = next(islice(f, 1)).decode('utf-8')
+                line = f.readline().decode('utf-8')
             dat = line.split()
             assert len(dat) == dim
             for d in range(dim):
@@ -142,7 +141,7 @@ def _read_cells(f, line):
             dtype=int
             )
         for k in range(num_cells):
-            line = next(islice(f, 1)).decode('utf-8')
+            line = f.readline().decode('utf-8')
             dat = line.split()
             assert len(dat) == num_nodes_per_cell
             data[k] = [int(d, 16) for d in dat]
@@ -216,7 +215,7 @@ def _read_faces(f, line):
             for k in range(num_cells):
                 line = ''
                 while line.strip() == '':
-                    line = next(islice(f, 1)).decode('utf-8')
+                    line = f.readline().decode('utf-8')
                 dat = line.split()
                 type_index = int(dat[0], 16)
                 assert type_index != 0
@@ -239,7 +238,7 @@ def _read_faces(f, line):
                 (num_cells, num_nodes_per_cell), dtype=int
                 )
             for k in range(num_cells):
-                line = next(islice(f, 1)).decode('utf-8')
+                line = f.readline().decode('utf-8')
                 dat = line.split()
                 # The body of a regular face section contains the
                 # grid connectivity, and each line appears as
@@ -300,9 +299,8 @@ def read(filename):
     # read file in binary mode since some data might be binary
     with open(filename, 'rb') as f:
         while True:
-            try:
-                line = next(islice(f, 1)).decode('utf-8')
-            except StopIteration:  # EOF
+            line = f.readline().decode('utf-8')
+            if not line:
                 break
 
             if line.strip() == '':
