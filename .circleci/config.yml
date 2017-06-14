@@ -1,6 +1,7 @@
 version: 2
 
 jobs:
+
   python2:
     working_directory: ~/meshio
     docker:
@@ -10,14 +11,12 @@ jobs:
       - run: apt-get install -y git python-h5py python-lxml python-numpy python-vtk6 python-pip
       - run: pip2 install -U pytest pytest-cov pylint
       - checkout
-      - run: LANG=C.UTF-8 pip3 install .
+      - run: LANG=C.UTF-8 pip2 install .
       # The actual test
       - run: pylint meshio/
       - run: pylint test/*py
       - run: cd test/ && pytest --cov meshio
-      # submit to codecov
-      - run: apt-get install -y curl
-      - run: bash <(curl -s https://codecov.io/bash)
+
   python3:
     working_directory: ~/meshio
     docker:
