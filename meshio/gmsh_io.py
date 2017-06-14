@@ -107,7 +107,7 @@ def read_buffer(f):
         elif environ == 'PhysicalNames':
             line = f.readline().decode('utf-8')
             num_phys_names = int(line)
-            for k in range(num_phys_names):
+            for _ in range(num_phys_names):
                 line = f.readline().decode('utf-8')
                 key = line.split(' ')[2].replace('"', '').replace('\n', '')
                 phys_group = int(line.split(' ')[1])
@@ -145,7 +145,7 @@ def read_buffer(f):
             line = f.readline().decode('utf-8')
             total_num_cells = int(line)
             if is_ascii:
-                for k in range(total_num_cells):
+                for _ in range(total_num_cells):
                     line = f.readline().decode('utf-8')
                     data = [int(k) for k in filter(None, line.split())]
                     t = _gmsh_to_meshio_type[data[1]]
