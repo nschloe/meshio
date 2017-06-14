@@ -17,6 +17,8 @@ jobs:
       - run: pylint test/*py
       # No Exodus tests on VTK6 -- they segfault
       - run: rm -f test/test_exodus.py
+      # XDMF3 is not part of VTK6
+      - run: rm -f test/test_xdmf3.py
       - run: cd test/ && pytest --cov meshio
 
   python3:
