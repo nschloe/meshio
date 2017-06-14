@@ -6,7 +6,6 @@ I/O for Gmsh's msh format, cf.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-from itertools import islice
 import logging
 import struct
 
@@ -108,8 +107,8 @@ def read_buffer(f):
         elif environ == 'PhysicalNames':
             line = f.readline().decode('utf-8')
             num_phys_names = int(line)
-            for k, line in enumerate(islice(f, num_phys_names)):
-                line = line.decode('utf-8')
+            for _ in range(num_phys_names):
+                line = f.readline().decode('utf-8')
                 key = line.split(' ')[2].replace('"', '').replace('\n', '')
                 phys_group = int(line.split(' ')[1])
                 field_data[key] = phys_group
@@ -119,12 +118,12 @@ def read_buffer(f):
             # The first line is the number of nodes
             line = f.readline().decode('utf-8')
             num_nodes = int(line)
-            points = numpy.empty((num_nodes, 3))
             if is_ascii:
-                # TODO speed up with http://stackoverflow.com/a/41642053/353337
-                for k, line in enumerate(islice(f, num_nodes)):
-                    # Throw away the index immediately
-                    points[k, :] = numpy.array(line.split(), dtype=float)[1:]
+                points = numpy.fromfile(
+                    f, count=num_nodes*4, sep=' '
+                    ).reshape((num_nodes, 4))
+                # The first number is the index
+                points = points[:, 1:]
             else:
                 # binary
                 num_bytes = num_nodes * (int_size + 3 * data_size)
@@ -146,7 +145,8 @@ def read_buffer(f):
             line = f.readline().decode('utf-8')
             total_num_cells = int(line)
             if is_ascii:
-                for k, line in enumerate(islice(f, total_num_cells)):
+                for _ in range(total_num_cells):
+                    line = f.readline().decode('utf-8')
                     data = [int(k) for k in filter(None, line.split())]
                     t = _gmsh_to_meshio_type[data[1]]
                     num_nodes_per_elem = num_nodes_per_cell[t]

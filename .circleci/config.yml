@@ -1,7 +1,29 @@
 version: 2
 
 jobs:
-  build:
+
+  python2:
+    working_directory: ~/meshio
+    docker:
+      - image: ubuntu:17.04
+    steps:
+      - run: apt-get update
+      - run: apt-get install -y git python-h5py python-lxml python-numpy python-vtk6 python-pip
+      - run: pip2 install -U pytest pytest-cov pylint
+      - checkout
+      - run: LANG=C.UTF-8 pip2 install .
+      # The actual test
+      - run: pylint meshio/
+      - run: pylint test/*py
+      # No Exodus tests on VTK6 -- they segfault
+      - run: rm -f test/test_exodus.py
+      # XDMF3 is not part of VTK6
+      - run: rm -f test/test_xdmf3.py
+      # ASCII VTK tests fail with Python2/VTK6
+      - run: rm -f test/test_vtk.py
+      - run: cd test/ && pytest --cov meshio
+
+  python3:
     working_directory: ~/meshio
     docker:
       - image: ubuntu:17.04
@@ -21,3 +43,10 @@ jobs:
       # submit to codecov
       - run: apt-get install -y curl
       - run: bash <(curl -s https://codecov.io/bash)
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - python2
+      - python3
