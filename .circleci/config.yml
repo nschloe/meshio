@@ -1,7 +1,24 @@
 version: 2
 
 jobs:
-  build:
+  python2:
+    working_directory: ~/meshio
+    docker:
+      - image: ubuntu:17.04
+    steps:
+      - run: apt-get update
+      - run: apt-get install -y git python-h5py python-lxml python-numpy python-vtk6 python-pip
+      - run: pip2 install -U pytest pytest-cov pylint
+      - checkout
+      - run: LANG=C.UTF-8 pip3 install .
+      # The actual test
+      - run: pylint meshio/
+      - run: pylint test/*py
+      - run: cd test/ && pytest --cov meshio
+      # submit to codecov
+      - run: apt-get install -y curl
+      - run: bash <(curl -s https://codecov.io/bash)
+  python3:
     working_directory: ~/meshio
     docker:
       - image: ubuntu:17.04
