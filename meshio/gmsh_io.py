@@ -132,7 +132,8 @@ def read_buffer(f):
                 dtype = [('index', numpy.int32), ('x', numpy.float64, (3,))]
                 data = numpy.fromstring(f.read(num_bytes), dtype=dtype)
                 assert (data['index'] == range(1, num_nodes+1)).all()
-                points = data['x']
+                # vtk numpy support requires contiguous data
+                points = numpy.ascontiguousarray(data['x'])
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
