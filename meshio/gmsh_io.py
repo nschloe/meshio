@@ -69,7 +69,7 @@ def read_buffer(f):
     # <http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
 
     # Initialize the data optional data fields
-    points = {}
+    points = []
     cells = {}
     field_data = {}
     cell_data = {}
