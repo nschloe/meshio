@@ -2,28 +2,29 @@ version: 2
 
 jobs:
 
-  python2:
-    working_directory: ~/meshio
-    docker:
-      - image: ubuntu:17.04
-    steps:
-      - run: apt-get update
-      - run: apt-get install -y git python-h5py python-lxml python-numpy python-vtk6 python-pip
-      - run: pip2 install -U pytest pytest-cov pylint
-      - checkout
-      - run: LANG=C.UTF-8 pip2 install .
-      # The actual test
-      - run: pylint meshio/
-      - run: pylint test/*py
-      # No Exodus tests on VTK6 -- they segfault
-      - run: rm -f test/test_exodus.py
-      # XDMF3 is not part of VTK6
-      - run: rm -f test/test_xdmf3.py
-      # ASCII VTK tests fail with Python2/VTK6
-      - run: rm -f test/test_vtk.py
-      - run: cd test/ && pytest --cov meshio
+  #   python2:
+  #     working_directory: ~/meshio
+  #     docker:
+  #       - image: ubuntu:17.04
+  #     steps:
+  #       - run: apt-get update
+  #       - run: apt-get install -y git python-h5py python-lxml python-numpy python-vtk6 python-pip
+  #       - run: pip2 install -U pytest pytest-cov pylint
+  #       - checkout
+  #       - run: LANG=C.UTF-8 pip2 install .
+  #       # The actual test
+  #       - run: pylint meshio/
+  #       - run: pylint test/*py
+  #       # No Exodus tests on VTK6 -- they segfault
+  #       - run: rm -f test/test_exodus.py
+  #       # XDMF3 is not part of VTK6
+  #       - run: rm -f test/test_xdmf3.py
+  #       # ASCII VTK tests fail with Python2/VTK6
+  #       - run: rm -f test/test_vtk.py
+  #       - run: cd test/ && pytest --cov meshio
 
-  python3:
+#  python3:
+  build:
     working_directory: ~/meshio
     docker:
       - image: ubuntu:17.04
@@ -44,9 +45,11 @@ jobs:
       - run: apt-get install -y curl
       - run: bash <(curl -s https://codecov.io/bash)
 
-workflows:
-  version: 2
-  build-and-test:
-    jobs:
-      - python2
-      - python3
+# workflow builds don't support forked PRs yet, cf.
+# <https://circleci.com/docs/2.0/faq/#can-i-build-fork-prs-using-workflows>.
+# workflows:
+#   version: 2
+#   build-and-test:
+#     jobs:
+#       - python2
+#       - python3
