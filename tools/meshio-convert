@@ -4,7 +4,7 @@ Convert a mesh file to another.
 '''
 import meshio
 
-import numpy as np
+import numpy
 
 
 def _main():
@@ -38,11 +38,11 @@ def _main():
         # remove_orphaned_nodes.
         # find which nodes are not mentioned in the cells and remove them
         flat_cells = cells['tetra'].flatten()
-        orphaned_nodes = np.setdiff1d(np.arange(len(points)), flat_cells)
-        points = np.delete(points, orphaned_nodes, axis=0)
+        orphaned_nodes = numpy.setdiff1d(numpy.arange(len(points)), flat_cells)
+        points = numpy.delete(points, orphaned_nodes, axis=0)
         # also adapt the point data
         for key in point_data:
-            point_data[key] = np.delete(
+            point_data[key] = numpy.delete(
                     point_data[key],
                     orphaned_nodes,
                     axis=0
@@ -50,14 +50,17 @@ def _main():
 
         # reset GLOBAL_ID
         if 'GLOBAL_ID' in point_data:
-            point_data['GLOBAL_ID'] = np.arange(1, len(points)+1)
+            point_data['GLOBAL_ID'] = numpy.arange(1, len(points)+1)
 
         # We now need to adapt the cells too.
-        diff = np.zeros(len(flat_cells), dtype=flat_cells.dtype)
+        diff = numpy.zeros(len(flat_cells), dtype=flat_cells.dtype)
         for orphan in orphaned_nodes:
-            diff[np.argwhere(flat_cells > orphan)] += 1
+            diff[numpy.argwhere(flat_cells > orphan)] += 1
         flat_cells -= diff
         cells['tetra'] = flat_cells.reshape(cells['tetra'].shape)
+
+    # Some converters (like VTK) require `points` to be contiguous.
+    points = numpy.ascontiguousarray(points)
 
     # write it out
     meshio.write(
