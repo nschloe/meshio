@@ -242,7 +242,7 @@ def read_buffer(f):
                 if cell_data[key].shape[1] > 0:
                     output_cell_data[key]['physical'] = cell_data[key][:, 0]
                 if cell_data[key].shape[1] > 1:
-                    output_cell_data[key]['geometrical'] = cell_data[key][:, 0]
+                    output_cell_data[key]['geometrical'] = cell_data[key][:, 1]
             cell_data = output_cell_data
 
     if has_additional_tag_data:
