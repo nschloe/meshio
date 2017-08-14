@@ -13,7 +13,7 @@ e.g.,
  * [ANSYS msh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
  * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
- * [H5M](https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m)
+ * [H5M](https://press3.mcs.anl.gov/sigma/moab/h5m-file-format)
  * [Medit](https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html)
  * [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats)
  * [OFF](http://segeval.cs.princeton.edu/public/off_format.html)
