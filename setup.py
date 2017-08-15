@@ -7,7 +7,7 @@ from setuptools import setup
 # https://packaging.python.org/single_source_version/
 base_dir = os.path.abspath(os.path.dirname(__file__))
 about = {}
-with open(os.path.join(base_dir, 'meshio', '__about__.py')) as f:
+with open(os.path.join(base_dir, 'meshio', '__about__.py'), 'rb') as f:
     exec(f.read(), about)
 
 
@@ -36,7 +36,7 @@ setup(
     platforms='any',
     install_requires=[
         'numpy',
-        'pipdated',
+        'pipdate',
         ],
     extras_require={
         'dolfin': ['lxml'],  # Dolfin's legacy format
