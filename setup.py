@@ -36,7 +36,7 @@ setup(
     platforms='any',
     install_requires=[
         'numpy',
-        'pipdated',
+        'pipdate',
         ],
     extras_require={
         'dolfin': ['lxml'],  # Dolfin's legacy format
