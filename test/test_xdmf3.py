@@ -6,6 +6,7 @@ import pytest
 
 vtk = pytest.importorskip('vtk')
 
+
 @pytest.mark.parametrize('mesh', [
         helpers.tri_mesh,
         helpers.quad_mesh,

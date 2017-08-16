@@ -4,6 +4,8 @@ import helpers
 
 import pytest
 
+h5py = pytest.importorskip('h5py')
+
 
 @pytest.mark.parametrize('mesh', [
         helpers.tri_mesh,
