@@ -51,9 +51,7 @@ def _read_mesh(filename):
                 else:
                     points[idx, 2] = vert.attrib['z']
 
-        else:
-            assert child.tag == 'cells', \
-                'Unknown entry \'{}\'.'.format(child.tag)
+        elif child.tag == 'cells':
             num_cells = int(child.attrib['size'])
             cells[cell_type] = numpy.empty((num_cells, npc), dtype=int)
             for cell in child.getchildren():
@@ -61,6 +59,8 @@ def _read_mesh(filename):
                 idx = int(cell.attrib['index'])
                 for k in range(npc):
                     cells[cell_type][idx, k] = cell.attrib['v{}'.format(k)]
+        else:
+            logging.warning('Unknown entry %s. Ignoring.', child.tag)
 
     return points, cells, cell_type
 
