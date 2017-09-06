@@ -76,21 +76,37 @@ def read(filetype, filename):
     if filetype in ['vtk', 'vtk-ascii', 'vtk-binary']:
         reader = vtk.vtkUnstructuredGridReader()
         reader.SetFileName(filename)
+        reader.SetReadAllScalars(1)
+        reader.SetReadAllVectors(1)
+        reader.SetReadAllNormals(1)
+        reader.SetReadAllTensors(1)
         reader.Update()
         vtk_mesh = reader.GetOutput()
     elif filetype in ['vtu', 'vtu-ascii', 'vtu-binary']:
         reader = vtk.vtkXMLUnstructuredGridReader()
         reader.SetFileName(filename)
+        reader.SetReadAllScalars(1)
+        reader.SetReadAllVectors(1)
+        reader.SetReadAllNormals(1)
+        reader.SetReadAllTensors(1)
         reader.Update()
         vtk_mesh = reader.GetOutput()
     elif filetype in ['xdmf', 'xdmf2']:
         reader = vtk.vtkXdmfReader()
         reader.SetFileName(filename)
+        reader.SetReadAllScalars(1)
+        reader.SetReadAllVectors(1)
+        reader.SetReadAllNormals(1)
+        reader.SetReadAllTensors(1)
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
     elif filetype == 'xdmf3':
         reader = vtk.vtkXdmf3Reader()
         reader.SetFileName(filename)
+        reader.SetReadAllScalars(1)
+        reader.SetReadAllVectors(1)
+        reader.SetReadAllNormals(1)
+        reader.SetReadAllTensors(1)
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
     else:
@@ -98,6 +114,10 @@ def read(filetype, filename):
             'Unknown file type \'{}\'.'.format(filename)
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
+        reader.SetReadAllScalars(1)
+        reader.SetReadAllVectors(1)
+        reader.SetReadAllNormals(1)
+        reader.SetReadAllTensors(1)
         vtk_mesh = _read_exodusii_mesh(reader)
 
     # Explicitly extract points, cells, point data, field data
