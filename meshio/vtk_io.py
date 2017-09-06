@@ -76,6 +76,10 @@ def read(filetype, filename):
     if filetype in ['vtk', 'vtk-ascii', 'vtk-binary']:
         reader = vtk.vtkUnstructuredGridReader()
         reader.SetFileName(filename)
+        reader.SetReadAllNormals(1)
+        reader.SetReadAllScalars(1)
+        reader.SetReadAllTensors(1)
+        reader.SetReadAllVectors(1)
         reader.Update()
         vtk_mesh = reader.GetOutput()
     elif filetype in ['vtu', 'vtu-ascii', 'vtu-binary']:
@@ -86,11 +90,25 @@ def read(filetype, filename):
     elif filetype in ['xdmf', 'xdmf2']:
         reader = vtk.vtkXdmfReader()
         reader.SetFileName(filename)
+        reader.SetReadAllColorScalars(1)
+        reader.SetReadAllFields(1)
+        reader.SetReadAllNormals(1)
+        reader.SetReadAllScalars(1)
+        reader.SetReadAllTCoords(1)
+        reader.SetReadAllTensors(1)
+        reader.SetReadAllVectors(1)
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
     elif filetype == 'xdmf3':
         reader = vtk.vtkXdmf3Reader()
         reader.SetFileName(filename)
+        reader.SetReadAllColorScalars(1)
+        reader.SetReadAllFields(1)
+        reader.SetReadAllNormals(1)
+        reader.SetReadAllScalars(1)
+        reader.SetReadAllTCoords(1)
+        reader.SetReadAllTensors(1)
+        reader.SetReadAllVectors(1)
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
     else:
