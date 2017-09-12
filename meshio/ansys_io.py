@@ -422,7 +422,7 @@ def write(
                 }
         first_index = 0
         binary_dtypes = {
-            # numpy.int64 is not allowed
+            # numpy.int16 is not allowed
             numpy.dtype('int32'): '2012',
             numpy.dtype('int64'): '3012',
             }
