@@ -421,8 +421,13 @@ def write(
                 'wedge': 6,
                 }
         first_index = 0
-        key = '12' if is_ascii else '3012'
+        binary_dtypes = {
+            # numpy.int64 is not allowed
+            numpy.dtype('int32'): '2012',
+            numpy.dtype('int64'): '3012',
+            }
         for cell_type, values in cells.items():
+            key = '12' if is_ascii else binary_dtypes[values.dtype]
             last_index = first_index + len(values) - 1
             fh.write((
                 '({} (1 {:x} {:x} 1 {})(\n'.format(
@@ -436,7 +441,9 @@ def write(
             else:
                 fh.write((values + first_node_index).tostring())
                 fh.write('\n)'.encode('utf8'))
-                fh.write('End of Binary Section 3012)\n'.encode('utf8'))
+                fh.write((
+                    'End of Binary Section {})\n'.format(key)
+                    ).encode('utf8'))
             first_index = last_index + 1
 
     return
