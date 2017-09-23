@@ -33,10 +33,15 @@ jobs:
       - run: apt-get install -y software-properties-common
       - run: LANG=C.UTF-8 apt-add-repository -y ppa:nschloe/vtk7
       - run: apt-get update
-      - run: apt-get install -y git python3-h5py python3-lxml python3-numpy python3-vtk7 python3-pip
+      - run: apt-get install -y git python3-h5py python3-lxml python3-vtk7 python3-pip
       - run: pip3 install -U pytest pytest-cov pylint
       - checkout
       - run: pip3 install .
+      # make sure that rst converts correctly
+      - run: cat README.md | sed 's_<img src="\([^"]*\)" width="\([^"]*\)">_![](\1){width="\2"}_g' > /tmp/README.md
+      - run: pandoc /tmp/README.md -o README.rst
+      - run: pip3 install docutils pygments
+      - run: python3 setup.py check -r -s
       # The actual test
       - run: pylint meshio/
       - run: pylint test/*py
