@@ -36,13 +36,24 @@ points, cells, point_data, cell_data, field_data = \
 ```
 to read a mesh. To write, do
 ```python
+points = numpy.array([
+    [0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0],
+    [0.0, 0.0, 1.0],
+    ])
+cells = {
+    'triangle': numpy.array([
+        [0, 1, 2]
+        ])
+    }
 meshio.write(
-    args.outfile,
+    'foo.vtk',
     points,
     cells,
-    point_data=point_data,
-    cell_data=cell_data,
-    field_data=field_data
+    # Optionally provide extra data on points, cells, etc.
+    # point_data=point_data,
+    # cell_data=cell_data,
+    # field_data=field_data
     )
 ```
 For both input and output, you can optionally specify the exact `file_format`
@@ -83,7 +94,6 @@ To create a new release
     ```
     make publish
     ```
-
 
 ### License
 
