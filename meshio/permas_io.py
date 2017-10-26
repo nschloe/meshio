@@ -126,7 +126,6 @@ def write(
             'wedge': (6, 'PENTA6'),
             'pyramid': (5, 'PYRA5')
             }
-
         #
         # Avoid non-unique element numbers in case of multiple element types by
         # num_ele !!!
@@ -153,7 +152,7 @@ def write(
         fh.write('!\n')
         elem_3D = ['HEXE8', 'TET4', 'PENTA6', 'PYRA5']
         elem_2D = ['TRIA3', 'QUAD4']
-        elem_1D = ['PLOT1','PLOTL2']
+        elem_1D = ['PLOT1', 'PLOTL2']
         fh.write('    $SYSTEM NAME = NSV\n')
         fh.write('!\n')
         fh.write('        $ELPROP\n')
@@ -172,7 +171,6 @@ def write(
                     ))
             else:
                 assert permas_type[1] in elem_1D
-                
         fh.write('!\n')
         fh.write('        $GEODAT SHELL  CONT = THICK  NODES = ALL\n')
         for meshio_type, cell in cells.items():
