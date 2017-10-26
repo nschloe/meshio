@@ -15,19 +15,19 @@ def _main():
     points, cells, point_data, cell_data, field_data = \
         meshio.read(args.infile, file_format=args.input_format)
 
-    print('Number of points: %d' % len(points))
+    print('Number of points: {}'.format(len(points)))
     print('Elements:')
     for type, elems in cells.items():
-        print('  Number of %ss: %s' % (type, len(elems)))
+        print('  Number of {}s: {}'.format(type, len(elems)))
 
     if point_data:
-        print('Point data: %s' % ', '.join(point_data.keys()))
+        print('Point data: {}'.format(', '.join(point_data.keys())))
 
     cell_data_keys = set()
     for cell_type in cell_data:
         cell_data_keys = cell_data_keys.union(cell_data[cell_type].keys())
     if cell_data_keys:
-        print('Cell data: %s' % ', '.join(cell_data_keys))
+        print('Cell data: {}'.format(', '.join(cell_data_keys)))
 
     if args.prune:
         cells.pop('vertex', None)
