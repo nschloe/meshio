@@ -273,8 +273,8 @@ def write(
         for key in cells:
             if cells[key].dtype != numpy.int32:
                 logging.warning(
-                    'Binary Gmsh needs 32-bit integers (got {}). Converting.'
-                    .format(cells[key].dtype)
+                    'Binary Gmsh needs 32-bit integers (got %s). Converting.',
+                    cells[key].dtype
                     )
                 cells[key] = numpy.array(cells[key], dtype=numpy.int32)
 
