@@ -25,6 +25,7 @@ def read(filename):
 
     cells = {}
     meshio_to_permas_type = {
+        'vertex': (1, 'PLOT1'),
         'line': (2, 'PLOTL2'),
         'triangle': (3, 'TRIA3'),
         'quad': (4, 'QUAD4'),
@@ -116,6 +117,7 @@ def write(
                 ))
 
         meshio_to_permas_type = {
+            'vertex': (1, 'PLOT1'),
             'line': (2, 'PLOTL2'),
             'triangle': (3, 'TRIA3'),
             'quad': (4, 'QUAD4'),
@@ -124,7 +126,6 @@ def write(
             'wedge': (6, 'PENTA6'),
             'pyramid': (5, 'PYRA5')
             }
-
         #
         # Avoid non-unique element numbers in case of multiple element types by
         # num_ele !!!
@@ -151,6 +152,7 @@ def write(
         fh.write('!\n')
         elem_3D = ['HEXE8', 'TET4', 'PENTA6', 'PYRA5']
         elem_2D = ['TRIA3', 'QUAD4']
+        elem_1D = ['PLOT1', 'PLOTL2']
         fh.write('    $SYSTEM NAME = NSV\n')
         fh.write('!\n')
         fh.write('        $ELPROP\n')
@@ -161,13 +163,14 @@ def write(
                     '            {} MATERIAL = DUMMY_MATERIAL\n'.format(
                         permas_type[1]
                     ))
-            else:
-                assert permas_type[1] in elem_2D
+            elif permas_type[1] in elem_2D:
                 fh.write(
                     12 * ' ' +
                     '{} GEODAT = GD_{} MATERIAL = DUMMY_MATERIAL\n'.format(
                         permas_type[1], permas_type[1]
                     ))
+            else:
+                assert permas_type[1] in elem_1D
         fh.write('!\n')
         fh.write('        $GEODAT SHELL  CONT = THICK  NODES = ALL\n')
         for meshio_type, cell in cells.items():
@@ -191,13 +194,13 @@ $ENTER MATERIAL
     $MATERIAL NAME = DUMMY_MATERIAL TYPE = ISO
 !
         $ELASTIC  GENERAL  INPUT = DATA
-            0.0 0.0
+            2.0E+05 0.3
 !
         $DENSITY  GENERAL  INPUT = DATA
-            0.0
+            7.8E-09
 !
         $THERMEXP  GENERAL  INPUT = DATA
-            0.0
+            1.2E-05
 !
     $END MATERIAL
 !
