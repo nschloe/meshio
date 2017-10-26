@@ -132,7 +132,7 @@ def _write_mesh(
             }
 
     if len(cells) > 1:
-        discarded_cells = cells.keys()
+        discarded_cells = list(cells.keys())
         discarded_cells.remove(cell_type)
         logging.warning(
           'DOLFIN XML can only handle one cell type at a time. '
