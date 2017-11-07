@@ -39,21 +39,30 @@ def read(filename):
 
     mesh = ens_maa[list(meshes)[0]]
 
-    submeshes = mesh.keys()
-    assert len(submeshes) == 1
-    submesh = mesh[list(submeshes)[0]]
+    if 'NOE' not in mesh:
+        # One needs NOE (node) and MAI (element) data. If they are not
+        # available in the mesh, check for the submesh.
+        submeshes = mesh.keys()
+        assert len(submeshes) == 1
+        mesh = mesh[list(submeshes)[0]]
 
-    pts_dataset = submesh['NOE']['COO']
+    pts_dataset = mesh['NOE']['COO']
     points = pts_dataset[()].reshape(3, -1).T
 
     cells = {}
 
-    mai = submesh['MAI']
+    mai = mesh['MAI']
     if 'TR3' in mai:
         cells['triangle'] = mai['TR3']['NOD'][()].reshape(3, -1).T - 1
 
     if 'TE4' in mai:
         cells['tetra'] = mai['TE4']['NOD'][()].reshape(4, -1).T - 1
+
+    if 'HE8' in mai:
+        cells['hexahedron'] = mai['HE8']['NOD'][()].reshape(8, -1).T - 1
+
+    if 'QU4' in mai:
+        cells['quad'] = mai['QU4']['NOD'][()].reshape(4, -1).T - 1
 
     return points, cells, {}, {}, {}
 
@@ -99,5 +108,13 @@ def write(
     if 'tetra' in cells:
         te4_group = mai_group.create_group('TE4')
         te4_group.create_dataset('NOD', data=cells['tetra'].T+1)
+
+    if 'hexahedron' in cells:
+        group = mai_group.create_group('HE8')
+        group.create_dataset('NOD', data=cells['hexahedron'].T+1)
+
+    if 'quad' in cells:
+        group = mai_group.create_group('QU4')
+        group.create_dataset('NOD', data=cells['quad'].T+1)
 
     return
