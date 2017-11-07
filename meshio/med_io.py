@@ -14,26 +14,26 @@ def read(filename):
 
     f = h5py.File(filename, 'r')
 
-    def print_group(grp, indent=0):
-        for key in grp:
-            if isinstance(key, int) or \
-                    isinstance(key, float) or \
-                    isinstance(key, numpy.int32) or \
-                    isinstance(key, numpy.int64):
-                print(indent*' ' + repr(key))
-            elif isinstance(key, numpy.ndarray):
-                print(indent*' ' + repr(key))
-            else:
-                print(indent*' ' + str(list(grp[key].attrs.items())))
-                try:
-                    print(indent*' ' + str(grp[key]))
-                    print_group(grp[key], indent=indent+4)
-                except TypeError:
-                    print(type(key))
-                    break
-        return
-
-    print_group(f)
+    # def print_group(grp, indent=0):
+    #     for key in grp:
+    #         if isinstance(key, int) or \
+    #                 isinstance(key, float) or \
+    #                 isinstance(key, numpy.int32) or \
+    #                 isinstance(key, numpy.int64):
+    #             print(indent*' ' + repr(key))
+    #         elif isinstance(key, numpy.ndarray):
+    #             print(indent*' ' + repr(key))
+    #         else:
+    #             try:
+    #                 print(indent*' ' + str(grp[key]))
+    #                 print(indent*' ' + str(list(grp[key].attrs.items())))
+    #                 print_group(grp[key], indent=indent+4)
+    #             except TypeError:
+    #                 print(type(key))
+    #                 break
+    #     return
+    #
+    # print_group(f)
 
     # <HDF5 group "/ENS_MAA" (1 members)>
     ens_maa = f['ENS_MAA']
@@ -43,8 +43,8 @@ def read(filename):
     mesh = ens_maa[list(meshes)[0]]
 
     if 'NOE' not in mesh:
-        # One needs NOE (node) and MAI (element) data. If they are not
-        # available in the mesh, check for the submesh.
+        # One needs NOE (node) and MAI (french maillage, meshing) data. If they
+        # are not available in the mesh, check for the submesh.
         submeshes = mesh.keys()
         assert len(submeshes) == 1
         mesh = mesh[list(submeshes)[0]]
@@ -97,48 +97,54 @@ def write(
 
     f = h5py.File(filename, 'w')
 
-    # Pretend this is a MED 3.0.6 file
+    # Pretend this is a MED 2.3.1 file
     info = f.create_group('INFOS_GENERALES')
-    info.attrs.create('MAJ', 3)
-    info.attrs.create('MIN', 0)
-    info.attrs.create('REL', 6)
+    info.attrs.create('MAJ', 2)
+    info.attrs.create('MIN', 3)
+    info.attrs.create('REL', 1)
 
     ens_maa = f.create_group('ENS_MAA')
 
-    mesh_name = 'meshio'
+    mesh_name = 'mesh0'
     mesh = ens_maa.create_group(mesh_name)
+
+    # dimensionality
+    mesh.attrs.create('DIM', points.shape[1])
+    # description
+    mesh.attrs.create('DES', b'Mesh created with meshio')
+    # No idea what that means
+    mesh.attrs.create('TYP', 0)
+
+    fas = mesh.create_group('FAS')
+    fz = fas.create_group('FAMILLE_ZERO')
+    fz.attrs.create('NUM', 0)
 
     # points with tags
     noe_group = mesh.create_group('NOE')
-    coo_dataset = noe_group.create_dataset('COO', data=points.T)
-    coo_dataset.attrs.create('NBR', len(points))
+    dataset = noe_group.create_dataset('COO', data=points.T.flatten())
+    dataset.attrs.create('NBR', len(points))
     tags = numpy.zeros(len(points), dtype=int)
-    noe_group.create_dataset('FAM', data=tags)
+    dataset = noe_group.create_dataset('FAM', data=tags)
+    dataset.attrs.create('NBR', len(points))
 
-    # cells with tags
+    d = {
+        'triangle': 'TR3',
+        'tetra': 'TE4',
+        'hexahedron': 'HE8',
+        'quad': 'QU4',
+        'vertex': 'PO1',
+        'line': 'SE2',
+        }
+
+    # maillage (french, meshing)
     mai_group = mesh.create_group('MAI')
-    if 'triangle' in cells:
-        tr3_group = mai_group.create_group('TR3')
-        tr3_group.create_dataset('NOD', data=cells['triangle'].T+1)
-
-    if 'tetra' in cells:
-        te4_group = mai_group.create_group('TE4')
-        te4_group.create_dataset('NOD', data=cells['tetra'].T+1)
-
-    if 'hexahedron' in cells:
-        group = mai_group.create_group('HE8')
-        group.create_dataset('NOD', data=cells['hexahedron'].T+1)
-
-    if 'quad' in cells:
-        group = mai_group.create_group('QU4')
-        group.create_dataset('NOD', data=cells['quad'].T+1)
-
-    if 'vertex' in cells:
-        group = mai_group.create_group('PO1')
-        group.create_dataset('NOD', data=cells['vertex'].T+1)
-
-    if 'line' in cells:
-        group = mai_group.create_group('SE2')
-        group.create_dataset('NOD', data=cells['line'].T+1)
+    for key in d:
+        if key in cells:
+            group = mai_group.create_group(d[key])
+            zeros = numpy.zeros(len(cells[key]), dtype=int)
+            fam = group.create_dataset('FAM', data=zeros)
+            fam.attrs.create('NBR', len(cells[key]))
+            nod = group.create_dataset('NOD', data=cells[key].T.flatten() + 1)
+            nod.attrs.create('NBR', len(cells[key]))
 
     return
