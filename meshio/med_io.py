@@ -16,12 +16,15 @@ def read(filename):
 
     # def print_group(grp, indent=0):
     #     for key in grp:
-    #         if isinstance(key, int) or isinstance(key, float) or \
-    #                 isinstance(key, numpy.int32):
+    #         if isinstance(key, int) or \
+    #                 isinstance(key, float) or \
+    #                 isinstance(key, numpy.int32) or \
+    #                 isinstance(key, numpy.int64):
     #             print(indent*' ' + repr(key))
     #         elif isinstance(key, numpy.ndarray):
     #             print(indent*' ' + repr(key))
     #         else:
+    #             print(indent*' ' + str(list(grp[key].attrs.items())))
     #             try:
     #                 print(indent*' ' + str(grp[key]))
     #                 print_group(grp[key], indent=indent+4)
@@ -47,11 +50,21 @@ def read(filename):
         mesh = mesh[list(submeshes)[0]]
 
     pts_dataset = mesh['NOE']['COO']
-    points = pts_dataset[()].reshape(3, -1).T
+    number = pts_dataset.attrs['NBR']
+    points = pts_dataset[()].reshape(-1, number).T
+    if points.shape[1] == 2:
+        points = numpy.column_stack([points, numpy.zeros(len(points))])
 
     cells = {}
 
     mai = mesh['MAI']
+
+    if 'PO1' in mai:
+        cells['vertex'] = mai['PO1']['NOD'][()].reshape(1, -1).T - 1
+
+    if 'SE2' in mai:
+        cells['line'] = mai['SE2']['NOD'][()].reshape(2, -1).T - 1
+
     if 'TR3' in mai:
         cells['triangle'] = mai['TR3']['NOD'][()].reshape(3, -1).T - 1
 
@@ -84,23 +97,25 @@ def write(
 
     f = h5py.File(filename, 'w')
 
+    # Pretend this is a MED 3.0.6 file
+    f.attrs.create('MAJ', 3)
+    f.attrs.create('MIN', 0)
+    f.attrs.create('REL', 6)
+
     ens_maa = f.create_group('ENS_MAA')
 
-    # add nodes
     mesh_name = 'meshio'
     mesh = ens_maa.create_group(mesh_name)
-    # The submesh name is taken from an example file
-    submesh_name = '-0000000000000000001-0000000000000000001'
-    submesh = mesh.create_group(submesh_name)
 
     # points with tags
-    noe_group = submesh.create_group('NOE')
-    noe_group.create_dataset('COO', data=points.T)
+    noe_group = mesh.create_group('NOE')
+    coo_dataset = noe_group.create_dataset('COO', data=points.T)
+    coo_dataset.attrs.create('NBR', len(points))
     tags = numpy.zeros(len(points), dtype=int)
     noe_group.create_dataset('FAM', data=tags)
 
     # cells with tags
-    mai_group = submesh.create_group('MAI')
+    mai_group = mesh.create_group('MAI')
     if 'triangle' in cells:
         tr3_group = mai_group.create_group('TR3')
         tr3_group.create_dataset('NOD', data=cells['triangle'].T+1)
@@ -116,5 +131,13 @@ def write(
     if 'quad' in cells:
         group = mai_group.create_group('QU4')
         group.create_dataset('NOD', data=cells['quad'].T+1)
+
+    if 'vertex' in cells:
+        group = mai_group.create_group('PO1')
+        group.create_dataset('NOD', data=cells['vertex'].T+1)
+
+    if 'line' in cells:
+        group = mai_group.create_group('SE2')
+        group.create_dataset('NOD', data=cells['line'].T+1)
 
     return
