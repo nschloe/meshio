@@ -14,26 +14,26 @@ def read(filename):
 
     f = h5py.File(filename, 'r')
 
-    # def print_group(grp, indent=0):
-    #     for key in grp:
-    #         if isinstance(key, int) or \
-    #                 isinstance(key, float) or \
-    #                 isinstance(key, numpy.int32) or \
-    #                 isinstance(key, numpy.int64):
-    #             print(indent*' ' + repr(key))
-    #         elif isinstance(key, numpy.ndarray):
-    #             print(indent*' ' + repr(key))
-    #         else:
-    #             print(indent*' ' + str(list(grp[key].attrs.items())))
-    #             try:
-    #                 print(indent*' ' + str(grp[key]))
-    #                 print_group(grp[key], indent=indent+4)
-    #             except TypeError:
-    #                 print(type(key))
-    #                 break
-    #     return
+    def print_group(grp, indent=0):
+        for key in grp:
+            if isinstance(key, int) or \
+                    isinstance(key, float) or \
+                    isinstance(key, numpy.int32) or \
+                    isinstance(key, numpy.int64):
+                print(indent*' ' + repr(key))
+            elif isinstance(key, numpy.ndarray):
+                print(indent*' ' + repr(key))
+            else:
+                print(indent*' ' + str(list(grp[key].attrs.items())))
+                try:
+                    print(indent*' ' + str(grp[key]))
+                    print_group(grp[key], indent=indent+4)
+                except TypeError:
+                    print(type(key))
+                    break
+        return
 
-    # print_group(f)
+    print_group(f)
 
     # <HDF5 group "/ENS_MAA" (1 members)>
     ens_maa = f['ENS_MAA']
@@ -98,9 +98,10 @@ def write(
     f = h5py.File(filename, 'w')
 
     # Pretend this is a MED 3.0.6 file
-    f.attrs.create('MAJ', 3)
-    f.attrs.create('MIN', 0)
-    f.attrs.create('REL', 6)
+    info = f.create_group('INFOS_GENERALES')
+    info.attrs.create('MAJ', 3)
+    info.attrs.create('MIN', 0)
+    info.attrs.create('REL', 6)
 
     ens_maa = f.create_group('ENS_MAA')
 
