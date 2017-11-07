@@ -2,7 +2,7 @@
 #
 import codecs
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 # https://packaging.python.org/single_source_version/
 base_dir = os.path.abspath(os.path.dirname(__file__))
@@ -27,7 +27,7 @@ setup(
     version=about['__version__'],
     author=about['__author__'],
     author_email=about['__author_email__'],
-    packages=['meshio'],
+    packages=find_packages(),
     description='I/O for various mesh formats',
     long_description=read('README.rst'),
     url='https://github.com/nschloe/meshio',

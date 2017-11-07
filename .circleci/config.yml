@@ -5,7 +5,7 @@ jobs:
   #   python2:
   #     working_directory: ~/meshio
   #     docker:
-  #       - image: ubuntu:17.04
+  #       - image: ubuntu:17.10
   #     steps:
   #       - run: apt-get update
   #       - run: apt-get install -y git python-h5py python-lxml python-numpy python-vtk6 python-pip
@@ -27,7 +27,7 @@ jobs:
   build:
     working_directory: ~/meshio
     docker:
-      - image: ubuntu:17.04
+      - image: ubuntu:17.10
     steps:
       - run: apt-get update
       - run: apt-get install -y software-properties-common

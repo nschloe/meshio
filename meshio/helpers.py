@@ -3,6 +3,7 @@
 from . import ansys_io
 from . import dolfin_io
 from . import h5m_io
+from . import med_io
 from . import medit_io
 from . import gmsh_io
 from . import off_io
@@ -15,6 +16,7 @@ input_filetypes = [
         'gmsh-ascii',
         'gmsh-binary',
         'dolfin-xml',
+        'med',
         'medit',
         'permas',
         'moab',
@@ -34,6 +36,7 @@ output_filetypes = [
         'gmsh-ascii',
         'gmsh-binary',
         'dolfin-xml',
+        'med',
         'medit',
         'permas',
         'moab',
@@ -50,6 +53,7 @@ _extension_to_filetype = {
     '.e': 'exodus',
     '.ex2': 'exodus',
     '.exo': 'exodus',
+    '.med': 'med',
     '.mesh': 'medit',
     '.msh': 'gmsh-binary',
     '.xml': 'dolfin-xml',
@@ -91,6 +95,8 @@ def read(filename, file_format=None):
         out = ansys_io.read(filename)
     elif file_format in ['gmsh', 'gmsh-ascii', 'gmsh-binary']:
         out = gmsh_io.read(filename)
+    elif file_format == 'med':
+        out = med_io.read(filename)
     elif file_format == 'medit':
         out = medit_io.read(filename)
     elif file_format == 'dolfin-xml':
@@ -164,6 +170,8 @@ def write(filename,
             point_data=point_data,
             cell_data=cell_data
             )
+    elif file_format == 'med':
+        med_io.write(filename, points, cells)
     elif file_format == 'medit':
         medit_io.write(filename, points, cells)
     elif file_format == 'dolfin-xml':

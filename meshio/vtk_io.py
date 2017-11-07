@@ -174,12 +174,12 @@ def _read_exodusii_mesh(reader, timestep=None):
     if timestep:
         reader.SetTimeStep(timestep)
 
-    # Make sure the point fields are read during Update().
+    # Make sure the point data are read during Update().
     for k in range(reader.GetNumberOfPointResultArrays()):
         arr_name = reader.GetPointResultArrayName(k)
         reader.SetPointResultArrayStatus(arr_name, 1)
 
-    # Make sure the point fields are read during Update().
+    # Make sure the cell data are read during Update().
     for k in range(reader.GetNumberOfElementResultArrays()):
         arr_name = reader.GetElementResultArrayName(k)
         reader.SetElementResultArrayStatus(arr_name, 1)

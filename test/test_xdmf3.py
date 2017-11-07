@@ -7,6 +7,7 @@ import pytest
 vtk = pytest.importorskip('vtk')
 
 
+@pytest.mark.skipif(not hasattr(vtk, 'vtkXdmf3Writer'), reason='Need XDMF3')
 @pytest.mark.parametrize('mesh', [
         helpers.tri_mesh,
         helpers.quad_mesh,

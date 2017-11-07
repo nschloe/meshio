@@ -77,6 +77,25 @@ tet_mesh = {
         }
 
 
+hex_mesh = {
+        'points': numpy.array([
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [0.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            ]),
+        'cells': {
+            'hexahedron': numpy.array([
+                [0, 1, 2, 4, 5, 6, 7, 8],
+                ])
+            },
+        }
+
+
 def _clone(mesh):
     mesh2 = {
         'points': numpy.copy(mesh['points'])
