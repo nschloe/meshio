@@ -13,8 +13,9 @@ vtk = pytest.importorskip('vtk')
         helpers.tri_quad_mesh,
         helpers.tet_mesh,
         helpers.hex_mesh,
-        # helpers.add_point_data(helpers.tri_mesh, 2),
-        # helpers.add_point_data(helpers.tri_mesh, 3),
+        helpers.add_point_data(helpers.tri_mesh, 1),
+        helpers.add_point_data(helpers.tri_mesh, 2),
+        helpers.add_point_data(helpers.tri_mesh, 3),
         ])
 def test_io(mesh):
     helpers.write_read('test.e', 'exodus', mesh, 1.0e-15)

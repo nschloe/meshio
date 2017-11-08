@@ -168,11 +168,6 @@ def write_read(filename, file_format, mesh, atol):
 
     # We cannot compare the exact rows here since the order of the points might
     # have changes. Just compare the sums
-    print(mesh['points'])
-    print(mesh['cells'])
-    print
-    print(points)
-    print(cells)
     assert numpy.allclose(mesh['points'], points, atol=atol, rtol=0.0)
 
     for cell_type, data in mesh['cells'].items():
