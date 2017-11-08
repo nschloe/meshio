@@ -158,6 +158,7 @@ def write_read(filename, file_format, mesh, atol):
         point_data=input_point_data,
         cell_data=input_cell_data
         )
+
     points, cells, point_data, cell_data, _ = \
         meshio.read(filename, file_format)
 

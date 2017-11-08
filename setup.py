@@ -40,7 +40,8 @@ setup(
         ],
     extras_require={
         'dolfin': ['lxml'],  # Dolfin's legacy format
-        'h5m': ['h5py'],  # MOAB's format
+        'exodus': ['netCDF4'],
+        'hdf5': ['h5py'],  # MED, MOAB format
         },
     scripts=[
       'tools/meshio-convert',

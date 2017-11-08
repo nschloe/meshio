@@ -99,7 +99,9 @@ def read(filetype, filename):
         reader.SetReadAllVectors(1)
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
-    elif filetype == 'xdmf3':
+    else:
+        assert filetype == 'xmdf3', \
+            'Unknown file type \'{}\'.'.format(filename)
         reader = vtk.vtkXdmf3Reader()
         reader.SetFileName(filename)
         reader.SetReadAllColorScalars(1)
@@ -111,12 +113,6 @@ def read(filetype, filename):
         reader.SetReadAllVectors(1)
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
-    else:
-        assert filetype == 'exodus', \
-            'Unknown file type \'{}\'.'.format(filename)
-        reader = vtk.vtkExodusIIReader()
-        reader.SetFileName(filename)
-        vtk_mesh = _read_exodusii_mesh(reader)
 
     # Explicitly extract points, cells, point data, field data
     points = numpy.copy(numpy_support.vtk_to_numpy(
@@ -140,85 +136,6 @@ def read(filetype, filename):
     cell_data = cd
 
     return points, cells, point_data, cell_data, field_data
-
-
-# def _read_exodus_mesh(reader, file_name):
-#     '''Uses a vtkExodusIIReader to return a vtkUnstructuredGrid.
-#     '''
-#     reader.SetFileName(file_name)
-#
-#     # Create Exodus metadata that can be used later when writing the file.
-#     reader.ExodusModelMetadataOn()
-#
-#     # Fetch metadata.
-#     reader.UpdateInformation()
-#
-#     # Make sure the point fields are read during Update().
-#     for k in range(reader.GetNumberOfPointArrays()):
-#         arr_name = reader.GetPointArrayName(k)
-#         reader.SetPointArrayStatus(arr_name, 1)
-#
-#     # Read the file.
-#     reader.Update()
-#
-#     return reader.GetOutput()
-
-
-def _read_exodusii_mesh(reader, timestep=None):
-    '''Uses a vtkExodusIIReader to return a vtkUnstructuredGrid.
-    '''
-    # Fetch metadata.
-    reader.UpdateInformation()
-
-    # Set time step to read.
-    if timestep:
-        reader.SetTimeStep(timestep)
-
-    # Make sure the point data are read during Update().
-    for k in range(reader.GetNumberOfPointResultArrays()):
-        arr_name = reader.GetPointResultArrayName(k)
-        reader.SetPointResultArrayStatus(arr_name, 1)
-
-    # Make sure the cell data are read during Update().
-    for k in range(reader.GetNumberOfElementResultArrays()):
-        arr_name = reader.GetElementResultArrayName(k)
-        reader.SetElementResultArrayStatus(arr_name, 1)
-
-    # Make sure all field data is read.
-    for k in range(reader.GetNumberOfGlobalResultArrays()):
-        arr_name = reader.GetGlobalResultArrayName(k)
-        reader.SetGlobalResultArrayStatus(arr_name, 1)
-
-    # Read the file.
-    reader.Update()
-    out = reader.GetOutput()
-
-    # Loop through the blocks and search for a vtkUnstructuredGrid.
-    # In Exodus, different element types are stored different meshes, with
-    # point information possibly duplicated.
-    vtk_mesh = []
-    for i in range(out.GetNumberOfBlocks()):
-        blk = out.GetBlock(i)
-        for j in range(blk.GetNumberOfBlocks()):
-            sub_block = blk.GetBlock(j)
-            if sub_block is not None and sub_block.IsA('vtkUnstructuredGrid'):
-                vtk_mesh.append(sub_block)
-
-    assert vtk_mesh, 'No \'vtkUnstructuredGrid\' found!'
-    assert len(vtk_mesh) == 1, 'More than one \'vtkUnstructuredGrid\' found!'
-
-    # Cut off trailing '_' from array names.
-    for k in range(vtk_mesh[0].GetPointData().GetNumberOfArrays()):
-        array = vtk_mesh[0].GetPointData().GetArray(k)
-        array_name = array.GetName()
-        if array_name[-1] == '_':
-            array.SetName(array_name[0:-1])
-
-    # time_values = reader.GetOutputInformation(0).Get(
-    #     vtkStreamingDemandDrivenPipeline.TIME_STEPS()
-    #     )
-
-    return vtk_mesh[0]  # , time_values
 
 
 def write(filetype,

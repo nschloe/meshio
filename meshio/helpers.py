@@ -2,6 +2,7 @@
 #
 from . import ansys_io
 from . import dolfin_io
+from . import exodus_io
 from . import h5m_io
 from . import med_io
 from . import medit_io
@@ -117,7 +118,7 @@ def read(filename, file_format=None):
         out = vtk_io.read('xdmf3', filename)
     else:
         assert file_format == 'exodus'
-        out = vtk_io.read('exodus', filename)
+        out = exodus_io.read(filename)
 
     return out
 
@@ -229,8 +230,8 @@ def write(filename,
             'Unknown file format \'{}\' of \'{}\'.'
             .format(file_format, filename)
             )
-        vtk_io.write(
-            'exodus', filename, points, cells,
+        exodus_io.write(
+            filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
