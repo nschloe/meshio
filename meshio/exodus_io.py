@@ -66,11 +66,15 @@ def read(filename):
     nc = netCDF4.Dataset(filename)
 
     if 'coordx' in nc.variables:
-        points = numpy.array([
+        points = [
             nc.variables['coordx'][:],
             nc.variables['coordy'][:],
-            nc.variables['coordz'][:],
-            ]).T
+            ]
+        if 'coordz' in nc.variables:
+            points.append(nc.variables['coordz'][:])
+        else:
+            points.append(numpy.zeros(len(points[0])))
+        points = numpy.array(points).T
     else:
         assert 'coord' in nc.variables
         points = nc.variables['coord'][:].T
