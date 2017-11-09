@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/nschloe/meshio.svg?branch=master)](https://travis-ci.org/nschloe/meshio)
 [![codecov.io](https://codecov.io/github/nschloe/meshio/branch/master/graphs/badge.svg)](https://codecov.io/github/nschloe/meshio/branch/master)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.python.org/pypi/meshio)
-[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=social&label=Star&maxAge=2592000)](https://github.com/nschloe/meshio)
+[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=social&label=Stars&maxAge=2592000)](https://github.com/nschloe/meshio)
 
 ![](https://nschloe.github.io/meshio/pp.png)
 
@@ -13,14 +13,14 @@ e.g.,
  * [ANSYS msh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
  * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
- * [H5M](https://press3.mcs.anl.gov/sigma/moab/h5m-file-format)
+ * [H5M](https://www.mcs.anl.gov/~fathom/moab-docs/h5mmain.html)
  * [Medit](https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html)
  * [MED/Salome](http://docs.salome-platform.org/latest/dev/MEDCoupling/med-file.html)
  * [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats)
  * [OFF](http://segeval.cs.princeton.edu/public/off_format.html)
  * [PERMAS](http://www.intes.de)
- * [VTK](http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
- * [VTU](http://www.vtk.org/Wiki/VTK_XML_Formats)
+ * [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
+ * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF/XDMF3](http://www.xdmf.org/)
 
 meshio can read and write all of these formats and smoothly converts between
