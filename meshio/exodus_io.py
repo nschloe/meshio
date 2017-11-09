@@ -103,20 +103,52 @@ def read(filename):
                     ]).T
 
     elem_types = {
-        'HEX': 'hexahedron',
-        'quad': 'quad',
+        # curves
+        'BEAM': 'line',
+        'BEAM2': 'line',
+        'BEAM3': 'line',
+        # surfaces
+        'QUAD': 'quad',
+        'QUAD4': 'quad',
+        'QUAD5': 'quad',
+        'QUAD8': 'quad',
+        'QUAD9': 'quad',
+        'SHELL': 'quad',
         'SHELL4': 'quad',
-        'TETRA': 'tetra',
-        'TRI3': 'triangle',
+        'SHELL8': 'quad',
+        'SHELL9': 'quad',
+        #
         'TRIANGLE': 'triangle',
+        'TRI': 'triangle',
+        'TRI3': 'triangle',
+        'TRI6': 'triangle',
+        'TRI7': 'triangle',
+        'TRISHELL': 'triangle',
+        'TRISHELL3': 'triangle',
+        'TRISHELL6': 'triangle',
+        'TRISHELL7': 'triangle',
+        # volumes
+        'HEX': 'hexahedron',
+        'HEX8': 'hexahedron',
+        'HEX9': 'hexahedron',
+        'HEX20': 'hexahedron',
+        'HEX27': 'hexahedron',
+        #
+        'TETRA': 'tetra',
+        'TETRA4': 'tetra',
+        'TETRA8': 'tetra',
+        'TETRA10': 'tetra',
+        'TETRA14': 'tetra',
+        #
+        'PYRAMID': 'pyramid',
         }
 
     cells = {}
     for key in nc.variables:
         var = nc.variables[key]
         try:
-            if var.elem_type in elem_types:
-                cells[elem_types[var.elem_type]] = var[:] - 1
+            if var.elem_type.upper() in elem_types:
+                cells[elem_types[var.elem_type.upper()]] = var[:] - 1
         except AttributeError:
             pass
 
