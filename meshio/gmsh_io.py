@@ -371,6 +371,6 @@ def write(
             consecutive_index += len(node_idcs)
         if not is_ascii:
             fh.write('\n'.encode('utf-8'))
-        fh.write('$EndElements'.encode('utf-8'))
+        fh.write('$EndElements\n'.encode('utf-8'))
 
     return
