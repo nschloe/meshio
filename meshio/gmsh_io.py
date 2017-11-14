@@ -28,14 +28,29 @@ num_nodes_per_cell = {
     'hexahedron27': 27,
     'prism18': 18,
     'pyramid14': 14,
+    #
     'line4': 4,
+    'triangle10': 10,
     'quad16': 16,
+    'tetra20': 20,
+    'hexahedron64': 64,
+    #
+    'line5': 5,
+    'triangle15': 15,
+    'quad25': 25,
+    'tetra35': 35,
+    'hexahedron125': 125,
+    #
+    'line6': 6,
+    'triangle21': 21,
+    'quad36': 36,
+    'tetra56': 56,
+    'hexahedron216': 216,
     }
 
 # Translate meshio types to gmsh codes
 # http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
 _gmsh_to_meshio_type = {
-        15: 'vertex',
         1: 'line',
         2: 'triangle',
         3: 'quad',
@@ -50,8 +65,22 @@ _gmsh_to_meshio_type = {
         12: 'hexahedron27',
         13: 'prism18',
         14: 'pyramid14',
+        15: 'vertex',
+        21: 'triangle10',
+        23: 'triangle15',
+        25: 'triangle21',
         26: 'line4',
+        27: 'line5',
+        28: 'line6',
+        29: 'tetra20',
+        30: 'tetra35',
+        31: 'tetra56',
         36: 'quad16',
+        37: 'quad25',
+        38: 'quad36',
+        92: 'hexahedron64',
+        93: 'hexahedron125',
+        94: 'hexahedron216',
         }
 _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
 
@@ -371,6 +400,6 @@ def write(
             consecutive_index += len(node_idcs)
         if not is_ascii:
             fh.write('\n'.encode('utf-8'))
-        fh.write('$EndElements'.encode('utf-8'))
+        fh.write('$EndElements\n'.encode('utf-8'))
 
     return
