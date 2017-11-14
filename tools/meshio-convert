@@ -2,8 +2,9 @@
 '''
 Convert a mesh file to another.
 '''
-import meshio
+from __future__ import print_function
 
+import meshio
 import numpy
 
 
@@ -17,8 +18,8 @@ def _main():
 
     print('Number of points: {}'.format(len(points)))
     print('Elements:')
-    for type, elems in cells.items():
-        print('  Number of {}s: {}'.format(type, len(elems)))
+    for tpe, elems in cells.items():
+        print('  Number of {}s: {}'.format(tpe, len(elems)))
 
     if point_data:
         print('Point data: {}'.format(', '.join(point_data.keys())))

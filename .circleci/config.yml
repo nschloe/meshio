@@ -46,6 +46,7 @@ jobs:
       # The actual test
       - run: pylint meshio/
       - run: pylint test/*py
+      - run: pylint tools/meshio-convert
       - run: cd test/ && pytest --cov meshio
       # submit to codecov
       - run: apt-get install -y curl
