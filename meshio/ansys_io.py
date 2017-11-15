@@ -350,8 +350,28 @@ def read(filename):
                     else:
                         cells[key] = data[key]
 
+            elif index == '39':
+                logging.warning(
+                    'Zone specification not supported yet. Skipping.'
+                    )
+                _skip_close(f, line.count('(') - line.count(')'))
+
+            elif index == '45':
+                # (45 (2 fluid solid)())
+                obj = re.match(
+                    '\\(45 \\([0-9]+ ([\\S]+) ([\\S]+)\\)\\(\\)\\)', line
+                    )
+                if obj:
+                    logging.warning(
+                        'Zone specification not supported yet (%r, %r). '
+                        'Skipping.',
+                        obj.group(1), obj.group(2)
+                        )
+                else:
+                    logging.warning('Zone specification not supported yet.')
+
             else:
-                logging.warning('Unknown index \'%d\'. Skipping.', index)
+                logging.warning('Unknown index %r. Skipping.', index)
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count('(') - line.count(')'))
 
