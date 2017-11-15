@@ -19,6 +19,7 @@ num_nodes_per_cell = {
     'quad8': 8,
     'tetra': 4,
     'hexahedron': 8,
+    'hexahedron20': 20,
     'wedge': 6,
     'pyramid': 5,
     #

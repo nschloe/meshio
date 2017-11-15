@@ -54,6 +54,7 @@ def read(filetype, filename):
             vtk.VTK_TETRA: 'tetra',
             vtk.VTK_QUADRATIC_TETRA: 'tetra10',
             vtk.VTK_HEXAHEDRON: 'hexahedron',
+            vtk.VTK_QUADRATIC_HEXAHEDRON: 'hexahedron20',
             vtk.VTK_WEDGE: 'wedge',
             vtk.VTK_PYRAMID: 'pyramid'
             }
@@ -289,6 +290,7 @@ def _generate_vtk_mesh(points, cells):
         'tetra': vtk.VTK_TETRA,
         'tetra10': vtk.VTK_QUADRATIC_TETRA,
         'hexahedron': vtk.VTK_HEXAHEDRON,
+        'hexahedron20': vtk.VTK_QUADRATIC_HEXAHEDRON,
         'wedge': vtk.VTK_WEDGE,
         'pyramid': vtk.VTK_PYRAMID
         }

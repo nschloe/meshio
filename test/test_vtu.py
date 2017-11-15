@@ -15,6 +15,8 @@ vtk = pytest.importorskip('vtk')
         helpers.tri_quad_mesh,
         helpers.tet_mesh,
         helpers.tet10_mesh,
+        helpers.hex_mesh,
+        helpers.hex20_mesh,
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 2),
         helpers.add_point_data(helpers.tri_mesh, 3),
@@ -47,4 +49,4 @@ def test_binary(mesh):
 
 
 if __name__ == '__main__':
-    test_ascii(helpers.quadratic_tri_mesh)
+    test_ascii(helpers.tet10_mesh)
