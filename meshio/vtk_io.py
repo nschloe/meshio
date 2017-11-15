@@ -56,19 +56,24 @@ def read(filetype, filename):
             vtk.VTK_PYRAMID: 'pyramid'
             }
 
+        # Translate it into the cells dictionary.
         # `data` is a one-dimensional vector with
         # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-        # Translate it into the cells dictionary.
-        cells = {}
+
+        # Collect types into bins.
         # See <https://stackoverflow.com/q/47310359/353337> for better
         # alternatives.
         uniques = numpy.unique(types)
         bins = {u: numpy.where(types == u)[0] for u in uniques}
+
+        cells = {}
         for tpe, b in bins.items():
             meshio_type = vtk_to_meshio_type[tpe]
             n = num_nodes_per_cell[meshio_type]
             assert (data[offsets[b]] == n).all()
-            indices = numpy.array([offsets[b]+i+1 for i in range(n)]).T
+            indices = numpy.array([
+                numpy.arange(1, n+1) + o for o in offsets[b]
+                ])
             cells[meshio_type] = data[indices]
 
         return cells
