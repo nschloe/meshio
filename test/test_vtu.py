@@ -14,6 +14,7 @@ vtk = pytest.importorskip('vtk')
         helpers.quad8_mesh,
         helpers.tri_quad_mesh,
         helpers.tet_mesh,
+        helpers.tet10_mesh,
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 2),
         helpers.add_point_data(helpers.tri_mesh, 3),
