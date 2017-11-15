@@ -351,15 +351,16 @@ def read(filename):
                         cells[key] = data[key]
 
             elif index == '39':
-                # (45 (2 fluid solid)())
-                print(line)
                 logging.warning(
                     'Zone specification not supported yet. Skipping.'
                     )
+                _skip_close(f, line.count('(') - line.count(')'))
 
             elif index == '45':
                 # (45 (2 fluid solid)())
-                obj = re.match('\(45 \([0-9]+ ([\S]+) ([\S]+)\)\(\)\)', line)
+                obj = re.match(
+                    '\\(45 \\([0-9]+ ([\\S]+) ([\\S]+)\\)\\(\\)\\)', line
+                    )
                 if obj:
                     logging.warning(
                         'Zone specification not supported yet (%r, %r). '
