@@ -121,12 +121,13 @@ def read(filename):
         'TRIANGLE': 'triangle',
         'TRI': 'triangle',
         'TRI3': 'triangle',
-        'TRI6': 'triangle',
         'TRI7': 'triangle',
         'TRISHELL': 'triangle',
         'TRISHELL3': 'triangle',
-        'TRISHELL6': 'triangle',
         'TRISHELL7': 'triangle',
+        #
+        'TRI6': 'triangle6',
+        'TRISHELL6': 'triangle6',
         # volumes
         'HEX': 'hexahedron',
         'HEX8': 'hexahedron',

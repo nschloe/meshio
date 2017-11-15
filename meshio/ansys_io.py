@@ -108,7 +108,7 @@ def _read_cells(f, line):
             1: ('triangle', 3),
             2: ('tetra', 4),
             3: ('quad', 4),
-            4: ('hexa', 8),
+            4: ('hexahedron', 8),
             5: ('pyra', 5),
             6: ('wedge', 6),
             }
@@ -436,7 +436,7 @@ def write(
                 'triangle': 1,
                 'tetra': 2,
                 'quad': 3,
-                'hex': 4,
+                'hexahedron': 4,
                 'pyra': 5,
                 'wedge': 6,
                 }
