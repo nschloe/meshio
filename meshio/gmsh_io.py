@@ -68,6 +68,8 @@ _gmsh_to_meshio_type = {
         13: 'prism18',
         14: 'pyramid14',
         15: 'vertex',
+        16: 'quad8',
+        17: 'hexahedron20',
         21: 'triangle10',
         23: 'triangle15',
         25: 'triangle21',
