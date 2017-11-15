@@ -8,6 +8,8 @@ I/O for VTK, VTU, Exodus etc.
 import logging
 import numpy
 
+from .gmsh_io import num_nodes_per_cell
+
 # Make explicit copies of the data; some (all?) of it is quite volatile and
 # contains garbage once the vtk_mesh goes out of scopy.
 
@@ -58,19 +60,16 @@ def read(filetype, filename):
         # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
         # Translate it into the cells dictionary.
         cells = {}
-        for vtk_type, meshio_type in vtk_to_meshio_type.items():
-            # Get all offsets for vtk_type
-            os = offsets[numpy.argwhere(types == vtk_type).transpose()[0]]
-            num_cells = len(os)
-            if num_cells > 0:
-                num_pts = data[os[0]]
-                # instantiate the array
-                arr = numpy.empty((num_cells, num_pts), dtype=int)
-                # sort the num_pts entries after the offsets into the columns
-                # of arr
-                for k in range(num_pts):
-                    arr[:, k] = data[os+k+1]
-                cells[meshio_type] = arr
+        # See <https://stackoverflow.com/q/47310359/353337> for better
+        # alternatives.
+        uniques = numpy.unique(types)
+        bins = {u: numpy.where(types == u)[0] for u in uniques}
+        for tpe, b in bins.items():
+            meshio_type = vtk_to_meshio_type[tpe]
+            n = num_nodes_per_cell[meshio_type]
+            assert (data[offsets[b]] == n).all()
+            indices = numpy.array([offsets[b]+i+1 for i in range(n)]).T
+            cells[meshio_type] = data[indices]
 
         return cells
 
