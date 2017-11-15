@@ -9,6 +9,7 @@ vtk = pytest.importorskip('vtk')
 
 @pytest.mark.parametrize('mesh', [
         helpers.tri_mesh,
+        helpers.triangle6_mesh,
         helpers.quad_mesh,
         helpers.tri_quad_mesh,
         helpers.tet_mesh,
@@ -41,3 +42,7 @@ def test_ascii(mesh):
 def test_binary(mesh):
     helpers.write_read('test.vtu', 'vtu-binary', mesh, 1.0e-15)
     return
+
+
+if __name__ == '__main__':
+    test_ascii(helpers.quadratic_tri_mesh)
