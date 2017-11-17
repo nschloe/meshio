@@ -237,6 +237,15 @@ def add_cell_data(mesh, dim):
     return mesh2
 
 
+def add_field_data(mesh, value, dtype):
+    mesh2 = _clone(mesh)
+    field_data = {
+        'a': numpy.array(value, dtype=dtype),
+    }
+    mesh2['field_data'] = field_data
+    return mesh2
+
+
 def write_read(writer, reader, mesh, atol):
     '''Write and read a file, and make sure the data is the same as before.
     '''
@@ -250,6 +259,11 @@ def write_read(writer, reader, mesh, atol):
     except KeyError:
         input_cell_data = {}
 
+    try:
+        input_field_data = mesh['field_data']
+    except KeyError:
+        input_field_data = {}
+
     filename = 'test.dat'
 
     writer(
@@ -257,10 +271,10 @@ def write_read(writer, reader, mesh, atol):
         mesh['points'], mesh['cells'],
         point_data=input_point_data,
         cell_data=input_cell_data,
-        field_data={}
+        field_data=input_field_data,
         )
 
-    points, cells, point_data, cell_data, _ = reader(filename)
+    points, cells, point_data, cell_data, field_data = reader(filename)
 
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
@@ -284,6 +298,12 @@ def write_read(writer, reader, mesh, atol):
                     data, cell_data[cell_type][key],
                     atol=atol, rtol=0.0
                     )
+
+    for name, data in input_field_data.items():
+        assert numpy.allclose(
+            data, field_data[name],
+            atol=atol, rtol=0.0
+            )
 
     os.remove(filename)
     return

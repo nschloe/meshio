@@ -167,7 +167,8 @@ def write(filename,
             filename, points, cells,
             is_ascii=(file_format == 'gmsh-ascii'),
             point_data=point_data,
-            cell_data=cell_data
+            cell_data=cell_data,
+            field_data=field_data
             )
     elif file_format == 'med':
         med_io.write(filename, points, cells)

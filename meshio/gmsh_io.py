@@ -145,7 +145,9 @@ def read_buffer(f):
                 line = f.readline().decode('utf-8')
                 key = line.split(' ')[2].replace('"', '').replace('\n', '')
                 phys_group = int(line.split(' ')[1])
-                field_data[key] = phys_group
+                phys_dim = int(line.split(' ')[0])
+                value = numpy.array([phys_group, phys_dim], dtype=int)
+                field_data[key] = value
             line = f.readline().decode('utf-8')
             assert line.strip() == '$EndPhysicalNames'
         elif environ == 'Nodes':
@@ -321,6 +323,26 @@ def write(
             fh.write(struct.pack('i', 1))
             fh.write('\n'.encode('utf-8'))
         fh.write('$EndMeshFormat\n'.encode('utf-8'))
+
+        # Write physical names
+        if field_data:
+            entries = []
+            for phys_name in field_data:
+                try:
+                    phys_num, phys_dim = field_data[phys_name]
+                    phys_num, phys_dim = int(phys_num), int(phys_dim)
+                    entries.append((phys_dim, phys_num, phys_name))
+                except (ValueError, TypeError):
+                    logging.warning(
+                        'Field data contains entry that cannot be processed.'
+                    )
+            entries.sort()
+            if entries:
+                fh.write('$PhysicalNames\n'.encode('utf-8'))
+                fh.write('{}\n'.format(len(entries)).encode('utf-8'))
+                for entry in entries:
+                    fh.write('{} {} "{}"\n'.format(*entry).encode('utf-8'))
+                fh.write('$EndPhysicalNames\n'.encode('utf-8'))
 
         # Write nodes
         fh.write('$Nodes\n'.encode('utf-8'))
