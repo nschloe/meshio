@@ -47,6 +47,7 @@ def read(filetype, filename):
         vtk_to_meshio_type = {
             vtk.VTK_VERTEX: 'vertex',
             vtk.VTK_LINE: 'line',
+            vtk.VTK_QUADRATIC_EDGE: 'line3',
             vtk.VTK_TRIANGLE: 'triangle',
             vtk.VTK_QUADRATIC_TRIANGLE: 'triangle6',
             vtk.VTK_QUAD: 'quad',
@@ -283,6 +284,7 @@ def _generate_vtk_mesh(points, cells):
     meshio_to_vtk_type = {
         'vertex': vtk.VTK_VERTEX,
         'line': vtk.VTK_LINE,
+        'line3': vtk.VTK_QUADRATIC_EDGE,
         'triangle': vtk.VTK_TRIANGLE,
         'triangle6': vtk.VTK_QUADRATIC_TRIANGLE,
         'quad': vtk.VTK_QUAD,
