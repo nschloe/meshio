@@ -93,13 +93,9 @@ def read(filename):
 
     for child in piece.getchildren():
         if child.tag == 'PointData':
-            c = child.getchildren()
-            if c:
-                assert len(c) == 1
-                c = c[0]
+            for c in child.getchildren():
                 assert c.tag == 'DataArray'
                 assert c.attrib['format'] == 'ascii'
-
                 point_data[c.attrib['Name']] = numpy.array(
                     c.text.split(),
                     dtype=vtu_type_to_numpy_type[c.attrib['type']]
