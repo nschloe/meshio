@@ -7,102 +7,136 @@ I/O for VTK, VTU, Exodus etc.
 '''
 import numpy
 
-from .gmsh_io import num_nodes_per_cell
-
 
 def read(filename):
-    # pylint: disable=import-error
-    import vtk
-    from vtk.util import numpy_support
+    from lxml import etree as ET
 
-    def _read_data(data):
-        '''Extract numpy arrays from a VTK data set.
-        '''
-        # Go through all arrays, fetch data.
-        out = {}
-        for k in range(data.GetNumberOfArrays()):
-            array = data.GetArray(k)
-            if array:
-                array_name = array.GetName()
-                out[array_name] = numpy.copy(
-                    vtk.util.numpy_support.vtk_to_numpy(array)
-                    )
-        return out
+    tree = ET.parse(filename)
+    root = tree.getroot()
 
-    def _read_cells(vtk_mesh):
-        data = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-                vtk_mesh.GetCells().GetData()
-                ))
-        offsets = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-                vtk_mesh.GetCellLocationsArray()
-                ))
-        types = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-                vtk_mesh.GetCellTypesArray()
-                ))
+    assert root.tag == 'VTKFile'
+    assert root.attrib['type'] == 'UnstructuredGrid'
+    assert root.attrib['version'] == '0.1'
+    assert root.attrib['byte_order'] == 'LittleEndian'
+    assert root.attrib['header_type'] == 'UInt32'
+    assert root.attrib['compressor'] == 'vtkZLibDataCompressor'
 
-        vtk_to_meshio_type = {
-            vtk.VTK_VERTEX: 'vertex',
-            vtk.VTK_LINE: 'line',
-            vtk.VTK_QUADRATIC_EDGE: 'line3',
-            vtk.VTK_TRIANGLE: 'triangle',
-            vtk.VTK_QUADRATIC_TRIANGLE: 'triangle6',
-            vtk.VTK_QUAD: 'quad',
-            vtk.VTK_QUADRATIC_QUAD: 'quad8',
-            vtk.VTK_TETRA: 'tetra',
-            vtk.VTK_QUADRATIC_TETRA: 'tetra10',
-            vtk.VTK_HEXAHEDRON: 'hexahedron',
-            vtk.VTK_QUADRATIC_HEXAHEDRON: 'hexahedron20',
-            vtk.VTK_WEDGE: 'wedge',
-            vtk.VTK_PYRAMID: 'pyramid'
-            }
+    children = root.getchildren()
+    assert len(children) == 1
+    grid = children[0]
+    assert grid.tag == 'UnstructuredGrid'
 
-        # Translate it into the cells dictionary.
-        # `data` is a one-dimensional vector with
-        # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+    pieces = grid.getchildren()
+    assert len(pieces) == 1
 
-        # Collect types into bins.
-        # See <https://stackoverflow.com/q/47310359/353337> for better
-        # alternatives.
-        uniques = numpy.unique(types)
-        bins = {u: numpy.where(types == u)[0] for u in uniques}
+    piece = pieces[0]
 
-        cells = {}
-        for tpe, b in bins.items():
-            meshio_type = vtk_to_meshio_type[tpe]
-            n = num_nodes_per_cell[meshio_type]
-            assert (data[offsets[b]] == n).all()
-            indices = numpy.array([
-                numpy.arange(1, n+1) + o for o in offsets[b]
-                ])
-            cells[meshio_type] = data[indices]
+    points = None
+    point_data = None
+    cell_data = None
+    field_data = None
 
-        return cells
+    connectivity = None
+    offsets = None
+    types = None
 
-    reader = vtk.vtkXMLUnstructuredGridReader()
-    reader.SetFileName(filename)
-    reader.Update()
-    vtk_mesh = reader.GetOutput()
+    vtu_type_to_numpy_type = {
+        'Float64': numpy.float64,
+        'Int64': numpy.int64,
+        'UInt8': numpy.uint8,
+        }
 
-    # Explicitly extract points, cells, point data, field data
-    points = numpy.copy(numpy_support.vtk_to_numpy(
-            vtk_mesh.GetPoints().GetData()
-            ))
-    cells = _read_cells(vtk_mesh)
+    for child in piece.getchildren():
+        if child.tag == 'PointData':
+            pass
+        elif child.tag == 'CellData':
+            pass
+        elif child.tag == 'Points':
+            c = child.getchildren()
+            assert len(c) == 1
+            c = c[0]
+            assert c.tag == 'DataArray'
+            assert c.attrib['Name'] == 'Points'
+            assert c.attrib['format'] == 'ascii'
 
-    point_data = _read_data(vtk_mesh.GetPointData())
-    field_data = _read_data(vtk_mesh.GetFieldData())
+            points = numpy.array(
+                c.text.split(),
+                dtype=vtu_type_to_numpy_type[c.attrib['type']]
+                ).reshape(-1, int(c.attrib['NumberOfComponents']))
 
-    cell_data = _read_data(vtk_mesh.GetCellData())
-    # split cell_data by the cell type
-    cd = {}
-    index = 0
-    for cell_type in cells:
-        num_cells = len(cells[cell_type])
-        cd[cell_type] = {}
-        for name, array in cell_data.items():
-            cd[cell_type][name] = array[index:index+num_cells]
-        index += num_cells
-    cell_data = cd
+        else:
+            assert child.tag == 'Cells', \
+                'Unknown tag \'{}\'.'.format(child.tag)
+
+            for data in child.getchildren():
+                assert data.tag == 'DataArray'
+                assert data.attrib['format'] == 'ascii'
+
+                if data.attrib['Name'] == 'connectivity':
+                    connectivity = numpy.array(
+                        data.text.split(),
+                        dtype=vtu_type_to_numpy_type[data.attrib['type']]
+                        )
+                elif data.attrib['Name'] == 'offsets':
+                    offsets = numpy.array(
+                        data.text.split(),
+                        dtype=vtu_type_to_numpy_type[data.attrib['type']]
+                        )
+                else:
+                    assert data.attrib['Name'] == 'types', \
+                        'Unknown array \'{}\'.'.format(data.attrib['Name'])
+                    types = numpy.array(
+                        data.text.split(),
+                        dtype=vtu_type_to_numpy_type[data.attrib['type']]
+                        )
+
+    assert points is not None
+    assert connectivity is not None
+    assert offsets is not None
+    assert types is not None
+
+    vtk_to_meshio_type = {
+        1: 'vertex',
+        3: 'line',
+        5: 'triangle',
+        9: 'quad',
+        10: 'tetra',
+        12: 'hexahedron',
+        13: 'wedge',
+        14: 'pyramid',
+        21: 'line3',
+        22: 'triangle6',
+        23: 'quad8',
+        24: 'tetra10',
+        25: 'hexahedron20',
+        }
+
+    from .gmsh_io import num_nodes_per_cell
+
+    print(types)
+    print(connectivity)
+    print(offsets)
+    # assert (types == types[0]).all()
+
+    # Translate it into the cells dictionary.
+    # `connectivity` is a one-dimensional vector with
+    # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
+
+    # Collect types into bins.
+    # See <https://stackoverflow.com/q/47310359/353337> for better
+    # alternatives.
+    uniques = numpy.unique(types)
+    bins = {u: numpy.where(types == u)[0] for u in uniques}
+
+    cells = {}
+    for tpe, b in bins.items():
+        meshio_type = vtk_to_meshio_type[tpe]
+        n = num_nodes_per_cell[meshio_type]
+        indices = numpy.array([
+            # The offsets point to the _end_ of the indices
+            numpy.arange(n) + o - n for o in offsets[b]
+            ])
+        cells[meshio_type] = connectivity[indices]
 
     return points, cells, point_data, cell_data, field_data
 
