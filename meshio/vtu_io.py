@@ -76,9 +76,11 @@ def read(filename):
 
     piece = pieces[0]
 
+    num_points = int(piece.attrib['NumberOfPoints'])
+
     points = None
     point_data = {}
-    cell_data = {}
+    cell_data_raw = {}
     field_data = {}
 
     connectivity = None
@@ -92,18 +94,7 @@ def read(filename):
         }
 
     for child in piece.getchildren():
-        if child.tag == 'PointData':
-            for c in child.getchildren():
-                assert c.tag == 'DataArray'
-                assert c.attrib['format'] == 'ascii'
-                point_data[c.attrib['Name']] = numpy.array(
-                    c.text.split(),
-                    dtype=vtu_type_to_numpy_type[c.attrib['type']]
-                    )
-
-        elif child.tag == 'CellData':
-            pass
-        elif child.tag == 'Points':
+        if child.tag == 'Points':
             c = child.getchildren()
             assert len(c) == 1
             c = c[0]
@@ -114,12 +105,9 @@ def read(filename):
             points = numpy.array(
                 c.text.split(),
                 dtype=vtu_type_to_numpy_type[c.attrib['type']]
-                ).reshape(-1, int(c.attrib['NumberOfComponents']))
+                ).reshape(num_points, int(c.attrib['NumberOfComponents']))
 
-        else:
-            assert child.tag == 'Cells', \
-                'Unknown tag \'{}\'.'.format(child.tag)
-
+        elif child.tag == 'Cells':
             for data in child.getchildren():
                 assert data.tag == 'DataArray'
                 assert data.attrib['format'] == 'ascii'
@@ -142,17 +130,50 @@ def read(filename):
                         dtype=vtu_type_to_numpy_type[data.attrib['type']]
                         )
 
+        elif child.tag == 'PointData':
+            for c in child.getchildren():
+                assert c.tag == 'DataArray'
+                assert c.attrib['format'] == 'ascii'
+                point_data[c.attrib['Name']] = numpy.array(
+                    c.text.split(),
+                    dtype=vtu_type_to_numpy_type[c.attrib['type']]
+                    )
+
+        else:
+            assert child.tag == 'CellData', \
+                'Unknown tag \'{}\'.'.format(child.tag)
+            for c in child.getchildren():
+                assert c.tag == 'DataArray'
+                assert c.attrib['format'] == 'ascii'
+                cell_data_raw[c.attrib['Name']] = numpy.array(
+                    c.text.split(),
+                    dtype=vtu_type_to_numpy_type[c.attrib['type']]
+                    )
+
     assert points is not None
     assert connectivity is not None
     assert offsets is not None
     assert types is not None
 
-    # get point_data in shape
+    cells = _cells_from_data(connectivity, offsets, types)
+
+    # get point data in shape
     for key in point_data:
         if len(point_data[key]) != len(points):
             point_data[key] = point_data[key].reshape(len(points), -1)
 
-    cells = _cells_from_data(connectivity, offsets, types)
+    # get cell data in shape
+    cell_data = {}
+    num_all_cells = sum([len(c) for c in cells.values()])
+    for key in cell_data_raw:
+        d = cell_data_raw[key]
+        if len(d) != num_all_cells:
+            d = d.reshape(num_all_cells, -1)
+
+        r = 0
+        for k in cells:
+            cell_data[k] = {key: d[r:r+len(cells[k])]}
+            r += len(cells[k])
 
     return points, cells, point_data, cell_data, field_data
 
