@@ -159,9 +159,7 @@ def read(filename):
     cell_data_raw = {}
     field_data = {}
 
-    connectivity = None
-    offsets = None
-    types = None
+    cells = {}
 
     vtu_to_numpy_type = {
         'Float64': numpy.float64,
@@ -196,46 +194,18 @@ def read(filename):
         elif child.tag == 'Cells':
             for data in child.getchildren():
                 assert data.tag == 'DataArray'
-                if data.attrib['Name'] == 'connectivity':
-                    if data.attrib['format'] == 'ascii':
-                        connectivity = numpy.array(
-                            data.text.split(),
-                            dtype=vtu_to_numpy_type[data.attrib['type']]
-                            )
-                    else:
-                        assert data.attrib['format'] == 'binary'
-                        connectivity = _read_binary(
-                            data.text.strip(),
-                            byte_order, header_type, data.attrib['type']
-                            )
 
-                elif data.attrib['Name'] == 'offsets':
-                    if data.attrib['format'] == 'ascii':
-                        offsets = numpy.array(
-                            data.text.split(),
-                            dtype=vtu_to_numpy_type[data.attrib['type']]
-                            )
-                    else:
-                        assert data.attrib['format'] == 'binary'
-                        offsets = _read_binary(
-                            data.text.strip(),
-                            byte_order, header_type, data.attrib['type']
-                            )
-
+                if data.attrib['format'] == 'ascii':
+                    cells[data.attrib['Name']] = numpy.array(
+                        data.text.split(),
+                        dtype=vtu_to_numpy_type[data.attrib['type']]
+                        )
                 else:
-                    assert data.attrib['Name'] == 'types', \
-                        'Unknown array \'{}\'.'.format(data.attrib['Name'])
-                    if data.attrib['format'] == 'ascii':
-                        types = numpy.array(
-                            data.text.split(),
-                            dtype=vtu_to_numpy_type[data.attrib['type']]
-                            )
-                    else:
-                        assert data.attrib['format'] == 'binary'
-                        types = _read_binary(
-                            data.text.strip(),
-                            byte_order, header_type, data.attrib['type']
-                            )
+                    assert data.attrib['format'] == 'binary'
+                    cells[data.attrib['Name']] = _read_binary(
+                        data.text.strip(),
+                        byte_order, header_type, data.attrib['type']
+                        )
 
         elif child.tag == 'PointData':
             for c in child.getchildren():
@@ -258,11 +228,13 @@ def read(filename):
                     )
 
     assert points is not None
-    assert connectivity is not None
-    assert offsets is not None
-    assert types is not None
+    assert 'connectivity' in cells
+    assert 'offsets' in cells
+    assert 'types' in cells
 
-    cells = _cells_from_data(connectivity, offsets, types)
+    cells = _cells_from_data(
+            cells['connectivity'], cells['offsets'], cells['types']
+            )
 
     # get point data in shape
     for key in point_data:
