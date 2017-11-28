@@ -141,7 +141,6 @@ def read_buffer(f):
                 assert line == '\n'
 
         elif section == 'POINT_DATA':
-            assert is_ascii
             type1, type2, num = f.readline().decode('utf-8').split()
             num = int(num)
 
@@ -153,15 +152,23 @@ def read_buffer(f):
                 f.readline().decode('utf-8').split()
             shape0 = int(shape0)
             shape1 = int(shape1)
-            dtype, _, _ = vtk_to_numpy_dtype[data_type]
-            point_data[name] = numpy.fromfile(
-                f, count=shape0 * shape1, sep=' ',
-                dtype=dtype
-                )
+            dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
+
+            if is_ascii:
+                point_data[name] = numpy.fromfile(
+                    f, count=shape0 * shape1, sep=' ', dtype=dtype
+                    )
+            else:
+                # binary
+                total_num_bytes = shape0 * shape1 * num_bytes
+                point_data[name] = \
+                    numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
+                line = f.readline().decode('utf-8')
+                assert line == '\n'
+
             if shape0 != 1:
                 point_data[name] = point_data[name].reshape((shape1, shape0))
         else:
-            assert is_ascii
             assert section == 'CELL_DATA', \
                 'Unknown section \'{}\'.'.format(section)
             num_items = int(split[1])
@@ -177,11 +184,21 @@ def read_buffer(f):
                 f.readline().decode('utf-8').split()
             shape0 = int(shape0)
             shape1 = int(shape1)
-            dtype, _, _ = vtk_to_numpy_dtype[data_type]
-            cell_data_raw[name] = numpy.fromfile(
-                f, count=shape0 * shape1, sep=' ',
-                dtype=dtype
-                )
+            dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
+
+            if is_ascii:
+                cell_data_raw[name] = numpy.fromfile(
+                    f, count=shape0 * shape1, sep=' ',
+                    dtype=dtype
+                    )
+            else:
+                # binary
+                total_num_bytes = shape0 * shape1 * num_bytes
+                cell_data_raw[name] = \
+                    numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
+                line = f.readline().decode('utf-8')
+                assert line == '\n'
+
             if shape0 != 1:
                 cell_data_raw[name] = \
                     cell_data_raw[name].reshape((shape1, shape0))
@@ -192,10 +209,6 @@ def read_buffer(f):
     cells = translate_cells(c, offsets, ct)
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
-
-    print(points)
-    print(points.dtype)
-    print(cells)
 
     return points, cells, point_data, cell_data, field_data
 
