@@ -60,12 +60,11 @@ def read_buffer(f):
     assert dataset_type == 'UNSTRUCTURED_GRID', \
         'Only VTK UNSTRUCTURED_GRID supported.'
 
-    # For some reason, many binary VTK files seem to be big endian
-    is_big_endian = True
+    is_big_endian = False
     endian = '<' if is_big_endian else '>'
 
     vtk_to_numpy_dtype = {
-        'double': (endian + 'f8', 8)
+        'double': (numpy.float64, endian + 'f8', 8)
         }
 
     c = None
@@ -88,7 +87,7 @@ def read_buffer(f):
         if section == 'POINTS':
             num_points = int(split[1])
             data_type = split[2]
-            dtype, num_bytes = vtk_to_numpy_dtype[data_type]
+            dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
             if is_ascii:
                 points = numpy.fromfile(
                     f, count=num_points*3, sep=' ',
@@ -97,7 +96,8 @@ def read_buffer(f):
             else:
                 # binary
                 total_num_bytes = num_points * (3 * num_bytes)
-                points = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
+                points = \
+                    numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
@@ -112,7 +112,9 @@ def read_buffer(f):
                 num_bytes = 4
                 total_num_bytes = num_items * num_bytes
                 # cell data is little endian. okay.
-                c = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
+                c = numpy.fromstring(
+                    f.read(total_num_bytes), dtype=endian+'i4'
+                    )
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
@@ -132,7 +134,9 @@ def read_buffer(f):
                 # binary
                 num_bytes = 4
                 total_num_bytes = num_items * num_bytes
-                ct = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
+                ct = numpy.fromstring(
+                    f.read(total_num_bytes), dtype=endian+'i4'
+                    )
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
@@ -149,9 +153,10 @@ def read_buffer(f):
                 f.readline().decode('utf-8').split()
             shape0 = int(shape0)
             shape1 = int(shape1)
+            dtype, _, _ = vtk_to_numpy_dtype[data_type]
             point_data[name] = numpy.fromfile(
                 f, count=shape0 * shape1, sep=' ',
-                dtype=vtk_to_numpy_dtype[data_type]
+                dtype=dtype
                 )
             if shape0 != 1:
                 point_data[name] = point_data[name].reshape((shape1, shape0))
@@ -172,9 +177,10 @@ def read_buffer(f):
                 f.readline().decode('utf-8').split()
             shape0 = int(shape0)
             shape1 = int(shape1)
+            dtype, _, _ = vtk_to_numpy_dtype[data_type]
             cell_data_raw[name] = numpy.fromfile(
                 f, count=shape0 * shape1, sep=' ',
-                dtype=vtk_to_numpy_dtype[data_type]
+                dtype=dtype
                 )
             if shape0 != 1:
                 cell_data_raw[name] = \
@@ -186,6 +192,10 @@ def read_buffer(f):
     cells = translate_cells(c, offsets, ct)
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
+
+    print(points)
+    print(points.dtype)
+    print(cells)
 
     return points, cells, point_data, cell_data, field_data
 
