@@ -7,6 +7,7 @@ I/O for VTU <https://www.vtk.org/Wiki/VTK_XML_Formats>.
 '''
 import numpy
 
+from .vtk_io import vtk_to_meshio_type
 from .gmsh_io import num_nodes_per_cell
 
 # Make explicit copies of the data; some (all?) of it is quite volatile and
@@ -42,22 +43,6 @@ def read(filetype, filename):
         types = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
                 vtk_mesh.GetCellTypesArray()
                 ))
-
-        vtk_to_meshio_type = {
-            vtk.VTK_VERTEX: 'vertex',
-            vtk.VTK_LINE: 'line',
-            vtk.VTK_QUADRATIC_EDGE: 'line3',
-            vtk.VTK_TRIANGLE: 'triangle',
-            vtk.VTK_QUADRATIC_TRIANGLE: 'triangle6',
-            vtk.VTK_QUAD: 'quad',
-            vtk.VTK_QUADRATIC_QUAD: 'quad8',
-            vtk.VTK_TETRA: 'tetra',
-            vtk.VTK_QUADRATIC_TETRA: 'tetra10',
-            vtk.VTK_HEXAHEDRON: 'hexahedron',
-            vtk.VTK_QUADRATIC_HEXAHEDRON: 'hexahedron20',
-            vtk.VTK_WEDGE: 'wedge',
-            vtk.VTK_PYRAMID: 'pyramid'
-            }
 
         # Translate it into the cells dictionary.
         # `data` is a one-dimensional vector with

@@ -11,29 +11,11 @@ import zlib
 
 import numpy
 
+from .vtk_io import vtk_to_meshio_type
 from .gmsh_io import num_nodes_per_cell
 
 
 def _cells_from_data(connectivity, offsets, types):
-    # create cells
-    vtk_to_meshio_type = {
-        1: 'vertex',
-        3: 'line',
-        5: 'triangle',
-        9: 'quad',
-        10: 'tetra',
-        12: 'hexahedron',
-        13: 'wedge',
-        14: 'pyramid',
-        21: 'line3',
-        22: 'triangle6',
-        23: 'quad8',
-        24: 'tetra10',
-        25: 'hexahedron20',
-        }
-
-    # assert (types == types[0]).all()
-
     # Translate it into the cells dictionary.
     # `connectivity` is a one-dimensional vector with
     # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
