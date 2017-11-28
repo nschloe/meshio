@@ -81,21 +81,7 @@ def read(filetype, filename):
 
         return cells
 
-    if filetype in ['vtk', 'vtk-ascii', 'vtk-binary']:
-        reader = vtk.vtkUnstructuredGridReader()
-        reader.SetFileName(filename)
-        reader.SetReadAllNormals(1)
-        reader.SetReadAllScalars(1)
-        reader.SetReadAllTensors(1)
-        reader.SetReadAllVectors(1)
-        reader.Update()
-        vtk_mesh = reader.GetOutput()
-    elif filetype in ['vtu', 'vtu-ascii', 'vtu-binary']:
-        reader = vtk.vtkXMLUnstructuredGridReader()
-        reader.SetFileName(filename)
-        reader.Update()
-        vtk_mesh = reader.GetOutput()
-    elif filetype in ['xdmf', 'xdmf2']:
+    if filetype in ['xdmf', 'xdmf2']:
         reader = vtk.vtkXdmfReader()
         reader.SetFileName(filename)
         reader.SetReadAllColorScalars(1)
