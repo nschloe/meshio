@@ -114,8 +114,6 @@ def read_buffer(f):
 
 
 def translate_cells(data, offsets, types):
-    from .gmsh_io import num_nodes_per_cell
-
     # Translate it into the cells dictionary.
     # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
@@ -129,9 +127,7 @@ def translate_cells(data, offsets, types):
     cells = {}
     for tpe, b in bins.items():
         meshio_type = vtk_to_meshio_type[tpe]
-        n = num_nodes_per_cell[meshio_type]
-        print(n)
-        print(data[offsets[b]])
+        n = data[offsets[b[0]]]
         assert (data[offsets[b]] == n).all()
         indices = numpy.array([
             numpy.arange(1, n+1) + o for o in offsets[b]
