@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 '''
-I/O for VTK, VTU, Exodus etc.
+I/O for VTU.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''

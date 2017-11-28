@@ -12,6 +12,7 @@ from . import permas_io
 from . import vtk_io
 from . import vtu_io
 from . import xdmf_io
+from . import xdmf3_io
 
 input_filetypes = [
         'ansys',
@@ -117,7 +118,7 @@ def read(filename, file_format=None):
     elif file_format in ['xdmf', 'xdmf2']:
         out = xdmf_io.read('xdmf2', filename)
     elif file_format == 'xdmf3':
-        out = xdmf_io.read('xdmf3', filename)
+        out = xdmf3_io.read('xdmf3', filename)
     else:
         assert file_format == 'exodus'
         out = exodus_io.read(filename)
@@ -221,7 +222,7 @@ def write(filename,
             field_data=field_data
             )
     elif file_format == 'xdmf3':  # XDMF
-        xdmf_io.write(
+        xdmf3_io.write(
             'xdmf3', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
