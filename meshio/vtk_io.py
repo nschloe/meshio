@@ -51,6 +51,7 @@ def read_buffer(f):
     data_type = f.readline().decode('utf-8').strip()
     assert data_type in ['ASCII', 'BINARY'], \
         'Unknown VTK data type \'{}\'.'.format(data_type)
+    is_ascii = data_type == 'ASCII'
 
     line = f.readline().decode('utf-8').strip()
     match = re.match('DATASET +([^ ]+)', line)
@@ -59,8 +60,12 @@ def read_buffer(f):
     assert dataset_type == 'UNSTRUCTURED_GRID', \
         'Only VTK UNSTRUCTURED_GRID supported.'
 
+    # For some reason, many binary VTK files seem to be big endian
+    is_big_endian = True
+    endian = '<' if is_big_endian else '>'
+
     vtk_to_numpy_dtype = {
-        'double': numpy.float64
+        'double': (endian + 'f8', 8)
         }
 
     c = None
@@ -83,12 +88,23 @@ def read_buffer(f):
         if section == 'POINTS':
             num_points = int(split[1])
             data_type = split[2]
-            points = numpy.fromfile(
-                f, count=num_points*3, sep=' ',
-                dtype=vtk_to_numpy_dtype[data_type]
-                ).reshape((num_points, 3))
+            dtype, num_bytes = vtk_to_numpy_dtype[data_type]
+            if is_ascii:
+                points = numpy.fromfile(
+                    f, count=num_points*3, sep=' ',
+                    dtype=dtype
+                    )
+            else:
+                # binary
+                total_num_bytes = num_points * (3 * num_bytes)
+                points = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
+                line = f.readline().decode('utf-8')
+                assert line == '\n'
+
+            points = points.reshape((num_points, 3))
 
         elif section == 'CELLS':
+            assert is_ascii
             num_items = int(split[2])
             c = numpy.fromfile(f, count=num_items, sep=' ', dtype=int)
 
@@ -100,10 +116,12 @@ def read_buffer(f):
             offsets = numpy.array(offsets)
 
         elif section == 'CELL_TYPES':
+            assert is_ascii
             num_items = int(split[1])
             ct = numpy.fromfile(f, count=int(num_items), sep=' ', dtype=int)
 
         elif section == 'POINT_DATA':
+            assert is_ascii
             type1, type2, num = f.readline().decode('utf-8').split()
             num = int(num)
 
@@ -122,6 +140,7 @@ def read_buffer(f):
             if shape0 != 1:
                 point_data[name] = point_data[name].reshape((shape1, shape0))
         else:
+            assert is_ascii
             assert section == 'CELL_DATA', \
                 'Unknown section \'{}\'.'.format(section)
             num_items = int(split[1])

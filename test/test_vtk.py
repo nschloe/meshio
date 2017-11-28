@@ -54,4 +54,4 @@ def test_binary(mesh):
 
 
 if __name__ == '__main__':
-    test_ascii(helpers.tri_mesh)
+    test_binary(helpers.tri_mesh)
