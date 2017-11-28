@@ -59,10 +59,13 @@ def _cells_from_data(connectivity, offsets, types):
 def _read_binary(data, byte_order, header_type, data_type):
     # https://docs.python.org/2/library/struct.html
     vtu_to_struct_type = {
-        'UInt32': ('I', 4),
-        'UInt64': ('Q', 8),
         'Float32': ('f', 4),
         'Float64': ('d', 8),
+        'Int32': ('i', 4),
+        'Int64': ('q', 8),
+        'UInt8': ('B', 1),
+        'UInt32': ('I', 4),
+        'UInt64': ('Q', 8),
         }
 
     # process the header
@@ -201,8 +204,10 @@ def read(filename):
                             )
                     else:
                         assert data.attrib['format'] == 'binary'
-
-                        exit(1)
+                        connectivity = _read_binary(
+                            data.text.strip(),
+                            byte_order, header_type, data.attrib['type']
+                            )
 
                 elif data.attrib['Name'] == 'offsets':
                     if data.attrib['format'] == 'ascii':
@@ -212,6 +217,10 @@ def read(filename):
                             )
                     else:
                         assert data.attrib['format'] == 'binary'
+                        offsets = _read_binary(
+                            data.text.strip(),
+                            byte_order, header_type, data.attrib['type']
+                            )
 
                 else:
                     assert data.attrib['Name'] == 'types', \
@@ -223,17 +232,10 @@ def read(filename):
                             )
                     else:
                         assert data.attrib['format'] == 'binary'
-                        # import binascii
-                        # print(data.text.strip())
-                        # d = base64.b64decode(data.text.strip())
-                        # print(d)
-                        # d = base64.b64decode(data.text)
-                        # print(d)
-                        # d = base64.b64decode('AQAAAACAAAACAAAACgAAAA==')
-                        # print(struct.unpack('I', d[0:4]))
-                        # print(struct.unpack('I', d[4:8]))
-                        # print(struct.unpack('I', d[8:12]))
-                        # print(struct.unpack('I', d[12:16]))
+                        types = _read_binary(
+                            data.text.strip(),
+                            byte_order, header_type, data.attrib['type']
+                            )
 
         elif child.tag == 'PointData':
             for c in child.getchildren():
