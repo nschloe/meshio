@@ -104,9 +104,17 @@ def read_buffer(f):
             points = points.reshape((num_points, 3))
 
         elif section == 'CELLS':
-            assert is_ascii
             num_items = int(split[2])
-            c = numpy.fromfile(f, count=num_items, sep=' ', dtype=int)
+            if is_ascii:
+                c = numpy.fromfile(f, count=num_items, sep=' ', dtype=int)
+            else:
+                # binary
+                num_bytes = 4
+                total_num_bytes = num_items * num_bytes
+                # cell data is little endian. okay.
+                c = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
+                line = f.readline().decode('utf-8')
+                assert line == '\n'
 
             offsets = []
             if len(c) > 0:
@@ -116,9 +124,17 @@ def read_buffer(f):
             offsets = numpy.array(offsets)
 
         elif section == 'CELL_TYPES':
-            assert is_ascii
             num_items = int(split[1])
-            ct = numpy.fromfile(f, count=int(num_items), sep=' ', dtype=int)
+            if is_ascii:
+                ct = \
+                    numpy.fromfile(f, count=int(num_items), sep=' ', dtype=int)
+            else:
+                # binary
+                num_bytes = 4
+                total_num_bytes = num_items * num_bytes
+                ct = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
+                line = f.readline().decode('utf-8')
+                assert line == '\n'
 
         elif section == 'POINT_DATA':
             assert is_ascii
