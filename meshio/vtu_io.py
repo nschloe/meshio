@@ -61,7 +61,8 @@ def _read_binary(data, byte_order, header_type, data_type):
     vtu_to_struct_type = {
         'UInt32': ('I', 4),
         'UInt64': ('Q', 8),
-        'Float64': ('d', 8)
+        'Float32': ('f', 4),
+        'Float64': ('d', 8),
         }
 
     # process the header
@@ -101,7 +102,6 @@ def _read_binary(data, byte_order, header_type, data_type):
     compressed_data = data[header_num_chars:]
     decompressed = \
         zlib.decompress(base64.b64decode(compressed_data))
-    print(len(decompressed))
 
     struct_type, num_bytes = vtu_to_struct_type[data_type]
 
@@ -174,21 +174,21 @@ def read(filename):
             c = c[0]
             assert c.tag == 'DataArray'
             assert c.attrib['Name'] == 'Points'
-            assert c.attrib['type'] == 'Float64'
 
-            num_components = int(c.attrib['NumberOfComponents'])
-
-            dtype = vtu_to_numpy_type[c.attrib['type']]
             if c.attrib['format'] == 'ascii':
-                points = numpy.array(c.text.split(), dtype=dtype)
-                points = points.reshape(num_points, num_components)
+                points = numpy.array(
+                    c.text.split(),
+                    dtype=vtu_to_numpy_type[c.attrib['type']]
+                    )
             else:
                 assert c.attrib['format'] == 'binary', \
                     'Unknown data format \'{}\'.'.format(c.attrib['format'])
-                data = c.text.strip()
                 points = _read_binary(
-                    data, byte_order, header_type, c.attrib['type']
-                    ).reshape(num_points, num_components)
+                    c.text.strip(), byte_order, header_type, c.attrib['type']
+                    )
+
+            num_components = int(c.attrib['NumberOfComponents'])
+            points = points.reshape(num_points, num_components)
 
         elif child.tag == 'Cells':
             for data in child.getchildren():
@@ -201,6 +201,8 @@ def read(filename):
                             )
                     else:
                         assert data.attrib['format'] == 'binary'
+
+                        exit(1)
 
                 elif data.attrib['Name'] == 'offsets':
                     if data.attrib['format'] == 'ascii':
