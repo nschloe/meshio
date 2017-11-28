@@ -77,6 +77,7 @@ def read_buffer(f, is_little_endian=True):
             break
 
         line = line.strip()
+        # pylint: disable=len-as-condition
         if len(line) == 0:
             continue
 
