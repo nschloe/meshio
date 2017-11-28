@@ -7,10 +7,7 @@ I/O for XDMF.
 '''
 import numpy
 
-from .vtk_io import translate_cells
-
-# Make explicit copies of the data; some (all?) of it is quite volatile and
-# contains garbage once the vtk_mesh goes out of scopy.
+from .vtk_io import cell_data_from_raw
 
 
 def read(filetype, filename):
@@ -36,7 +33,7 @@ def read(filetype, filename):
     points = None
     cells = {}
     point_data = {}
-    cell_data = {}
+    cell_data_raw = {}
     field_data = {}
 
     xdmf_to_meshio_type = {
@@ -111,9 +108,13 @@ def read(filetype, filename):
                 ).reshape(dims)
 
             name = c.attrib['Name']
-            assert c.attrib['Center'] == 'Node'
+            if c.attrib['Center'] == 'Node':
+                point_data[name] = data
+            else:
+                assert c.attrib['Center'] == 'Cell'
+                cell_data_raw[name] = data
 
-            point_data[name] = data
+    cell_data = cell_data_from_raw(cells, cell_data_raw)
 
     return points, cells, point_data, cell_data, field_data
 
