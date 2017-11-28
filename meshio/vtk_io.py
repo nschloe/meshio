@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 '''
-I/O for VTK, VTU, Exodus etc.
+I/O for VTU <https://www.vtk.org/Wiki/VTK_XML_Formats>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
