@@ -99,11 +99,30 @@ def read_buffer(f):
                     offsets.append(offsets[-1] + c[offsets[-1]] + 1)
             offsets = numpy.array(offsets)
 
-        else:
-            assert section == 'CELL_TYPES', \
-                'Unknown section \'{}\'.'.format(section)
+        elif section == 'CELL_TYPES':
             num_items = int(split[1])
             ct = numpy.fromfile(f, count=int(num_items), sep=' ', dtype=int)
+
+        else:
+            assert section == 'POINT_DATA', \
+                'Unknown section \'{}\'.'.format(section)
+            num_items = int(split[1])
+
+            type1, type2, num = f.readline().decode('utf-8').split()
+            num = int(num)
+            assert type1 == 'FIELD'
+            assert type2 == 'FieldData'
+            assert num == 1
+            name, shape0, shape1, data_type = \
+                f.readline().decode('utf-8').split()
+            shape0 = int(shape0)
+            shape1 = int(shape1)
+            point_data[name] = numpy.fromfile(
+                f, count=shape0 * shape1, sep=' ',
+                dtype=vtk_to_numpy_dtype[data_type]
+                )
+            if shape0 != 1:
+                point_data[name] = point_data[name].reshape((shape1, shape0))
 
     assert c is not None
     assert ct is not None
