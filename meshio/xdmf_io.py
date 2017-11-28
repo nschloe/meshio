@@ -35,9 +35,15 @@ def read(filetype, filename):
 
     points = None
     cells = {}
+    point_data = {}
+    cell_data = {}
+    field_data = {}
 
     xdmf_to_meshio_type = {
-        'Triangle': 'triangle'
+        'Hexahedron': 'hexahedron',
+        'Quadrilateral': 'quad',
+        'Tetrahedron': 'tetra',
+        'Triangle': 'triangle',
         }
 
     def xdmf_to_numpy_type(number_type, precision):
@@ -66,9 +72,7 @@ def read(filetype, filename):
                 dtype=xdmf_to_numpy_type(number_type, precision)
                 ).reshape(dims)
 
-        else:
-            assert c.tag == 'Geometry', \
-                'Unknown section '
+        elif c.tag == 'Geometry':
             assert c.attrib['GeometryType'] == 'XYZ'
 
             data_items = c.getchildren()
@@ -85,9 +89,31 @@ def read(filetype, filename):
                 dtype=xdmf_to_numpy_type(number_type, precision)
                 ).reshape(dims)
 
-    point_data = None
-    cell_data = None
-    field_data = None
+        else:
+            assert c.tag == 'Attribute', \
+                'Unknown section \'{}\'.'.format(c.tag)
+
+            assert c.attrib['Active'] == '1'
+            assert c.attrib['AttributeType'] == 'None'
+
+            data_items = c.getchildren()
+            assert len(data_items) == 1
+            data_item = data_items[0]
+
+            dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
+            number_type = data_item.attrib['NumberType']
+            precision = data_item.attrib['Precision']
+            assert data_item.attrib['Format'] == 'XML'
+
+            data = numpy.array(
+                data_item.text.split(),
+                dtype=xdmf_to_numpy_type(number_type, precision)
+                ).reshape(dims)
+
+            name = c.attrib['Name']
+            assert c.attrib['Center'] == 'Node'
+
+            point_data[name] = data
 
     return points, cells, point_data, cell_data, field_data
 
