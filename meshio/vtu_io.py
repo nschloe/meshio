@@ -210,22 +210,34 @@ def read(filename):
         elif child.tag == 'PointData':
             for c in child.getchildren():
                 assert c.tag == 'DataArray'
-                assert c.attrib['format'] == 'ascii'
-                point_data[c.attrib['Name']] = numpy.array(
-                    c.text.split(),
-                    dtype=vtu_to_numpy_type[c.attrib['type']]
-                    )
+                if c.attrib['format'] == 'ascii':
+                    point_data[c.attrib['Name']] = numpy.array(
+                        c.text.split(),
+                        dtype=vtu_to_numpy_type[c.attrib['type']]
+                        )
+                else:
+                    assert c.attrib['format'] == 'binary'
+                    point_data[c.attrib['Name']] = _read_binary(
+                        c.text.strip(),
+                        byte_order, header_type, c.attrib['type']
+                        )
 
         else:
             assert child.tag == 'CellData', \
                 'Unknown tag \'{}\'.'.format(child.tag)
             for c in child.getchildren():
                 assert c.tag == 'DataArray'
-                assert c.attrib['format'] == 'ascii'
-                cell_data_raw[c.attrib['Name']] = numpy.array(
-                    c.text.split(),
-                    dtype=vtu_to_numpy_type[c.attrib['type']]
-                    )
+                if c.attrib['format'] == 'ascii':
+                    cell_data_raw[c.attrib['Name']] = numpy.array(
+                        c.text.split(),
+                        dtype=vtu_to_numpy_type[c.attrib['type']]
+                        )
+                else:
+                    assert c.attrib['format'] == 'binary'
+                    cell_data_raw[c.attrib['Name']] = _read_binary(
+                        c.text.strip(),
+                        byte_order, header_type, c.attrib['type']
+                        )
 
     assert points is not None
     assert 'connectivity' in cells
