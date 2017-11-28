@@ -43,7 +43,10 @@ def read(filetype, filename):
     def xdmf_to_numpy_type(number_type, precision):
         if number_type == 'Int' and precision == '8':
             return numpy.int64
-        return None
+
+        assert number_type == 'Float' and precision == '8', \
+            'Unknown XDMF type ({}, {}).'.format(number_type, precision)
+        return numpy.float64
 
     for c in grid.getchildren():
         if c.tag == 'Topology':
@@ -66,13 +69,25 @@ def read(filetype, filename):
         else:
             assert c.tag == 'Geometry', \
                 'Unknown section '
+            assert c.attrib['GeometryType'] == 'XYZ'
 
-            exit(1)
+            data_items = c.getchildren()
+            assert len(data_items) == 1
+            data_item = data_items[0]
+
+            dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
+            number_type = data_item.attrib['NumberType']
+            precision = data_item.attrib['Precision']
+            assert data_item.attrib['Format'] == 'XML'
+
+            points = numpy.array(
+                data_item.text.split(),
+                dtype=xdmf_to_numpy_type(number_type, precision)
+                ).reshape(dims)
 
     point_data = None
     cell_data = None
     field_data = None
-    exit(1)
 
     return points, cells, point_data, cell_data, field_data
 
