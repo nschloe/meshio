@@ -11,7 +11,7 @@ import zlib
 
 import numpy
 
-from .vtk_io import vtk_to_meshio_type
+from .vtk_io import vtk_to_meshio_type, cell_data_from_raw
 from .gmsh_io import num_nodes_per_cell
 
 
@@ -237,17 +237,7 @@ def read(filename):
             point_data[key] = point_data[key].reshape(len(points), -1)
 
     # get cell data in shape
-    cell_data = {}
-    num_all_cells = sum([len(c) for c in cells.values()])
-    for key in cell_data_raw:
-        d = cell_data_raw[key]
-        if len(d) != num_all_cells:
-            d = d.reshape(num_all_cells, -1)
-
-        r = 0
-        for k in cells:
-            cell_data[k] = {key: d[r:r+len(cells[k])]}
-            r += len(cells[k])
+    cell_data = cell_data_from_raw(cells, cell_data_raw)
 
     return points, cells, point_data, cell_data, field_data
 

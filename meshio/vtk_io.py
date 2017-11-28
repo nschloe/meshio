@@ -41,7 +41,7 @@ def read_buffer(f):
     # initialize output data
     points = None
     field_data = {}
-    cell_data = {}
+    cell_data_raw = {}
     point_data = {}
 
     # skip header and title
@@ -103,16 +103,14 @@ def read_buffer(f):
             num_items = int(split[1])
             ct = numpy.fromfile(f, count=int(num_items), sep=' ', dtype=int)
 
-        else:
-            assert section == 'POINT_DATA', \
-                'Unknown section \'{}\'.'.format(section)
-            num_items = int(split[1])
-
+        elif section == 'POINT_DATA':
             type1, type2, num = f.readline().decode('utf-8').split()
             num = int(num)
+
             assert type1 == 'FIELD'
             assert type2 == 'FieldData'
             assert num == 1
+
             name, shape0, shape1, data_type = \
                 f.readline().decode('utf-8').split()
             shape0 = int(shape0)
@@ -123,13 +121,53 @@ def read_buffer(f):
                 )
             if shape0 != 1:
                 point_data[name] = point_data[name].reshape((shape1, shape0))
+        else:
+            assert section == 'CELL_DATA', \
+                'Unknown section \'{}\'.'.format(section)
+            num_items = int(split[1])
+
+            type1, type2, num = f.readline().decode('utf-8').split()
+            num = int(num)
+
+            assert type1 == 'FIELD'
+            assert type2 == 'FieldData'
+            assert num == 1
+
+            name, shape0, shape1, data_type = \
+                f.readline().decode('utf-8').split()
+            shape0 = int(shape0)
+            shape1 = int(shape1)
+            cell_data_raw[name] = numpy.fromfile(
+                f, count=shape0 * shape1, sep=' ',
+                dtype=vtk_to_numpy_dtype[data_type]
+                )
+            if shape0 != 1:
+                cell_data_raw[name] = \
+                    cell_data_raw[name].reshape((shape1, shape0))
 
     assert c is not None
     assert ct is not None
 
     cells = translate_cells(c, offsets, ct)
 
+    cell_data = cell_data_from_raw(cells, cell_data_raw)
+
     return points, cells, point_data, cell_data, field_data
+
+
+def cell_data_from_raw(cells, cell_data_raw):
+    cell_data = {}
+    num_all_cells = sum([len(c) for c in cells.values()])
+    for key in cell_data_raw:
+        d = cell_data_raw[key]
+        if len(d) != num_all_cells:
+            d = d.reshape(num_all_cells, -1)
+
+        r = 0
+        for k in cells:
+            cell_data[k] = {key: d[r:r+len(cells[k])]}
+            r += len(cells[k])
+    return cell_data
 
 
 def translate_cells(data, offsets, types):
