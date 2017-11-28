@@ -7,8 +7,7 @@ I/O for VTU <https://www.vtk.org/Wiki/VTK_XML_Formats>.
 '''
 import numpy
 
-from .vtk_io import vtk_to_meshio_type
-from .gmsh_io import num_nodes_per_cell
+from .vtk_io import translate_cells
 
 # Make explicit copies of the data; some (all?) of it is quite volatile and
 # contains garbage once the vtk_mesh goes out of scopy.
@@ -32,39 +31,6 @@ def read(filetype, filename):
                     vtk.util.numpy_support.vtk_to_numpy(array)
                     )
         return out
-
-    def _read_cells(vtk_mesh):
-        data = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-                vtk_mesh.GetCells().GetData()
-                ))
-        offsets = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-                vtk_mesh.GetCellLocationsArray()
-                ))
-        types = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-                vtk_mesh.GetCellTypesArray()
-                ))
-
-        # Translate it into the cells dictionary.
-        # `data` is a one-dimensional vector with
-        # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-
-        # Collect types into bins.
-        # See <https://stackoverflow.com/q/47310359/353337> for better
-        # alternatives.
-        uniques = numpy.unique(types)
-        bins = {u: numpy.where(types == u)[0] for u in uniques}
-
-        cells = {}
-        for tpe, b in bins.items():
-            meshio_type = vtk_to_meshio_type[tpe]
-            n = num_nodes_per_cell[meshio_type]
-            assert (data[offsets[b]] == n).all()
-            indices = numpy.array([
-                numpy.arange(1, n+1) + o for o in offsets[b]
-                ])
-            cells[meshio_type] = data[indices]
-
-        return cells
 
     if filetype in ['xdmf', 'xdmf2']:
         reader = vtk.vtkXdmfReader()
@@ -97,7 +63,17 @@ def read(filetype, filename):
     points = numpy.copy(numpy_support.vtk_to_numpy(
             vtk_mesh.GetPoints().GetData()
             ))
-    cells = _read_cells(vtk_mesh)
+
+    data = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
+            vtk_mesh.GetCells().GetData()
+            ))
+    offsets = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
+            vtk_mesh.GetCellLocationsArray()
+            ))
+    types = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
+            vtk_mesh.GetCellTypesArray()
+            ))
+    cells = translate_cells(data, offsets, types)
 
     point_data = _read_data(vtk_mesh.GetPointData())
     field_data = _read_data(vtk_mesh.GetFieldData())

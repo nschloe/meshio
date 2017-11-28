@@ -39,8 +39,7 @@ def read_buffer(f):
     # pylint: disable=import-error
 
     # initialize output data
-    points = []
-    cells = {}
+    points = None
     field_data = {}
     cell_data = {}
     point_data = {}
@@ -65,6 +64,7 @@ def read_buffer(f):
         }
 
     c = None
+    offsets = None
     ct = None
 
     while True:
@@ -77,44 +77,68 @@ def read_buffer(f):
         if len(line) == 0:
             continue
 
-        section = line.split()[0]
+        split = line.split()
+        section = split[0]
 
         if section == 'POINTS':
-            _, num_points, data_type = line.split()
-            num_points = int(num_points)
+            num_points = int(split[1])
+            data_type = split[2]
             points = numpy.fromfile(
                 f, count=num_points*3, sep=' ',
                 dtype=vtk_to_numpy_dtype[data_type]
                 ).reshape((num_points, 3))
 
         elif section == 'CELLS':
-            _, num_cells, num_items = line.split()
-            num_cells = int(num_cells)
-            num_items = int(num_items)
-            c = numpy.fromfile(
-                f, count=num_items, sep=' ', dtype=int
-                )
+            num_items = int(split[2])
+            c = numpy.fromfile(f, count=num_items, sep=' ', dtype=int)
+
+            offsets = []
+            if len(c) > 0:
+                offsets.append(0)
+                while offsets[-1] + c[offsets[-1]] + 1 < len(c):
+                    offsets.append(offsets[-1] + c[offsets[-1]] + 1)
+            offsets = numpy.array(offsets)
 
         else:
             assert section == 'CELL_TYPES', \
                 'Unknown section \'{}\'.'.format(section)
-
-            _, num_ints = line.split()
-            num_items = int(num_items)
-
-            ct = numpy.fromfile(
-                f, count=num_items, sep=' ', dtype=int
-                )
+            num_items = int(split[1])
+            ct = numpy.fromfile(f, count=int(num_items), sep=' ', dtype=int)
 
     assert c is not None
     assert ct is not None
 
-    print(c)
-    print(ct)
-
-    exit(1)
+    cells = translate_cells(c, offsets, ct)
 
     return points, cells, point_data, cell_data, field_data
+
+
+def translate_cells(data, offsets, types):
+    from .gmsh_io import num_nodes_per_cell
+
+    # Translate it into the cells dictionary.
+    # `data` is a one-dimensional vector with
+    # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+
+    # Collect types into bins.
+    # See <https://stackoverflow.com/q/47310359/353337> for better
+    # alternatives.
+    uniques = numpy.unique(types)
+    bins = {u: numpy.where(types == u)[0] for u in uniques}
+
+    cells = {}
+    for tpe, b in bins.items():
+        meshio_type = vtk_to_meshio_type[tpe]
+        n = num_nodes_per_cell[meshio_type]
+        print(n)
+        print(data[offsets[b]])
+        assert (data[offsets[b]] == n).all()
+        indices = numpy.array([
+            numpy.arange(1, n+1) + o for o in offsets[b]
+            ])
+        cells[meshio_type] = data[indices]
+
+    return cells
 
 
 def write(filetype,
