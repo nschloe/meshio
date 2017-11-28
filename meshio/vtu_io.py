@@ -6,9 +6,10 @@ I/O for VTK, VTU, Exodus etc.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import base64
-import numpy
 import struct
 import zlib
+
+import numpy
 
 from .gmsh_io import num_nodes_per_cell
 
