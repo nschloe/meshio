@@ -6,7 +6,6 @@ I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import logging
-import re
 
 import numpy
 
@@ -82,13 +81,6 @@ def read_buffer(f, is_little_endian=True):
         'Unknown VTK data type \'{}\'.'.format(data_type)
     is_ascii = data_type == 'ASCII'
 
-    line = f.readline().decode('utf-8').strip()
-    match = re.match('DATASET +([^ ]+)', line)
-    assert match is not None
-    dataset_type = match.group(1)
-    assert dataset_type == 'UNSTRUCTURED_GRID', \
-        'Only VTK UNSTRUCTURED_GRID supported.'
-
     endian = '>' if is_little_endian else '<'
 
     vtk_to_numpy_dtype = {
@@ -101,6 +93,7 @@ def read_buffer(f, is_little_endian=True):
         'int': (numpy.int32, endian + 'i4', 4),
         'unsigned_long': (numpy.int64, endian + 'u8', 8),
         'long': (numpy.int64, endian + 'i8', 8),
+        'vtktypeint64': (numpy.int64, endian + 'i8', 8),
         'float': (numpy.float32, endian + 'f4', 4),
         'double': (numpy.float64, endian + 'f8', 8),
         }
@@ -130,7 +123,12 @@ def read_buffer(f, is_little_endian=True):
         split = line.split()
         section = split[0]
 
-        if section == 'POINTS':
+        if section == 'DATASET':
+            dataset_type = split[1]
+            assert dataset_type == 'UNSTRUCTURED_GRID', \
+                'Only VTK UNSTRUCTURED_GRID supported.'
+
+        elif section == 'POINTS':
             active = 'POINTS'
             num_points = int(split[1])
             data_type = split[2]
@@ -227,7 +225,6 @@ def read_buffer(f, is_little_endian=True):
             assert section == 'FIELD', \
                 'Unknown section \'{}\'.'.format(section)
 
-            assert split[1] == 'FieldData'
             if active == 'POINT_DATA':
                 d = point_data
             else:
