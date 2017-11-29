@@ -180,20 +180,18 @@ def read_buffer(f, is_little_endian=True):
                 assert line == '\n'
 
         elif section == 'POINT_DATA':
-            num_data = int(split[1])
-            data, name = _read_point_cell_data(
-                    f, num_data, vtk_to_numpy_dtype, is_ascii
-                    )
-            point_data[name] = data
+            num_items = int(split[1])
+            point_data.update(_read_point_cell_data(
+                    f, num_items, vtk_to_numpy_dtype, is_ascii
+                    ))
 
         else:
             assert section == 'CELL_DATA', \
                 'Unknown section \'{}\'.'.format(section)
-            num_data = int(split[1])
-            data, name = _read_point_cell_data(
-                    f, num_data, vtk_to_numpy_dtype, is_ascii
-                    )
-            cell_data_raw[name] = data
+            num_items = int(split[1])
+            cell_data_raw.update(_read_point_cell_data(
+                    f, num_items, vtk_to_numpy_dtype, is_ascii
+                    ))
 
     assert c is not None
     assert ct is not None
@@ -210,8 +208,7 @@ def _read_point_cell_data(f, num_data, vtk_to_numpy_dtype, is_ascii):
 
     if split[0] == 'FIELD':
         assert split[1] == 'FieldData'
-        assert split[2] == 1
-        return _read_field(f, vtk_to_numpy_dtype, is_ascii)
+        return _read_fields(f, int(split[2]), vtk_to_numpy_dtype, is_ascii)
 
     # Scalar
     assert split[0] == 'SCALARS', \
@@ -231,7 +228,7 @@ def _read_point_cell_data(f, num_data, vtk_to_numpy_dtype, is_ascii):
     dtype, _, _ = vtk_to_numpy_dtype[data_type]
     data = _read_lookup_table(f, num_data, dtype, is_ascii)
 
-    return data, data_name
+    return {data_name: data}
 
 
 def _read_lookup_table(f, num_data, dtype, is_ascii):
@@ -240,32 +237,36 @@ def _read_lookup_table(f, num_data, dtype, is_ascii):
     return numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
 
 
-def _read_field(f, vtk_to_numpy_dtype, is_ascii):
-    name, shape0, shape1, data_type = \
-        f.readline().decode('utf-8').split()
-    shape0 = int(shape0)
-    shape1 = int(shape1)
-    dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
+def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
+    data = {}
+    for _ in range(num_fields):
+        name, shape0, shape1, data_type = \
+            f.readline().decode('utf-8').split()
+        shape0 = int(shape0)
+        shape1 = int(shape1)
+        dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
 
-    if is_ascii:
-        data = numpy.fromfile(
-            f, count=shape0 * shape1, sep=' ', dtype=dtype
-            )
-    else:
-        # binary
-        total_num_bytes = shape0 * shape1 * num_bytes
-        data = numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
-        line = f.readline().decode('utf-8')
-        assert line == '\n'
+        if is_ascii:
+            dat = numpy.fromfile(
+                f, count=shape0 * shape1, sep=' ', dtype=dtype
+                )
+        else:
+            # binary
+            total_num_bytes = shape0 * shape1 * num_bytes
+            dat = numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
+            line = f.readline().decode('utf-8')
+            assert line == '\n'
 
-    if shape0 != 1:
-        data = data.reshape((shape1, shape0))
+        if shape0 != 1:
+            dat = dat.reshape((shape1, shape0))
 
-    return data, name
+        data[name] = dat
+
+    return data
 
 
 def cell_data_from_raw(cells, cell_data_raw):
-    cell_data = {}
+    cell_data = {k: {} for k in cells}
     num_all_cells = sum([len(c) for c in cells.values()])
     for key in cell_data_raw:
         d = cell_data_raw[key]
@@ -274,8 +275,9 @@ def cell_data_from_raw(cells, cell_data_raw):
 
         r = 0
         for k in cells:
-            cell_data[k] = {key: d[r:r+len(cells[k])]}
+            cell_data[k][key] = d[r:r+len(cells[k])]
             r += len(cells[k])
+
     return cell_data
 
 

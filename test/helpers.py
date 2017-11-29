@@ -277,6 +277,7 @@ def write_read(filename, file_format, mesh, atol):
             input_point_data[key], point_data[key],
             atol=atol, rtol=0.0
             )
+
     for cell_type, cell_type_data in input_cell_data.items():
         for key, data in cell_type_data.items():
             assert numpy.allclose(
