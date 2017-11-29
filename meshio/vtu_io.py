@@ -125,10 +125,22 @@ def read(filename):
     assert byte_order in ['LittleEndian', 'BigEndian'], \
         'Unknown byte order \'{}\'.'.format(byte_order)
 
-    children = root.getchildren()
-    assert len(children) == 1
-    grid = children[0]
-    assert grid.tag == 'UnstructuredGrid'
+    grid = None
+    appended_data = None
+    for c in root.getchildren():
+        if c.tag == 'UnstructuredGrid':
+            assert grid is None, \
+                'More than one UnstructuredGrid found.'
+            grid = c
+        else:
+            assert c.tag == 'AppendedData', \
+                'Unknown main tag \'{}\'.'.format(c.tag)
+            assert appended_data is None, \
+                'More than one AppendedData found.'
+            appended_data = c
+
+    assert grid is not None, \
+        'No UnstructuredGrid found.'
 
     pieces = grid.getchildren()
     assert len(pieces) == 1
