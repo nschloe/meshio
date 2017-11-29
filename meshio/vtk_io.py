@@ -109,6 +109,13 @@ def read_buffer(f, is_little_endian=True):
     offsets = None
     ct = None
 
+    # One of the problem in reading VTK files are POINT_DATA and CELL_DATA
+    # fields. They can contain a number of SCALARS+LOOKUP_TABLE tables, without
+    # giving and indication of how many there are. Hence, SCALARS must be
+    # treated like a first-class section. To associate it with POINT/CELL_DATA,
+    # we store the `active` section in this variable.
+    active = None
+
     while True:
         line = f.readline().decode('utf-8')
         if not line:
@@ -124,6 +131,7 @@ def read_buffer(f, is_little_endian=True):
         section = split[0]
 
         if section == 'POINTS':
+            active = 'POINTS'
             num_points = int(split[1])
             data_type = split[2]
             dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
@@ -143,6 +151,8 @@ def read_buffer(f, is_little_endian=True):
             points = points.reshape((num_points, 3))
 
         elif section == 'CELLS':
+            active = 'CELLS'
+
             num_items = int(split[2])
             if is_ascii:
                 c = numpy.fromfile(f, count=num_items, sep=' ', dtype=int)
@@ -165,6 +175,8 @@ def read_buffer(f, is_little_endian=True):
             offsets = numpy.array(offsets)
 
         elif section == 'CELL_TYPES':
+            active = 'CELL_TYPES'
+
             num_items = int(split[1])
             if is_ascii:
                 ct = \
@@ -180,17 +192,39 @@ def read_buffer(f, is_little_endian=True):
                 assert line == '\n'
 
         elif section == 'POINT_DATA':
+            active = 'POINT_DATA'
             num_items = int(split[1])
-            point_data.update(_read_point_cell_data(
-                    f, num_items, vtk_to_numpy_dtype, is_ascii
-                    ))
 
-        else:
-            assert section == 'CELL_DATA', \
-                'Unknown section \'{}\'.'.format(section)
+        elif section == 'CELL_DATA':
+            active = 'CELL_DATA'
             num_items = int(split[1])
-            cell_data_raw.update(_read_point_cell_data(
-                    f, num_items, vtk_to_numpy_dtype, is_ascii
+
+        elif section == 'SCALARS':
+            if active == 'POINT_DATA':
+                d = point_data
+            else:
+                assert active == 'CELL_DATA', \
+                    'Illegal SCALARS in section \'{}\'.'.format(active)
+                d = cell_data_raw
+
+            d.update(
+                _read_scalar_field(f, num_items, split, vtk_to_numpy_dtype)
+                )
+        else:
+            assert section == 'FIELD', \
+                'Unknown section \'{}\'.'.format(section)
+
+            assert split[1] == 'FieldData'
+            if active == 'POINT_DATA':
+                d = point_data
+            else:
+                assert active == 'CELL_DATA', \
+                    'Illegal FIELD in section \'{}\'.'.format(active)
+                d = cell_data_raw
+
+            d.update(
+                _read_fields(
+                    f, int(split[2]), vtk_to_numpy_dtype, is_ascii
                     ))
 
     assert c is not None
@@ -203,17 +237,7 @@ def read_buffer(f, is_little_endian=True):
     return points, cells, point_data, cell_data, field_data
 
 
-def _read_point_cell_data(f, num_data, vtk_to_numpy_dtype, is_ascii):
-    split = f.readline().decode('utf-8').split()
-
-    if split[0] == 'FIELD':
-        assert split[1] == 'FieldData'
-        return _read_fields(f, int(split[2]), vtk_to_numpy_dtype, is_ascii)
-
-    # Scalar
-    assert split[0] == 'SCALARS', \
-        'Unknown data field \'{}\'.'.format(split[0])
-
+def _read_scalar_field(f, num_data, split, vtk_to_numpy_dtype):
     data_name = split[1]
     data_type = split[2]
     try:
@@ -226,15 +250,11 @@ def _read_point_cell_data(f, num_data, vtk_to_numpy_dtype, is_ascii):
     assert 0 < num_comp < 5
 
     dtype, _, _ = vtk_to_numpy_dtype[data_type]
-    data = _read_lookup_table(f, num_data, dtype, is_ascii)
-
-    return {data_name: data}
-
-
-def _read_lookup_table(f, num_data, dtype, is_ascii):
     lt, name = f.readline().decode('utf-8').split()
     assert lt == 'LOOKUP_TABLE'
-    return numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
+    data = numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
+
+    return {data_name: data}
 
 
 def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
