@@ -210,6 +210,19 @@ def read_buffer(f, is_little_endian=True):
             d.update(
                 _read_scalar_field(f, num_items, split, vtk_to_numpy_dtype)
                 )
+
+        elif section == 'VECTORS':
+            if active == 'POINT_DATA':
+                d = point_data
+            else:
+                assert active == 'CELL_DATA', \
+                    'Illegal SCALARS in section \'{}\'.'.format(active)
+                d = cell_data_raw
+
+            d.update(
+                _read_vector_field(f, num_items, split, vtk_to_numpy_dtype)
+                )
+
         else:
             assert section == 'FIELD', \
                 'Unknown section \'{}\'.'.format(section)
@@ -253,6 +266,18 @@ def _read_scalar_field(f, num_data, split, vtk_to_numpy_dtype):
     lt, name = f.readline().decode('utf-8').split()
     assert lt == 'LOOKUP_TABLE'
     data = numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
+
+    return {data_name: data}
+
+
+def _read_vector_field(f, num_data, split, vtk_to_numpy_dtype):
+    data_name = split[1]
+    data_type = split[2]
+
+    dtype, _, _ = vtk_to_numpy_dtype[data_type]
+    data = numpy.fromfile(
+        f, count=3*num_data, sep=' ', dtype=dtype
+        ).reshape(-1, 3)
 
     return {data_name: data}
 
