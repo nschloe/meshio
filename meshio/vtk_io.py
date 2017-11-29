@@ -221,6 +221,18 @@ def read_buffer(f, is_little_endian=True):
                 _read_vector_field(f, num_items, split, vtk_to_numpy_dtype)
                 )
 
+        elif section == 'TENSORS':
+            if active == 'POINT_DATA':
+                d = point_data
+            else:
+                assert active == 'CELL_DATA', \
+                    'Illegal SCALARS in section \'{}\'.'.format(active)
+                d = cell_data_raw
+
+            d.update(
+                _read_tensor_field(f, num_items, split, vtk_to_numpy_dtype)
+                )
+
         else:
             assert section == 'FIELD', \
                 'Unknown section \'{}\'.'.format(section)
@@ -277,6 +289,18 @@ def _read_vector_field(f, num_data, split, vtk_to_numpy_dtype):
     data = numpy.fromfile(
         f, count=3*num_data, sep=' ', dtype=dtype
         ).reshape(-1, 3)
+
+    return {data_name: data}
+
+
+def _read_tensor_field(f, num_data, split, vtk_to_numpy_dtype):
+    data_name = split[1]
+    data_type = split[2]
+
+    dtype, _, _ = vtk_to_numpy_dtype[data_type]
+    data = numpy.fromfile(
+        f, count=9*num_data, sep=' ', dtype=dtype
+        ).reshape(-1, 3, 3)
 
     return {data_name: data}
 
