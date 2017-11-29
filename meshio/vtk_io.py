@@ -237,8 +237,10 @@ def read_buffer(f, is_little_endian=True):
                     f, int(split[2]), vtk_to_numpy_dtype, is_ascii
                     ))
 
-    assert c is not None
-    assert ct is not None
+    assert c is not None, \
+        'Required section CELLS not found.'
+    assert ct is not None, \
+        'Required section CELL_TYPES not found.'
 
     cells = translate_cells(c, offsets, ct)
 
