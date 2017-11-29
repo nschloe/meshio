@@ -104,6 +104,22 @@ def _read_binary(data, byte_order, header_type, data_type):
     return out
 
 
+def _read_data(c, vtu_to_numpy_type, byte_order, header_type):
+    if c.attrib['format'] == 'ascii':
+        # ascii
+        return numpy.array(
+            c.text.split(),
+            dtype=vtu_to_numpy_type[c.attrib['type']]
+            )
+
+    # binary
+    assert c.attrib['format'] == 'binary', \
+        'Unknown data format \'{}\'.'.format(c.attrib['format'])
+    return _read_binary(
+        c.text.strip(), byte_order, header_type, c.attrib['type']
+        )
+
+
 def read(filename):
     from lxml import etree as ET
 
@@ -174,17 +190,9 @@ def read(filename):
             assert c.tag == 'DataArray'
             assert c.attrib['Name'] == 'Points'
 
-            if c.attrib['format'] == 'ascii':
-                points = numpy.array(
-                    c.text.split(),
-                    dtype=vtu_to_numpy_type[c.attrib['type']]
-                    )
-            else:
-                assert c.attrib['format'] == 'binary', \
-                    'Unknown data format \'{}\'.'.format(c.attrib['format'])
-                points = _read_binary(
-                    c.text.strip(), byte_order, header_type, c.attrib['type']
-                    )
+            points = _read_data(
+                c, vtu_to_numpy_type, byte_order, header_type
+                )
 
             num_components = int(c.attrib['NumberOfComponents'])
             points = points.reshape(num_points, num_components)
@@ -193,49 +201,25 @@ def read(filename):
             for data in child.getchildren():
                 assert data.tag == 'DataArray'
 
-                if data.attrib['format'] == 'ascii':
-                    cells[data.attrib['Name']] = numpy.array(
-                        data.text.split(),
-                        dtype=vtu_to_numpy_type[data.attrib['type']]
-                        )
-                else:
-                    assert data.attrib['format'] == 'binary'
-                    cells[data.attrib['Name']] = _read_binary(
-                        data.text.strip(),
-                        byte_order, header_type, data.attrib['type']
-                        )
+                cells[data.attrib['Name']] = _read_data(
+                    data, vtu_to_numpy_type, byte_order, header_type
+                    )
 
         elif child.tag == 'PointData':
             for c in child.getchildren():
                 assert c.tag == 'DataArray'
-                if c.attrib['format'] == 'ascii':
-                    point_data[c.attrib['Name']] = numpy.array(
-                        c.text.split(),
-                        dtype=vtu_to_numpy_type[c.attrib['type']]
-                        )
-                else:
-                    assert c.attrib['format'] == 'binary'
-                    point_data[c.attrib['Name']] = _read_binary(
-                        c.text.strip(),
-                        byte_order, header_type, c.attrib['type']
-                        )
+                point_data[c.attrib['Name']] = _read_data(
+                    c, vtu_to_numpy_type, byte_order, header_type
+                    )
 
         else:
             assert child.tag == 'CellData', \
                 'Unknown tag \'{}\'.'.format(child.tag)
             for c in child.getchildren():
                 assert c.tag == 'DataArray'
-                if c.attrib['format'] == 'ascii':
-                    cell_data_raw[c.attrib['Name']] = numpy.array(
-                        c.text.split(),
-                        dtype=vtu_to_numpy_type[c.attrib['type']]
-                        )
-                else:
-                    assert c.attrib['format'] == 'binary'
-                    cell_data_raw[c.attrib['Name']] = _read_binary(
-                        c.text.strip(),
-                        byte_order, header_type, c.attrib['type']
-                        )
+                cell_data_raw[c.attrib['Name']] = _read_data(
+                    c, vtu_to_numpy_type, byte_order, header_type
+                    )
 
     assert points is not None
     assert 'connectivity' in cells
