@@ -12,7 +12,7 @@ import numpy
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {
-    # 0: 'empty cell',
+    0: 'empty',
     1: 'vertex',
     # 2: 'poly_vertex',
     3: 'line',
@@ -27,8 +27,8 @@ vtk_to_meshio_type = {
     12: 'hexahedron',
     13: 'wedge',
     14: 'pyramid',
-    # 15: 'pentagonal prism',
-    # 16: 'hexagonal prism',
+    15: 'penta_prism',
+    16: 'hexa_prism',
     21: 'line3',
     22: 'triangle6',
     23: 'quad8',
@@ -459,31 +459,7 @@ def _generate_vtk_mesh(points, cells):
     mesh.SetPoints(vtk_points)
 
     # Set cells.
-    meshio_to_vtk_type = {
-        'vertex': vtk.VTK_VERTEX,
-        'line': vtk.VTK_LINE,
-        'line3': vtk.VTK_QUADRATIC_EDGE,
-        'line4': vtk.VTK_CUBIC_LINE,
-        'triangle': vtk.VTK_TRIANGLE,
-        'triangle6': vtk.VTK_QUADRATIC_TRIANGLE,
-        'triangle7': vtk.VTK_BIQUADRATIC_TRIANGLE,
-        'quad': vtk.VTK_QUAD,
-        'quad6': vtk.VTK_QUADRATIC_LINEAR_QUAD,
-        'quad8': vtk.VTK_QUADRATIC_QUAD,
-        'quad9': vtk.VTK_BIQUADRATIC_QUAD,
-        'tetra': vtk.VTK_TETRA,
-        'tetra10': vtk.VTK_QUADRATIC_TETRA,
-        'hexahedron': vtk.VTK_HEXAHEDRON,
-        'hexahedron20': vtk.VTK_QUADRATIC_HEXAHEDRON,
-        'hexahedron24': vtk.VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON,
-        'hexahedron27': vtk.VTK_TRIQUADRATIC_HEXAHEDRON,
-        'wedge': vtk.VTK_WEDGE,
-        'wedge15': vtk.VTK_QUADRATIC_WEDGE,
-        'wedge12': vtk.VTK_QUADRATIC_LINEAR_WEDGE,
-        'wedge18': vtk.VTK_BIQUADRATIC_QUADRATIC_WEDGE,
-        'pyramid': vtk.VTK_PYRAMID,
-        'pyramid13': vtk.VTK_QUADRATIC_PYRAMID,
-        }
+    meshio_to_vtk_type = {y: x for x, y in vtk_to_meshio_type.items()}
 
     # create cell_array. It's a one-dimensional vector with
     # (num_points2, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
