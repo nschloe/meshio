@@ -39,206 +39,216 @@ def _cells_from_data(connectivity, offsets, types):
     return cells
 
 
-def _read_binary(data, byte_order, header_type, data_type):
-    # https://docs.python.org/2/library/struct.html
-    vtu_to_struct_type = {
-        'Float32': ('f', 4),
-        'Float64': ('d', 8),
-        'Int32': ('i', 4),
-        'Int64': ('q', 8),
-        'UInt8': ('B', 1),
-        'UInt32': ('I', 4),
-        'UInt64': ('Q', 8),
-        }
+class VtuReader(object):
+    '''Helper class for reading VTU files. Some properties are global to the
+    file (e.g., byte_order), and instead of passing around these parameters,
+    make them properties of this class.
+    '''
+    def __init__(self, filename):
+        from lxml import etree as ET
 
-    # process the header
-    byte_string = base64.b64decode(data)
-    bo = '<' if byte_order == 'LittleEndian' else '>'
-    symbol, num_bytes = vtu_to_struct_type[header_type]
-    num_blocks = int(struct.unpack(
-        bo + symbol, byte_string[0:num_bytes]
-        )[0])
-    # Not needed:
-    # uncompressed_size = int(struct.unpack(
-    #     bo + symbol, byte_string[num_bytes:2*num_bytes]
-    #     )[0])
-    # last_block_size = int(struct.unpack(
-    #     bo + symbol, byte_string[2*num_bytes:3*num_bytes]
-    #     )[0])
-    # block_sizes = [
-    #     int(struct.unpack(
-    #         bo + symbol,
-    #         byte_string[(3+k)*num_bytes:(4+k)*num_bytes]
-    #         )[0])
-    #     for k in range(num_blocks)
-    #     ]
+        points = None
+        point_data = {}
+        cell_data_raw = {}
+        cells = {}
+        field_data = {}
 
-    # Check how many characters the header occupies. This is
-    # determined according to base64 encoding.
-    header_num_bytes = (3 + num_blocks) * num_bytes
-    if header_num_bytes % 3 == 0:
-        header_num_chars = header_num_bytes // 3 * 4
-    elif header_num_bytes % 3 == 1:
-        header_num_chars = (header_num_bytes+2) // 3 * 4
-    else:
-        assert header_num_bytes % 3 == 2
-        header_num_chars = (header_num_bytes+1) // 3 * 4
+        tree = ET.parse(filename)
+        root = tree.getroot()
 
-    # process the compressed data
-    compressed_data = data[header_num_chars:]
-    decompressed = \
-        zlib.decompress(base64.b64decode(compressed_data))
+        assert root.tag == 'VTKFile'
+        assert root.attrib['type'] == 'UnstructuredGrid'
+        assert root.attrib['version'] in ['0.1', '1.0'], \
+            'Unknown VTU file version \'{}\'.'.format(root.attrib['version'])
+        assert root.attrib['compressor'] == 'vtkZLibDataCompressor'
 
-    struct_type, num_bytes = vtu_to_struct_type[data_type]
-
-    assert len(decompressed) % num_bytes == 0
-
-    out = numpy.array([
-        struct.unpack(
-            struct_type,
-            decompressed[num_bytes*k:num_bytes*(k+1)]
-            )[0]
-        for k in range(len(decompressed) // num_bytes)
-        ])
-
-    return out
-
-
-def _read_data(c, vtu_to_numpy_type, byte_order, header_type):
-    if c.attrib['format'] == 'ascii':
-        # ascii
-        return numpy.array(
-            c.text.split(),
-            dtype=vtu_to_numpy_type[c.attrib['type']]
+        self.header_type = (
+            root.attrib['header_type'] if 'header_type' in root.attrib
+            else 'UInt32'
             )
 
-    # binary
-    assert c.attrib['format'] == 'binary', \
-        'Unknown data format \'{}\'.'.format(c.attrib['format'])
-    return _read_binary(
-        c.text.strip(), byte_order, header_type, c.attrib['type']
-        )
+        self.byte_order = root.attrib['byte_order']
+        assert self.byte_order in ['LittleEndian', 'BigEndian'], \
+            'Unknown byte order \'{}\'.'.format(self.byte_order)
+
+        grid = None
+        appended_data = None
+        for c in root.getchildren():
+            if c.tag == 'UnstructuredGrid':
+                assert grid is None, 'More than one UnstructuredGrid found.'
+                grid = c
+            else:
+                assert c.tag == 'AppendedData', \
+                    'Unknown main tag \'{}\'.'.format(c.tag)
+                assert appended_data is None, \
+                    'More than one AppendedData found.'
+                appended_data = c
+
+        assert grid is not None, 'No UnstructuredGrid found.'
+
+        piece = None
+        for c in grid.getchildren():
+            if c.tag == 'Piece':
+                assert piece is None, 'More than one Piece found.'
+                piece = c
+            else:
+                assert c.tag == 'FieldData', \
+                    'Unknown grid subtag \'{}\'.'.format(c.tag)
+                # TODO read field data + TEST
+
+        assert piece is not None, 'No Piece found.'
+
+        num_points = int(piece.attrib['NumberOfPoints'])
+
+        self.vtu_to_numpy_type = {
+            'Float64': numpy.float64,
+            'Int64': numpy.int64,
+            'UInt8': numpy.uint8,
+            'UInt32': numpy.uint32,
+            }
+
+        for child in piece.getchildren():
+            if child.tag == 'Points':
+                c = child.getchildren()
+                assert len(c) == 1
+                c = c[0]
+                assert c.tag == 'DataArray'
+                assert c.attrib['Name'] == 'Points'
+
+                points = self.read_data(c)
+
+                num_components = int(c.attrib['NumberOfComponents'])
+                points = points.reshape(num_points, num_components)
+
+            elif child.tag == 'Cells':
+                for data in child.getchildren():
+                    assert data.tag == 'DataArray'
+                    cells[data.attrib['Name']] = self.read_data(data)
+
+            elif child.tag == 'PointData':
+                for c in child.getchildren():
+                    assert c.tag == 'DataArray'
+                    point_data[c.attrib['Name']] = self.read_data(c)
+
+            else:
+                assert child.tag == 'CellData', \
+                    'Unknown tag \'{}\'.'.format(child.tag)
+                for c in child.getchildren():
+                    assert c.tag == 'DataArray'
+                    cell_data_raw[c.attrib['Name']] = self.read_data(c)
+
+        assert points is not None
+        assert 'connectivity' in cells
+        assert 'offsets' in cells
+        assert 'types' in cells
+
+        cells = _cells_from_data(
+                cells['connectivity'], cells['offsets'], cells['types']
+                )
+
+        # get point data in shape
+        for key in point_data:
+            if len(point_data[key]) != len(points):
+                point_data[key] = point_data[key].reshape(len(points), -1)
+
+        # get cell data in shape
+        cell_data = cell_data_from_raw(cells, cell_data_raw)
+
+        self.points = points
+        self.cells = cells
+        self.point_data = point_data
+        self.cell_data = cell_data
+        self.field_data = field_data
+        return
+
+    def read_binary(self, data, data_type):
+        # https://docs.python.org/2/library/struct.html
+        vtu_to_struct_type = {
+            'Float32': ('f', 4),
+            'Float64': ('d', 8),
+            'Int32': ('i', 4),
+            'Int64': ('q', 8),
+            'UInt8': ('B', 1),
+            'UInt32': ('I', 4),
+            'UInt64': ('Q', 8),
+            }
+
+        # process the header
+        byte_string = base64.b64decode(data)
+        bo = '<' if self.byte_order == 'LittleEndian' else '>'
+        symbol, num_bytes = vtu_to_struct_type[self.header_type]
+        num_blocks = int(struct.unpack(
+            bo + symbol, byte_string[0:num_bytes]
+            )[0])
+        # Not needed:
+        # uncompressed_size = int(struct.unpack(
+        #     bo + symbol, byte_string[num_bytes:2*num_bytes]
+        #     )[0])
+        # last_block_size = int(struct.unpack(
+        #     bo + symbol, byte_string[2*num_bytes:3*num_bytes]
+        #     )[0])
+        # block_sizes = [
+        #     int(struct.unpack(
+        #         bo + symbol,
+        #         byte_string[(3+k)*num_bytes:(4+k)*num_bytes]
+        #         )[0])
+        #     for k in range(num_blocks)
+        #     ]
+
+        # Check how many characters the header occupies. This is
+        # determined according to base64 encoding.
+        header_num_bytes = (3 + num_blocks) * num_bytes
+        if header_num_bytes % 3 == 0:
+            header_num_chars = header_num_bytes // 3 * 4
+        elif header_num_bytes % 3 == 1:
+            header_num_chars = (header_num_bytes+2) // 3 * 4
+        else:
+            assert header_num_bytes % 3 == 2
+            header_num_chars = (header_num_bytes+1) // 3 * 4
+
+        # process the compressed data
+        compressed_data = data[header_num_chars:]
+        decompressed = \
+            zlib.decompress(base64.b64decode(compressed_data))
+
+        struct_type, num_bytes = vtu_to_struct_type[data_type]
+
+        assert len(decompressed) % num_bytes == 0
+
+        out = numpy.array([
+            struct.unpack(
+                struct_type,
+                decompressed[num_bytes*k:num_bytes*(k+1)]
+                )[0]
+            for k in range(len(decompressed) // num_bytes)
+            ])
+
+        return out
+
+    def read_data(self, c):
+        if c.attrib['format'] == 'ascii':
+            # ascii
+            return numpy.array(
+                c.text.split(),
+                dtype=self.vtu_to_numpy_type[c.attrib['type']]
+                )
+        elif c.attrib['format'] == 'binary':
+            return self.read_binary(c.text.strip(), c.attrib['type'])
+
+        # appended
+        assert c.attrib['format'] == 'appended', \
+            'Unknown data format \'{}\'.'.format(c.attrib['format'])
+
+        exit(1)
+        return self.read_binary(c.text.strip(), c.attrib['type'])
 
 
 def read(filename):
-    from lxml import etree as ET
-
-    points = None
-    point_data = {}
-    cell_data_raw = {}
-    cells = {}
-    field_data = {}
-
-    tree = ET.parse(filename)
-    root = tree.getroot()
-
-    assert root.tag == 'VTKFile'
-    assert root.attrib['type'] == 'UnstructuredGrid'
-    assert root.attrib['version'] in ['0.1', '1.0'], \
-        'Unknown VTU file version \'{}\'.'.format(root.attrib['version'])
-    assert root.attrib['compressor'] == 'vtkZLibDataCompressor'
-
-    header_type = (
-        root.attrib['header_type'] if 'header_type' in root.attrib
-        else 'UInt32'
+    reader = VtuReader(filename)
+    return (
+        reader.points, reader.cells, reader.point_data, reader.cell_data,
+        reader.field_data
         )
-
-    byte_order = root.attrib['byte_order']
-    assert byte_order in ['LittleEndian', 'BigEndian'], \
-        'Unknown byte order \'{}\'.'.format(byte_order)
-
-    grid = None
-    appended_data = None
-    for c in root.getchildren():
-        if c.tag == 'UnstructuredGrid':
-            assert grid is None, 'More than one UnstructuredGrid found.'
-            grid = c
-        else:
-            assert c.tag == 'AppendedData', \
-                'Unknown main tag \'{}\'.'.format(c.tag)
-            assert appended_data is None, 'More than one AppendedData found.'
-            appended_data = c
-
-    assert grid is not None, 'No UnstructuredGrid found.'
-
-    piece = None
-    for c in grid.getchildren():
-        if c.tag == 'Piece':
-            assert piece is None, 'More than one Piece found.'
-            piece = c
-        else:
-            assert c.tag == 'FieldData', \
-                'Unknown grid subtag \'{}\'.'.format(c.tag)
-            # TODO read field data + TEST
-
-    assert piece is not None, 'No Piece found.'
-
-    num_points = int(piece.attrib['NumberOfPoints'])
-
-    vtu_to_numpy_type = {
-        'Float64': numpy.float64,
-        'Int64': numpy.int64,
-        'UInt8': numpy.uint8,
-        'UInt32': numpy.uint32,
-        }
-
-    for child in piece.getchildren():
-        if child.tag == 'Points':
-            c = child.getchildren()
-            assert len(c) == 1
-            c = c[0]
-            assert c.tag == 'DataArray'
-            assert c.attrib['Name'] == 'Points'
-
-            points = _read_data(
-                c, vtu_to_numpy_type, byte_order, header_type
-                )
-
-            num_components = int(c.attrib['NumberOfComponents'])
-            points = points.reshape(num_points, num_components)
-
-        elif child.tag == 'Cells':
-            for data in child.getchildren():
-                assert data.tag == 'DataArray'
-
-                cells[data.attrib['Name']] = _read_data(
-                    data, vtu_to_numpy_type, byte_order, header_type
-                    )
-
-        elif child.tag == 'PointData':
-            for c in child.getchildren():
-                assert c.tag == 'DataArray'
-                point_data[c.attrib['Name']] = _read_data(
-                    c, vtu_to_numpy_type, byte_order, header_type
-                    )
-
-        else:
-            assert child.tag == 'CellData', \
-                'Unknown tag \'{}\'.'.format(child.tag)
-            for c in child.getchildren():
-                assert c.tag == 'DataArray'
-                cell_data_raw[c.attrib['Name']] = _read_data(
-                    c, vtu_to_numpy_type, byte_order, header_type
-                    )
-
-    assert points is not None
-    assert 'connectivity' in cells
-    assert 'offsets' in cells
-    assert 'types' in cells
-
-    cells = _cells_from_data(
-            cells['connectivity'], cells['offsets'], cells['types']
-            )
-
-    # get point data in shape
-    for key in point_data:
-        if len(point_data[key]) != len(points):
-            point_data[key] = point_data[key].reshape(len(points), -1)
-
-    # get cell data in shape
-    cell_data = cell_data_from_raw(cells, cell_data_raw)
-
-    return points, cells, point_data, cell_data, field_data
 
 
 def write(filetype,
