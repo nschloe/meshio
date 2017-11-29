@@ -10,20 +10,49 @@ import re
 
 import numpy
 
+# https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {
+    # 0: 'empty cell',
     1: 'vertex',
+    # 2: 'poly_vertex',
     3: 'line',
+    # 4: 'poly_line',
     5: 'triangle',
+    # 6: 'triangle_strip',
+    # 7: 'polygon',
+    # 8: 'pixel',
     9: 'quad',
     10: 'tetra',
+    # 11: 'voxel',
     12: 'hexahedron',
     13: 'wedge',
     14: 'pyramid',
+    # 15: 'pentagonal prism',
+    # 16: 'hexagonal prism',
     21: 'line3',
     22: 'triangle6',
     23: 'quad8',
     24: 'tetra10',
     25: 'hexahedron20',
+    26: 'wedge15',
+    27: 'pyramid13',
+    28: 'quad9',
+    29: 'hexahedron27',
+    30: 'quad6',
+    31: 'wedge12',
+    32: 'wedge18',
+    33: 'hexahedron24',
+    34: 'triangle7',
+    35: 'line4',
+    #
+    # 60: VTK_HIGHER_ORDER_EDGE,
+    # 61: VTK_HIGHER_ORDER_TRIANGLE,
+    # 62: VTK_HIGHER_ORDER_QUAD,
+    # 63: VTK_HIGHER_ORDER_POLYGON,
+    # 64: VTK_HIGHER_ORDER_TETRAHEDRON,
+    # 65: VTK_HIGHER_ORDER_WEDGE,
+    # 66: VTK_HIGHER_ORDER_PYRAMID,
+    # 67: VTK_HIGHER_ORDER_HEXAHEDRON,
     }
 
 
@@ -412,16 +441,26 @@ def _generate_vtk_mesh(points, cells):
         'vertex': vtk.VTK_VERTEX,
         'line': vtk.VTK_LINE,
         'line3': vtk.VTK_QUADRATIC_EDGE,
+        'line4': vtk.VTK_CUBIC_LINE,
         'triangle': vtk.VTK_TRIANGLE,
         'triangle6': vtk.VTK_QUADRATIC_TRIANGLE,
+        'triangle7': vtk.VTK_BIQUADRATIC_TRIANGLE,
         'quad': vtk.VTK_QUAD,
+        'quad6': vtk.VTK_QUADRATIC_LINEAR_QUAD,
         'quad8': vtk.VTK_QUADRATIC_QUAD,
+        'quad9': vtk.VTK_BIQUADRATIC_QUAD,
         'tetra': vtk.VTK_TETRA,
         'tetra10': vtk.VTK_QUADRATIC_TETRA,
         'hexahedron': vtk.VTK_HEXAHEDRON,
         'hexahedron20': vtk.VTK_QUADRATIC_HEXAHEDRON,
+        'hexahedron24': vtk.VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON,
+        'hexahedron27': vtk.VTK_TRIQUADRATIC_HEXAHEDRON,
         'wedge': vtk.VTK_WEDGE,
-        'pyramid': vtk.VTK_PYRAMID
+        'wedge15': vtk.VTK_QUADRATIC_WEDGE,
+        'wedge12': vtk.VTK_QUADRATIC_LINEAR_WEDGE,
+        'wedge18': vtk.VTK_BIQUADRATIC_QUADRATIC_WEDGE,
+        'pyramid': vtk.VTK_PYRAMID,
+        'pyramid13': vtk.VTK_QUADRATIC_PYRAMID,
         }
 
     # create cell_array. It's a one-dimensional vector with
