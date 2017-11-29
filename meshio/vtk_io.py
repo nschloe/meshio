@@ -63,7 +63,17 @@ def read_buffer(f, is_little_endian=True):
     endian = '>' if is_little_endian else '<'
 
     vtk_to_numpy_dtype = {
-        'double': (numpy.float64, endian + 'f8', 8)
+        # 'bit':
+        # 'unsigned_char':
+        # 'char':
+        # 'unsigned_short':
+        # 'short':
+        'unsigned_int': (numpy.uint32, endian + 'u4', 4),
+        'int': (numpy.int32, endian + 'i4', 4),
+        'unsigned_long': (numpy.int64, endian + 'u8', 8),
+        'long': (numpy.int64, endian + 'i8', 8),
+        'float': (numpy.float32, endian + 'f4', 4),
+        'double': (numpy.float64, endian + 'f8', 8),
         }
 
     c = None
