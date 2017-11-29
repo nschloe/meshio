@@ -151,15 +151,19 @@ def read_buffer(f, is_little_endian=True):
                 assert line == '\n'
 
         elif section == 'POINT_DATA':
-            data, name = \
-                _read_point_cell_data(f, vtk_to_numpy_dtype, is_ascii)
+            num_data = int(split[1])
+            data, name = _read_point_cell_data(
+                    f, num_data, vtk_to_numpy_dtype, is_ascii
+                    )
             point_data[name] = data
 
         else:
             assert section == 'CELL_DATA', \
                 'Unknown section \'{}\'.'.format(section)
-            data, name = \
-                _read_point_cell_data(f, vtk_to_numpy_dtype, is_ascii)
+            num_data = int(split[1])
+            data, name = _read_point_cell_data(
+                    f, num_data, vtk_to_numpy_dtype, is_ascii
+                    )
             cell_data_raw[name] = data
 
     assert c is not None
@@ -172,14 +176,42 @@ def read_buffer(f, is_little_endian=True):
     return points, cells, point_data, cell_data, field_data
 
 
-def _read_point_cell_data(f, vtk_to_numpy_dtype, is_ascii):
-    type1, type2, num = f.readline().decode('utf-8').split()
-    num = int(num)
+def _read_point_cell_data(f, num_data, vtk_to_numpy_dtype, is_ascii):
+    split = f.readline().decode('utf-8').split()
 
-    assert type1 == 'FIELD'
-    assert type2 == 'FieldData'
-    assert num == 1
+    if split[0] == 'FIELD':
+        assert split[1] == 'FieldData'
+        assert split[2] == 1
+        return _read_field(f, vtk_to_numpy_dtype, is_ascii)
 
+    # Scalar
+    assert split[0] == 'SCALARS', \
+        'Unknown data field \'{}\'.'.format(split[0])
+
+    data_name = split[1]
+    data_type = split[2]
+    try:
+        num_comp = int(split[3])
+    except IndexError:
+        num_comp = 1
+
+    # The standard says:
+    # > The parameter numComp must range between (1,4) inclusive; [...]
+    assert 0 < num_comp < 5
+
+    dtype, _, _ = vtk_to_numpy_dtype[data_type]
+    data = _read_lookup_table(f, num_data, dtype, is_ascii)
+
+    return data, data_name
+
+
+def _read_lookup_table(f, num_data, dtype, is_ascii):
+    lt, name = f.readline().decode('utf-8').split()
+    assert lt == 'LOOKUP_TABLE'
+    return numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
+
+
+def _read_field(f, vtk_to_numpy_dtype, is_ascii):
     name, shape0, shape1, data_type = \
         f.readline().decode('utf-8').split()
     shape0 = int(shape0)
