@@ -107,6 +107,12 @@ def _read_binary(data, byte_order, header_type, data_type):
 def read(filename):
     from lxml import etree as ET
 
+    points = None
+    point_data = {}
+    cell_data_raw = {}
+    cells = {}
+    field_data = {}
+
     tree = ET.parse(filename)
     root = tree.getroot()
 
@@ -129,32 +135,29 @@ def read(filename):
     appended_data = None
     for c in root.getchildren():
         if c.tag == 'UnstructuredGrid':
-            assert grid is None, \
-                'More than one UnstructuredGrid found.'
+            assert grid is None, 'More than one UnstructuredGrid found.'
             grid = c
         else:
             assert c.tag == 'AppendedData', \
                 'Unknown main tag \'{}\'.'.format(c.tag)
-            assert appended_data is None, \
-                'More than one AppendedData found.'
+            assert appended_data is None, 'More than one AppendedData found.'
             appended_data = c
 
-    assert grid is not None, \
-        'No UnstructuredGrid found.'
+    assert grid is not None, 'No UnstructuredGrid found.'
 
-    pieces = grid.getchildren()
-    assert len(pieces) == 1
+    piece = None
+    for c in grid.getchildren():
+        if c.tag == 'Piece':
+            assert piece is None, 'More than one Piece found.'
+            piece = c
+        else:
+            assert c.tag == 'FieldData', \
+                'Unknown grid subtag \'{}\'.'.format(c.tag)
+            # TODO read field data + TEST
 
-    piece = pieces[0]
+    assert piece is not None, 'No Piece found.'
 
     num_points = int(piece.attrib['NumberOfPoints'])
-
-    points = None
-    point_data = {}
-    cell_data_raw = {}
-    field_data = {}
-
-    cells = {}
 
     vtu_to_numpy_type = {
         'Float64': numpy.float64,
