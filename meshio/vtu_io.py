@@ -240,19 +240,16 @@ class VtuReader(object):
         header_num_bytes = (3 + num_blocks) * num_bytes
         header_offset = num_bytes_to_num_base64_chars(header_num_bytes)
 
-        compressed_data = data[header_offset:]
-        byte_array = base64.b64decode(compressed_data)
+        byte_array = base64.b64decode(data[header_offset:])
 
         block_data = []
         byte_offset = 0
         for k in range(num_blocks):
-            block_num_bytes = block_sizes[k]
-
             # process the compressed data
-            compressed_data = \
-                byte_array[byte_offset:byte_offset + block_num_bytes]
-            byte_offset += block_num_bytes
-            decompressed = zlib.decompress(compressed_data)
+            decompressed = zlib.decompress(
+                    byte_array[byte_offset:byte_offset + block_sizes[k]]
+                    )
+            byte_offset += block_sizes[k]
 
             struct_type, num_bytes = self.vtu_to_struct_type[data_type]
 
