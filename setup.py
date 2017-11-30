@@ -39,7 +39,6 @@ setup(
         'pipdate',
         ],
     extras_require={
-        'dolfin': ['lxml'],  # Dolfin's legacy format
         'exodus': ['netCDF4'],
         'hdf5': ['h5py'],  # MED, MOAB format
         },
