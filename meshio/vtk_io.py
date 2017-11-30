@@ -393,6 +393,7 @@ def write(filetype,
     for key in point_data:
         assert len(point_data[key]) == len(points), \
                 'Point data mismatch.'
+
     for key in cell_data:
         assert key in cells, 'Cell data without cell'
         for key2 in cell_data[key]:

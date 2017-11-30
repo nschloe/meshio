@@ -185,11 +185,6 @@ class VtuReader(object):
                 cells['connectivity'], cells['offsets'], cells['types']
                 )
 
-        # get point data in shape
-        for key in point_data:
-            if len(point_data[key]) != len(points):
-                point_data[key] = point_data[key].reshape(len(points), -1)
-
         # get cell data in shape
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
