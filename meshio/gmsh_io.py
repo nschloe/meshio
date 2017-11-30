@@ -101,7 +101,7 @@ def read_buffer(f):
     # The format is specified at
     # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
 
-    # Initialize the data optional data fields
+    # Initialize the optional data fields
     points = []
     cells = {}
     field_data = {}

@@ -9,16 +9,19 @@ I/O for DOLFIN's XML format, cf.
 import logging
 import os
 import re
+import xml.etree.ElementTree as ET
 
 import numpy
 
 
 def _read_mesh(filename):
-    from lxml import etree as ET
-
     tree = ET.parse(filename)
     root = tree.getroot()
-    mesh = root.getchildren()[0]
+
+    meshes = list(root)
+    assert len(meshes) == 1
+    mesh = meshes[0]
+
     assert mesh.tag == 'mesh'
 
     dolfin_to_meshio_type = {
@@ -37,11 +40,11 @@ def _read_mesh(filename):
         cell_type: None
         }
 
-    for child in mesh.getchildren():
+    for child in mesh:
         if child.tag == 'vertices':
             num_verts = int(child.attrib['size'])
             points = numpy.empty((num_verts, 3))
-            for vert in child.getchildren():
+            for vert in child:
                 assert vert.tag == 'vertex'
                 idx = int(vert.attrib['index'])
                 points[idx, 0] = vert.attrib['x']
@@ -54,7 +57,7 @@ def _read_mesh(filename):
         elif child.tag == 'cells':
             num_cells = int(child.attrib['size'])
             cells[cell_type] = numpy.empty((num_cells, npc), dtype=int)
-            for cell in child.getchildren():
+            for cell in child:
                 assert dolfin_to_meshio_type[cell.tag][0] == cell_type
                 idx = int(cell.attrib['index'])
                 for k in range(npc):
@@ -66,7 +69,6 @@ def _read_mesh(filename):
 
 
 def _read_cell_data(filename, cell_type):
-    from lxml import etree as ET
     dolfin_type_to_numpy_type = {
         'int': numpy.dtype('int'),
         'float': numpy.dtype('float'),
@@ -89,12 +91,16 @@ def _read_cell_data(filename, cell_type):
         name = out.group(1)
         tree = ET.parse(f)
         root = tree.getroot()
-        mesh_function = root.getchildren()[0]
+
+        mesh_functions = list(root)
+        assert len(mesh_functions) == 1
+        mesh_function = mesh_functions[0]
+
         assert mesh_function.tag == 'mesh_function'
         size = int(mesh_function.attrib['size'])
         dtype = dolfin_type_to_numpy_type[mesh_function.attrib['type']]
         data = numpy.empty(size, dtype=dtype)
-        for child in mesh_function.getchildren():
+        for child in mesh_function:
             assert child.tag == 'entity'
             idx = int(child.attrib['index'])
             data[idx] = child.attrib['value']
@@ -117,8 +123,6 @@ def _write_mesh(
         cell_type,
         cells
         ):
-    from lxml import etree as ET
-
     stripped_cells = {cell_type: cells[cell_type]}
 
     dolfin = ET.Element(
@@ -127,9 +131,9 @@ def _write_mesh(
         )
 
     meshio_to_dolfin_type = {
-            'triangle': 'triangle',
-            'tetra': 'tetrahedron',
-            }
+        'triangle': 'triangle',
+        'tetra': 'tetrahedron',
+        }
 
     if len(cells) > 1:
         discarded_cells = list(cells.keys())
@@ -178,7 +182,7 @@ def _write_mesh(
             idx += 1
 
     tree = ET.ElementTree(dolfin)
-    tree.write(filename, pretty_print=True)
+    tree.write(filename)
     return
 
 
@@ -196,8 +200,6 @@ def _write_cell_data(
         dim,
         cell_data
         ):
-    from lxml import etree as ET
-
     dolfin = ET.Element(
         'dolfin',
         nsmap={'dolfin': 'http://fenicsproject.org/'}
@@ -220,7 +222,7 @@ def _write_cell_data(
             )
 
     tree = ET.ElementTree(dolfin)
-    tree.write(filename, pretty_print=True)
+    tree.write(filename)
     return
 
 

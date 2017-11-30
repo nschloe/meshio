@@ -10,6 +10,8 @@ from . import gmsh_io
 from . import off_io
 from . import permas_io
 from . import vtk_io
+from . import vtu_io
+from . import xdmf_io
 
 input_filetypes = [
         'ansys',
@@ -26,8 +28,7 @@ input_filetypes = [
         'vtk-binary',
         'vtu-ascii',
         'vtu-binary',
-        'xdmf2',
-        'xdmf3',
+        'xdmf',
         ]
 
 output_filetypes = [
@@ -46,8 +47,7 @@ output_filetypes = [
         'vtk-binary',
         'vtu-ascii',
         'vtu-binary',
-        'xdmf2',
-        'xdmf3',
+        'xdmf',
         ]
 
 _extension_to_filetype = {
@@ -66,8 +66,8 @@ _extension_to_filetype = {
     '.off': 'off',
     '.vtu': 'vtu-binary',
     '.vtk': 'vtk-binary',
-    '.xdmf': 'xdmf3',
-    '.xmf': 'xdmf3',
+    '.xdmf': 'xdmf',
+    '.xmf': 'xdmf',
     }
 
 
@@ -109,13 +109,11 @@ def read(filename, file_format=None):
     elif file_format == 'off':
         out = off_io.read(filename)
     elif file_format in ['vtu-ascii', 'vtu-binary']:
-        out = vtk_io.read('vtu', filename)
+        out = vtu_io.read(filename)
     elif file_format in ['vtk-ascii', 'vtk-binary']:
         out = vtk_io.read('vtk', filename)
-    elif file_format in ['xdmf', 'xdmf2']:
-        out = vtk_io.read('xdmf2', filename)
-    elif file_format == 'xdmf3':
-        out = vtk_io.read('xdmf3', filename)
+    elif file_format in ['xdmf']:
+        out = xdmf_io.read(filename)
     else:
         assert file_format == 'exodus'
         out = exodus_io.read(filename)
@@ -182,14 +180,14 @@ def write(filename,
     elif file_format == 'permas':
         permas_io.write(filename, points, cells)
     elif file_format == 'vtu-ascii':
-        vtk_io.write(
+        vtu_io.write(
             'vtu-ascii', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data
             )
     elif file_format in ['vtu', 'vtu-binary']:
-        vtk_io.write(
+        vtu_io.write(
             'vtu-binary', filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
@@ -211,16 +209,9 @@ def write(filename,
             cell_data=cell_data,
             field_data=field_data
             )
-    elif file_format in ['xdmf', 'xdmf2']:  # XDMF
-        vtk_io.write(
-            'xdmf', filename, points, cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data
-            )
-    elif file_format == 'xdmf3':  # XDMF
-        vtk_io.write(
-            'xdmf3', filename, points, cells,
+    elif file_format in ['xdmf', 'xdmf3']:  # XDMF
+        xdmf_io.write(
+            filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data

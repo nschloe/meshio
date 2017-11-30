@@ -4,8 +4,6 @@ import helpers
 
 import pytest
 
-lxml = pytest.importorskip('lxml')
-
 
 @pytest.mark.parametrize('mesh', [
         helpers.tri_mesh,

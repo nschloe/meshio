@@ -51,3 +51,7 @@ def test_ascii(mesh):
 def test_binary(mesh):
     helpers.write_read('test.vtk', 'vtk-binary', mesh, 1.0e-15)
     return
+
+
+if __name__ == '__main__':
+    test_binary(helpers.tri_mesh)
