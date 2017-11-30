@@ -119,6 +119,13 @@ def read(filetype, filename):
         'Pyramid': 'pyramid',
         'Wedge': 'wedge',
         'Hexahedron': 'hexahedron',
+        'Edge_3': 'line3',
+        'Tri_6': 'triangle6',
+        'Quad_8': 'quad8',
+        'Tet_10': 'tetra10',
+        'Pyramid_13': 'pyramid13',
+        'Wedge_15': 'wedge15',
+        'Hex_20': 'hexahedron20',
         }
 
     for c in grid:
