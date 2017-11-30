@@ -32,7 +32,7 @@ def read(filetype, filename):
                     )
         return out
 
-    assert filetype == 'xmdf3'
+    assert filetype == 'xdmf3'
     reader = vtk.vtkXdmf3Reader()
     reader.SetFileName(filename)
     reader.SetReadAllColorScalars(1)

@@ -225,7 +225,9 @@ class VtuReader(object):
         dtype = self.vtu_to_numpy_type[data_type]
         num_bytes_per_item = numpy.dtype(dtype).itemsize
 
-        byte_offsets = numpy.concatenate([[0], numpy.cumsum(block_sizes)])
+        byte_offsets = numpy.concatenate(
+                [[0], numpy.cumsum(block_sizes, dtype=block_sizes.dtype)]
+                )
         # https://github.com/numpy/numpy/issues/10135
         byte_offsets = byte_offsets.astype(numpy.int64)
 
