@@ -46,11 +46,13 @@ class XdmfReader(object):
 
         assert root.tag == 'Xdmf'
 
-        if root.attrib['Version'] == '2.2':
+        version = root.attrib['Version']
+
+        if version.split('.')[0] == '2':
             return self.read_xdmf2(root)
 
-        assert root.attrib['Version'] == '3.0', \
-            'Unknown XDMF version {}.'.format(root.attrib['Version'])
+        assert version.split('.')[0] == '3', \
+            'Unknown XDMF version {}.'.format(version)
 
         return self.read_xdmf3(root)
 
@@ -209,14 +211,15 @@ class XdmfReader(object):
 
         return cells
 
-    def _read_xdmf3(self, root):
+    def read_xdmf3(self, root):
         domains = list(root)
         assert len(domains) == 1
         domain = domains[0]
         assert domain.tag == 'Domain'
 
         grids = list(domain)
-        assert len(grids) == 1
+        assert len(grids) == 1, \
+            'XDMF reader: Only supports one grid right now.'
         grid = grids[0]
         assert grid.tag == 'Grid'
 
