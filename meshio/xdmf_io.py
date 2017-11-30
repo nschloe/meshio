@@ -18,6 +18,75 @@ def read(filename):
     return XdmfReader(filename).read()
 
 
+def _xdmf_to_numpy_type(data_type, precision):
+    if data_type == 'Int' and precision == '4':
+        return numpy.int32
+    elif data_type == 'Int' and precision == '8':
+        return numpy.int64
+    elif data_type == 'Float' and precision == '4':
+        return numpy.float32
+
+    assert data_type == 'Float' and precision == '8', \
+        'Unknown XDMF type ({}, {}).'.format(data_type, precision)
+    return numpy.float64
+
+
+def _translate_mixed_cells(data):
+    # Translate it into the cells dictionary.
+    # `data` is a one-dimensional vector with
+    # (cell_type1, p0, p1, ... ,pk, cell_type2, p10, p11, ..., p1k, ...
+
+    # http://www.xdmf.org/index.php/XDMF_Model_and_Format#Topology
+    xdmf_idx_to_num_nodes = {
+        1: 1,
+        4: 3,
+        5: 4,
+        6: 4,
+        7: 5,
+        8: 6,
+        9: 8,
+        }
+
+    xdmf_idx_to_meshio_type = {
+        1: 'vertex',
+        4: 'triangle',
+        5: 'quad',
+        6: 'tetra',
+        7: 'pyramid',
+        8: 'wedge',
+        9: 'hexahedron',
+        }
+
+    # collect types and offsets
+    types = []
+    offsets = []
+    r = 0
+    while r < len(data):
+        types.append(data[r])
+        offsets.append(r)
+        r += xdmf_idx_to_num_nodes[data[r]] + 1
+
+    offsets = numpy.array(offsets)
+
+    # Collect types into bins.
+    # See <https://stackoverflow.com/q/47310359/353337> for better
+    # alternatives.
+    uniques = numpy.unique(types)
+    bins = {u: numpy.where(types == u)[0] for u in uniques}
+
+    cells = {}
+    for tpe, b in bins.items():
+        meshio_type = xdmf_idx_to_meshio_type[tpe]
+        assert (data[offsets[b]] == tpe).all()
+        n = xdmf_idx_to_num_nodes[tpe]
+        indices = numpy.array([
+            numpy.arange(1, n+1) + o for o in offsets[b]
+            ])
+        cells[meshio_type] = data[indices]
+
+    return cells
+
+
 class XdmfReader(object):
     def __init__(self, filename):
         self.filename = filename
@@ -64,7 +133,7 @@ class XdmfReader(object):
         if data_item.attrib['Format'] == 'XML':
             return numpy.array(
                 data_item.text.split(),
-                dtype=self.xdmf_to_numpy_type(data_type, precision)
+                dtype=_xdmf_to_numpy_type(data_type, precision)
                 ).reshape(dims)
 
         assert data_item.attrib['Format'] == 'HDF', \
@@ -151,73 +220,6 @@ class XdmfReader(object):
 
         return points, cells, point_data, cell_data, field_data
 
-    def xdmf_to_numpy_type(self, data_type, precision):
-        if data_type == 'Int' and precision == '4':
-            return numpy.int32
-        elif data_type == 'Int' and precision == '8':
-            return numpy.int64
-        elif data_type == 'Float' and precision == '4':
-            return numpy.float32
-
-        assert data_type == 'Float' and precision == '8', \
-            'Unknown XDMF type ({}, {}).'.format(data_type, precision)
-        return numpy.float64
-
-    def translate_mixed_cells(self, data):
-        # Translate it into the cells dictionary.
-        # `data` is a one-dimensional vector with
-        # (cell_type1, p0, p1, ... ,pk, cell_type2, p10, p11, ..., p1k, ...
-
-        # http://www.xdmf.org/index.php/XDMF_Model_and_Format#Topology
-        xdmf_idx_to_num_nodes = {
-            1: 1,
-            4: 3,
-            5: 4,
-            6: 4,
-            7: 5,
-            8: 6,
-            9: 8,
-            }
-
-        xdmf_idx_to_meshio_type = {
-            1: 'vertex',
-            4: 'triangle',
-            5: 'quad',
-            6: 'tetra',
-            7: 'pyramid',
-            8: 'wedge',
-            9: 'hexahedron',
-            }
-
-        # collect types and offsets
-        types = []
-        offsets = []
-        r = 0
-        while r < len(data):
-            types.append(data[r])
-            offsets.append(r)
-            r += xdmf_idx_to_num_nodes[data[r]] + 1
-
-        offsets = numpy.array(offsets)
-
-        # Collect types into bins.
-        # See <https://stackoverflow.com/q/47310359/353337> for better
-        # alternatives.
-        uniques = numpy.unique(types)
-        bins = {u: numpy.where(types == u)[0] for u in uniques}
-
-        cells = {}
-        for tpe, b in bins.items():
-            meshio_type = xdmf_idx_to_meshio_type[tpe]
-            assert (data[offsets[b]] == tpe).all()
-            n = xdmf_idx_to_num_nodes[tpe]
-            indices = numpy.array([
-                numpy.arange(1, n+1) + o for o in offsets[b]
-                ])
-            cells[meshio_type] = data[indices]
-
-        return cells
-
     def read_xdmf3(self, root):
         domains = list(root)
         assert len(domains) == 1
@@ -245,7 +247,7 @@ class XdmfReader(object):
                 data = self.read_data_item(data_item)
 
                 if c.attrib['Type'] == 'Mixed':
-                    cells = self.translate_mixed_cells(data)
+                    cells = _translate_mixed_cells(data)
                 else:
                     meshio_type = self.xdmf_to_meshio_type[c.attrib['Type']]
                     cells[meshio_type] = data
