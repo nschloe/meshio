@@ -284,18 +284,16 @@ class XdmfReader(object):
 
 
 # XDMF 2 writer
-# def write(filetype,
-#           filename,
+# def write(filename,
 #           points,
 #           cells,
 #           point_data=None,
 #           cell_data=None,
 #           field_data=None
 #           ):
-#     # pylint: disable=import-error
-#     from .vtk_io import write as vtk_write
-#     return vtk_write(
-#         filetype, filename, points, cells,
+#     from .legacy_writer import write as w
+#     return w(
+#         'xdmf2, filename, points, cells,
 #         point_data=point_data, cell_data=cell_data, field_data=field_data
 #         )
 
@@ -307,9 +305,7 @@ def write(filename,
           cell_data=None,
           field_data=None
           ):
-    # pylint: disable=import-error
-    from .vtk_io import write as vtk_write
-    return vtk_write(
-        'xdmf3', filename, points, cells,
-        point_data=point_data, cell_data=cell_data, field_data=field_data
+    from .legacy_writer import write as w
+    return w(
+        'xdmf3', filename, points, cells, point_data, cell_data, field_data
         )

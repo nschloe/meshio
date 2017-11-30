@@ -281,9 +281,7 @@ def write(filetype,
           cell_data=None,
           field_data=None
           ):
-    # pylint: disable=import-error
-    from .vtk_io import write as vtk_write
-    return vtk_write(
-        filetype, filename, points, cells,
-        point_data=point_data, cell_data=cell_data, field_data=field_data
+    from .legacy_writer import write as w
+    return w(
+        filetype, filename, points, cells, point_data, cell_data, field_data
         )

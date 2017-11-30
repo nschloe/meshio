@@ -165,9 +165,7 @@ def write(filename,
           cell_data=None,
           field_data=None
           ):
-    from . import vtk_io
-    vtk_io.write(
-            'exodus', filename, points, cells,
-            point_data, cell_data, field_data
-            )
-    return
+    from .legacy_writer import write as w
+    return w(
+        'exodus', filename, points, cells, point_data, cell_data, field_data
+        )
