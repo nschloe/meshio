@@ -132,11 +132,9 @@ class VtuReader(object):
                 assert c.tag == 'FieldData', \
                     'Unknown grid subtag \'{}\'.'.format(c.tag)
                 # TODO test field data
-                data_arrays = c.getchildren()
-                assert len(data_arrays) == 1
-                data_array = data_arrays[0]
-                field_data[data_array.attrib['Name']] = \
-                    self.read_data(data_array)
+                for data_array in c.getchildren():
+                    field_data[data_array.attrib['Name']] = \
+                        self.read_data(data_array)
 
         assert piece is not None, 'No Piece found.'
 
