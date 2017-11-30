@@ -1,80 +1,168 @@
 # -*- coding: utf-8 -*-
 #
 '''
-I/O for VTU <https://www.vtk.org/Wiki/VTK_XML_Formats>.
+I/O for XDMF3 <http://www.xdmf.org/index.php/XDMF_Model_and_Format>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
+import xml.etree.ElementTree as ET
+
 import numpy
 
-from .vtk_io import translate_cells
+from .vtk_io import cell_data_from_raw
 
-# Make explicit copies of the data; some (all?) of it is quite volatile and
-# contains garbage once the vtk_mesh goes out of scopy.
+
+def xdmf_to_numpy_type(data_type, precision):
+    if data_type == 'Int' and precision == '8':
+        return numpy.int64
+
+    assert data_type == 'Float' and precision == '8', \
+        'Unknown XDMF type ({}, {}).'.format(data_type, precision)
+    return numpy.float64
+
+
+def read_data_item(data_item):
+    dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
+    data_type = data_item.attrib['DataType']
+    precision = data_item.attrib['Precision']
+    assert data_item.attrib['Format'] == 'XML'
+
+    return numpy.array(
+        data_item.text.split(),
+        dtype=xdmf_to_numpy_type(data_type, precision)
+        ).reshape(dims)
+
+
+def translate_mixed_cells(data):
+    # Translate it into the cells dictionary.
+    # `data` is a one-dimensional vector with
+    # (cell_type1, p0, p1, ... ,pk, cell_type2, p10, p11, ..., p1k, ...
+
+    xdmf_idx_to_num_nodes = {
+        1: 1,
+        4: 3,
+        5: 4,
+        6: 4,
+        7: 5,
+        8: 6,
+        9: 8,
+        }
+
+    xdmf_idx_to_meshio_type = {
+        1: 'vertex',
+        4: 'triangle',
+        5: 'quad',
+        6: 'tetra',
+        7: 'pyramid',
+        8: 'wedge',
+        9: 'hexahedron',
+        }
+
+    # collect types and offsets
+    types = []
+    offsets = []
+    r = 0
+    while r < len(data):
+        types.append(data[r])
+        offsets.append(r)
+        r += xdmf_idx_to_num_nodes[data[r]] + 1
+
+    offsets = numpy.array(offsets)
+
+    # Collect types into bins.
+    # See <https://stackoverflow.com/q/47310359/353337> for better
+    # alternatives.
+    uniques = numpy.unique(types)
+    bins = {u: numpy.where(types == u)[0] for u in uniques}
+
+    cells = {}
+    for tpe, b in bins.items():
+        meshio_type = xdmf_idx_to_meshio_type[tpe]
+        n = data[offsets[b[0]]]
+        assert (data[offsets[b]] == n).all()
+        indices = numpy.array([
+            numpy.arange(1, n) + o for o in offsets[b]
+            ])
+        cells[meshio_type] = data[indices]
+
+    return cells
 
 
 def read(filetype, filename):
-    # pylint: disable=import-error
-    import vtk
-    from vtk.util import numpy_support
+    tree = ET.parse(filename)
+    root = tree.getroot()
 
-    def _read_data(data):
-        '''Extract numpy arrays from a VTK data set.
-        '''
-        # Go through all arrays, fetch data.
-        out = {}
-        for k in range(data.GetNumberOfArrays()):
-            array = data.GetArray(k)
-            if array:
-                array_name = array.GetName()
-                out[array_name] = numpy.copy(
-                    vtk.util.numpy_support.vtk_to_numpy(array)
-                    )
-        return out
+    assert root.tag == 'Xdmf'
+    assert root.attrib['Version'] == '3.0'
 
-    assert filetype == 'xdmf3'
-    reader = vtk.vtkXdmf3Reader()
-    reader.SetFileName(filename)
-    reader.SetReadAllColorScalars(1)
-    reader.SetReadAllFields(1)
-    reader.SetReadAllNormals(1)
-    reader.SetReadAllScalars(1)
-    reader.SetReadAllTCoords(1)
-    reader.SetReadAllTensors(1)
-    reader.SetReadAllVectors(1)
-    reader.Update()
-    vtk_mesh = reader.GetOutputDataObject(0)
+    domains = list(root)
+    assert len(domains) == 1
+    domain = domains[0]
+    assert domain.tag == 'Domain'
 
-    # Explicitly extract points, cells, point data, field data
-    points = numpy.copy(numpy_support.vtk_to_numpy(
-            vtk_mesh.GetPoints().GetData()
-            ))
+    grids = list(domain)
+    assert len(grids) == 1
+    grid = grids[0]
+    assert grid.tag == 'Grid'
 
-    data = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-            vtk_mesh.GetCells().GetData()
-            ))
-    offsets = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-            vtk_mesh.GetCellLocationsArray()
-            ))
-    types = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-            vtk_mesh.GetCellTypesArray()
-            ))
-    cells = translate_cells(data, offsets, types)
+    points = None
+    cells = {}
+    point_data = {}
+    cell_data_raw = {}
+    field_data = {}
 
-    point_data = _read_data(vtk_mesh.GetPointData())
-    field_data = _read_data(vtk_mesh.GetFieldData())
+    xdmf_to_meshio_type = {
+        'Polyvertex': 'vertex',
+        'Triangle': 'triangle',
+        'Quadrilateral': 'quad',
+        'Tetrahedron': 'tetra',
+        'Pyramid': 'pyramid',
+        'Wedge': 'wedge',
+        'Hexahedron': 'hexahedron',
+        }
 
-    cell_data = _read_data(vtk_mesh.GetCellData())
-    # split cell_data by the cell type
-    cd = {}
-    index = 0
-    for cell_type in cells:
-        num_cells = len(cells[cell_type])
-        cd[cell_type] = {}
-        for name, array in cell_data.items():
-            cd[cell_type][name] = array[index:index+num_cells]
-        index += num_cells
-    cell_data = cd
+    for c in grid:
+        if c.tag == 'Topology':
+            data_items = list(c)
+            assert len(data_items) == 1
+            data_item = data_items[0]
+
+            data = read_data_item(data_item)
+
+            if c.attrib['Type'] == 'Mixed':
+                cells = translate_mixed_cells(data)
+            else:
+                meshio_type = xdmf_to_meshio_type[c.attrib['Type']]
+                cells[meshio_type] = data
+
+        elif c.tag == 'Geometry':
+            assert c.attrib['Type'] == 'XYZ'
+            data_items = list(c)
+            assert len(data_items) == 1
+            data_item = data_items[0]
+            points = read_data_item(data_item)
+
+        else:
+            assert c.tag == 'Attribute', \
+                'Unknown section \'{}\'.'.format(c.tag)
+
+            assert c.attrib['Active'] == '1'
+            assert c.attrib['AttributeType'] == 'None'
+
+            data_items = list(c)
+            assert len(data_items) == 1
+            data_item = data_items[0]
+
+            data = read_data_item(data_item)
+
+            name = c.attrib['Name']
+            if c.attrib['Center'] == 'Node':
+                point_data[name] = data
+            else:
+                assert c.attrib['Center'] == 'Cell'
+                cell_data_raw[name] = data
+
+    cell_data = cell_data_from_raw(cells, cell_data_raw)
 
     return points, cells, point_data, cell_data, field_data
 
