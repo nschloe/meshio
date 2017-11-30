@@ -379,19 +379,59 @@ def write(filetype,
           field_data=None
           ):
 
-    # numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype.items()}
-    # write_ascii = True
-    # with open(filename, 'w') as f:
-    #     f.write('# vtk DataFile Version 4.2\n')
-    #     f.write('written by meshio v{}\n'.format(__version__))
-    #     f.write('ASCII\n' if write_ascii else 'BINARY\n')
-    #     f.write('DATASET UNSTRUCTURED_GRID\n')
-    #     # write points
-    #     f.write(
-    #         'POINTS {} {}'.format(
-    #             len(points), numpy_to_vtk_dtype[points.dtype]
-    #             ))
+    numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype.items()}
+    meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
-    from .legacy_writer import write as w
-    w(filetype, filename, points, cells, point_data, cell_data, field_data)
+    write_ascii = True
+    with open(filename, 'wb') as f:
+        f.write('# vtk DataFile Version 4.2\n'.encode('utf-8'))
+        f.write('written by meshio v{}\n'.format(__version__).encode('utf-8'))
+        f.write(('ASCII\n' if write_ascii else 'BINARY\n').encode('utf-8'))
+        f.write('DATASET UNSTRUCTURED_GRID\n'.encode('utf-8'))
+
+        # write points
+        f.write(
+            'POINTS {} {}\n'.format(
+                len(points), numpy_to_vtk_dtype[points.dtype]
+                ).encode('utf-8'))
+        # numpy's tofile documentation says:
+        # ```
+        # This is a convenience function for quick storage of array data.
+        # Information on endianness and precision is lost, so this method is
+        # not a good choice for files intended to archive data or transport
+        # data between machines with different endianness. Some of these
+        # problems can be overcome by outputting the data as text files, at the
+        # expense of speed and file size.
+        # ```
+        sep = ' ' if write_ascii else ''
+        points.tofile(f, sep=sep)
+        # numpy.savetxt(f, points)
+        f.write('\n'.encode('utf-8'))
+
+        # write cells
+        total_num_cells = sum([len(c) for c in cells.values()])
+        total_num_idx = sum([numpy.sum(c) for c in cells.values()])
+        f.write(
+            'CELLS {} {}\n'.format(total_num_cells, total_num_idx)
+            .encode('utf-8'))
+        for key in cells:
+            if write_ascii:
+                n = cells[key].shape[1]
+                for cell in cells[key]:
+                    f.write(('{} '.format(n)).encode('utf-8'))
+                    for idx in cell:
+                        f.write(('{} '.format(idx)).encode('utf-8'))
+                    f.write('\n'.encode('utf-8'))
+            else:
+                # binary
+                f.write(points.tostring())
+
+        # write cell types
+        f.write('CELL_TYPES {}\n'.format(total_num_cells).encode('utf-8'))
+        for key in cells:
+            for _ in range(len(cells[key])):
+                f.write('{}\n'.format(meshio_to_vtk_type[key]).encode('utf-8'))
+
+    # from .legacy_writer import write as w
+    # w(filetype, filename, points, cells, point_data, cell_data, field_data)
     return
