@@ -6,7 +6,6 @@ I/O for VTU.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import base64
-import struct
 import zlib
 
 import numpy
@@ -207,41 +206,27 @@ class VtuReader(object):
         return
 
     def read_binary(self, data, data_type):
-        # https://docs.python.org/2/library/struct.html
+        # first read the the block size; it determines the size of the header
+        dtype = self.vtu_to_numpy_type[self.header_type]
+        num_bytes_per_item = numpy.dtype(dtype).itemsize
+        num_chars = num_bytes_to_num_base64_chars(num_bytes_per_item)
+        byte_string = base64.b64decode(data[:num_chars])[:num_bytes_per_item]
+        num_blocks = numpy.fromstring(byte_string, dtype)[0]
 
-        # process the header
-        byte_string = base64.b64decode(data)
-        bo = '<' if self.byte_order == 'LittleEndian' else '>'
-        symbol, num_bytes = self.vtu_to_struct_type[self.header_type]
-        num_blocks = int(struct.unpack(
-            bo + symbol, byte_string[0:num_bytes]
-            )[0])
-        # Not needed:
-        # uncompressed_size = max uncompressed block size
-        # uncompressed_size = int(struct.unpack(
-        #     bo + symbol, byte_string[num_bytes:2*num_bytes]
-        #     )[0])
-        # block size (uncompressed):
-        # last_block_size = int(struct.unpack(
-        #     bo + symbol, byte_string[2*num_bytes:3*num_bytes]
-        #     )[0])
+        # read the entire header
+        num_header_items = 3 + num_blocks
+        num_header_bytes = num_bytes_per_item * num_header_items
+        num_header_chars = num_bytes_to_num_base64_chars(num_header_bytes)
+        byte_string = base64.b64decode(data[:num_header_chars])
+        header = numpy.fromstring(byte_string, dtype)
 
-        # TODO numpy
-        block_sizes = [
-            int(struct.unpack(
-                bo + symbol,
-                byte_string[(3+k)*num_bytes:(4+k)*num_bytes]
-                )[0])
-            for k in range(num_blocks)
-            ]
+        # num_blocks = header[0]
+        # max_uncompressed_block_size = header[1]
+        # last_compressed_block_size = header[2]
+        block_sizes = header[3:]
 
-        # Check how many characters the header occupies. This is determined
-        # according to base64 encoding.
-        header_num_bytes = (3 + num_blocks) * num_bytes
-        header_offset = num_bytes_to_num_base64_chars(header_num_bytes)
-
-        byte_array = base64.b64decode(data[header_offset:])
-
+        # Read the block data
+        byte_array = base64.b64decode(data[num_header_chars:])
         block_data = []
         byte_offset = 0
         for k in range(num_blocks):
@@ -251,18 +236,12 @@ class VtuReader(object):
                     )
             byte_offset += block_sizes[k]
 
-            struct_type, num_bytes = self.vtu_to_struct_type[data_type]
+            dtype = self.vtu_to_numpy_type[data_type]
+            num_bytes_per_item = numpy.dtype(dtype).itemsize
 
-            assert len(decompressed) % num_bytes == 0
+            assert len(decompressed) % num_bytes_per_item == 0
 
-            # TODO numpy function
-            block_data.append(numpy.array([
-                struct.unpack(
-                    struct_type,
-                    decompressed[num_bytes*k:num_bytes*(k+1)]
-                    )[0]
-                for k in range(len(decompressed) // num_bytes)
-                ]))
+            block_data.append(numpy.fromstring(decompressed, dtype=dtype))
 
         return numpy.concatenate(block_data)
 
