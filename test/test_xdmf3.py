@@ -16,5 +16,5 @@ vtk = pytest.importorskip('vtk')
         helpers.add_cell_data(helpers.tri_mesh, 1)
         ])
 def test_xdmf3(mesh):
-    helpers.write_read('test.xdmf', 'xdmf3', mesh, 1.0e-15)
+    helpers.write_read('test.xdmf', 'xdmf', mesh, 1.0e-15)
     return

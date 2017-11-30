@@ -27,17 +27,19 @@ def read(filename):
     return _read_xdmf3(root)
 
 
-def _read_xdmf2(root):
-    def read_data_item(data_item):
-        dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
-        data_type = data_item.attrib['NumberType']
-        precision = data_item.attrib['Precision']
-        assert data_item.attrib['Format'] == 'XML'
+def read_data_item(data_item, dt_key='DataType'):
+    dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
+    data_type = data_item.attrib[dt_key]
+    precision = data_item.attrib['Precision']
+    assert data_item.attrib['Format'] == 'XML'
 
-        return numpy.array(
-            data_item.text.split(),
-            dtype=_xdmf_to_numpy_type(data_type, precision)
-            ).reshape(dims)
+    return numpy.array(
+        data_item.text.split(),
+        dtype=_xdmf_to_numpy_type(data_type, precision)
+        ).reshape(dims)
+
+
+def _read_xdmf2(root):
 
     domains = list(root)
     assert len(domains) == 1
@@ -68,13 +70,17 @@ def _read_xdmf2(root):
             data_items = list(c)
             assert len(data_items) == 1
             meshio_type = xdmf_to_meshio_type[c.attrib['TopologyType']]
-            cells[meshio_type] = read_data_item(data_items[0])
+            cells[meshio_type] = read_data_item(
+                data_items[0], dt_key='NumberType'
+                )
 
         elif c.tag == 'Geometry':
             assert c.attrib['GeometryType'] == 'XYZ'
             data_items = list(c)
             assert len(data_items) == 1
-            points = read_data_item(data_items[0])
+            points = read_data_item(
+                    data_items[0], dt_key='NumberType'
+                    )
 
         else:
             assert c.tag == 'Attribute', \
@@ -86,7 +92,7 @@ def _read_xdmf2(root):
             data_items = list(c)
             assert len(data_items) == 1
 
-            data = read_data_item(data_items[0])
+            data = read_data_item(data_items[0], dt_key='NumberType')
 
             name = c.attrib['Name']
             if c.attrib['Center'] == 'Node':
@@ -183,17 +189,6 @@ def translate_mixed_cells(data):
 
 
 def _read_xdmf3(root):
-    def read_data_item(data_item):
-        dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
-        data_type = data_item.attrib['DataType']
-        precision = data_item.attrib['Precision']
-        assert data_item.attrib['Format'] == 'XML'
-
-        return numpy.array(
-            data_item.text.split(),
-            dtype=_xdmf_to_numpy_type(data_type, precision)
-            ).reshape(dims)
-
     domains = list(root)
     assert len(domains) == 1
     domain = domains[0]
@@ -272,8 +267,7 @@ def _read_xdmf3(root):
     return points, cells, point_data, cell_data, field_data
 
 
-def write(filetype,
-          filename,
+def write(filename,
           points,
           cells,
           point_data=None,
@@ -283,6 +277,6 @@ def write(filetype,
     # pylint: disable=import-error
     from .vtk_io import write as vtk_write
     return vtk_write(
-        filetype, filename, points, cells,
+        'xdmf3', filename, points, cells,
         point_data=point_data, cell_data=cell_data, field_data=field_data
         )
