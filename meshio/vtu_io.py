@@ -227,23 +227,22 @@ class VtuReader(object):
 
         # Read the block data
         byte_array = base64.b64decode(data[num_header_chars:])
-        block_data = []
-        byte_offset = 0
-        for k in range(num_blocks):
-            # process the compressed data
-            decompressed = zlib.decompress(
-                    byte_array[byte_offset:byte_offset + block_sizes[k]]
-                    )
-            byte_offset += block_sizes[k]
+        dtype = self.vtu_to_numpy_type[data_type]
+        num_bytes_per_item = numpy.dtype(dtype).itemsize
 
-            dtype = self.vtu_to_numpy_type[data_type]
-            num_bytes_per_item = numpy.dtype(dtype).itemsize
+        byte_offsets = numpy.concatenate([[0], numpy.cumsum(block_sizes)])
+        # https://github.com/numpy/numpy/issues/10135
+        byte_offsets = byte_offsets.astype(numpy.int64)
 
-            assert len(decompressed) % num_bytes_per_item == 0
+        # process the compressed data
+        block_data = numpy.concatenate([
+                numpy.fromstring(zlib.decompress(
+                    byte_array[byte_offsets[k]:byte_offsets[k+1]]
+                    ), dtype=dtype)
+                for k in range(num_blocks)
+                ])
 
-            block_data.append(numpy.fromstring(decompressed, dtype=dtype))
-
-        return numpy.concatenate(block_data)
+        return block_data
 
     def read_data(self, c):
         if c.attrib['format'] == 'ascii':
