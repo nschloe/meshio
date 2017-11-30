@@ -57,6 +57,7 @@ def _cells_from_data(connectivity, offsets, types):
     return cells
 
 
+# pylint: disable=too-many-instance-attributes
 class VtuReader(object):
     '''Helper class for reading VTU files. Some properties are global to the
     file (e.g., byte_order), and instead of passing around these parameters,
@@ -109,7 +110,7 @@ class VtuReader(object):
 
         grid = None
         self.appended_data = None
-        for c in root.getchildren():
+        for c in root:
             if c.tag == 'UnstructuredGrid':
                 assert grid is None, 'More than one UnstructuredGrid found.'
                 grid = c
@@ -128,7 +129,7 @@ class VtuReader(object):
         assert grid is not None, 'No UnstructuredGrid found.'
 
         piece = None
-        for c in grid.getchildren():
+        for c in grid:
             if c.tag == 'Piece':
                 assert piece is None, 'More than one Piece found.'
                 piece = c
@@ -136,7 +137,7 @@ class VtuReader(object):
                 assert c.tag == 'FieldData', \
                     'Unknown grid subtag \'{}\'.'.format(c.tag)
                 # TODO test field data
-                for data_array in c.getchildren():
+                for data_array in c:
                     field_data[data_array.attrib['Name']] = \
                         self.read_data(data_array)
 
@@ -145,9 +146,9 @@ class VtuReader(object):
         num_points = int(piece.attrib['NumberOfPoints'])
         num_cells = int(piece.attrib['NumberOfCells'])
 
-        for child in piece.getchildren():
+        for child in piece:
             if child.tag == 'Points':
-                data_arrays = child.getchildren()
+                data_arrays = list(child)
                 assert len(data_arrays) == 1
                 data_array = data_arrays[0]
 
@@ -159,7 +160,7 @@ class VtuReader(object):
                 points = points.reshape(num_points, num_components)
 
             elif child.tag == 'Cells':
-                for data_array in child.getchildren():
+                for data_array in child:
                     assert data_array.tag == 'DataArray'
                     cells[data_array.attrib['Name']] = \
                         self.read_data(data_array)
@@ -168,7 +169,7 @@ class VtuReader(object):
                 assert len(cells['types']) == num_cells
 
             elif child.tag == 'PointData':
-                for c in child.getchildren():
+                for c in child:
                     assert c.tag == 'DataArray'
                     point_data[c.attrib['Name']] = self.read_data(c)
 
@@ -176,7 +177,7 @@ class VtuReader(object):
                 assert child.tag == 'CellData', \
                     'Unknown tag \'{}\'.'.format(child.tag)
 
-                for c in child.getchildren():
+                for c in child:
                     assert c.tag == 'DataArray'
                     cell_data_raw[c.attrib['Name']] = self.read_data(c)
 
