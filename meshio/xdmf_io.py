@@ -5,26 +5,26 @@ I/O for XDMF.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
+import xml.etree.ElementTree as ET
+
 import numpy
 
 from .vtk_io import cell_data_from_raw
 
 
 def read(filetype, filename):
-    from lxml import etree as ET
-
     tree = ET.parse(filename)
     root = tree.getroot()
 
     assert root.tag == 'Xdmf'
     assert root.attrib['Version'] == '2.2'
 
-    domains = root.getchildren()
+    domains = list(root)
     assert len(domains) == 1
     domain = domains[0]
     assert domain.tag == 'Domain'
 
-    grids = domain.getchildren()
+    grids = list(domain)
     assert len(grids) == 1
     grid = grids[0]
     assert grid.tag == 'Grid'
@@ -51,11 +51,11 @@ def read(filetype, filename):
             'Unknown XDMF type ({}, {}).'.format(number_type, precision)
         return numpy.float64
 
-    for c in grid.getchildren():
+    for c in grid:
         if c.tag == 'Topology':
             meshio_type = xdmf_to_meshio_type[c.attrib['TopologyType']]
 
-            data_items = c.getchildren()
+            data_items = list(c)
             assert len(data_items) == 1
             data_item = data_items[0]
 
@@ -72,7 +72,7 @@ def read(filetype, filename):
         elif c.tag == 'Geometry':
             assert c.attrib['GeometryType'] == 'XYZ'
 
-            data_items = c.getchildren()
+            data_items = list(c)
             assert len(data_items) == 1
             data_item = data_items[0]
 
@@ -93,7 +93,7 @@ def read(filetype, filename):
             assert c.attrib['Active'] == '1'
             assert c.attrib['AttributeType'] == 'None'
 
-            data_items = c.getchildren()
+            data_items = list(c)
             assert len(data_items) == 1
             data_item = data_items[0]
 
