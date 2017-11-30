@@ -150,10 +150,6 @@ class VtuReader(object):
                 data_array = data_arrays[0]
 
                 assert data_array.tag == 'DataArray'
-                try:
-                    assert data_array.attrib['Name'] == 'Points'
-                except KeyError:
-                    pass
 
                 points = self.read_data(data_array)
 
@@ -177,6 +173,7 @@ class VtuReader(object):
             else:
                 assert child.tag == 'CellData', \
                     'Unknown tag \'{}\'.'.format(child.tag)
+
                 for c in child.getchildren():
                     assert c.tag == 'DataArray'
                     cell_data_raw[c.attrib['Name']] = self.read_data(c)
@@ -247,20 +244,25 @@ class VtuReader(object):
     def read_data(self, c):
         if c.attrib['format'] == 'ascii':
             # ascii
-            return numpy.array(
+            data = numpy.array(
                 c.text.split(),
                 dtype=self.vtu_to_numpy_type[c.attrib['type']]
                 )
         elif c.attrib['format'] == 'binary':
-            return self.read_binary(c.text.strip(), c.attrib['type'])
+            data = self.read_binary(c.text.strip(), c.attrib['type'])
+        else:
+            # appended data
+            assert c.attrib['format'] == 'appended', \
+                'Unknown data format \'{}\'.'.format(c.attrib['format'])
 
-        # appended data
-        assert c.attrib['format'] == 'appended', \
-            'Unknown data format \'{}\'.'.format(c.attrib['format'])
+            offset = int(c.attrib['offset'])
+            data = self.read_binary(
+                    self.appended_data[offset:], c.attrib['type']
+                    )
 
-        offset = int(c.attrib['offset'])
-        data = self.appended_data[offset:]
-        return self.read_binary(data, c.attrib['type'])
+        if 'NumberOfComponents' in c.attrib:
+            data = data.reshape(-1, int(c.attrib['NumberOfComponents']))
+        return data
 
 
 def read(filename):

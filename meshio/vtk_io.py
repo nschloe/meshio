@@ -335,12 +335,8 @@ def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
 
 def cell_data_from_raw(cells, cell_data_raw):
     cell_data = {k: {} for k in cells}
-    num_all_cells = sum([len(c) for c in cells.values()])
     for key in cell_data_raw:
         d = cell_data_raw[key]
-        if len(d) != num_all_cells:
-            d = d.reshape(num_all_cells, -1)
-
         r = 0
         for k in cells:
             cell_data[k][key] = d[r:r+len(cells[k])]
