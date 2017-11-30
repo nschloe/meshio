@@ -96,7 +96,8 @@ class XdmfReader(object):
         assert domain.tag == 'Domain'
 
         grids = list(domain)
-        assert len(grids) == 1
+        assert len(grids) == 1, \
+            'XDMF reader: Only supports one grid right now.'
         grid = grids[0]
         assert grid.tag == 'Grid'
         assert grid.attrib['GridType'] == 'Uniform'
@@ -129,8 +130,8 @@ class XdmfReader(object):
                 assert c.tag == 'Attribute', \
                     'Unknown section \'{}\'.'.format(c.tag)
 
-                assert c.attrib['Active'] == '1'
-                assert c.attrib['AttributeType'] == 'None'
+                # assert c.attrib['Active'] == '1'
+                # assert c.attrib['AttributeType'] == 'None'
 
                 data_items = list(c)
                 assert len(data_items) == 1
@@ -140,17 +141,23 @@ class XdmfReader(object):
                 name = c.attrib['Name']
                 if c.attrib['Center'] == 'Node':
                     point_data[name] = data
-                else:
-                    assert c.attrib['Center'] == 'Cell'
+                elif c.attrib['Center'] == 'Cell':
                     cell_data_raw[name] = data
+                else:
+                    # TODO
+                    assert c.attrib['Center'] == 'Grid'
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
         return points, cells, point_data, cell_data, field_data
 
     def xdmf_to_numpy_type(self, data_type, precision):
-        if data_type == 'Int' and precision == '8':
+        if data_type == 'Int' and precision == '4':
+            return numpy.int32
+        elif data_type == 'Int' and precision == '8':
             return numpy.int64
+        elif data_type == 'Float' and precision == '4':
+            return numpy.float32
 
         assert data_type == 'Float' and precision == '8', \
             'Unknown XDMF type ({}, {}).'.format(data_type, precision)
