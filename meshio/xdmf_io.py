@@ -10,6 +10,19 @@ import xml.etree.ElementTree as ET
 import numpy
 
 from .vtk_io import cell_data_from_raw
+from .xdmf3_io import xdmf_to_numpy_type
+
+
+def read_data_item(data_item):
+    dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
+    data_type = data_item.attrib['NumberType']
+    precision = data_item.attrib['Precision']
+    assert data_item.attrib['Format'] == 'XML'
+
+    return numpy.array(
+        data_item.text.split(),
+        dtype=xdmf_to_numpy_type(data_type, precision)
+        ).reshape(dims)
 
 
 def read(filetype, filename):
@@ -43,48 +56,18 @@ def read(filetype, filename):
         'Triangle': 'triangle',
         }
 
-    def xdmf_to_numpy_type(number_type, precision):
-        if number_type == 'Int' and precision == '8':
-            return numpy.int64
-
-        assert number_type == 'Float' and precision == '8', \
-            'Unknown XDMF type ({}, {}).'.format(number_type, precision)
-        return numpy.float64
-
     for c in grid:
         if c.tag == 'Topology':
-            meshio_type = xdmf_to_meshio_type[c.attrib['TopologyType']]
-
             data_items = list(c)
             assert len(data_items) == 1
-            data_item = data_items[0]
-
-            dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
-            number_type = data_item.attrib['NumberType']
-            precision = data_item.attrib['Precision']
-            assert data_item.attrib['Format'] == 'XML'
-
-            cells[meshio_type] = numpy.array(
-                data_item.text.split(),
-                dtype=xdmf_to_numpy_type(number_type, precision)
-                ).reshape(dims)
+            meshio_type = xdmf_to_meshio_type[c.attrib['TopologyType']]
+            cells[meshio_type] = read_data_item(data_items[0])
 
         elif c.tag == 'Geometry':
             assert c.attrib['GeometryType'] == 'XYZ'
-
             data_items = list(c)
             assert len(data_items) == 1
-            data_item = data_items[0]
-
-            dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
-            number_type = data_item.attrib['NumberType']
-            precision = data_item.attrib['Precision']
-            assert data_item.attrib['Format'] == 'XML'
-
-            points = numpy.array(
-                data_item.text.split(),
-                dtype=xdmf_to_numpy_type(number_type, precision)
-                ).reshape(dims)
+            points = read_data_item(data_items[0])
 
         else:
             assert c.tag == 'Attribute', \
@@ -95,17 +78,8 @@ def read(filetype, filename):
 
             data_items = list(c)
             assert len(data_items) == 1
-            data_item = data_items[0]
 
-            dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
-            number_type = data_item.attrib['NumberType']
-            precision = data_item.attrib['Precision']
-            assert data_item.attrib['Format'] == 'XML'
-
-            data = numpy.array(
-                data_item.text.split(),
-                dtype=xdmf_to_numpy_type(number_type, precision)
-                ).reshape(dims)
+            data = read_data_item(data_items[0])
 
             name = c.attrib['Name']
             if c.attrib['Center'] == 'Node':
