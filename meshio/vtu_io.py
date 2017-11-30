@@ -38,9 +38,6 @@ def _cells_from_data(connectivity, offsets, types):
     bins = {u: numpy.where(types == u)[0] for u in uniques}
 
     assert len(offsets) == len(types)
-    print(max(offsets), len(offsets))
-    print(len(connectivity))
-    print((types == 10).all())
 
     cells = {}
     for tpe, b in bins.items():
@@ -190,12 +187,6 @@ class VtuReader(object):
         assert 'offsets' in cells
         assert 'types' in cells
 
-        print(points.shape)
-        print(cells)
-        print(cells['connectivity'].shape)
-        print(cells['offsets'].shape)
-        print(cells['types'].shape)
-
         cells = _cells_from_data(
                 cells['connectivity'], cells['offsets'], cells['types']
                 )
@@ -230,10 +221,10 @@ class VtuReader(object):
         # uncompressed_size = int(struct.unpack(
         #     bo + symbol, byte_string[num_bytes:2*num_bytes]
         #     )[0])
-        # block size after compression:
-        last_block_size = int(struct.unpack(
-            bo + symbol, byte_string[2*num_bytes:3*num_bytes]
-            )[0])
+        # block size (uncompressed):
+        # last_block_size = int(struct.unpack(
+        #     bo + symbol, byte_string[2*num_bytes:3*num_bytes]
+        #     )[0])
 
         # TODO numpy
         block_sizes = [
@@ -244,35 +235,24 @@ class VtuReader(object):
             for k in range(num_blocks)
             ]
 
-        print('    ', num_blocks, block_sizes, last_block_size)
-        # print('     uncompressed: ', uncompressed_size)
-
         # Check how many characters the header occupies. This is determined
         # according to base64 encoding.
         header_num_bytes = (3 + num_blocks) * num_bytes
-        char_offset = num_bytes_to_num_base64_chars(header_num_bytes)
+        header_offset = num_bytes_to_num_base64_chars(header_num_bytes)
+
+        compressed_data = data[header_offset:]
+        byte_array = base64.b64decode(compressed_data)
 
         block_data = []
+        byte_offset = 0
         for k in range(num_blocks):
             block_num_bytes = block_sizes[k]
-            block_num_chars = num_bytes_to_num_base64_chars(block_num_bytes)
-
-            print('     =========')
-            print('     data type', data_type)
-            print('     block num bytes', block_num_bytes)
-            print('     block num chars', block_num_chars)
-            print('     char_offset', char_offset)
 
             # process the compressed data
-            compressed_data = data[char_offset:char_offset + block_num_chars]
-            # print(compressed_data)
-            print('     len(compressed data)', len(compressed_data))
-            decoded = base64.b64decode(compressed_data)
-            print('     decoded bytes', len(decoded))
-            decompressed = zlib.decompress(decoded)
-            print('     decompressed bytes', len(decompressed))
-
-            char_offset += block_num_chars
+            compressed_data = \
+                byte_array[byte_offset:byte_offset + block_num_bytes]
+            byte_offset += block_num_bytes
+            decompressed = zlib.decompress(compressed_data)
 
             struct_type, num_bytes = self.vtu_to_struct_type[data_type]
 
@@ -289,10 +269,6 @@ class VtuReader(object):
 
         return numpy.concatenate(block_data)
 
-    def read_appended(self, offset, dtype):
-        data = self.appended_data[offset:]
-        return self.read_binary(data, dtype)
-
     def read_data(self, c):
         if c.attrib['format'] == 'ascii':
             # ascii
@@ -303,14 +279,13 @@ class VtuReader(object):
         elif c.attrib['format'] == 'binary':
             return self.read_binary(c.text.strip(), c.attrib['type'])
 
-        print(c.attrib['Name'])
-
-        # appended
+        # appended data
         assert c.attrib['format'] == 'appended', \
             'Unknown data format \'{}\'.'.format(c.attrib['format'])
 
-        print('     offset ', int(c.attrib['offset']))
-        return self.read_appended(int(c.attrib['offset']), c.attrib['type'])
+        offset = int(c.attrib['offset'])
+        data = self.appended_data[offset:]
+        return self.read_binary(data, c.attrib['type'])
 
 
 def read(filename):
