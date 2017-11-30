@@ -85,16 +85,23 @@ class VtuReader(object):
         assert root.attrib['type'] == 'UnstructuredGrid'
         assert root.attrib['version'] in ['0.1', '1.0'], \
             'Unknown VTU file version \'{}\'.'.format(root.attrib['version'])
-        assert root.attrib['compressor'] == 'vtkZLibDataCompressor'
+
+        try:
+            assert root.attrib['compressor'] == 'vtkZLibDataCompressor'
+        except KeyError:
+            pass
 
         self.header_type = (
             root.attrib['header_type'] if 'header_type' in root.attrib
             else 'UInt32'
             )
 
-        self.byte_order = root.attrib['byte_order']
-        assert self.byte_order in ['LittleEndian', 'BigEndian'], \
-            'Unknown byte order \'{}\'.'.format(self.byte_order)
+        try:
+            self.byte_order = root.attrib['byte_order']
+            assert self.byte_order in ['LittleEndian', 'BigEndian'], \
+                'Unknown byte order \'{}\'.'.format(self.byte_order)
+        except KeyError:
+            self.byte_order = None
 
         grid = None
         self.appended_data = None
@@ -143,7 +150,10 @@ class VtuReader(object):
                 data_array = data_arrays[0]
 
                 assert data_array.tag == 'DataArray'
-                assert data_array.attrib['Name'] == 'Points'
+                try:
+                    assert data_array.attrib['Name'] == 'Points'
+                except KeyError:
+                    pass
 
                 points = self.read_data(data_array)
 
