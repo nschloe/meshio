@@ -82,17 +82,18 @@ def read_buffer(f, is_little_endian=True):
         'Unknown VTK data type \'{}\'.'.format(data_type)
     is_ascii = data_type == 'ASCII'
 
+    # These are all VTK data types. One sometimes finds 'vtktypeint64', but
+    # this is ill-formed.
     vtk_to_numpy_dtype = {
         'bit': numpy.bool,
-        # 'unsigned_char':
-        # 'char':
-        # 'unsigned_short':
-        # 'short':
+        'unsigned_char': numpy.uint8,
+        'char': numpy.int8,
+        'unsigned_short': numpy.uint16,
+        'short': numpy.int16,
         'unsigned_int': numpy.uint32,
         'int': numpy.int32,
         'unsigned_long': numpy.int64,
         'long': numpy.int64,
-        'vtktypeint64': numpy.int64,
         'float': numpy.float32,
         'double': numpy.float64,
         }
