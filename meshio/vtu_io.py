@@ -78,16 +78,6 @@ class VtuReader(object):
             'UInt64': numpy.uint64,
             }
 
-        self.vtu_to_struct_type = {
-            'Float32': ('f', 4),
-            'Float64': ('d', 8),
-            'Int32': ('i', 4),
-            'Int64': ('q', 8),
-            'UInt8': ('B', 1),
-            'UInt32': ('I', 4),
-            'UInt64': ('Q', 8),
-            }
-
         tree = ET.parse(filename)
         root = tree.getroot()
 
