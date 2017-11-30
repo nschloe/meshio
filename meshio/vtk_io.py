@@ -7,6 +7,9 @@ I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 '''
 import numpy
 
+# from .__about__ import __version__
+
+
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {
     0: 'empty',
@@ -82,18 +85,18 @@ def read_buffer(f, is_little_endian=True):
     endian = '>' if is_little_endian else '<'
 
     vtk_to_numpy_dtype = {
-        'bit': (numpy.bool, '?4', 4),
+        'bit': (numpy.bool, '?4'),
         # 'unsigned_char':
         # 'char':
         # 'unsigned_short':
         # 'short':
-        'unsigned_int': (numpy.uint32, endian + 'u4', 4),
-        'int': (numpy.int32, endian + 'i4', 4),
-        'unsigned_long': (numpy.int64, endian + 'u8', 8),
-        'long': (numpy.int64, endian + 'i8', 8),
-        'vtktypeint64': (numpy.int64, endian + 'i8', 8),
-        'float': (numpy.float32, endian + 'f4', 4),
-        'double': (numpy.float64, endian + 'f8', 8),
+        'unsigned_int': (numpy.uint32, endian + 'u4'),
+        'int': (numpy.int32, endian + 'i4'),
+        'unsigned_long': (numpy.int64, endian + 'u8'),
+        'long': (numpy.int64, endian + 'i8'),
+        'vtktypeint64': (numpy.int64, endian + 'i8'),
+        'float': (numpy.float32, endian + 'f4'),
+        'double': (numpy.float64, endian + 'f8'),
         }
 
     c = None
@@ -130,7 +133,7 @@ def read_buffer(f, is_little_endian=True):
             active = 'POINTS'
             num_points = int(split[1])
             data_type = split[2]
-            dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
+            dtype, bdtype = vtk_to_numpy_dtype[data_type]
             if is_ascii:
                 points = numpy.fromfile(
                     f, count=num_points*3, sep=' ',
@@ -138,6 +141,7 @@ def read_buffer(f, is_little_endian=True):
                     )
             else:
                 # binary
+                num_bytes = numpy.dtype(dtype).itemsize
                 total_num_bytes = num_points * (3 * num_bytes)
                 points = \
                     numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
@@ -271,7 +275,7 @@ def _read_scalar_field(f, num_data, split, vtk_to_numpy_dtype):
     # > The parameter numComp must range between (1,4) inclusive; [...]
     assert 0 < num_comp < 5
 
-    dtype, _, _ = vtk_to_numpy_dtype[data_type]
+    dtype, _ = vtk_to_numpy_dtype[data_type]
     lt, _ = f.readline().decode('utf-8').split()
     assert lt == 'LOOKUP_TABLE'
     data = numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
@@ -283,7 +287,7 @@ def _read_vector_field(f, num_data, split, vtk_to_numpy_dtype):
     data_name = split[1]
     data_type = split[2]
 
-    dtype, _, _ = vtk_to_numpy_dtype[data_type]
+    dtype, _ = vtk_to_numpy_dtype[data_type]
     data = numpy.fromfile(
         f, count=3*num_data, sep=' ', dtype=dtype
         ).reshape(-1, 3)
@@ -295,7 +299,7 @@ def _read_tensor_field(f, num_data, split, vtk_to_numpy_dtype):
     data_name = split[1]
     data_type = split[2]
 
-    dtype, _, _ = vtk_to_numpy_dtype[data_type]
+    dtype, _ = vtk_to_numpy_dtype[data_type]
     data = numpy.fromfile(
         f, count=9*num_data, sep=' ', dtype=dtype
         ).reshape(-1, 3, 3)
@@ -310,7 +314,7 @@ def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
             f.readline().decode('utf-8').split()
         shape0 = int(shape0)
         shape1 = int(shape1)
-        dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
+        dtype, bdtype = vtk_to_numpy_dtype[data_type]
 
         if is_ascii:
             dat = numpy.fromfile(
@@ -318,6 +322,7 @@ def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
                 )
         else:
             # binary
+            num_bytes = numpy.dtype(dtype).itemsize
             total_num_bytes = shape0 * shape1 * num_bytes
             dat = numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
             line = f.readline().decode('utf-8')
@@ -375,8 +380,15 @@ def write(filetype,
           cell_data=None,
           field_data=None
           ):
-    from .legacy_writer import write as w
+    # write_ascii = True
+    # with open(filename, 'w') as f:
+    #     f.write('# vtk DataFile Version 4.2\n')
+    #     f.write('written by meshio v{}\n'.format(__version__))
+    #     f.write('ASCII\n' if write_ascii else 'BINARY\n')
+    #     f.write('DATASET UNSTRUCTURED_GRID\n')
+    #     # write points
+    #     f.write('POINTS {} double'.format(len(points))
 
-    return w(
-        filetype, filename, points, cells, point_data, cell_data, field_data
-        )
+    from .legacy_writer import write as w
+    w(filetype, filename, points, cells, point_data, cell_data, field_data)
+    return
