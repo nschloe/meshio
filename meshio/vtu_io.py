@@ -6,6 +6,12 @@ I/O for VTU.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import base64
+# lxml cannot parse large files and instead throws the exception
+#
+# lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
+#
+# Use Python's native xml parser to avoid this error.
+import xml.etree.ElementTree as ET
 import zlib
 
 import numpy
@@ -57,8 +63,6 @@ class VtuReader(object):
     make them properties of this class.
     '''
     def __init__(self, filename):
-        from lxml import etree as ET
-
         points = None
         point_data = {}
         cell_data_raw = {}
