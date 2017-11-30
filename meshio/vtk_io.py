@@ -274,7 +274,7 @@ def _read_scalar_field(f, num_data, split, vtk_to_numpy_dtype):
     assert 0 < num_comp < 5
 
     dtype, _, _ = vtk_to_numpy_dtype[data_type]
-    lt, name = f.readline().decode('utf-8').split()
+    lt, _ = f.readline().decode('utf-8').split()
     assert lt == 'LOOKUP_TABLE'
     data = numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
 
