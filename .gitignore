@@ -10,6 +10,7 @@
 *.pyc
 *.vtk
 *.vtu
+*.xdmf
 *.xmf
 *.xml
 .cache/
