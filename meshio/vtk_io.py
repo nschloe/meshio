@@ -82,21 +82,19 @@ def read_buffer(f, is_little_endian=True):
         'Unknown VTK data type \'{}\'.'.format(data_type)
     is_ascii = data_type == 'ASCII'
 
-    endian = '>' if is_little_endian else '<'
-
     vtk_to_numpy_dtype = {
-        'bit': (numpy.bool, '?4'),
+        'bit': numpy.bool,
         # 'unsigned_char':
         # 'char':
         # 'unsigned_short':
         # 'short':
-        'unsigned_int': (numpy.uint32, endian + 'u4'),
-        'int': (numpy.int32, endian + 'i4'),
-        'unsigned_long': (numpy.int64, endian + 'u8'),
-        'long': (numpy.int64, endian + 'i8'),
-        'vtktypeint64': (numpy.int64, endian + 'i8'),
-        'float': (numpy.float32, endian + 'f4'),
-        'double': (numpy.float64, endian + 'f8'),
+        'unsigned_int': numpy.uint32,
+        'int': numpy.int32,
+        'unsigned_long': numpy.int64,
+        'long': numpy.int64,
+        'vtktypeint64': numpy.int64,
+        'float': numpy.float32,
+        'double': numpy.float64,
         }
 
     c = None
@@ -133,7 +131,7 @@ def read_buffer(f, is_little_endian=True):
             active = 'POINTS'
             num_points = int(split[1])
             data_type = split[2]
-            dtype, bdtype = vtk_to_numpy_dtype[data_type]
+            dtype = vtk_to_numpy_dtype[data_type]
             if is_ascii:
                 points = numpy.fromfile(
                     f, count=num_points*3, sep=' ',
@@ -143,8 +141,10 @@ def read_buffer(f, is_little_endian=True):
                 # binary
                 num_bytes = numpy.dtype(dtype).itemsize
                 total_num_bytes = num_points * (3 * num_bytes)
+                # Binary point data is big-endian. okay...
+                dtype = numpy.dtype(dtype).newbyteorder('>')
                 points = \
-                    numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
+                    numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
@@ -160,10 +160,7 @@ def read_buffer(f, is_little_endian=True):
                 # binary
                 num_bytes = 4
                 total_num_bytes = num_items * num_bytes
-                # cell data is little endian. okay.
-                c = numpy.fromstring(
-                    f.read(total_num_bytes), dtype=endian+'i4'
-                    )
+                c = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
@@ -185,9 +182,7 @@ def read_buffer(f, is_little_endian=True):
                 # binary
                 num_bytes = 4
                 total_num_bytes = num_items * num_bytes
-                ct = numpy.fromstring(
-                    f.read(total_num_bytes), dtype=endian+'i4'
-                    )
+                ct = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
@@ -314,7 +309,7 @@ def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
             f.readline().decode('utf-8').split()
         shape0 = int(shape0)
         shape1 = int(shape1)
-        dtype, bdtype = vtk_to_numpy_dtype[data_type]
+        dtype = vtk_to_numpy_dtype[data_type]
 
         if is_ascii:
             dat = numpy.fromfile(
@@ -324,7 +319,9 @@ def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
             # binary
             num_bytes = numpy.dtype(dtype).itemsize
             total_num_bytes = shape0 * shape1 * num_bytes
-            dat = numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
+            # Binary point data is big-endian. okay...
+            dtype = numpy.dtype(dtype).newbyteorder('>')
+            dat = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
             line = f.readline().decode('utf-8')
             assert line == '\n'
 
