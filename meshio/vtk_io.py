@@ -7,7 +7,7 @@ I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 '''
 import numpy
 
-# from .__about__ import __version__
+from .__about__ import __version__
 
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
@@ -55,6 +55,22 @@ vtk_to_meshio_type = {
     # 67: VTK_HIGHER_ORDER_HEXAHEDRON,
     }
 
+# These are all VTK data types. One sometimes finds 'vtktypeint64', but
+# this is ill-formed.
+vtk_to_numpy_dtype = {
+    'bit': numpy.dtype('bool'),
+    'unsigned_char': numpy.dtype('uint8'),
+    'char': numpy.dtype('int8'),
+    'unsigned_short': numpy.dtype('uint16'),
+    'short': numpy.dtype('int16'),
+    'unsigned_int': numpy.dtype('uint32'),
+    'int': numpy.dtype('int32'),
+    'unsigned_long': numpy.dtype('int64'),
+    'long': numpy.dtype('int64'),
+    'float': numpy.dtype('float32'),
+    'double': numpy.dtype('float64'),
+    }
+
 
 def read(filetype, filename, is_little_endian=True):
     '''Reads a Gmsh msh file.
@@ -81,22 +97,6 @@ def read_buffer(f, is_little_endian=True):
     assert data_type in ['ASCII', 'BINARY'], \
         'Unknown VTK data type \'{}\'.'.format(data_type)
     is_ascii = data_type == 'ASCII'
-
-    # These are all VTK data types. One sometimes finds 'vtktypeint64', but
-    # this is ill-formed.
-    vtk_to_numpy_dtype = {
-        'bit': numpy.bool,
-        'unsigned_char': numpy.uint8,
-        'char': numpy.int8,
-        'unsigned_short': numpy.uint16,
-        'short': numpy.int16,
-        'unsigned_int': numpy.uint32,
-        'int': numpy.int32,
-        'unsigned_long': numpy.int64,
-        'long': numpy.int64,
-        'float': numpy.float32,
-        'double': numpy.float64,
-        }
 
     c = None
     offsets = None
@@ -143,7 +143,7 @@ def read_buffer(f, is_little_endian=True):
                 num_bytes = numpy.dtype(dtype).itemsize
                 total_num_bytes = num_points * (3 * num_bytes)
                 # Binary point data is big-endian. okay...
-                dtype = numpy.dtype(dtype).newbyteorder('>')
+                dtype = dtype.newbyteorder('>')
                 points = \
                     numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
                 line = f.readline().decode('utf-8')
@@ -321,7 +321,7 @@ def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
             num_bytes = numpy.dtype(dtype).itemsize
             total_num_bytes = shape0 * shape1 * num_bytes
             # Binary point data is big-endian. okay...
-            dtype = numpy.dtype(dtype).newbyteorder('>')
+            dtype = dtype.newbyteorder('>')
             dat = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
             line = f.readline().decode('utf-8')
             assert line == '\n'
@@ -378,6 +378,8 @@ def write(filetype,
           cell_data=None,
           field_data=None
           ):
+
+    # numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype.items()}
     # write_ascii = True
     # with open(filename, 'w') as f:
     #     f.write('# vtk DataFile Version 4.2\n')
@@ -385,7 +387,10 @@ def write(filetype,
     #     f.write('ASCII\n' if write_ascii else 'BINARY\n')
     #     f.write('DATASET UNSTRUCTURED_GRID\n')
     #     # write points
-    #     f.write('POINTS {} double'.format(len(points))
+    #     f.write(
+    #         'POINTS {} {}'.format(
+    #             len(points), numpy_to_vtk_dtype[points.dtype]
+    #             ))
 
     from .legacy_writer import write as w
     w(filetype, filename, points, cells, point_data, cell_data, field_data)
