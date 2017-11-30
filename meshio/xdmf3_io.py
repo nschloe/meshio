@@ -38,6 +38,7 @@ def translate_mixed_cells(data):
     # `data` is a one-dimensional vector with
     # (cell_type1, p0, p1, ... ,pk, cell_type2, p10, p11, ..., p1k, ...
 
+    # http://www.xdmf.org/index.php/XDMF_Model_and_Format#Topology
     xdmf_idx_to_num_nodes = {
         1: 1,
         4: 3,
@@ -78,10 +79,10 @@ def translate_mixed_cells(data):
     cells = {}
     for tpe, b in bins.items():
         meshio_type = xdmf_idx_to_meshio_type[tpe]
-        n = data[offsets[b[0]]]
-        assert (data[offsets[b]] == n).all()
+        assert (data[offsets[b]] == tpe).all()
+        n = xdmf_idx_to_num_nodes[tpe]
         indices = numpy.array([
-            numpy.arange(1, n) + o for o in offsets[b]
+            numpy.arange(1, n+1) + o for o in offsets[b]
             ])
         cells[meshio_type] = data[indices]
 
@@ -153,8 +154,7 @@ def read(filetype, filename):
             assert c.tag == 'Attribute', \
                 'Unknown section \'{}\'.'.format(c.tag)
 
-            assert c.attrib['Active'] == '1'
-            assert c.attrib['AttributeType'] == 'None'
+            assert c.attrib['Type'] == 'None'
 
             data_items = list(c)
             assert len(data_items) == 1
