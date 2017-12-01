@@ -335,7 +335,14 @@ def write(filename,
                 # RangeMin='0',
                 # RangeMax='0.47140452079'
                 )
-        da.text = re.sub('[\[\]]', '', numpy.array_str(points))
+
+        try:
+            from StringIO import cStringIO as BytesIO
+        except ImportError:
+            from io import BytesIO
+        s = BytesIO()
+        numpy.savetxt(s, numpy.concatenate(points), '%.11e')
+        da.text = s.getvalue().decode()
 
     if cells is not None:
         cls = ET.SubElement(piece, 'Cells')
@@ -344,9 +351,9 @@ def write(filename,
         connectivity = numpy.concatenate(numpy.concatenate([
             v for v in cells.values()
             ]))
-        # offset
+        # offset (points to the last element)
         offsets = [
-            v.shape[1] * numpy.arange(v.shape[0])
+            v.shape[1] * numpy.arange(1, v.shape[0]+1)
             for v in cells.values()
             ]
         for k in range(1, len(offsets)):
