@@ -14,11 +14,8 @@ import helpers
         helpers.hex_mesh,
         ])
 def test_ascii(mesh):
-    def writer(filename, points, cells, point_data, cell_data, field_data):
-        return meshio.ansys_io.write(
-            filename, points, cells, point_data, cell_data, field_data,
-            write_binary=False
-            )
+    def writer(*args, **kwargs):
+        return meshio.ansys_io.write(*args, write_binary=False, **kwargs)
 
     helpers.write_read2(writer, meshio.ansys_io.read, mesh, 1.0e-15)
     return
@@ -32,11 +29,8 @@ def test_ascii(mesh):
         helpers.hex_mesh,
         ])
 def test_binary(mesh):
-    def writer(filename, points, cells, point_data, cell_data, field_data):
-        return meshio.ansys_io.write(
-            filename, points, cells, point_data, cell_data, field_data,
-            write_binary=True
-            )
+    def writer(*args, **kwargs):
+        return meshio.ansys_io.write(*args, write_binary=True, **kwargs)
 
     helpers.write_read2(writer, meshio.ansys_io.read, mesh, 1.0e-15)
     return
