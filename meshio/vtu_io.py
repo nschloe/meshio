@@ -6,6 +6,7 @@ I/O for VTU.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import base64
+import logging
 # lxml cannot parse large files and instead throws the exception
 #
 # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
@@ -281,6 +282,9 @@ def write(filename,
           field_data=None,
           write_binary=True,
           ):
+    if not write_binary:
+        logging.warning('VTU ASCII files are only meant for debugging.')
+
     from .legacy_writer import write as w
     filetype = 'vtu-binary' if write_binary else 'vtu-ascii'
     return w(

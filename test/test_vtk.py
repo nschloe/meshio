@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-import helpers
-
+import meshio
 import pytest
 
-import meshio
-
+import helpers
 import legacy_reader
 
 vtk = pytest.importorskip('vtk')
@@ -55,7 +53,6 @@ def test_ascii_legacy2(mesh):
         return meshio.vtk_io.write(*args, write_binary=False, **kwargs)
 
     # test with legacy reader
-    # The legacy writer only writes with low precision.
     def lr(filename):
         return legacy_reader.read('vtk-ascii', filename)
 

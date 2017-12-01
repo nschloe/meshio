@@ -4,6 +4,7 @@ import meshio
 import pytest
 
 import helpers
+import legacy_reader
 
 vtk = pytest.importorskip('vtk')
 
@@ -38,11 +39,60 @@ def test_ascii(mesh):
 
 
 @pytest.mark.parametrize('mesh', test_set)
+def test_ascii_legacy1(mesh):
+    # test with legacy writer
+    def legacy_writer(*args, **kwargs):
+        return meshio.legacy_writer.write('vtu-ascii', *args, **kwargs)
+
+    # The legacy writer only writes with low precision.
+    helpers.write_read(legacy_writer, meshio.vtu_io.read, mesh, 1.0e-11)
+    return
+
+
+@pytest.mark.parametrize('mesh', test_set)
+def test_ascii_legacy2(mesh):
+    def writer(*args, **kwargs):
+        return meshio.vtu_io.write(*args, write_binary=False, **kwargs)
+
+    # test with legacy reader
+    def lr(filename):
+        return legacy_reader.read('vtu-ascii', filename)
+
+    # the legacy reader only reads at low precision
+    helpers.write_read(writer, lr, mesh, 1.0e-11)
+    return
+
+
+@pytest.mark.parametrize('mesh', test_set)
 def test_binary(mesh):
     def writer(*args, **kwargs):
         return meshio.vtu_io.write(*args, write_binary=True, **kwargs)
 
     helpers.write_read(writer, meshio.vtu_io.read, mesh, 1.0e-15)
+    return
+
+
+@pytest.mark.parametrize('mesh', test_set)
+def test_binary_legacy1(mesh):
+    # test with legacy writer
+    def legacy_writer(*args, **kwargs):
+        return meshio.legacy_writer.write('vtu-binary', *args, **kwargs)
+
+    # The legacy writer only writes with low precision.
+    helpers.write_read(legacy_writer, meshio.vtu_io.read, mesh, 1.0e-11)
+    return
+
+
+@pytest.mark.parametrize('mesh', test_set)
+# test with legacy reader
+def test_binary_legacy2(mesh):
+    def writer(*args, **kwargs):
+        return meshio.vtu_io.write(*args, write_binary=True, **kwargs)
+
+    def lr(filename):
+        return legacy_reader.read('vtu-binary', filename)
+
+    helpers.write_read(writer, lr, mesh, 1.0e-15)
     return
 
 
