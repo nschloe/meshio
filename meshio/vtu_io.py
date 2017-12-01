@@ -311,6 +311,20 @@ def write(filename,
         compressor='vtkZLibDataCompressor'
         )
 
+    def numpy_to_xml_array(parent, name, data):
+        da = ET.SubElement(
+                parent, 'DataArray',
+                type=numpy_to_vtu_type[data.dtype],
+                Name=name,
+                format='ascii',
+                )
+        if len(data.shape) == 2:
+            da.set('NumberOfComponents', '{}'.format(data.shape[1]))
+        s = BytesIO()
+        numpy.savetxt(s, data, '%.11e')
+        da.text = s.getvalue().decode()
+        return
+
     comment = \
         ET.Comment('This file was created by meshio v{}'.format(__version__))
     vtk_file.insert(1, comment)
@@ -327,18 +341,7 @@ def write(filename,
     # points
     if points is not None:
         pts = ET.SubElement(piece, 'Points')
-        da = ET.SubElement(
-                pts, 'DataArray',
-                type=numpy_to_vtu_type[points.dtype],
-                Name='Points',
-                NumberOfComponents='{}'.format(points.shape[1]),
-                format='ascii',
-                # RangeMin='0',
-                # RangeMax='0.47140452079'
-                )
-        s = BytesIO()
-        numpy.savetxt(s, numpy.concatenate(points), '%.11e')
-        da.text = s.getvalue().decode()
+        numpy_to_xml_array(pts, 'Points', points)
 
     if cells is not None:
         cls = ET.SubElement(piece, 'Cells')
@@ -394,32 +397,12 @@ def write(filename,
     if point_data:
         pd = ET.SubElement(piece, 'PointData')
         for name, data in point_data.items():
-            da = ET.SubElement(
-                    pd, 'DataArray',
-                    type=numpy_to_vtu_type[data.dtype],
-                    Name=name,
-                    format='ascii',
-                    )
-            if len(data.shape) == 2:
-                da.set('NumberOfComponents', '{}'.format(data.shape[1]))
-            s = BytesIO()
-            numpy.savetxt(s, data, '%.11e')
-            da.text = s.getvalue().decode()
+            numpy_to_xml_array(pd, name, data)
 
     if cell_data:
-        pd = ET.SubElement(piece, 'CellData')
+        cd = ET.SubElement(piece, 'CellData')
         for name, data in raw_from_cell_data(cell_data).items():
-            da = ET.SubElement(
-                pd, 'DataArray',
-                type=numpy_to_vtu_type[data.dtype],
-                Name=name,
-                format='ascii',
-                )
-            if len(data.shape) == 2:
-                da.set('NumberOfComponents', '{}'.format(data.shape[1]))
-            s = BytesIO()
-            numpy.savetxt(s, data, '%.11e')
-            da.text = s.getvalue().decode()
+            numpy_to_xml_array(cd, name, data)
 
     tree = ET.ElementTree(vtk_file)
 
