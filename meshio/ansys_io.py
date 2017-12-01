@@ -388,10 +388,10 @@ def write(
         filename,
         points,
         cells,
-        is_ascii=False,
         point_data=None,
         cell_data=None,
-        field_data=None
+        field_data=None,
+        write_binary=True,
         ):
     point_data = {} if point_data is None else point_data
     cell_data = {} if cell_data is None else cell_data
@@ -418,18 +418,18 @@ def write(
             ).encode('utf8'))
 
         # Write nodes
-        key = '10' if is_ascii else '3010'
+        key = '3010' if write_binary else '10'
         fh.write((
             '({} (1 {:x} {:x} 1 {:x}))(\n'.format(
                 key, first_node_index, points.shape[0], points.shape[1]
             )).encode('utf8'))
-        if is_ascii:
-            numpy.savetxt(fh, points, fmt='%.15e')
-            fh.write(('))\n').encode('utf8'))
-        else:
+        if write_binary:
             fh.write(points.tostring())
             fh.write('\n)'.encode('utf8'))
             fh.write('End of Binary Section 3010)\n'.encode('utf8'))
+        else:
+            numpy.savetxt(fh, points, fmt='%.15e')
+            fh.write(('))\n').encode('utf8'))
 
         # Write cells
         meshio_to_ansys_type = {
@@ -447,7 +447,7 @@ def write(
             numpy.dtype('int64'): '3012',
             }
         for cell_type, values in cells.items():
-            key = '12' if is_ascii else binary_dtypes[values.dtype]
+            key = binary_dtypes[values.dtype] if write_binary else '12'
             last_index = first_index + len(values) - 1
             fh.write((
                 '({} (1 {:x} {:x} 1 {})(\n'.format(
@@ -455,15 +455,15 @@ def write(
                     meshio_to_ansys_type[cell_type]
                     )
                 ).encode('utf8'))
-            if is_ascii:
-                numpy.savetxt(fh, values + first_node_index, fmt='%x')
-                fh.write(('))\n').encode('utf8'))
-            else:
+            if write_binary:
                 fh.write((values + first_node_index).tostring())
                 fh.write('\n)'.encode('utf8'))
                 fh.write((
                     'End of Binary Section {})\n'.format(key)
                     ).encode('utf8'))
+            else:
+                numpy.savetxt(fh, values + first_node_index, fmt='%x')
+                fh.write(('))\n').encode('utf8'))
             first_index = last_index + 1
 
     return

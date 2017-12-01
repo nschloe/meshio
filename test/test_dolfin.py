@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-import helpers
-
+import meshio
 import pytest
+
+import helpers
 
 
 @pytest.mark.parametrize('mesh', [
@@ -11,5 +12,9 @@ import pytest
         helpers.add_cell_data(helpers.tri_mesh, 1),
         ])
 def test_io(mesh):
-    helpers.write_read('test.xml', 'dolfin-xml', mesh, 1.0e-15)
+    helpers.write_read2(
+            meshio.dolfin_io.write,
+            meshio.dolfin_io.read,
+            mesh, 1.0e-15
+            )
     return
