@@ -394,18 +394,12 @@ def write(filename,
             'POINTS {} {}\n'.format(
                 len(points), numpy_to_vtk_dtype[points.dtype]
                 ).encode('utf-8'))
-        # numpy's tofile documentation says:
-        # ```
-        # This is a convenience function for quick storage of array data.
-        # Information on endianness and precision is lost, so this method is
-        # not a good choice for files intended to archive data or transport
-        # data between machines with different endianness. Some of these
-        # problems can be overcome by outputting the data as text files, at the
-        # expense of speed and file size.
-        # ```
-        sep = '' if write_binary else ' '
-        points.tofile(f, sep=sep)
-        # numpy.savetxt(f, points)
+
+        if write_binary:
+            points.byteswap().tofile(f, sep='')
+        else:
+            # ascii
+            points.tofile(f, sep=' ')
         f.write('\n'.encode('utf-8'))
 
         # write cells
@@ -419,7 +413,7 @@ def write(filename,
                 n = cells[key].shape[1]
                 d = numpy.column_stack([
                     numpy.full(len(cells[key]), n), cells[key]
-                    ]).astype(numpy.int32)
+                    ]).astype(numpy.dtype('>i4'))
                 f.write(d.tostring())
             if write_binary:
                 f.write('\n'.encode('utf-8'))
