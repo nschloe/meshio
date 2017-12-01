@@ -340,6 +340,21 @@ def cell_data_from_raw(cells, cell_data_raw):
     return cell_data
 
 
+def raw_from_cell_data(cell_data):
+    # merge cell data
+    cell_data_raw = {}
+    for d in cell_data.values():
+        for name, values in d.items():
+            if name in cell_data_raw:
+                cell_data_raw[name].append(values)
+            else:
+                cell_data_raw[name] = [values]
+    for name in cell_data_raw:
+        cell_data_raw[name] = numpy.concatenate(cell_data_raw[name])
+
+    return cell_data_raw
+
+
 def translate_cells(data, offsets, types):
     # Translate it into the cells dictionary.
     # `data` is a one-dimensional vector with
@@ -452,17 +467,7 @@ def write(filename,
 
         # write cell data
         if cell_data:
-            # merge cell data
-            cell_data_raw = {}
-            for d in cell_data.values():
-                for name, values in d.items():
-                    if name in cell_data_raw:
-                        cell_data_raw[name].append(values)
-                    else:
-                        cell_data_raw[name] = [values]
-            for name in cell_data_raw:
-                cell_data_raw[name] = numpy.concatenate(cell_data_raw[name])
-
+            cell_data_raw = raw_from_cell_data(cell_data)
             f.write('CELL_DATA {}\n'.format(total_num_cells).encode('utf-8'))
             _write_field_data(f, cell_data_raw, write_binary)
 

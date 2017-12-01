@@ -8,6 +8,10 @@ I/O for VTU.
 import base64
 import logging
 import re
+try:
+    from StringIO import cStringIO as BytesIO
+except ImportError:
+    from io import BytesIO
 # lxml cannot parse large files and instead throws the exception
 #
 # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
@@ -19,7 +23,10 @@ import zlib
 import numpy
 
 from .__about__ import __version__
-from .vtk_io import vtk_to_meshio_type, meshio_to_vtk_type, cell_data_from_raw
+from .vtk_io import (
+    vtk_to_meshio_type, meshio_to_vtk_type, cell_data_from_raw,
+    raw_from_cell_data
+    )
 from .gmsh_io import num_nodes_per_cell
 
 
@@ -317,12 +324,6 @@ def write(filename,
             NumberOfCells='{}'.format(total_num_cells)
             )
 
-    if point_data:
-        pass
-
-    if cell_data:
-        pass
-
     # points
     if points is not None:
         pts = ET.SubElement(piece, 'Points')
@@ -335,11 +336,6 @@ def write(filename,
                 # RangeMin='0',
                 # RangeMax='0.47140452079'
                 )
-
-        try:
-            from StringIO import cStringIO as BytesIO
-        except ImportError:
-            from io import BytesIO
         s = BytesIO()
         numpy.savetxt(s, numpy.concatenate(points), '%.11e')
         da.text = s.getvalue().decode()
@@ -351,7 +347,7 @@ def write(filename,
         connectivity = numpy.concatenate([
             numpy.concatenate(v) for v in cells.values()
             ])
-        # offset (points to the last element)
+        # offset (points to the first element of the next cell)
         offsets = [
             v.shape[1] * numpy.arange(1, v.shape[0]+1)
             for v in cells.values()
@@ -394,6 +390,36 @@ def write(filename,
                 RangeMax='{}'.format(types.max()),
                 )
         tp.text = re.sub('[\[\]]', '', numpy.array_str(types))
+
+    if point_data:
+        pd = ET.SubElement(piece, 'PointData')
+        for name, data in point_data.items():
+            da = ET.SubElement(
+                    pd, 'DataArray',
+                    type=numpy_to_vtu_type[data.dtype],
+                    Name=name,
+                    format='ascii',
+                    )
+            if len(data.shape) == 2:
+                da.set('NumberOfComponents', '{}'.format(data.shape[1]))
+            s = BytesIO()
+            numpy.savetxt(s, data, '%.11e')
+            da.text = s.getvalue().decode()
+
+    if cell_data:
+        pd = ET.SubElement(piece, 'CellData')
+        for name, data in raw_from_cell_data(cell_data).items():
+            da = ET.SubElement(
+                pd, 'DataArray',
+                type=numpy_to_vtu_type[data.dtype],
+                Name=name,
+                format='ascii',
+                )
+            if len(data.shape) == 2:
+                da.set('NumberOfComponents', '{}'.format(data.shape[1]))
+            s = BytesIO()
+            numpy.savetxt(s, data, '%.11e')
+            da.text = s.getvalue().decode()
 
     tree = ET.ElementTree(vtk_file)
 
