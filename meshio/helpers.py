@@ -195,19 +195,21 @@ def write(filename,
             )
     elif file_format == 'vtk-ascii':
         vtk_io.write(
-            'vtk-ascii', filename,
+            filename,
             points, cells,
             point_data=point_data,
             cell_data=cell_data,
-            field_data=field_data
+            field_data=field_data,
+            write_binary=False
             )
     elif file_format in ['vtk', 'vtk-binary']:
         vtk_io.write(
-            'vtk-binary', filename,
+            filename,
             points, cells,
             point_data=point_data,
             cell_data=cell_data,
-            field_data=field_data
+            field_data=field_data,
+            write_binary=True
             )
     elif file_format in ['xdmf', 'xdmf3']:  # XDMF
         xdmf_io.write(

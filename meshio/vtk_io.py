@@ -372,24 +372,21 @@ def translate_cells(data, offsets, types):
     return cells
 
 
-def write(filetype,
-          filename,
+def write(filename,
           points,
           cells,
           point_data=None,
           cell_data=None,
-          field_data=None
+          field_data=None,
+          write_binary=True
           ):
 
     meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
-    # TODO make configurable
-    write_ascii = False
-
     with open(filename, 'wb') as f:
         f.write('# vtk DataFile Version 4.2\n'.encode('utf-8'))
         f.write('written by meshio v{}\n'.format(__version__).encode('utf-8'))
-        f.write(('ASCII\n' if write_ascii else 'BINARY\n').encode('utf-8'))
+        f.write(('BINARY\n' if write_binary else 'ASCII\n').encode('utf-8'))
         f.write('DATASET UNSTRUCTURED_GRID\n'.encode('utf-8'))
 
         # write points
@@ -406,7 +403,7 @@ def write(filetype,
         # problems can be overcome by outputting the data as text files, at the
         # expense of speed and file size.
         # ```
-        sep = ' ' if write_ascii else ''
+        sep = '' if write_binary else ' '
         points.tofile(f, sep=sep)
         # numpy.savetxt(f, points)
         f.write('\n'.encode('utf-8'))
@@ -417,45 +414,47 @@ def write(filetype,
         f.write(
             'CELLS {} {}\n'.format(total_num_cells, total_num_idx)
             .encode('utf-8'))
-        for key in cells:
-            n = cells[key].shape[1]
-            if write_ascii:
+        if write_binary:
+            for key in cells:
+                n = cells[key].shape[1]
+                d = numpy.column_stack([
+                    numpy.full(len(cells[key]), n), cells[key]
+                    ]).astype(numpy.int32)
+                f.write(d.tostring())
+            if write_binary:
+                f.write('\n'.encode('utf-8'))
+        else:
+            # ascii
+            for key in cells:
+                n = cells[key].shape[1]
                 for cell in cells[key]:
                         f.write(('{} '.format(n)).encode('utf-8'))
                         for idx in cell:
                             f.write(('{} '.format(idx)).encode('utf-8'))
                         f.write('\n'.encode('utf-8'))
-            else:
-                # binary
-                d = numpy.column_stack([
-                    numpy.full(len(cells[key]), n), cells[key]
-                    ]).astype(numpy.int32)
-                f.write(d.tostring())
-        if not write_ascii:
-            f.write('\n'.encode('utf-8'))
 
         # write cell types
         f.write('CELL_TYPES {}\n'.format(total_num_cells).encode('utf-8'))
-        if write_ascii:
-            for key in cells:
-                for _ in range(len(cells[key])):
-                    f.write(
-                        '{}\n'.format(meshio_to_vtk_type[key]).encode('utf-8')
-                        )
-        else:
-            # binary
+        if write_binary:
             for key in cells:
                 d = numpy.full(
                     len(cells[key]), meshio_to_vtk_type[key]
                     ).astype(numpy.dtype('>i4'))
                 f.write(d.tostring())
             f.write('\n'.encode('utf-8'))
+        else:
+            # ascii
+            for key in cells:
+                for _ in range(len(cells[key])):
+                    f.write(
+                        '{}\n'.format(meshio_to_vtk_type[key]).encode('utf-8')
+                        )
 
         # write point data
         if len(point_data) > 0:
             num_points = len(points)
             f.write('POINT_DATA {}\n'.format(num_points).encode('utf-8'))
-            _write_field_data(f, point_data, write_ascii)
+            _write_field_data(f, point_data, write_binary)
 
         # write cell data
         if len(cell_data) > 0:
@@ -471,14 +470,14 @@ def write(filetype,
                 cell_data_raw[name] = numpy.concatenate(cell_data_raw[name])
 
             f.write('CELL_DATA {}\n'.format(total_num_cells).encode('utf-8'))
-            _write_field_data(f, cell_data_raw, write_ascii)
+            _write_field_data(f, cell_data_raw, write_binary)
 
     # from .legacy_writer import write as w
     # w(filetype, filename, points, cells, point_data, cell_data, field_data)
     return
 
 
-def _write_field_data(f, data, write_ascii):
+def _write_field_data(f, data, write_binary):
     f.write((
         'FIELD FieldData {}\n'.format(len(data))
         ).encode('utf-8'))
@@ -495,12 +494,11 @@ def _write_field_data(f, data, write_ascii):
             name, num_components, num_tuples,
             numpy_to_vtk_dtype[values.dtype]
             )).encode('utf-8'))
-        if write_ascii:
-            sep = ' ' if write_ascii else ''
-            values.tofile(f, sep=sep)
+        if write_binary:
+            f.write(values.tostring())
+        else:
+            # ascii
+            values.tofile(f, sep=' ')
             # numpy.savetxt(f, points)
             f.write('\n'.encode('utf-8'))
-        else:
-            # binary
-            f.write(values.tostring())
     return
