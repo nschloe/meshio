@@ -432,6 +432,74 @@ def write(filetype,
             for _ in range(len(cells[key])):
                 f.write('{}\n'.format(meshio_to_vtk_type[key]).encode('utf-8'))
 
+        # write point data
+        if len(point_data) > 0:
+            num_points = len(points)
+            f.write('POINT_DATA {}\n'.format(num_points).encode('utf-8'))
+            f.write((
+                'FIELD FieldData {}\n'.format(len(point_data))
+                ).encode('utf-8'))
+            for name, values in point_data.items():
+                if len(values.shape) == 1:
+                    num_tuples = values.shape[0]
+                    num_components = 1
+                else:
+                    assert len(values.shape) == 2, \
+                        'Only one and two-dimensional point data supported.'
+                    num_tuples = values.shape[0]
+                    num_components = values.shape[1]
+                f.write(('{} {} {} {}\n'.format(
+                    name, num_components, num_tuples,
+                    numpy_to_vtk_dtype[values.dtype]
+                    )).encode('utf-8'))
+                if write_ascii:
+                    sep = ' ' if write_ascii else ''
+                    values.tofile(f, sep=sep)
+                    # numpy.savetxt(f, points)
+                    f.write('\n'.encode('utf-8'))
+                else:
+                    # binary
+                    f.write(values.tostring())
+
+        # write cell data
+        if len(cell_data) > 0:
+            # merge cell data
+            cell_data_raw = {}
+            for d in cell_data.values():
+                for name, values in d.items():
+                    if name in cell_data_raw:
+                        cell_data_raw[name].append(values)
+                    else:
+                        cell_data_raw[name] = [values]
+            for name in cell_data_raw:
+                cell_data_raw[name] = numpy.concatenate(cell_data_raw[name])
+
+            f.write('CELL_DATA {}\n'.format(total_num_cells).encode('utf-8'))
+            f.write((
+                'FIELD FieldData {}\n'.format(len(cell_data_raw))
+                ).encode('utf-8'))
+            for name, values in cell_data_raw.items():
+                if len(values.shape) == 1:
+                    num_tuples = values.shape[0]
+                    num_components = 1
+                else:
+                    assert len(values.shape) == 2, \
+                        'Only one and two-dimensional point data supported.'
+                    num_tuples = values.shape[0]
+                    num_components = values.shape[1]
+                f.write(('{} {} {} {}\n'.format(
+                    name, num_components, num_tuples,
+                    numpy_to_vtk_dtype[values.dtype]
+                    )).encode('utf-8'))
+                if write_ascii:
+                    sep = ' ' if write_ascii else ''
+                    values.tofile(f, sep=sep)
+                    # numpy.savetxt(f, points)
+                    f.write('\n'.encode('utf-8'))
+                else:
+                    # binary
+                    f.write(values.tostring())
+
     # from .legacy_writer import write as w
     # w(filetype, filename, points, cells, point_data, cell_data, field_data)
     return
