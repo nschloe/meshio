@@ -7,6 +7,7 @@ I/O for VTU.
 '''
 import base64
 import logging
+import re
 # lxml cannot parse large files and instead throws the exception
 #
 # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
@@ -18,7 +19,7 @@ import zlib
 import numpy
 
 from .__about__ import __version__
-from .vtk_io import vtk_to_meshio_type, cell_data_from_raw
+from .vtk_io import vtk_to_meshio_type, meshio_to_vtk_type, cell_data_from_raw
 from .gmsh_io import num_nodes_per_cell
 
 
@@ -323,17 +324,69 @@ def write(filename,
         pass
 
     # points
-    pts = ET.SubElement(piece, 'Points')
-    da = ET.SubElement(
-            pts, 'DataArray',
-            type=numpy_to_vtu_type[points.dtype],
-            Name='Points',
-            NumberOfComponents='{}'.format(points.shape[1]),
-            format='ascii',
-            # RangeMin='0',
-            # RangeMax='0.47140452079'
-            )
-    da.text = 'rofl'  # points.tostring()
+    if points is not None:
+        pts = ET.SubElement(piece, 'Points')
+        da = ET.SubElement(
+                pts, 'DataArray',
+                type=numpy_to_vtu_type[points.dtype],
+                Name='Points',
+                NumberOfComponents='{}'.format(points.shape[1]),
+                format='ascii',
+                # RangeMin='0',
+                # RangeMax='0.47140452079'
+                )
+        da.text = re.sub('[\[\]]', '', numpy.array_str(points))
+
+    if cells is not None:
+        cls = ET.SubElement(piece, 'Cells')
+
+        # create connectivity, offset, type arrays
+        connectivity = numpy.concatenate(numpy.concatenate([
+            v for v in cells.values()
+            ]))
+        # offset
+        offsets = [
+            v.shape[1] * numpy.arange(v.shape[0])
+            for v in cells.values()
+            ]
+        for k in range(1, len(offsets)):
+            offsets[k] += offsets[k-1][-1]
+        offsets = numpy.concatenate(offsets)
+        # types
+        types = numpy.concatenate([
+            numpy.full(len(v), meshio_to_vtk_type[k])
+            for k, v in cells.items()
+            ])
+
+        conn = ET.SubElement(
+                cls, 'DataArray',
+                type=numpy_to_vtu_type[connectivity.dtype],
+                Name='connectivity',
+                format='ascii',
+                RangeMin='{}'.format(connectivity.min()),
+                RangeMax='{}'.format(connectivity.max()),
+                )
+        conn.text = re.sub('[\[\]]', '', numpy.array_str(connectivity))
+
+        os = ET.SubElement(
+                cls, 'DataArray',
+                type=numpy_to_vtu_type[offsets.dtype],
+                Name='offsets',
+                format='ascii',
+                RangeMin='{}'.format(offsets.min()),
+                RangeMax='{}'.format(offsets.max()),
+                )
+        os.text = re.sub('[\[\]]', '', numpy.array_str(offsets))
+
+        tp = ET.SubElement(
+                cls, 'DataArray',
+                type=numpy_to_vtu_type[types.dtype],
+                Name='types',
+                format='ascii',
+                RangeMin='{}'.format(types.min()),
+                RangeMax='{}'.format(types.max()),
+                )
+        tp.text = re.sub('[\[\]]', '', numpy.array_str(types))
 
     tree = ET.ElementTree(vtk_file)
 

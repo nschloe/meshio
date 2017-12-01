@@ -55,6 +55,8 @@ vtk_to_meshio_type = {
     # 66: VTK_HIGHER_ORDER_PYRAMID,
     # 67: VTK_HIGHER_ORDER_HEXAHEDRON,
     }
+meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
+
 
 # These are all VTK data types. One sometimes finds 'vtktypeint64', but
 # this is ill-formed.
@@ -378,8 +380,6 @@ def write(filename,
 
     if not write_binary:
         logging.warning('VTK ASCII files are only meant for debugging.')
-
-    meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
     with open(filename, 'wb') as f:
         f.write('# vtk DataFile Version 4.2\n'.encode('utf-8'))
