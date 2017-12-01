@@ -59,6 +59,21 @@ def _cells_from_data(connectivity, offsets, types):
     return cells
 
 
+vtu_to_numpy_type = {
+    'Float32': numpy.dtype(numpy.float32),
+    'Float64': numpy.dtype(numpy.float64),
+    'Int8': numpy.dtype(numpy.int8),
+    'Int16': numpy.dtype(numpy.int16),
+    'Int32': numpy.dtype(numpy.int32),
+    'Int64': numpy.dtype(numpy.int64),
+    'UInt8': numpy.dtype(numpy.uint8),
+    'UInt16': numpy.dtype(numpy.uint16),
+    'UInt32': numpy.dtype(numpy.uint32),
+    'UInt64': numpy.dtype(numpy.uint64),
+    }
+numpy_to_vtu_type = {v: k for k, v in vtu_to_numpy_type.items()}
+
+
 # pylint: disable=too-many-instance-attributes
 class VtuReader(object):
     '''Helper class for reading VTU files. Some properties are global to the
@@ -71,19 +86,6 @@ class VtuReader(object):
         cell_data_raw = {}
         cells = {}
         field_data = {}
-
-        self.vtu_to_numpy_type = {
-            'Float32': numpy.float32,
-            'Float64': numpy.float64,
-            'Int8': numpy.int8,
-            'Int16': numpy.int16,
-            'Int32': numpy.int32,
-            'Int64': numpy.int64,
-            'UInt8': numpy.uint8,
-            'UInt16': numpy.uint16,
-            'UInt32': numpy.uint32,
-            'UInt64': numpy.uint64,
-            }
 
         tree = ET.parse(filename)
         root = tree.getroot()
@@ -204,7 +206,7 @@ class VtuReader(object):
 
     def read_binary(self, data, data_type):
         # first read the the block size; it determines the size of the header
-        dtype = self.vtu_to_numpy_type[self.header_type]
+        dtype = vtu_to_numpy_type[self.header_type]
         num_bytes_per_item = numpy.dtype(dtype).itemsize
         num_chars = num_bytes_to_num_base64_chars(num_bytes_per_item)
         byte_string = base64.b64decode(data[:num_chars])[:num_bytes_per_item]
@@ -224,7 +226,7 @@ class VtuReader(object):
 
         # Read the block data
         byte_array = base64.b64decode(data[num_header_chars:])
-        dtype = self.vtu_to_numpy_type[data_type]
+        dtype = vtu_to_numpy_type[data_type]
         num_bytes_per_item = numpy.dtype(dtype).itemsize
 
         byte_offsets = numpy.concatenate(
@@ -248,7 +250,7 @@ class VtuReader(object):
             # ascii
             data = numpy.array(
                 c.text.split(),
-                dtype=self.vtu_to_numpy_type[c.attrib['type']]
+                dtype=vtu_to_numpy_type[c.attrib['type']]
                 )
         elif c.attrib['format'] == 'binary':
             data = self.read_binary(c.text.strip(), c.attrib['type'])
@@ -320,8 +322,18 @@ def write(filename,
     if cell_data:
         pass
 
+    # points
     pts = ET.SubElement(piece, 'Points')
-    pts.text = 'rofl'  # points.tostring()
+    da = ET.SubElement(
+            pts, 'DataArray',
+            type=numpy_to_vtu_type[points.dtype],
+            Name='Points',
+            NumberOfComponents='{}'.format(points.shape[1]),
+            format='ascii',
+            # RangeMin='0',
+            # RangeMax='0.47140452079'
+            )
+    da.text = 'rofl'  # points.tostring()
 
     tree = ET.ElementTree(vtk_file)
 
