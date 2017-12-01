@@ -134,14 +134,14 @@ def write(filetype,
         fd.AddArray(_create_vtkarray(value, key))
 
     if filetype in 'vtk-ascii':
-        logging.warning('ASCII files are only meant for debugging.')
+        logging.warning('VTK ASCII files are only meant for debugging.')
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
     elif filetype == 'vtk-binary':
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToBinary()
     elif filetype == 'vtu-ascii':
-        logging.warning('ASCII files are only meant for debugging.')
+        logging.warning('VTU ASCII files are only meant for debugging.')
         writer = vtk.vtkXMLUnstructuredGridWriter()
         writer.SetDataModeToAscii()
     elif filetype == 'vtu-binary':

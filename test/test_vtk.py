@@ -6,6 +6,8 @@ import pytest
 
 import meshio
 
+import legacy_reader
+
 vtk = pytest.importorskip('vtk')
 
 
@@ -33,11 +35,26 @@ def test_ascii(mesh):
             write_binary=False
             )
 
-    # # ASCII files are only meant for debugging, VTK stores only 11 digits
-    # # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
-    # helpers.write_read('test.vtk', 'vtk-ascii', mesh, 1.0e-11)
-
     helpers.write_read2(writer, meshio.vtk_io.read, mesh, 1.0e-15)
+
+    # test with legacy writer
+    def legacy_writer(
+            filename, points, cells, point_data, cell_data, field_data
+            ):
+        return meshio.legacy_writer.write(
+            'vtk-ascii',
+            filename, points, cells, point_data, cell_data, field_data
+            )
+
+    # The legacy writer only writes with low precision.
+    helpers.write_read2(legacy_writer, meshio.vtk_io.read, mesh, 1.0e-11)
+
+    # test with legacy reader
+    # The legacy writer only writes with low precision.
+    def lr(filename):
+        return legacy_reader.read('vtk-ascii', filename)
+
+    helpers.write_read2(writer, lr, mesh, 1.0e-15)
     return
 
 
@@ -66,6 +83,25 @@ def test_binary(mesh):
             )
 
     helpers.write_read2(writer, meshio.vtk_io.read, mesh, 1.0e-15)
+
+    # test with legacy writer
+    def legacy_writer(
+            filename, points, cells, point_data, cell_data, field_data
+            ):
+        return meshio.legacy_writer.write(
+            'vtk-binary',
+            filename, points, cells, point_data, cell_data, field_data
+            )
+
+    # The legacy writer only writes with low precision.
+    helpers.write_read2(legacy_writer, meshio.vtk_io.read, mesh, 1.0e-11)
+
+    # test with legacy reader
+    # The legacy writer only writes with low precision.
+    def lr(filename):
+        return legacy_reader.read('vtk-binary', filename)
+
+    helpers.write_read2(writer, lr, mesh, 1.0e-15)
     return
 
 

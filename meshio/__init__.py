@@ -11,6 +11,7 @@ from .__about__ import (
 
 # pylint: disable=wildcard-import
 from .helpers import *
+from . import legacy_writer
 
 try:
     import pipdate
