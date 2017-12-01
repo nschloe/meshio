@@ -335,18 +335,18 @@ def write(filename,
             blocks = chunk_it(data_bytes, max_block_size)
             num_blocks = len(blocks)
             last_block_size = len(blocks[-1])
+
+            compressed_blocks = [zlib.compress(block) for block in blocks]
             # collect header
             header = numpy.array(
                 [num_blocks, max_block_size, last_block_size]
-                + [len(b) for b in blocks],
+                + [len(b) for b in compressed_blocks],
                 dtype=vtu_to_numpy_type[header_type]
                 )
             da.text = (
                 base64.b64encode(header.tostring())
-                + base64.b64encode(b''.join([
-                    zlib.compress(block) for block in blocks
-                    ])
-                )).decode()
+                + base64.b64encode(b''.join(compressed_blocks))
+                ).decode()
         else:
             da.set('format', 'ascii')
             s = BytesIO()
