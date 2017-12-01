@@ -5,6 +5,7 @@ I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
+import logging
 import numpy
 
 from .__about__ import __version__
@@ -386,6 +387,9 @@ def write(filename,
     #   )
     # return
 
+    if not write_binary:
+        logging.warning('VTK ASCII files are only meant for debugging.')
+
     meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
     with open(filename, 'wb') as f:
@@ -429,11 +433,10 @@ def write(filename,
             for key in cells:
                 n = cells[key].shape[1]
                 for cell in cells[key]:
-                    f.write(' '.join([
+                    f.write((' '.join([
                         '{}'.format(idx)
                         for idx in numpy.concatenate([[n], cell])
-                        ]).encode('utf-8'))
-                    f.write('\n'.encode('utf-8'))
+                        ]) + '\n').encode('utf-8'))
 
         # write cell types
         f.write('CELL_TYPES {}\n'.format(total_num_cells).encode('utf-8'))
