@@ -348,9 +348,9 @@ def write(filename,
         cls = ET.SubElement(piece, 'Cells')
 
         # create connectivity, offset, type arrays
-        connectivity = numpy.concatenate(numpy.concatenate([
-            v for v in cells.values()
-            ]))
+        connectivity = numpy.concatenate([
+            numpy.concatenate(v) for v in cells.values()
+            ])
         # offset (points to the last element)
         offsets = [
             v.shape[1] * numpy.arange(1, v.shape[0]+1)
