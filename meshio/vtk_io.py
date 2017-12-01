@@ -322,7 +322,7 @@ def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
             # binary
             num_bytes = numpy.dtype(dtype).itemsize
             total_num_bytes = shape0 * shape1 * num_bytes
-            # Binary point data is big-endian. okay...
+            # Binary data is big-endian. okay...
             dtype = dtype.newbyteorder('>')
             dat = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
             line = f.readline().decode('utf-8')
@@ -491,10 +491,10 @@ def _write_field_data(f, data, write_binary):
             numpy_to_vtk_dtype[values.dtype]
             )).encode('utf-8'))
         if write_binary:
-            f.write(values.tostring())
+            values.byteswap().tofile(f, sep='')
         else:
             # ascii
             values.tofile(f, sep=' ')
             # numpy.savetxt(f, points)
-            f.write('\n'.encode('utf-8'))
+        f.write('\n'.encode('utf-8'))
     return
