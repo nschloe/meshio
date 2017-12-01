@@ -282,6 +282,7 @@ def write(filename,
           cell_data=None,
           field_data=None,
           write_binary=True,
+          pretty_xml=True
           ):
     if not write_binary:
         logging.warning('VTU ASCII files are only meant for debugging.')
@@ -323,5 +324,17 @@ def write(filename,
     pts.text = 'rofl'  # points.tostring()
 
     tree = ET.ElementTree(vtk_file)
-    tree.write(filename)
+
+    if pretty_xml:
+        # https://stackoverflow.com/a/17402424/353337
+        def prettify(elem):
+            import xml.dom.minidom
+            rough_string = ET.tostring(elem, 'utf-8')
+            reparsed = xml.dom.minidom.parseString(rough_string)
+            return reparsed.toprettyxml(indent=4*' ')
+
+        with open(filename, 'w') as f:
+            f.write(prettify(vtk_file))
+    else:
+        tree.write(filename)
     return
