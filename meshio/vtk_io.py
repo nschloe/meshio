@@ -383,7 +383,9 @@ def write(filetype,
 
     meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
-    write_ascii = True
+    # TODO make configurable
+    write_ascii = False
+
     with open(filename, 'wb') as f:
         f.write('# vtk DataFile Version 4.2\n'.encode('utf-8'))
         f.write('written by meshio v{}\n'.format(__version__).encode('utf-8'))
@@ -416,22 +418,38 @@ def write(filetype,
             'CELLS {} {}\n'.format(total_num_cells, total_num_idx)
             .encode('utf-8'))
         for key in cells:
+            n = cells[key].shape[1]
             if write_ascii:
-                n = cells[key].shape[1]
                 for cell in cells[key]:
-                    f.write(('{} '.format(n)).encode('utf-8'))
-                    for idx in cell:
-                        f.write(('{} '.format(idx)).encode('utf-8'))
-                    f.write('\n'.encode('utf-8'))
+                        f.write(('{} '.format(n)).encode('utf-8'))
+                        for idx in cell:
+                            f.write(('{} '.format(idx)).encode('utf-8'))
+                        f.write('\n'.encode('utf-8'))
             else:
                 # binary
-                f.write(points.tostring())
+                d = numpy.column_stack([
+                    numpy.full(len(cells[key]), n), cells[key]
+                    ]).astype(numpy.int32)
+                f.write(d.tostring())
+        if not write_ascii:
+            f.write('\n'.encode('utf-8'))
 
         # write cell types
         f.write('CELL_TYPES {}\n'.format(total_num_cells).encode('utf-8'))
-        for key in cells:
-            for _ in range(len(cells[key])):
-                f.write('{}\n'.format(meshio_to_vtk_type[key]).encode('utf-8'))
+        if write_ascii:
+            for key in cells:
+                for _ in range(len(cells[key])):
+                    f.write(
+                        '{}\n'.format(meshio_to_vtk_type[key]).encode('utf-8')
+                        )
+        else:
+            # binary
+            for key in cells:
+                d = numpy.full(
+                    len(cells[key]), meshio_to_vtk_type[key]
+                    ).astype(numpy.dtype('>i4'))
+                f.write(d.tostring())
+            f.write('\n'.encode('utf-8'))
 
         # write point data
         if len(point_data) > 0:
