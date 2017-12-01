@@ -17,6 +17,7 @@ import zlib
 
 import numpy
 
+from .__about__ import __version__
 from .vtk_io import vtk_to_meshio_type, cell_data_from_raw
 from .gmsh_io import num_nodes_per_cell
 
@@ -285,8 +286,42 @@ def write(filename,
     if not write_binary:
         logging.warning('VTU ASCII files are only meant for debugging.')
 
-    from .legacy_writer import write as w
-    filetype = 'vtu-binary' if write_binary else 'vtu-ascii'
-    return w(
-        filetype, filename, points, cells, point_data, cell_data, field_data
+    # from .legacy_writer import write as w
+    # filetype = 'vtu-binary' if write_binary else 'vtu-ascii'
+    # w(filetype, filename, points, cells, point_data, cell_data, field_data)
+    # exit(1)
+
+    vtk_file = ET.Element(
+        'VTKFile',
+        type='UnstructuredGrid',
+        version='0.1',
+        byte_order='LittleEndian',
+        header_type='UInt32',
+        compressor='vtkZLibDataCompressor'
         )
+
+    comment = \
+        ET.Comment('This file was created by meshio v{}'.format(__version__))
+    vtk_file.insert(1, comment)
+
+    grid = ET.SubElement(vtk_file, 'UnstructuredGrid')
+
+    total_num_cells = sum([len(c) for c in cells.values()])
+    piece = ET.SubElement(
+            grid, 'Piece',
+            NumberOfPoints='{}'.format(len(points)),
+            NumberOfCells='{}'.format(total_num_cells)
+            )
+
+    if point_data:
+        pass
+
+    if cell_data:
+        pass
+
+    pts = ET.SubElement(piece, 'Points')
+    pts.text = 'rofl'  # points.tostring()
+
+    tree = ET.ElementTree(vtk_file)
+    tree.write(filename)
+    return
