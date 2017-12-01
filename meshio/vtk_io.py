@@ -75,17 +75,15 @@ vtk_to_numpy_dtype = {
 numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype.items()}
 
 
-def read(filetype, filename, is_little_endian=True):
+def read(filename):
     '''Reads a Gmsh msh file.
     '''
     with open(filename, 'rb') as f:
-        out = read_buffer(f, is_little_endian=is_little_endian)
+        out = read_buffer(f)
     return out
 
 
-def read_buffer(f, is_little_endian=True):
-    # pylint: disable=import-error
-
+def read_buffer(f):
     # initialize output data
     points = None
     field_data = {}

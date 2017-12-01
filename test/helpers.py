@@ -287,3 +287,55 @@ def write_read(filename, file_format, mesh, atol):
 
     os.remove(filename)
     return
+
+
+def write_read2(writer, reader, mesh, atol):
+    '''Write and read a file, and make sure the data is the same as before.
+    '''
+    try:
+        input_point_data = mesh['point_data']
+    except KeyError:
+        input_point_data = {}
+
+    try:
+        input_cell_data = mesh['cell_data']
+    except KeyError:
+        input_cell_data = {}
+
+    filename = 'test.dat'
+
+    writer(
+        filename,
+        mesh['points'], mesh['cells'],
+        point_data=input_point_data,
+        cell_data=input_cell_data,
+        field_data={}
+        )
+
+    points, cells, point_data, cell_data, _ = reader(filename)
+
+    # Numpy's array_equal is too strict here, cf.
+    # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
+    # Use allclose.
+
+    # We cannot compare the exact rows here since the order of the points might
+    # have changes. Just compare the sums
+    assert numpy.allclose(mesh['points'], points, atol=atol, rtol=0.0)
+
+    for cell_type, data in mesh['cells'].items():
+        assert numpy.allclose(data, cells[cell_type])
+    for key in input_point_data.keys():
+        assert numpy.allclose(
+            input_point_data[key], point_data[key],
+            atol=atol, rtol=0.0
+            )
+
+    for cell_type, cell_type_data in input_cell_data.items():
+        for key, data in cell_type_data.items():
+            assert numpy.allclose(
+                    data, cell_data[cell_type][key],
+                    atol=atol, rtol=0.0
+                    )
+
+    os.remove(filename)
+    return

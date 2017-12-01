@@ -111,7 +111,7 @@ def read(filename, file_format=None):
     elif file_format in ['vtu-ascii', 'vtu-binary']:
         out = vtu_io.read(filename)
     elif file_format in ['vtk-ascii', 'vtk-binary']:
-        out = vtk_io.read('vtk', filename)
+        out = vtk_io.read(filename)
     elif file_format in ['xdmf']:
         out = xdmf_io.read(filename)
     else:
