@@ -404,7 +404,9 @@ def write(filename,
 
         # write cells
         total_num_cells = sum([len(c) for c in cells.values()])
-        total_num_idx = sum([numpy.sum(c) for c in cells.values()])
+        total_num_idx = sum([numpy.prod(c.shape) for c in cells.values()])
+        # For each cell, the number of nodes is stored
+        total_num_idx += total_num_cells
         f.write(
             'CELLS {} {}\n'.format(total_num_cells, total_num_idx)
             .encode('utf-8'))
