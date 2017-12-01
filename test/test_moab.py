@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-import helpers
-
+import meshio
 import pytest
+
+import helpers
 
 h5py = pytest.importorskip('h5py')
 
@@ -12,5 +13,9 @@ h5py = pytest.importorskip('h5py')
         helpers.tet_mesh,
         ])
 def test_io(mesh):
-    helpers.write_read('test.h5m', 'moab', mesh, 1.0e-15)
+    helpers.write_read(
+        meshio.h5m_io.write,
+        meshio.h5m_io.read,
+        mesh, 1.0e-15
+        )
     return

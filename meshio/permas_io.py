@@ -5,10 +5,11 @@ I/O for PERMAS dat format, cf.
 
 .. moduleauthor:: Nils Wagner
 '''
+import gzip
 import re
 
-import gzip
 import numpy
+
 from .__about__ import __version__, __website__
 
 
@@ -17,11 +18,6 @@ def read(filename):
     '''
     # The format is specified at
     # <http://www.intes.de>.
-    if filename.endswith('post.gz') or filename.endswith('dato.gz'):
-        opener = gzip.open
-    else:
-        assert filename.endswith('dato') or filename.endswith('post')
-        opener = open
 
     cells = {}
     meshio_to_permas_type = {
@@ -34,6 +30,13 @@ def read(filename):
         'wedge': (6, 'PENTA6'),
         'pyramid': (5, 'PYRA5')
         }
+
+    if filename.endswith('.gz') or filename.endswith('.gz'):
+        opener = gzip.open
+    else:
+        # assert filename.endswith('dato') or filename.endswith('post')
+        opener = open
+
     with opener(filename, 'r') as f:
         while True:
             line = f.readline()

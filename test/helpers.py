@@ -2,7 +2,6 @@
 #
 import os
 
-import meshio
 import numpy
 
 # In general:
@@ -238,7 +237,7 @@ def add_cell_data(mesh, dim):
     return mesh2
 
 
-def write_read(filename, file_format, mesh, atol):
+def write_read(writer, reader, mesh, atol):
     '''Write and read a file, and make sure the data is the same as before.
     '''
     try:
@@ -251,16 +250,17 @@ def write_read(filename, file_format, mesh, atol):
     except KeyError:
         input_cell_data = {}
 
-    meshio.write(
+    filename = 'test.dat'
+
+    writer(
         filename,
         mesh['points'], mesh['cells'],
-        file_format=file_format,
         point_data=input_point_data,
-        cell_data=input_cell_data
+        cell_data=input_cell_data,
+        field_data={}
         )
 
-    points, cells, point_data, cell_data, _ = \
-        meshio.read(filename, file_format)
+    points, cells, point_data, cell_data, _ = reader(filename)
 
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.

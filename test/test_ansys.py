@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-import helpers
-
+import meshio
 import pytest
+
+import helpers
 
 
 @pytest.mark.parametrize('mesh', [
@@ -13,7 +14,10 @@ import pytest
         helpers.hex_mesh,
         ])
 def test_ascii(mesh):
-    helpers.write_read('test.msh', 'ansys-ascii', mesh, 1.0e-15)
+    def writer(*args, **kwargs):
+        return meshio.ansys_io.write(*args, write_binary=False, **kwargs)
+
+    helpers.write_read(writer, meshio.ansys_io.read, mesh, 1.0e-15)
     return
 
 
@@ -25,5 +29,8 @@ def test_ascii(mesh):
         helpers.hex_mesh,
         ])
 def test_binary(mesh):
-    helpers.write_read('test.msh', 'ansys-binary', mesh, 1.0e-15)
+    def writer(*args, **kwargs):
+        return meshio.ansys_io.write(*args, write_binary=True, **kwargs)
+
+    helpers.write_read(writer, meshio.ansys_io.read, mesh, 1.0e-15)
     return

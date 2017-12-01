@@ -6,6 +6,11 @@ I/O for VTU.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import base64
+import logging
+try:
+    from StringIO import cStringIO as BytesIO
+except ImportError:
+    from io import BytesIO
 # lxml cannot parse large files and instead throws the exception
 #
 # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
@@ -16,7 +21,11 @@ import zlib
 
 import numpy
 
-from .vtk_io import vtk_to_meshio_type, cell_data_from_raw
+from .__about__ import __version__
+from .vtk_io import (
+    vtk_to_meshio_type, meshio_to_vtk_type, cell_data_from_raw,
+    raw_from_cell_data
+    )
 from .gmsh_io import num_nodes_per_cell
 
 
@@ -57,6 +66,21 @@ def _cells_from_data(connectivity, offsets, types):
     return cells
 
 
+vtu_to_numpy_type = {
+    'Float32': numpy.dtype(numpy.float32),
+    'Float64': numpy.dtype(numpy.float64),
+    'Int8': numpy.dtype(numpy.int8),
+    'Int16': numpy.dtype(numpy.int16),
+    'Int32': numpy.dtype(numpy.int32),
+    'Int64': numpy.dtype(numpy.int64),
+    'UInt8': numpy.dtype(numpy.uint8),
+    'UInt16': numpy.dtype(numpy.uint16),
+    'UInt32': numpy.dtype(numpy.uint32),
+    'UInt64': numpy.dtype(numpy.uint64),
+    }
+numpy_to_vtu_type = {v: k for k, v in vtu_to_numpy_type.items()}
+
+
 # pylint: disable=too-many-instance-attributes
 class VtuReader(object):
     '''Helper class for reading VTU files. Some properties are global to the
@@ -69,19 +93,6 @@ class VtuReader(object):
         cell_data_raw = {}
         cells = {}
         field_data = {}
-
-        self.vtu_to_numpy_type = {
-            'Float32': numpy.float32,
-            'Float64': numpy.float64,
-            'Int8': numpy.int8,
-            'Int16': numpy.int16,
-            'Int32': numpy.int32,
-            'Int64': numpy.int64,
-            'UInt8': numpy.uint8,
-            'UInt16': numpy.uint16,
-            'UInt32': numpy.uint32,
-            'UInt64': numpy.uint64,
-            }
 
         tree = ET.parse(filename)
         root = tree.getroot()
@@ -202,7 +213,7 @@ class VtuReader(object):
 
     def read_binary(self, data, data_type):
         # first read the the block size; it determines the size of the header
-        dtype = self.vtu_to_numpy_type[self.header_type]
+        dtype = vtu_to_numpy_type[self.header_type]
         num_bytes_per_item = numpy.dtype(dtype).itemsize
         num_chars = num_bytes_to_num_base64_chars(num_bytes_per_item)
         byte_string = base64.b64decode(data[:num_chars])[:num_bytes_per_item]
@@ -222,7 +233,7 @@ class VtuReader(object):
 
         # Read the block data
         byte_array = base64.b64decode(data[num_header_chars:])
-        dtype = self.vtu_to_numpy_type[data_type]
+        dtype = vtu_to_numpy_type[data_type]
         num_bytes_per_item = numpy.dtype(dtype).itemsize
 
         byte_offsets = numpy.concatenate(
@@ -246,7 +257,7 @@ class VtuReader(object):
             # ascii
             data = numpy.array(
                 c.text.split(),
-                dtype=self.vtu_to_numpy_type[c.attrib['type']]
+                dtype=vtu_to_numpy_type[c.attrib['type']]
                 )
         elif c.attrib['format'] == 'binary':
             data = self.read_binary(c.text.strip(), c.attrib['type'])
@@ -273,17 +284,141 @@ def read(filename):
         )
 
 
-def write(filetype,
-          filename,
+def write(filename,
           points,
           cells,
           point_data=None,
           cell_data=None,
-          field_data=None
+          field_data=None,
+          write_binary=True,
+          pretty_xml=True
           ):
-    # pylint: disable=import-error
-    from .vtk_io import write as vtk_write
-    return vtk_write(
-        filetype, filename, points, cells,
-        point_data=point_data, cell_data=cell_data, field_data=field_data
+    if not write_binary:
+        logging.warning('VTU ASCII files are only meant for debugging.')
+
+    # from .legacy_writer import write as w
+    # filetype = 'vtu-binary' if write_binary else 'vtu-ascii'
+    # w(filetype, filename, points, cells, point_data, cell_data, field_data)
+    # exit(1)
+
+    header_type = 'UInt32'
+
+    vtk_file = ET.Element(
+        'VTKFile',
+        type='UnstructuredGrid',
+        version='0.1',
+        byte_order='LittleEndian',
+        header_type=header_type,
+        compressor='vtkZLibDataCompressor'
         )
+
+    def chunk_it(array, n):
+        out = []
+        k = 0
+        while k*n < len(array):
+            out.append(array[k*n:(k+1)*n])
+            k += 1
+        return out
+
+    def numpy_to_xml_array(parent, name, fmt, data):
+        da = ET.SubElement(
+            parent, 'DataArray',
+            type=numpy_to_vtu_type[data.dtype],
+            Name=name,
+            )
+        if len(data.shape) == 2:
+            da.set('NumberOfComponents', '{}'.format(data.shape[1]))
+        if write_binary:
+            da.set('format', 'binary')
+            max_block_size = 32768
+            data_bytes = data.tostring()
+            blocks = chunk_it(data_bytes, max_block_size)
+            num_blocks = len(blocks)
+            last_block_size = len(blocks[-1])
+
+            compressed_blocks = [zlib.compress(block) for block in blocks]
+            # collect header
+            header = numpy.array(
+                [num_blocks, max_block_size, last_block_size]
+                + [len(b) for b in compressed_blocks],
+                dtype=vtu_to_numpy_type[header_type]
+                )
+            da.text = (
+                base64.b64encode(header.tostring())
+                + base64.b64encode(b''.join(compressed_blocks))
+                ).decode()
+        else:
+            da.set('format', 'ascii')
+            s = BytesIO()
+            numpy.savetxt(s, data.flatten(), fmt)
+            da.text = s.getvalue().decode()
+        return
+
+    comment = \
+        ET.Comment('This file was created by meshio v{}'.format(__version__))
+    vtk_file.insert(1, comment)
+
+    grid = ET.SubElement(vtk_file, 'UnstructuredGrid')
+
+    total_num_cells = sum([len(c) for c in cells.values()])
+    piece = ET.SubElement(
+        grid, 'Piece',
+        NumberOfPoints='{}'.format(len(points)),
+        NumberOfCells='{}'.format(total_num_cells)
+        )
+
+    # points
+    if points is not None:
+        pts = ET.SubElement(piece, 'Points')
+        numpy_to_xml_array(pts, 'Points', '%.11e', points)
+
+    if cells is not None:
+        cls = ET.SubElement(piece, 'Cells')
+
+        # create connectivity, offset, type arrays
+        connectivity = numpy.concatenate([
+            numpy.concatenate(v) for v in cells.values()
+            ])
+        # offset (points to the first element of the next cell)
+        offsets = [
+            v.shape[1] * numpy.arange(1, v.shape[0]+1)
+            for v in cells.values()
+            ]
+        for k in range(1, len(offsets)):
+            offsets[k] += offsets[k-1][-1]
+        offsets = numpy.concatenate(offsets)
+        # types
+        types = numpy.concatenate([
+            numpy.full(len(v), meshio_to_vtk_type[k])
+            for k, v in cells.items()
+            ])
+
+        numpy_to_xml_array(cls, 'connectivity', '%d', connectivity)
+        numpy_to_xml_array(cls, 'offsets', '%d', offsets)
+        numpy_to_xml_array(cls, 'types', '%d', types)
+
+    if point_data:
+        pd = ET.SubElement(piece, 'PointData')
+        for name, data in point_data.items():
+            numpy_to_xml_array(pd, name, '%.11e', data)
+
+    if cell_data:
+        cd = ET.SubElement(piece, 'CellData')
+        for name, data in raw_from_cell_data(cell_data).items():
+            numpy_to_xml_array(cd, name, '%.11e', data)
+
+    tree = ET.ElementTree(vtk_file)
+
+    if pretty_xml:
+        # https://stackoverflow.com/a/17402424/353337
+        def prettify(elem):
+            import xml.dom.minidom
+            rough_string = ET.tostring(elem, 'utf-8')
+            reparsed = xml.dom.minidom.parseString(rough_string)
+            return reparsed.toprettyxml(indent=4*' ')
+
+        with open(filename, 'w') as f:
+            f.write(prettify(vtk_file))
+    else:
+        tree.write(filename)
+    return

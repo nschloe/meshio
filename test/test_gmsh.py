@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-import helpers
-
+import meshio
 import pytest
 
+import helpers
 
-@pytest.mark.parametrize('mesh', [
+test_set = [
         helpers.tri_mesh,
         helpers.triangle6_mesh,
         helpers.quad_mesh,
@@ -15,23 +15,22 @@ import pytest
         helpers.tet10_mesh,
         helpers.hex_mesh,
         helpers.hex20_mesh,
-        ])
+        ]
+
+
+@pytest.mark.parametrize('mesh', test_set)
 def test_gmsh(mesh):
-    helpers.write_read('test.msh', 'gmsh-ascii', mesh, 1.0e-15)
+    def writer(*args, **kwargs):
+        return meshio.gmsh_io.write(*args, write_binary=False, **kwargs)
+
+    helpers.write_read(writer, meshio.gmsh_io.read, mesh, 1.0e-15)
     return
 
 
-@pytest.mark.parametrize('mesh', [
-        helpers.tri_mesh,
-        helpers.triangle6_mesh,
-        helpers.quad_mesh,
-        helpers.quad8_mesh,
-        helpers.tri_quad_mesh,
-        helpers.tet_mesh,
-        helpers.tet10_mesh,
-        helpers.hex_mesh,
-        helpers.hex20_mesh,
-        ])
-def test_binary(mesh):
-    helpers.write_read('test.msh', 'gmsh-binary', mesh, 1.0e-15)
+@pytest.mark.parametrize('mesh', test_set)
+def test_gmsh_binary(mesh):
+    def writer(*args, **kwargs):
+        return meshio.gmsh_io.write(*args, write_binary=True, **kwargs)
+
+    helpers.write_read(writer, meshio.gmsh_io.read, mesh, 1.0e-15)
     return

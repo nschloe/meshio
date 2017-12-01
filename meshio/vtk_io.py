@@ -6,8 +6,10 @@ I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import logging
-
 import numpy
+
+from .__about__ import __version__
+
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {
@@ -53,19 +55,37 @@ vtk_to_meshio_type = {
     # 66: VTK_HIGHER_ORDER_PYRAMID,
     # 67: VTK_HIGHER_ORDER_HEXAHEDRON,
     }
+meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
 
-def read(filetype, filename, is_little_endian=True):
+# These are all VTK data types. One sometimes finds 'vtktypeint64', but
+# this is ill-formed.
+vtk_to_numpy_dtype = {
+    'bit': numpy.dtype('bool'),
+    'unsigned_char': numpy.dtype('uint8'),
+    'char': numpy.dtype('int8'),
+    'unsigned_short': numpy.dtype('uint16'),
+    'short': numpy.dtype('int16'),
+    'unsigned_int': numpy.dtype('uint32'),
+    'int': numpy.dtype('int32'),
+    'unsigned_long': numpy.dtype('int64'),
+    'long': numpy.dtype('int64'),
+    'float': numpy.dtype('float32'),
+    'double': numpy.dtype('float64'),
+    }
+
+numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype.items()}
+
+
+def read(filename):
     '''Reads a Gmsh msh file.
     '''
     with open(filename, 'rb') as f:
-        out = read_buffer(f, is_little_endian=is_little_endian)
+        out = read_buffer(f)
     return out
 
 
-def read_buffer(f, is_little_endian=True):
-    # pylint: disable=import-error
-
+def read_buffer(f):
     # initialize output data
     points = None
     field_data = {}
@@ -80,23 +100,6 @@ def read_buffer(f, is_little_endian=True):
     assert data_type in ['ASCII', 'BINARY'], \
         'Unknown VTK data type \'{}\'.'.format(data_type)
     is_ascii = data_type == 'ASCII'
-
-    endian = '>' if is_little_endian else '<'
-
-    vtk_to_numpy_dtype = {
-        'bit': (numpy.bool, '?4', 4),
-        # 'unsigned_char':
-        # 'char':
-        # 'unsigned_short':
-        # 'short':
-        'unsigned_int': (numpy.uint32, endian + 'u4', 4),
-        'int': (numpy.int32, endian + 'i4', 4),
-        'unsigned_long': (numpy.int64, endian + 'u8', 8),
-        'long': (numpy.int64, endian + 'i8', 8),
-        'vtktypeint64': (numpy.int64, endian + 'i8', 8),
-        'float': (numpy.float32, endian + 'f4', 4),
-        'double': (numpy.float64, endian + 'f8', 8),
-        }
 
     c = None
     offsets = None
@@ -132,7 +135,7 @@ def read_buffer(f, is_little_endian=True):
             active = 'POINTS'
             num_points = int(split[1])
             data_type = split[2]
-            dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
+            dtype = vtk_to_numpy_dtype[data_type]
             if is_ascii:
                 points = numpy.fromfile(
                     f, count=num_points*3, sep=' ',
@@ -140,9 +143,12 @@ def read_buffer(f, is_little_endian=True):
                     )
             else:
                 # binary
+                num_bytes = numpy.dtype(dtype).itemsize
                 total_num_bytes = num_points * (3 * num_bytes)
+                # Binary point data is big-endian. okay...
+                dtype = dtype.newbyteorder('>')
                 points = \
-                    numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
+                    numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
@@ -158,10 +164,7 @@ def read_buffer(f, is_little_endian=True):
                 # binary
                 num_bytes = 4
                 total_num_bytes = num_items * num_bytes
-                # cell data is little endian. okay.
-                c = numpy.fromstring(
-                    f.read(total_num_bytes), dtype=endian+'i4'
-                    )
+                c = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
@@ -183,9 +186,7 @@ def read_buffer(f, is_little_endian=True):
                 # binary
                 num_bytes = 4
                 total_num_bytes = num_items * num_bytes
-                ct = numpy.fromstring(
-                    f.read(total_num_bytes), dtype=endian+'i4'
-                    )
+                ct = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
@@ -205,9 +206,7 @@ def read_buffer(f, is_little_endian=True):
                     'Illegal SCALARS in section \'{}\'.'.format(active)
                 d = cell_data_raw
 
-            d.update(
-                _read_scalar_field(f, num_items, split, vtk_to_numpy_dtype)
-                )
+            d.update(_read_scalar_field(f, num_items, split))
 
         elif section == 'VECTORS':
             if active == 'POINT_DATA':
@@ -217,9 +216,7 @@ def read_buffer(f, is_little_endian=True):
                     'Illegal SCALARS in section \'{}\'.'.format(active)
                 d = cell_data_raw
 
-            d.update(
-                _read_vector_field(f, num_items, split, vtk_to_numpy_dtype)
-                )
+            d.update(_read_vector_field(f, num_items, split))
 
         elif section == 'TENSORS':
             if active == 'POINT_DATA':
@@ -229,9 +226,7 @@ def read_buffer(f, is_little_endian=True):
                     'Illegal SCALARS in section \'{}\'.'.format(active)
                 d = cell_data_raw
 
-            d.update(
-                _read_tensor_field(f, num_items, split, vtk_to_numpy_dtype)
-                )
+            d.update(_read_tensor_field(f, num_items, split))
 
         else:
             assert section == 'FIELD', \
@@ -244,10 +239,7 @@ def read_buffer(f, is_little_endian=True):
                     'Illegal FIELD in section \'{}\'.'.format(active)
                 d = cell_data_raw
 
-            d.update(
-                _read_fields(
-                    f, int(split[2]), vtk_to_numpy_dtype, is_ascii
-                    ))
+            d.update(_read_fields(f, int(split[2]), is_ascii))
 
     assert c is not None, \
         'Required section CELLS not found.'
@@ -261,7 +253,7 @@ def read_buffer(f, is_little_endian=True):
     return points, cells, point_data, cell_data, field_data
 
 
-def _read_scalar_field(f, num_data, split, vtk_to_numpy_dtype):
+def _read_scalar_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
     try:
@@ -273,7 +265,7 @@ def _read_scalar_field(f, num_data, split, vtk_to_numpy_dtype):
     # > The parameter numComp must range between (1,4) inclusive; [...]
     assert 0 < num_comp < 5
 
-    dtype, _, _ = vtk_to_numpy_dtype[data_type]
+    dtype, _ = vtk_to_numpy_dtype[data_type]
     lt, _ = f.readline().decode('utf-8').split()
     assert lt == 'LOOKUP_TABLE'
     data = numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
@@ -281,11 +273,11 @@ def _read_scalar_field(f, num_data, split, vtk_to_numpy_dtype):
     return {data_name: data}
 
 
-def _read_vector_field(f, num_data, split, vtk_to_numpy_dtype):
+def _read_vector_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
 
-    dtype, _, _ = vtk_to_numpy_dtype[data_type]
+    dtype, _ = vtk_to_numpy_dtype[data_type]
     data = numpy.fromfile(
         f, count=3*num_data, sep=' ', dtype=dtype
         ).reshape(-1, 3)
@@ -293,11 +285,11 @@ def _read_vector_field(f, num_data, split, vtk_to_numpy_dtype):
     return {data_name: data}
 
 
-def _read_tensor_field(f, num_data, split, vtk_to_numpy_dtype):
+def _read_tensor_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
 
-    dtype, _, _ = vtk_to_numpy_dtype[data_type]
+    dtype, _ = vtk_to_numpy_dtype[data_type]
     data = numpy.fromfile(
         f, count=9*num_data, sep=' ', dtype=dtype
         ).reshape(-1, 3, 3)
@@ -305,14 +297,14 @@ def _read_tensor_field(f, num_data, split, vtk_to_numpy_dtype):
     return {data_name: data}
 
 
-def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
+def _read_fields(f, num_fields, is_ascii):
     data = {}
     for _ in range(num_fields):
         name, shape0, shape1, data_type = \
             f.readline().decode('utf-8').split()
         shape0 = int(shape0)
         shape1 = int(shape1)
-        dtype, bdtype, num_bytes = vtk_to_numpy_dtype[data_type]
+        dtype = vtk_to_numpy_dtype[data_type]
 
         if is_ascii:
             dat = numpy.fromfile(
@@ -320,8 +312,11 @@ def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
                 )
         else:
             # binary
+            num_bytes = numpy.dtype(dtype).itemsize
             total_num_bytes = shape0 * shape1 * num_bytes
-            dat = numpy.fromstring(f.read(total_num_bytes), dtype=bdtype)
+            # Binary data is big-endian. okay...
+            dtype = dtype.newbyteorder('>')
+            dat = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
             line = f.readline().decode('utf-8')
             assert line == '\n'
 
@@ -343,6 +338,21 @@ def cell_data_from_raw(cells, cell_data_raw):
             r += len(cells[k])
 
     return cell_data
+
+
+def raw_from_cell_data(cell_data):
+    # merge cell data
+    cell_data_raw = {}
+    for d in cell_data.values():
+        for name, values in d.items():
+            if name in cell_data_raw:
+                cell_data_raw[name].append(values)
+            else:
+                cell_data_raw[name] = [values]
+    for name in cell_data_raw:
+        cell_data_raw[name] = numpy.concatenate(cell_data_raw[name])
+
+    return cell_data_raw
 
 
 def translate_cells(data, offsets, types):
@@ -369,196 +379,123 @@ def translate_cells(data, offsets, types):
     return cells
 
 
-def write(filetype,
-          filename,
+def write(filename,
           points,
           cells,
           point_data=None,
           cell_data=None,
-          field_data=None
+          field_data=None,
+          write_binary=True
           ):
-    # pylint: disable=import-error
-    import vtk
+    # from .legacy_writer import write as w
+    # w('vtk-ascii',
+    #   filename, points, cells, point_data, cell_data, field_data
+    #   )
+    # return
 
-    def _create_vtkarray(X, name):
-        array = vtk.util.numpy_support.numpy_to_vtk(X, deep=1)
-        array.SetName(name)
-        return array
+    if not write_binary:
+        logging.warning('VTK ASCII files are only meant for debugging.')
 
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
+    with open(filename, 'wb') as f:
+        f.write('# vtk DataFile Version 4.2\n'.encode('utf-8'))
+        f.write('written by meshio v{}\n'.format(__version__).encode('utf-8'))
+        f.write(('BINARY\n' if write_binary else 'ASCII\n').encode('utf-8'))
+        f.write('DATASET UNSTRUCTURED_GRID\n'.encode('utf-8'))
 
-    # assert data integrity
-    for key in point_data:
-        assert len(point_data[key]) == len(points), \
-                'Point data mismatch.'
+        # write points
+        f.write(
+            'POINTS {} {}\n'.format(
+                len(points), numpy_to_vtk_dtype[points.dtype]
+                ).encode('utf-8'))
 
-    for key in cell_data:
-        assert key in cells, 'Cell data without cell'
-        for key2 in cell_data[key]:
-            assert len(cell_data[key][key2]) == len(cells[key]), \
-                    'Cell data mismatch.'
+        if write_binary:
+            points.byteswap().tofile(f, sep='')
+        else:
+            # ascii
+            points.tofile(f, sep=' ')
+        f.write('\n'.encode('utf-8'))
 
-    vtk_mesh = _generate_vtk_mesh(points, cells)
+        # write cells
+        total_num_cells = sum([len(c) for c in cells.values()])
+        total_num_idx = sum([numpy.prod(c.shape) for c in cells.values()])
+        # For each cell, the number of nodes is stored
+        total_num_idx += total_num_cells
+        f.write(
+            'CELLS {} {}\n'.format(total_num_cells, total_num_idx)
+            .encode('utf-8'))
+        if write_binary:
+            for key in cells:
+                n = cells[key].shape[1]
+                d = numpy.column_stack([
+                    numpy.full(len(cells[key]), n), cells[key]
+                    ]).astype(numpy.dtype('>i4'))
+                f.write(d.tostring())
+            if write_binary:
+                f.write('\n'.encode('utf-8'))
+        else:
+            # ascii
+            for key in cells:
+                n = cells[key].shape[1]
+                for cell in cells[key]:
+                    f.write((' '.join([
+                        '{}'.format(idx)
+                        for idx in numpy.concatenate([[n], cell])
+                        ]) + '\n').encode('utf-8'))
 
-    # add point data
-    pd = vtk_mesh.GetPointData()
-    for name, X in point_data.items():
-        # There is a naming inconsistency in VTK when it comes to multivectors
-        # in Exodus files:
-        # If a vector 'v' has two components, they are called 'v_x', 'v_y'
-        # (note the underscore), if it has three, then they are called 'vx',
-        # 'vy', 'vz'. See bug <http://www.vtk.org/Bug/view.php?id=15894>.
-        # For VT{K,U} files, no underscore is ever added.
-        pd.AddArray(_create_vtkarray(X, name))
+        # write cell types
+        f.write('CELL_TYPES {}\n'.format(total_num_cells).encode('utf-8'))
+        if write_binary:
+            for key in cells:
+                d = numpy.full(
+                    len(cells[key]), meshio_to_vtk_type[key]
+                    ).astype(numpy.dtype('>i4'))
+                f.write(d.tostring())
+            f.write('\n'.encode('utf-8'))
+        else:
+            # ascii
+            for key in cells:
+                for _ in range(len(cells[key])):
+                    f.write(
+                        '{}\n'.format(meshio_to_vtk_type[key]).encode('utf-8')
+                        )
 
-    # Add cell data.
-    # The cell_data is structured like
-    #
-    #  cell_type ->
-    #      key -> array
-    #      key -> array
-    #      [...]
-    #  cell_type ->
-    #      key -> array
-    #      key -> array
-    #      [...]
-    #  [...]
-    #
-    # VTK expects one array for each `key`, so assemble the keys across all
-    # mesh_types. This requires each key to be present for each mesh_type, of
-    # course.
-    all_keys = []
-    for cell_type in cell_data:
-        all_keys += cell_data[cell_type].keys()
-    # create unified cell data
-    for key in all_keys:
-        for cell_type in cell_data:
-            assert key in cell_data[cell_type]
-    unified_cell_data = {
-        key: numpy.concatenate([
-            cell_data[cell_type][key]
-            for cell_type in cell_data
-            ])
-        for key in all_keys
-        }
-    # add the array data to the mesh
-    cd = vtk_mesh.GetCellData()
-    for name, array in unified_cell_data.items():
-        cd.AddArray(_create_vtkarray(array, name))
+        # write point data
+        if point_data:
+            num_points = len(points)
+            f.write('POINT_DATA {}\n'.format(num_points).encode('utf-8'))
+            _write_field_data(f, point_data, write_binary)
 
-    # add field data
-    fd = vtk_mesh.GetFieldData()
-    for key, value in field_data.items():
-        fd.AddArray(_create_vtkarray(value, key))
-
-    if filetype in 'vtk-ascii':
-        logging.warning('ASCII files are only meant for debugging.')
-        writer = vtk.vtkUnstructuredGridWriter()
-        writer.SetFileTypeToASCII()
-    elif filetype == 'vtk-binary':
-        writer = vtk.vtkUnstructuredGridWriter()
-        writer.SetFileTypeToBinary()
-    elif filetype == 'vtu-ascii':
-        logging.warning('ASCII files are only meant for debugging.')
-        writer = vtk.vtkXMLUnstructuredGridWriter()
-        writer.SetDataModeToAscii()
-    elif filetype == 'vtu-binary':
-        writer = vtk.vtkXMLUnstructuredGridWriter()
-        writer.SetDataModeToBinary()
-    elif filetype == 'xdmf':
-        writer = vtk.vtkXdmfWriter()
-    elif filetype == 'xdmf3':
-        writer = vtk.vtkXdmf3Writer()
-    else:
-        assert filetype == 'exodus', \
-            'Unknown file type \'{}\'.'.format(filename)
-        writer = vtk.vtkExodusIIWriter()
-        # if the mesh contains vtkmodeldata information, make use of it
-        # and write out all time steps.
-        writer.WriteAllTimeStepsOn()
-
-    writer.SetFileName(filename)
-    try:
-        writer.SetInput(vtk_mesh)
-    except AttributeError:
-        writer.SetInputData(vtk_mesh)
-    writer.Write()
+        # write cell data
+        if cell_data:
+            cell_data_raw = raw_from_cell_data(cell_data)
+            f.write('CELL_DATA {}\n'.format(total_num_cells).encode('utf-8'))
+            _write_field_data(f, cell_data_raw, write_binary)
 
     return
 
 
-def _generate_vtk_mesh(points, cells):
-    # pylint: disable=import-error
-    import vtk
-    from vtk.util import numpy_support
-
-    mesh = vtk.vtkUnstructuredGrid()
-
-    # set points
-    vtk_points = vtk.vtkPoints()
-    # Not using a deep copy here results in a segfault.
-    vtk_array = numpy_support.numpy_to_vtk(points, deep=True)
-    vtk_points.SetData(vtk_array)
-    mesh.SetPoints(vtk_points)
-
-    # Set cells.
-    meshio_to_vtk_type = {y: x for x, y in vtk_to_meshio_type.items()}
-
-    # create cell_array. It's a one-dimensional vector with
-    # (num_points2, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    cell_types = []
-    cell_offsets = []
-    cell_connectivity = []
-    len_array = 0
-    for meshio_type, data in cells.items():
-        numcells, num_local_nodes = data.shape
-        vtk_type = meshio_to_vtk_type[meshio_type]
-        # add cell types
-        cell_types.append(numpy.empty(numcells, dtype=numpy.ubyte))
-        cell_types[-1].fill(vtk_type)
-        # add cell offsets
-        cell_offsets.append(numpy.arange(
-            len_array,
-            len_array + numcells * (num_local_nodes + 1),
-            num_local_nodes + 1,
-            dtype=numpy.int64
-            ))
-        cell_connectivity.append(
-            numpy.c_[
-                num_local_nodes * numpy.ones(numcells, dtype=data.dtype),
-                data
-            ].flatten()
-            )
-        len_array += len(cell_connectivity[-1])
-
-    cell_types = numpy.concatenate(cell_types)
-    cell_offsets = numpy.concatenate(cell_offsets)
-    cell_connectivity = numpy.concatenate(cell_connectivity)
-
-    connectivity = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
-        cell_connectivity.astype(numpy.int64),
-        deep=1
-        )
-
-    # wrap the data into a vtkCellArray
-    cell_array = vtk.vtkCellArray()
-    cell_array.SetCells(len(cell_types), connectivity)
-
-    # Add cell data to the mesh
-    mesh.SetCells(
-        numpy_support.numpy_to_vtk(
-            cell_types,
-            deep=1,
-            array_type=vtk.vtkUnsignedCharArray().GetDataType()
-            ),
-        numpy_support.numpy_to_vtk(
-            cell_offsets,
-            deep=1,
-            array_type=vtk.vtkIdTypeArray().GetDataType()
-            ),
-        cell_array
-        )
-
-    return mesh
+def _write_field_data(f, data, write_binary):
+    f.write((
+        'FIELD FieldData {}\n'.format(len(data))
+        ).encode('utf-8'))
+    for name, values in data.items():
+        if len(values.shape) == 1:
+            num_tuples = values.shape[0]
+            num_components = 1
+        else:
+            assert len(values.shape) == 2, \
+                'Only one and two-dimensional point data supported.'
+            num_tuples = values.shape[0]
+            num_components = values.shape[1]
+        f.write(('{} {} {} {}\n'.format(
+            name, num_components, num_tuples,
+            numpy_to_vtk_dtype[values.dtype]
+            )).encode('utf-8'))
+        if write_binary:
+            values.byteswap().tofile(f, sep='')
+        else:
+            # ascii
+            values.tofile(f, sep=' ')
+            # numpy.savetxt(f, points)
+        f.write('\n'.encode('utf-8'))
+    return

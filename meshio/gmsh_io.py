@@ -290,10 +290,10 @@ def write(
         filename,
         points,
         cells,
-        is_ascii=False,
         point_data=None,
         cell_data=None,
-        field_data=None
+        field_data=None,
+        write_binary=True,
         ):
     '''Writes msh files, cf.
     http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
@@ -302,7 +302,7 @@ def write(
     cell_data = {} if cell_data is None else cell_data
     field_data = {} if field_data is None else field_data
 
-    if not is_ascii:
+    if write_binary:
         for key in cells:
             if cells[key].dtype != numpy.int32:
                 logging.warning(
@@ -312,12 +312,12 @@ def write(
                 cells[key] = numpy.array(cells[key], dtype=numpy.int32)
 
     with open(filename, 'wb') as fh:
-        mode_idx = 0 if is_ascii else 1
+        mode_idx = 1 if write_binary else 0
         size_of_double = 8
         fh.write((
             '$MeshFormat\n2.2 {} {}\n'.format(mode_idx, size_of_double)
             ).encode('utf-8'))
-        if not is_ascii:  # binary
+        if write_binary:
             fh.write(struct.pack('i', 1))
             fh.write('\n'.encode('utf-8'))
         fh.write('$EndMeshFormat\n'.encode('utf-8'))
@@ -325,19 +325,19 @@ def write(
         # Write nodes
         fh.write('$Nodes\n'.encode('utf-8'))
         fh.write('{}\n'.format(len(points)).encode('utf-8'))
-        if is_ascii:
-            for k, x in enumerate(points):
-                fh.write(
-                    '{} {!r} {!r} {!r}\n'.format(k+1, x[0], x[1], x[2])
-                    .encode('utf-8')
-                    )
-        else:
+        if write_binary:
             dtype = [('index', numpy.int32), ('x', numpy.float64, (3,))]
             tmp = numpy.empty(len(points), dtype=dtype)
             tmp['index'] = 1 + numpy.arange(len(points))
             tmp['x'] = points
             fh.write(tmp.tostring())
             fh.write('\n'.encode('utf-8'))
+        else:
+            for k, x in enumerate(points):
+                fh.write(
+                    '{} {!r} {!r} {!r}\n'.format(k+1, x[0], x[1], x[2])
+                    .encode('utf-8')
+                    )
         fh.write('$EndNodes\n'.encode('utf-8'))
 
         fh.write('$Elements\n'.encode('utf-8'))
@@ -376,19 +376,7 @@ def write(
                 # no cell data
                 fcd = numpy.empty([len(node_idcs), 0], dtype=numpy.int32)
 
-            if is_ascii:
-                form = '{} ' + str(_meshio_to_gmsh_type[cell_type]) \
-                    + ' ' + str(fcd.shape[1]) \
-                    + ' {} {}\n'
-                for k, c in enumerate(node_idcs):
-                    fh.write(
-                        form.format(
-                            consecutive_index + k + 1,
-                            ' '.join([str(val) for val in fcd[k]]),
-                            ' '.join([str(cc + 1) for cc in c])
-                            ).encode('utf-8')
-                        )
-            else:
+            if write_binary:
                 # header
                 fh.write(struct.pack('i', _meshio_to_gmsh_type[cell_type]))
                 fh.write(struct.pack('i', node_idcs.shape[0]))
@@ -400,9 +388,21 @@ def write(
                 a += 1 + consecutive_index
                 array = numpy.hstack([a, fcd, node_idcs + 1])
                 fh.write(array.tostring())
+            else:
+                form = '{} ' + str(_meshio_to_gmsh_type[cell_type]) \
+                    + ' ' + str(fcd.shape[1]) \
+                    + ' {} {}\n'
+                for k, c in enumerate(node_idcs):
+                    fh.write(
+                        form.format(
+                            consecutive_index + k + 1,
+                            ' '.join([str(val) for val in fcd[k]]),
+                            ' '.join([str(cc + 1) for cc in c])
+                            ).encode('utf-8')
+                        )
 
             consecutive_index += len(node_idcs)
-        if not is_ascii:
+        if write_binary:
             fh.write('\n'.encode('utf-8'))
         fh.write('$EndElements\n'.encode('utf-8'))
 
