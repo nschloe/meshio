@@ -301,27 +301,57 @@ def write(filename,
     # w(filetype, filename, points, cells, point_data, cell_data, field_data)
     # exit(1)
 
+    header_type = 'UInt32'
+
     vtk_file = ET.Element(
         'VTKFile',
         type='UnstructuredGrid',
         version='0.1',
         byte_order='LittleEndian',
-        header_type='UInt32',
+        header_type=header_type,
         compressor='vtkZLibDataCompressor'
         )
 
+    def chunk_it(array, n):
+        out = []
+        k = 0
+        while k*n < len(array):
+            out.append(array[k*n:(k+1)*n])
+            k += 1
+        return out
+
     def numpy_to_xml_array(parent, name, fmt, data):
         da = ET.SubElement(
-                parent, 'DataArray',
-                type=numpy_to_vtu_type[data.dtype],
-                Name=name,
-                format='ascii',
-                )
+            parent, 'DataArray',
+            type=numpy_to_vtu_type[data.dtype],
+            Name=name,
+            )
         if len(data.shape) == 2:
             da.set('NumberOfComponents', '{}'.format(data.shape[1]))
-        s = BytesIO()
-        numpy.savetxt(s, data, fmt)
-        da.text = s.getvalue().decode()
+        if write_binary:
+            da.set('format', 'binary')
+            max_block_size = 32768
+            data_bytes = data.tostring()
+            blocks = chunk_it(data_bytes, max_block_size)
+            num_blocks = len(blocks)
+            last_block_size = len(blocks[-1])
+            # collect header
+            header = numpy.array(
+                [num_blocks, max_block_size, last_block_size]
+                + [len(b) for b in blocks],
+                dtype=vtu_to_numpy_type[header_type]
+                )
+            da.text = (
+                base64.b64encode(header.tostring())
+                + base64.b64encode(b''.join([
+                    zlib.compress(block) for block in blocks
+                    ])
+                )).decode()
+        else:
+            da.set('format', 'ascii')
+            s = BytesIO()
+            numpy.savetxt(s, data.flatten(), fmt)
+            da.text = s.getvalue().decode()
         return
 
     comment = \
@@ -332,10 +362,10 @@ def write(filename,
 
     total_num_cells = sum([len(c) for c in cells.values()])
     piece = ET.SubElement(
-            grid, 'Piece',
-            NumberOfPoints='{}'.format(len(points)),
-            NumberOfCells='{}'.format(total_num_cells)
-            )
+        grid, 'Piece',
+        NumberOfPoints='{}'.format(len(points)),
+        NumberOfCells='{}'.format(total_num_cells)
+        )
 
     # points
     if points is not None:
