@@ -204,9 +204,7 @@ def read_buffer(f):
                     'Illegal SCALARS in section \'{}\'.'.format(active)
                 d = cell_data_raw
 
-            d.update(
-                _read_scalar_field(f, num_items, split, vtk_to_numpy_dtype)
-                )
+            d.update(_read_scalar_field(f, num_items, split))
 
         elif section == 'VECTORS':
             if active == 'POINT_DATA':
@@ -216,9 +214,7 @@ def read_buffer(f):
                     'Illegal SCALARS in section \'{}\'.'.format(active)
                 d = cell_data_raw
 
-            d.update(
-                _read_vector_field(f, num_items, split, vtk_to_numpy_dtype)
-                )
+            d.update(_read_vector_field(f, num_items, split))
 
         elif section == 'TENSORS':
             if active == 'POINT_DATA':
@@ -228,9 +224,7 @@ def read_buffer(f):
                     'Illegal SCALARS in section \'{}\'.'.format(active)
                 d = cell_data_raw
 
-            d.update(
-                _read_tensor_field(f, num_items, split, vtk_to_numpy_dtype)
-                )
+            d.update(_read_tensor_field(f, num_items, split))
 
         else:
             assert section == 'FIELD', \
@@ -243,10 +237,7 @@ def read_buffer(f):
                     'Illegal FIELD in section \'{}\'.'.format(active)
                 d = cell_data_raw
 
-            d.update(
-                _read_fields(
-                    f, int(split[2]), vtk_to_numpy_dtype, is_ascii
-                    ))
+            d.update(_read_fields(f, int(split[2]), is_ascii))
 
     assert c is not None, \
         'Required section CELLS not found.'
@@ -260,7 +251,7 @@ def read_buffer(f):
     return points, cells, point_data, cell_data, field_data
 
 
-def _read_scalar_field(f, num_data, split, vtk_to_numpy_dtype):
+def _read_scalar_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
     try:
@@ -280,7 +271,7 @@ def _read_scalar_field(f, num_data, split, vtk_to_numpy_dtype):
     return {data_name: data}
 
 
-def _read_vector_field(f, num_data, split, vtk_to_numpy_dtype):
+def _read_vector_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
 
@@ -292,7 +283,7 @@ def _read_vector_field(f, num_data, split, vtk_to_numpy_dtype):
     return {data_name: data}
 
 
-def _read_tensor_field(f, num_data, split, vtk_to_numpy_dtype):
+def _read_tensor_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
 
@@ -304,7 +295,7 @@ def _read_tensor_field(f, num_data, split, vtk_to_numpy_dtype):
     return {data_name: data}
 
 
-def _read_fields(f, num_fields, vtk_to_numpy_dtype, is_ascii):
+def _read_fields(f, num_fields, is_ascii):
     data = {}
     for _ in range(num_fields):
         name, shape0, shape1, data_type = \
@@ -454,13 +445,13 @@ def write(filename,
                         )
 
         # write point data
-        if len(point_data) > 0:
+        if point_data:
             num_points = len(points)
             f.write('POINT_DATA {}\n'.format(num_points).encode('utf-8'))
             _write_field_data(f, point_data, write_binary)
 
         # write cell data
-        if len(cell_data) > 0:
+        if cell_data:
             # merge cell data
             cell_data_raw = {}
             for d in cell_data.values():
