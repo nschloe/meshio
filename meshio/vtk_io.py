@@ -71,6 +71,8 @@ vtk_to_numpy_dtype = {
     'double': numpy.dtype('float64'),
     }
 
+numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype.items()}
+
 
 def read(filetype, filename, is_little_endian=True):
     '''Reads a Gmsh msh file.
@@ -379,7 +381,6 @@ def write(filetype,
           field_data=None
           ):
 
-    numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype.items()}
     meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
     write_ascii = True
@@ -436,30 +437,7 @@ def write(filetype,
         if len(point_data) > 0:
             num_points = len(points)
             f.write('POINT_DATA {}\n'.format(num_points).encode('utf-8'))
-            f.write((
-                'FIELD FieldData {}\n'.format(len(point_data))
-                ).encode('utf-8'))
-            for name, values in point_data.items():
-                if len(values.shape) == 1:
-                    num_tuples = values.shape[0]
-                    num_components = 1
-                else:
-                    assert len(values.shape) == 2, \
-                        'Only one and two-dimensional point data supported.'
-                    num_tuples = values.shape[0]
-                    num_components = values.shape[1]
-                f.write(('{} {} {} {}\n'.format(
-                    name, num_components, num_tuples,
-                    numpy_to_vtk_dtype[values.dtype]
-                    )).encode('utf-8'))
-                if write_ascii:
-                    sep = ' ' if write_ascii else ''
-                    values.tofile(f, sep=sep)
-                    # numpy.savetxt(f, points)
-                    f.write('\n'.encode('utf-8'))
-                else:
-                    # binary
-                    f.write(values.tostring())
+            _write_field_data(f, point_data, write_ascii)
 
         # write cell data
         if len(cell_data) > 0:
@@ -475,31 +453,36 @@ def write(filetype,
                 cell_data_raw[name] = numpy.concatenate(cell_data_raw[name])
 
             f.write('CELL_DATA {}\n'.format(total_num_cells).encode('utf-8'))
-            f.write((
-                'FIELD FieldData {}\n'.format(len(cell_data_raw))
-                ).encode('utf-8'))
-            for name, values in cell_data_raw.items():
-                if len(values.shape) == 1:
-                    num_tuples = values.shape[0]
-                    num_components = 1
-                else:
-                    assert len(values.shape) == 2, \
-                        'Only one and two-dimensional point data supported.'
-                    num_tuples = values.shape[0]
-                    num_components = values.shape[1]
-                f.write(('{} {} {} {}\n'.format(
-                    name, num_components, num_tuples,
-                    numpy_to_vtk_dtype[values.dtype]
-                    )).encode('utf-8'))
-                if write_ascii:
-                    sep = ' ' if write_ascii else ''
-                    values.tofile(f, sep=sep)
-                    # numpy.savetxt(f, points)
-                    f.write('\n'.encode('utf-8'))
-                else:
-                    # binary
-                    f.write(values.tostring())
+            _write_field_data(f, cell_data_raw, write_ascii)
 
     # from .legacy_writer import write as w
     # w(filetype, filename, points, cells, point_data, cell_data, field_data)
+    return
+
+
+def _write_field_data(f, data, write_ascii):
+    f.write((
+        'FIELD FieldData {}\n'.format(len(data))
+        ).encode('utf-8'))
+    for name, values in data.items():
+        if len(values.shape) == 1:
+            num_tuples = values.shape[0]
+            num_components = 1
+        else:
+            assert len(values.shape) == 2, \
+                'Only one and two-dimensional point data supported.'
+            num_tuples = values.shape[0]
+            num_components = values.shape[1]
+        f.write(('{} {} {} {}\n'.format(
+            name, num_components, num_tuples,
+            numpy_to_vtk_dtype[values.dtype]
+            )).encode('utf-8'))
+        if write_ascii:
+            sep = ' ' if write_ascii else ''
+            values.tofile(f, sep=sep)
+            # numpy.savetxt(f, points)
+            f.write('\n'.encode('utf-8'))
+        else:
+            # binary
+            f.write(values.tostring())
     return
