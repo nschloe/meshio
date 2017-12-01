@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-import helpers
-
+import meshio
 import pytest
+
+import helpers
 
 vtk = pytest.importorskip('vtk')
 
@@ -16,5 +17,9 @@ vtk = pytest.importorskip('vtk')
         helpers.add_cell_data(helpers.tri_mesh, 1)
         ])
 def test_xdmf3(mesh):
-    helpers.write_read('test.xdmf', 'xdmf', mesh, 1.0e-15)
+    helpers.write_read(
+        meshio.xdmf_io.write,
+        meshio.xdmf_io.read,
+        mesh, 1.0e-15
+        )
     return

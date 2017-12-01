@@ -23,7 +23,7 @@ def test_gmsh(mesh):
     def writer(*args, **kwargs):
         return meshio.gmsh_io.write(*args, write_binary=False, **kwargs)
 
-    helpers.write_read2(writer, meshio.gmsh_io.read, mesh, 1.0e-15)
+    helpers.write_read(writer, meshio.gmsh_io.read, mesh, 1.0e-15)
     return
 
 
@@ -32,5 +32,5 @@ def test_gmsh_binary(mesh):
     def writer(*args, **kwargs):
         return meshio.gmsh_io.write(*args, write_binary=True, **kwargs)
 
-    helpers.write_read2(writer, meshio.gmsh_io.read, mesh, 1.0e-15)
+    helpers.write_read(writer, meshio.gmsh_io.read, mesh, 1.0e-15)
     return

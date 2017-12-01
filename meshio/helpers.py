@@ -181,17 +181,19 @@ def write(filename,
         permas_io.write(filename, points, cells)
     elif file_format == 'vtu-ascii':
         vtu_io.write(
-            'vtu-ascii', filename, points, cells,
+            filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
-            field_data=field_data
+            field_data=field_data,
+            write_binary=False
             )
     elif file_format in ['vtu', 'vtu-binary']:
         vtu_io.write(
-            'vtu-binary', filename, points, cells,
+            filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
-            field_data=field_data
+            field_data=field_data,
+            write_binary=True
             )
     elif file_format == 'vtk-ascii':
         vtk_io.write(

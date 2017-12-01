@@ -273,15 +273,16 @@ def read(filename):
         )
 
 
-def write(filetype,
-          filename,
+def write(filename,
           points,
           cells,
           point_data=None,
           cell_data=None,
-          field_data=None
+          field_data=None,
+          write_binary=True,
           ):
     from .legacy_writer import write as w
+    filetype = 'vtu-binary' if write_binary else 'vtu-ascii'
     return w(
         filetype, filename, points, cells, point_data, cell_data, field_data
         )

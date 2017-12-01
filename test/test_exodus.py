@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-import helpers
-
+import meshio
 import pytest
+
+import helpers
 
 vtk = pytest.importorskip('vtk')
 
@@ -22,5 +23,9 @@ vtk = pytest.importorskip('vtk')
         helpers.add_point_data(helpers.tri_mesh, 3),
         ])
 def test_io(mesh):
-    helpers.write_read('test.e', 'exodus', mesh, 1.0e-15)
+    helpers.write_read(
+            meshio.exodus_io.write,
+            meshio.exodus_io.read,
+            mesh, 1.0e-15
+            )
     return

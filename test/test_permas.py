@@ -13,7 +13,7 @@ import helpers
     helpers.tet_mesh,
     ])
 def test_io(mesh):
-    helpers.write_read2(
+    helpers.write_read(
         meshio.permas_io.write,
         meshio.permas_io.read,
         mesh, 1.0e-15

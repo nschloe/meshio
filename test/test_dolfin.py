@@ -12,7 +12,7 @@ import helpers
         helpers.add_cell_data(helpers.tri_mesh, 1),
         ])
 def test_io(mesh):
-    helpers.write_read2(
+    helpers.write_read(
             meshio.dolfin_io.write,
             meshio.dolfin_io.read,
             mesh, 1.0e-15

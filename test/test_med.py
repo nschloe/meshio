@@ -15,7 +15,7 @@ h5py = pytest.importorskip('h5py')
     helpers.hex_mesh,
     ])
 def test_io(mesh):
-    helpers.write_read2(
+    helpers.write_read(
         meshio.med_io.write,
         meshio.med_io.read,
         mesh, 1.0e-15
