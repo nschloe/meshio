@@ -7,7 +7,6 @@ I/O for VTU.
 '''
 import base64
 import logging
-import re
 try:
     from StringIO import cStringIO as BytesIO
 except ImportError:
@@ -311,7 +310,7 @@ def write(filename,
         compressor='vtkZLibDataCompressor'
         )
 
-    def numpy_to_xml_array(parent, name, data):
+    def numpy_to_xml_array(parent, name, fmt, data):
         da = ET.SubElement(
                 parent, 'DataArray',
                 type=numpy_to_vtu_type[data.dtype],
@@ -321,7 +320,7 @@ def write(filename,
         if len(data.shape) == 2:
             da.set('NumberOfComponents', '{}'.format(data.shape[1]))
         s = BytesIO()
-        numpy.savetxt(s, data, '%.11e')
+        numpy.savetxt(s, data, fmt)
         da.text = s.getvalue().decode()
         return
 
@@ -341,7 +340,7 @@ def write(filename,
     # points
     if points is not None:
         pts = ET.SubElement(piece, 'Points')
-        numpy_to_xml_array(pts, 'Points', points)
+        numpy_to_xml_array(pts, 'Points', '%.11e', points)
 
     if cells is not None:
         cls = ET.SubElement(piece, 'Cells')
@@ -364,45 +363,19 @@ def write(filename,
             for k, v in cells.items()
             ])
 
-        conn = ET.SubElement(
-                cls, 'DataArray',
-                type=numpy_to_vtu_type[connectivity.dtype],
-                Name='connectivity',
-                format='ascii',
-                RangeMin='{}'.format(connectivity.min()),
-                RangeMax='{}'.format(connectivity.max()),
-                )
-        conn.text = re.sub('[\[\]]', '', numpy.array_str(connectivity))
-
-        os = ET.SubElement(
-                cls, 'DataArray',
-                type=numpy_to_vtu_type[offsets.dtype],
-                Name='offsets',
-                format='ascii',
-                RangeMin='{}'.format(offsets.min()),
-                RangeMax='{}'.format(offsets.max()),
-                )
-        os.text = re.sub('[\[\]]', '', numpy.array_str(offsets))
-
-        tp = ET.SubElement(
-                cls, 'DataArray',
-                type=numpy_to_vtu_type[types.dtype],
-                Name='types',
-                format='ascii',
-                RangeMin='{}'.format(types.min()),
-                RangeMax='{}'.format(types.max()),
-                )
-        tp.text = re.sub('[\[\]]', '', numpy.array_str(types))
+        numpy_to_xml_array(cls, 'connectivity', '%d', connectivity)
+        numpy_to_xml_array(cls, 'offsets', '%d', offsets)
+        numpy_to_xml_array(cls, 'types', '%d', types)
 
     if point_data:
         pd = ET.SubElement(piece, 'PointData')
         for name, data in point_data.items():
-            numpy_to_xml_array(pd, name, data)
+            numpy_to_xml_array(pd, name, '%.11e', data)
 
     if cell_data:
         cd = ET.SubElement(piece, 'CellData')
         for name, data in raw_from_cell_data(cell_data).items():
-            numpy_to_xml_array(cd, name, data)
+            numpy_to_xml_array(cd, name, '%.11e', data)
 
     tree = ET.ElementTree(vtk_file)
 
