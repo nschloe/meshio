@@ -147,7 +147,7 @@ def write(filetype,
     elif filetype == 'vtu-binary':
         writer = vtk.vtkXMLUnstructuredGridWriter()
         writer.SetDataModeToBinary()
-    elif filetype == 'xdmf':
+    elif filetype == 'xdmf2':
         writer = vtk.vtkXdmfWriter()
     elif filetype == 'xdmf3':
         writer = vtk.vtkXdmf3Writer()
