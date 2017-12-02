@@ -283,21 +283,6 @@ class XdmfReader(object):
         return points, cells, point_data, cell_data, field_data
 
 
-# XDMF 2 writer
-# def write(filename,
-#           points,
-#           cells,
-#           point_data=None,
-#           cell_data=None,
-#           field_data=None
-#           ):
-#     from .legacy_writer import write as w
-#     return w(
-#         'xdmf2, filename, points, cells,
-#         point_data=point_data, cell_data=cell_data, field_data=field_data
-#         )
-
-
 def write(filename,
           points,
           cells,
