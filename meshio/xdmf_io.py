@@ -6,12 +6,17 @@ I/O for XDMF.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import os
+try:
+    from StringIO import cStringIO as BytesIO
+except ImportError:
+    from io import BytesIO
 import xml.etree.ElementTree as ET
 
 import h5py
 import numpy
 
 from .vtk_io import cell_data_from_raw
+from .vtu_io import write_xml
 
 
 def read(filename):
@@ -29,6 +34,14 @@ def _xdmf_to_numpy_type(data_type, precision):
     assert data_type == 'Float' and precision == '8', \
         'Unknown XDMF type ({}, {}).'.format(data_type, precision)
     return numpy.float64
+
+
+numpy_to_xdmf_type = {
+    numpy.dtype(numpy.int32): ('Int', '4'),
+    numpy.dtype(numpy.int64): ('Int', '8'),
+    numpy.dtype(numpy.float32): ('Float', '4'),
+    numpy.dtype(numpy.float64): ('Float', '8'),
+    }
 
 
 def _translate_mixed_cells(data):
@@ -288,9 +301,37 @@ def write(filename,
           cells,
           point_data=None,
           cell_data=None,
-          field_data=None
+          field_data=None,
+          pretty_xml=True
           ):
-    from .legacy_writer import write as w
-    return w(
-        'xdmf3', filename, points, cells, point_data, cell_data, field_data
+    # from .legacy_writer import write as w
+    # w('xdmf3', filename, points, cells, point_data, cell_data, field_data)
+    # exit(1)
+
+    def numpy_to_xml_string(data, fmt):
+        s = BytesIO()
+        numpy.savetxt(s, data.flatten(), fmt)
+        return s.getvalue().decode()
+
+    xdmf_file = ET.Element(
+        'Xdmf',
+        Version='3.0',
         )
+
+    domain = ET.SubElement(xdmf_file, 'Domain')
+    grid = ET.SubElement(domain, 'Grid', Name='Grid')
+
+    # points
+    geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
+    dt, prec = numpy_to_xdmf_type[points.dtype]
+    dim = '{} {}'.format(points.shape[0], points.shape[1])
+    data_item = ET.SubElement(
+            geo, 'DataItem',
+            DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+            )
+    data_item.text = numpy_to_xml_string(points, '%.15e')
+
+    ET.register_namespace('xi', 'http://www.w3.org/2001/XInclude')
+
+    write_xml(filename, xdmf_file, pretty_xml, indent=2)
+    return

@@ -411,14 +411,14 @@ def write(filename,
     return
 
 
-def write_xml(filename, root, pretty_print=False):
+def write_xml(filename, root, pretty_print=False, indent=4):
     if pretty_print:
         # https://stackoverflow.com/a/17402424/353337
         def prettify(elem):
             import xml.dom.minidom
             rough_string = ET.tostring(elem, 'utf-8')
             reparsed = xml.dom.minidom.parseString(rough_string)
-            return reparsed.toprettyxml(indent=4*' ')
+            return reparsed.toprettyxml(indent=indent*' ')
 
         with open(filename, 'w') as f:
             f.write(prettify(root))
