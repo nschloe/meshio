@@ -36,7 +36,7 @@ def _xdmf_to_numpy_type(data_type, precision):
     return numpy.float64
 
 
-numpy_to_xdmf_type = {
+numpy_to_xdmf_dtype = {
     numpy.dtype(numpy.int32): ('Int', '4'),
     numpy.dtype(numpy.int64): ('Int', '8'),
     numpy.dtype(numpy.float32): ('Float', '4'),
@@ -53,6 +53,24 @@ xdmf_idx_to_meshio_type = {
     9: 'hexahedron',
     }
 meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
+
+xdmf_to_meshio_type = {
+    'Polyvertex': 'vertex',
+    'Triangle': 'triangle',
+    'Quadrilateral': 'quad',
+    'Tetrahedron': 'tetra',
+    'Pyramid': 'pyramid',
+    'Wedge': 'wedge',
+    'Hexahedron': 'hexahedron',
+    'Edge_3': 'line3',
+    'Tri_6': 'triangle6',
+    'Quad_8': 'quad8',
+    'Tet_10': 'tetra10',
+    'Pyramid_13': 'pyramid13',
+    'Wedge_15': 'wedge15',
+    'Hex_20': 'hexahedron20',
+    }
+meshio_to_xdmf_type = {v: k for k, v in xdmf_to_meshio_type.items()}
 
 
 def _translate_mixed_cells(data):
@@ -104,23 +122,6 @@ def _translate_mixed_cells(data):
 class XdmfReader(object):
     def __init__(self, filename):
         self.filename = filename
-        self.xdmf_to_meshio_type = {
-            'Polyvertex': 'vertex',
-            'Triangle': 'triangle',
-            'Quadrilateral': 'quad',
-            'Tetrahedron': 'tetra',
-            'Pyramid': 'pyramid',
-            'Wedge': 'wedge',
-            'Hexahedron': 'hexahedron',
-            'Edge_3': 'line3',
-            'Tri_6': 'triangle6',
-            'Quad_8': 'quad8',
-            'Tet_10': 'tetra10',
-            'Pyramid_13': 'pyramid13',
-            'Wedge_15': 'wedge15',
-            'Hex_20': 'hexahedron20',
-            }
-
         return
 
     def read(self):
@@ -195,8 +196,7 @@ class XdmfReader(object):
             if c.tag == 'Topology':
                 data_items = list(c)
                 assert len(data_items) == 1
-                meshio_type = \
-                    self.xdmf_to_meshio_type[c.attrib['TopologyType']]
+                meshio_type = xdmf_to_meshio_type[c.attrib['TopologyType']]
                 cells[meshio_type] = self.read_data_item(
                     data_items[0], dt_key='NumberType'
                     )
@@ -263,7 +263,7 @@ class XdmfReader(object):
                 if c.attrib['Type'] == 'Mixed':
                     cells = _translate_mixed_cells(data)
                 else:
-                    meshio_type = self.xdmf_to_meshio_type[c.attrib['Type']]
+                    meshio_type = xdmf_to_meshio_type[c.attrib['Type']]
                     cells[meshio_type] = data
 
             elif c.tag == 'Geometry':
@@ -324,7 +324,7 @@ def write(filename,
 
     # points
     geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
-    dt, prec = numpy_to_xdmf_type[points.dtype]
+    dt, prec = numpy_to_xdmf_dtype[points.dtype]
     dim = '{} {}'.format(*points.shape)
     data_item = ET.SubElement(
             geo, 'DataItem',
@@ -335,15 +335,16 @@ def write(filename,
     # cells
     # TODO other types than Triangle
     if len(cells) == 1:
-        assert list(cells.keys()) == ['triangle']
-        topo = ET.SubElement(grid, 'Topology', Type='Triangle')
-        dt, prec = numpy_to_xdmf_type[cells['triangle'].dtype]
-        dim = '{} {}'.format(*cells['triangle'].shape)
+        meshio_type = list(cells.keys())[0]
+        xdmf_type = meshio_to_xdmf_type[meshio_type]
+        topo = ET.SubElement(grid, 'Topology', Type=xdmf_type)
+        dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
+        dim = '{} {}'.format(*cells[meshio_type].shape)
         data_item = ET.SubElement(
                 topo, 'DataItem',
                 DataType=dt, Dimensions=dim, Format='XML', Precision=prec
                 )
-        data_item.text = numpy_to_xml_string(cells['triangle'], '%d')
+        data_item.text = numpy_to_xml_string(cells[meshio_type], '%d')
     else:
         assert False
 
