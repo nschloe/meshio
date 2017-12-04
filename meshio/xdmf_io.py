@@ -305,9 +305,10 @@ def write(filename,
           field_data=None,
           pretty_xml=True
           ):
-    # from .legacy_writer import write as w
-    # w('xdmf3', filename, points, cells, point_data, cell_data, field_data)
-    # exit(1)
+    # if len(cells) > 1:
+    #     from .legacy_writer import write as w
+    #     w('xdmf3', filename, points, cells, point_data, cell_data, field_data)
+    #     exit(1)
 
     def numpy_to_xml_string(data, fmt):
         s = BytesIO()
@@ -345,8 +346,26 @@ def write(filename,
                 DataType=dt, Dimensions=dim, Format='XML', Precision=prec
                 )
         data_item.text = numpy_to_xml_string(cells[meshio_type], '%d')
-    else:
-        assert False
+    elif len(cells) > 1:
+        topo = ET.SubElement(grid, 'Topology', Type='Mixed')
+        total_num_cells = sum(c.shape[0] for c in cells.values())
+        total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
+        dim = str(total_num_cell_items + total_num_cells)
+        # Deliberately take the data type of the first key
+        keys = list(cells.keys())
+        dt, prec = numpy_to_xdmf_dtype[cells[keys[0]].dtype]
+        data_item = ET.SubElement(
+                topo, 'DataItem',
+                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+                )
+        # prepend column with index
+        data_item.text = ''
+        for key, value in cells.items():
+            d = numpy.column_stack([
+                numpy.full(len(value), meshio_type_to_xdmf_index[key]),
+                value
+                ])
+            data_item.text += numpy_to_xml_string(d, '%d')
 
     ET.register_namespace('xi', 'http://www.w3.org/2001/XInclude')
 
