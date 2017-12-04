@@ -305,10 +305,9 @@ def write(filename,
           field_data=None,
           pretty_xml=True
           ):
-    # if len(cells) > 1:
-    #     from .legacy_writer import write as w
-    #     w('xdmf3', filename, points, cells, point_data, cell_data, field_data)
-    #     exit(1)
+    # from .legacy_writer import write as w
+    # w('xdmf3', filename, points, cells, point_data, cell_data, field_data)
+    # exit(1)
 
     def numpy_to_xml_string(data, fmt):
         s = BytesIO()
@@ -366,6 +365,20 @@ def write(filename,
                 value
                 ])
             data_item.text += numpy_to_xml_string(d, '%d')
+
+    # point data
+    for name, data in point_data.items():
+        att = ET.SubElement(
+                grid, 'Attribute',
+                Name=name, Type='None', Center='Node'
+                )
+        dt, prec = numpy_to_xdmf_dtype[data.dtype]
+        dim = ' '.join([str(s) for s in data.shape])
+        data_item = ET.SubElement(
+                att, 'DataItem',
+                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+                )
+        data_item.text = numpy_to_xml_string(data, '%.15e')
 
     ET.register_namespace('xi', 'http://www.w3.org/2001/XInclude')
 
