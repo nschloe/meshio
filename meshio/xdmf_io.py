@@ -43,6 +43,17 @@ numpy_to_xdmf_type = {
     numpy.dtype(numpy.float64): ('Float', '8'),
     }
 
+xdmf_idx_to_meshio_type = {
+    1: 'vertex',
+    4: 'triangle',
+    5: 'quad',
+    6: 'tetra',
+    7: 'pyramid',
+    8: 'wedge',
+    9: 'hexahedron',
+    }
+meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
+
 
 def _translate_mixed_cells(data):
     # Translate it into the cells dictionary.
@@ -58,16 +69,6 @@ def _translate_mixed_cells(data):
         7: 5,
         8: 6,
         9: 8,
-        }
-
-    xdmf_idx_to_meshio_type = {
-        1: 'vertex',
-        4: 'triangle',
-        5: 'quad',
-        6: 'tetra',
-        7: 'pyramid',
-        8: 'wedge',
-        9: 'hexahedron',
         }
 
     # collect types and offsets
@@ -324,12 +325,27 @@ def write(filename,
     # points
     geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
     dt, prec = numpy_to_xdmf_type[points.dtype]
-    dim = '{} {}'.format(points.shape[0], points.shape[1])
+    dim = '{} {}'.format(*points.shape)
     data_item = ET.SubElement(
             geo, 'DataItem',
             DataType=dt, Dimensions=dim, Format='XML', Precision=prec
             )
     data_item.text = numpy_to_xml_string(points, '%.15e')
+
+    # cells
+    # TODO other types than Triangle
+    if len(cells) == 1:
+        assert list(cells.keys()) == ['triangle']
+        topo = ET.SubElement(grid, 'Topology', Type='Triangle')
+        dt, prec = numpy_to_xdmf_type[cells['triangle'].dtype]
+        dim = '{} {}'.format(*cells['triangle'].shape)
+        data_item = ET.SubElement(
+                topo, 'DataItem',
+                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+                )
+        data_item.text = numpy_to_xml_string(cells['triangle'], '%d')
+    else:
+        assert False
 
     ET.register_namespace('xi', 'http://www.w3.org/2001/XInclude')
 
