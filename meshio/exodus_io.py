@@ -121,6 +121,10 @@ def read(filename):
     assert nc.api_version == numpy.float32(5.1)
     assert nc.floating_point_word_size == 8
 
+    assert b''.join(nc.variables['coor_names'][0]) == b'X'
+    assert b''.join(nc.variables['coor_names'][1]) == b'Y'
+    assert b''.join(nc.variables['coor_names'][2]) == b'Z'
+
     for dimobj in nc.dimensions.values():
         print(dimobj)
 
@@ -155,6 +159,9 @@ def read(filename):
             pass
 
     print(nc.variables)
+
+    print(nc.variables['time_whole'][:])
+    print(nc.variables['coor_names'][:])
 
     exit(1)
 
@@ -219,9 +226,8 @@ def write(filename,
     rootgrp.api_version = numpy.float32(5.1)
     rootgrp.floating_point_word_size = 8
 
-    total_num_elems = sum([v.shape[0] for v in cells.values()])
-
     # set dimensions
+    total_num_elems = sum([v.shape[0] for v in cells.values()])
     rootgrp.createDimension('num_nodes', len(points))
     rootgrp.createDimension('num_dim', 3)
     rootgrp.createDimension('num_elem', total_num_elems)
@@ -229,10 +235,24 @@ def write(filename,
     rootgrp.createDimension('len_string', 33)
     rootgrp.createDimension('len_line', 81)
     rootgrp.createDimension('four', 4)
+    rootgrp.createDimension('time_step', None)
+
+    # dummy time step
+    data = rootgrp.createVariable('time_whole', 'f4', 'time_step')
+    data[:] = 0.0
 
     # points
+    coor_names = rootgrp.createVariable(
+            'coor_names', 'S1', ('num_dim', 'len_string'),
+            fill_value=b'x'
+            )
+    # Set the value multiple times; see bug
+    # <https://github.com/Unidata/netcdf4-python/issues/746>.
+    coor_names[:] = b''
+    coor_names[0, 0] = 'X'
+    coor_names[1, 0] = 'Y'
+    coor_names[2, 0] = 'Z'
     for k, s in enumerate(['x', 'y', 'z']):
-        # TODO dtype
         data = rootgrp.createVariable(
                 'coord' + s,
                 numpy_to_exodus_dtype[points.dtype],
@@ -242,13 +262,14 @@ def write(filename,
 
     # cells
     for k, (key, values) in enumerate(cells.items()):
-        exodus_cell_type = meshio_to_exodus_type[key]
         dim1 = 'num_el_in_blk{}'.format(k+1)
         dim2 = 'num_nod_per_el{}'.format(k+1)
         rootgrp.createDimension(dim1, values.shape[0])
         rootgrp.createDimension(dim2, values.shape[1])
         dtype = numpy_to_exodus_dtype[values.dtype]
-        data = rootgrp.createVariable(exodus_cell_type, dtype, (dim1, dim2))
+        data = rootgrp.createVariable(
+                'connect{}'.format(k+1), dtype, (dim1, dim2)
+                )
         data.elem_type = meshio_to_exodus_type[key]
         # Exodus is 1-based
         data[:] = values + 1
