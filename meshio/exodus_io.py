@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
 #
 '''
-I/O for Exodus etc.
+I/O for Exodus II.
+
+See
+<http://prod.sandia.gov/techlib/access-control.cgi/1992/922137.pdf>,
+in particular Appendix A (Implementation of EXODUS II with netCDF).
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
+import datetime
+
 import numpy
+
+from .__about__ import __version__
+
 
 exodus_to_meshio_type = {
     # curves
@@ -108,6 +117,13 @@ def read(filename):
 
     nc = netCDF4.Dataset(filename)
 
+    assert nc.version == numpy.float32(5.1)
+    assert nc.api_version == numpy.float32(5.1)
+    assert nc.floating_point_word_size == 8
+
+    for dimobj in nc.dimensions.values():
+        print(dimobj)
+
     if 'coordx' in nc.variables:
         points = [
             nc.variables['coordx'][:],
@@ -137,6 +153,10 @@ def read(filename):
                     = var[:] - 1
         except AttributeError:
             pass
+
+    print(nc.variables)
+
+    exit(1)
 
     # point data
     point_data = {}
@@ -189,8 +209,28 @@ def write(filename,
 
     rootgrp = netCDF4.Dataset(filename, 'w')
 
-    # points
+    # set global data
+    rootgrp.title = \
+        'Created by meshio v{}, {}'.format(
+            __version__,
+            datetime.datetime.now().isoformat()
+            )
+    rootgrp.version = numpy.float32(5.1)
+    rootgrp.api_version = numpy.float32(5.1)
+    rootgrp.floating_point_word_size = 8
+
+    total_num_elems = sum([v.shape[0] for v in cells.values()])
+
+    # set dimensions
     rootgrp.createDimension('num_nodes', len(points))
+    rootgrp.createDimension('num_dim', 3)
+    rootgrp.createDimension('num_elem', total_num_elems)
+    rootgrp.createDimension('num_el_blk', len(cells))
+    rootgrp.createDimension('len_string', 33)
+    rootgrp.createDimension('len_line', 81)
+    rootgrp.createDimension('four', 4)
+
+    # points
     for k, s in enumerate(['x', 'y', 'z']):
         # TODO dtype
         data = rootgrp.createVariable(
@@ -201,19 +241,16 @@ def write(filename,
         data[:] = points[:, k]
 
     # cells
-    for key, values in cells.items():
-        exodus_type = meshio_to_exodus_type[key]
-        rootgrp.createDimension('num_' + exodus_type, values.shape[0])
-        rootgrp.createDimension(
-                'num_nodes_per_' + exodus_type,
-                values.shape[1]
-                )
-        data = rootgrp.createVariable(
-                exodus_type,
-                numpy_to_exodus_dtype[values.dtype],
-                ('num_' + exodus_type, 'num_nodes_per_' + exodus_type)
-                )
+    for k, (key, values) in enumerate(cells.items()):
+        exodus_cell_type = meshio_to_exodus_type[key]
+        dim1 = 'num_el_in_blk{}'.format(k+1)
+        dim2 = 'num_nod_per_el{}'.format(k+1)
+        rootgrp.createDimension(dim1, values.shape[0])
+        rootgrp.createDimension(dim2, values.shape[1])
+        dtype = numpy_to_exodus_dtype[values.dtype]
+        data = rootgrp.createVariable(exodus_cell_type, dtype, (dim1, dim2))
         data.elem_type = meshio_to_exodus_type[key]
+        # Exodus is 1-based
         data[:] = values + 1
 
     # point data
@@ -221,12 +258,10 @@ def write(filename,
     # variables, the variables `vals_nod_var*` hold the actual data.
     # rootgrp.createDimension('num_' + exodus_type, values.shape[0])
     num_nod_var = len(point_data)
-    max_length_node_var_name = 33
     if num_nod_var > 0:
         rootgrp.createDimension('num_nod_var', num_nod_var)
-        rootgrp.createDimension('len_name', max_length_node_var_name)
         point_data_names = rootgrp.createVariable(
-                'name_nod_var', 'S1', ('num_nod_var', 'len_name'),
+                'name_nod_var', 'S1', ('num_nod_var', 'len_string'),
                 fill_value=b'x'
                 )
         # Set the value multiple times; see bug
