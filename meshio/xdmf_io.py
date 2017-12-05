@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 import h5py
 import numpy
 
-from .vtk_io import cell_data_from_raw
+from .vtk_io import cell_data_from_raw, raw_from_cell_data
 from .vtu_io import write_xml
 
 
@@ -333,7 +333,6 @@ def write(filename,
     data_item.text = numpy_to_xml_string(points, '%.15e')
 
     # cells
-    # TODO other types than Triangle
     if len(cells) == 1:
         meshio_type = list(cells.keys())[0]
         xdmf_type = meshio_to_xdmf_type[meshio_type]
@@ -371,6 +370,21 @@ def write(filename,
         att = ET.SubElement(
                 grid, 'Attribute',
                 Name=name, Type='None', Center='Node'
+                )
+        dt, prec = numpy_to_xdmf_dtype[data.dtype]
+        dim = ' '.join([str(s) for s in data.shape])
+        data_item = ET.SubElement(
+                att, 'DataItem',
+                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+                )
+        data_item.text = numpy_to_xml_string(data, '%.15e')
+
+    # cell data
+    raw = raw_from_cell_data(cell_data)
+    for name, data in raw.items():
+        att = ET.SubElement(
+                grid, 'Attribute',
+                Name=name, Type='None', Center='Cell'
                 )
         dt, prec = numpy_to_xdmf_dtype[data.dtype]
         dim = ' '.join([str(s) for s in data.shape])
