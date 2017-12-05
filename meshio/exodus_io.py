@@ -34,7 +34,7 @@ exodus_to_meshio_type = {
     #
     'TRIANGLE': 'triangle',
     # 'TRI': 'triangle',
-    'TRI3': 'triangle3',
+    'TRI3': 'triangle',
     'TRI7': 'triangle7',
     # 'TRISHELL': 'triangle',
     # 'TRISHELL3': 'triangle',
@@ -65,13 +65,13 @@ def read(filename):
 
     nc = netCDF4.Dataset(filename)
 
-    assert nc.version == numpy.float32(5.1)
-    assert nc.api_version == numpy.float32(5.1)
-    assert nc.floating_point_word_size == 8
+    # assert nc.version == numpy.float32(5.1)
+    # assert nc.api_version == numpy.float32(5.1)
+    # assert nc.floating_point_word_size == 8
 
-    assert b''.join(nc.variables['coor_names'][0]) == b'X'
-    assert b''.join(nc.variables['coor_names'][1]) == b'Y'
-    assert b''.join(nc.variables['coor_names'][2]) == b'Z'
+    # assert b''.join(nc.variables['coor_names'][0]) == b'X'
+    # assert b''.join(nc.variables['coor_names'][1]) == b'Y'
+    # assert b''.join(nc.variables['coor_names'][2]) == b'Z'
 
     if 'coordx' in nc.variables:
         points = [
@@ -97,11 +97,11 @@ def read(filename):
     for key in nc.variables:
         var = nc.variables[key]
         try:
-            if var.elem_type.upper() in exodus_to_meshio_type:
-                cells[exodus_to_meshio_type[var.elem_type.upper()]] \
-                    = var[:] - 1
+            elem_type = var.elem_type
         except AttributeError:
             pass
+        else:
+            cells[exodus_to_meshio_type[elem_type.upper()]] = var[:] - 1
 
     # point data
     point_data = {}
@@ -114,9 +114,6 @@ def read(filename):
         point_data = {}
         for k, name in enumerate(variable_names):
             point_data[name] = nc.variables['vals_nod_var'][0, k]
-
-        print(point_data['a'].dtype)
-        print(point_data)
 
     nc.close()
     return points, cells, point_data, {}, {}

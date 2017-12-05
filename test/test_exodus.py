@@ -7,6 +7,7 @@ import helpers
 
 vtk = pytest.importorskip('vtk')
 
+# TODO tests with the legacy reader/writer
 
 @pytest.mark.parametrize('mesh', [
         helpers.tri_mesh,
