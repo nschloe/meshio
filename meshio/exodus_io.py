@@ -127,7 +127,18 @@ def read(filename):
                 numpy.zeros(len(points))
                 ])
 
-    # handle point data
+    # cells
+    cells = {}
+    for key in nc.variables:
+        var = nc.variables[key]
+        try:
+            if var.elem_type.upper() in exodus_to_meshio_type:
+                cells[exodus_to_meshio_type[var.elem_type.upper()]] \
+                    = var[:] - 1
+        except AttributeError:
+            pass
+
+    # point data
     point_data = {}
     if 'name_nod_var' in nc.variables:
         variable_names = [
@@ -145,22 +156,7 @@ def read(filename):
                     for index in indices
                     ]).T
 
-    cells = {}
-    for key in nc.variables:
-        var = nc.variables[key]
-        try:
-            print('<<')
-            print(var)
-            print(var.elem_type)
-            print('>>')
-            if var.elem_type.upper() in exodus_to_meshio_type:
-                cells[exodus_to_meshio_type[var.elem_type.upper()]] \
-                    = var[:] - 1
-        except AttributeError:
-            pass
-
     nc.close()
-
     return points, cells, point_data, {}, {}
 
 
@@ -180,10 +176,10 @@ def write(filename,
     rootgrp = netCDF4.Dataset(filename, 'w')
 
     # points
-    rootgrp.createDimension('pts', len(points))
+    rootgrp.createDimension('num_nodes', len(points))
     for k, s in enumerate(['x', 'y', 'z']):
         # TODO dtype
-        data = rootgrp.createVariable('coord' + s, 'f8', 'pts')
+        data = rootgrp.createVariable('coord' + s, 'f8', 'num_nodes')
         data[:] = points[:, k]
 
     # cells
@@ -201,6 +197,38 @@ def write(filename,
                 )
         data.elem_type = meshio_to_exodus_type[key]
         data[:] = values + 1
+
+    # point data
+    # The variable `name_nod_var` holds the names and indices of the node
+    # variables, the variables `vals_nod_var*` hold the actual data.
+    # rootgrp.createDimension('num_' + exodus_type, values.shape[0])
+    num_nod_var = len(point_data)
+    max_length_node_var_name = 33
+    if num_nod_var > 0:
+        rootgrp.createDimension('num_nod_var', num_nod_var)
+        rootgrp.createDimension('len_name', max_length_node_var_name)
+        point_data_names = rootgrp.createVariable(
+                'name_nod_var', 'S1', ('num_nod_var', 'len_name'),
+                fill_value=b'x'
+                )
+        # Set the value multiple times; see bug
+        # <https://github.com/Unidata/netcdf4-python/issues/746>.
+        point_data_names[:] = b''
+    for k, (name, data) in enumerate(point_data.items()):
+        # TODO dtype
+        assert len(name) == 1
+        point_data_names[k, 0] = name[0].encode('utf-8')
+
+        shp = []
+        for i, s in enumerate(data.shape):
+            shp.append('num_nod_data{}_{}'.format(i, name))
+            rootgrp.createDimension(shp[-1], s)
+
+        node_data = rootgrp.createVariable(
+                'vals_nod_var{}'.format(k+1),
+                'f8', shp
+                )
+        node_data[:] = data
 
     rootgrp.close()
     return
