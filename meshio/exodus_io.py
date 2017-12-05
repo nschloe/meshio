@@ -125,9 +125,6 @@ def read(filename):
     assert b''.join(nc.variables['coor_names'][1]) == b'Y'
     assert b''.join(nc.variables['coor_names'][2]) == b'Z'
 
-    for dimobj in nc.dimensions.values():
-        print(dimobj)
-
     if 'coordx' in nc.variables:
         points = [
             nc.variables['coordx'][:],
@@ -157,13 +154,6 @@ def read(filename):
                     = var[:] - 1
         except AttributeError:
             pass
-
-    print(nc.variables)
-
-    print(nc.variables['time_whole'][:])
-    print(nc.variables['coor_names'][:])
-
-    exit(1)
 
     # point data
     point_data = {}
@@ -252,15 +242,31 @@ def write(filename,
     coor_names[0, 0] = 'X'
     coor_names[1, 0] = 'Y'
     coor_names[2, 0] = 'Z'
-    for k, s in enumerate(['x', 'y', 'z']):
-        data = rootgrp.createVariable(
-                'coord' + s,
-                numpy_to_exodus_dtype[points.dtype],
-                'num_nodes'
-                )
-        data[:] = points[:, k]
+    data = rootgrp.createVariable(
+            'coord',
+            numpy_to_exodus_dtype[points.dtype],
+            ('num_dim', 'num_nodes'),
+            fill_value=False
+            )
+    data[:] = points.T
 
     # cells
+    # TODO clean up
+    data = rootgrp.createVariable('eb_status', 'i4', 'num_el_blk')
+    data[:] = 1
+
+    data = rootgrp.createVariable('eb_prop1', 'i4', 'num_el_blk')
+    # data.name = 'ID'
+    data[:] = 5
+
+    data = rootgrp.createVariable(
+            'eb_names', 'S1', ('num_el_blk', 'len_string'),
+            fill_value=b'x'
+            )
+    # Set the value multiple times; see bug
+    # <https://github.com/Unidata/netcdf4-python/issues/746>.
+    data[:] = b''
+
     for k, (key, values) in enumerate(cells.items()):
         dim1 = 'num_el_in_blk{}'.format(k+1)
         dim2 = 'num_nod_per_el{}'.format(k+1)
