@@ -7,6 +7,49 @@ I/O for Exodus etc.
 '''
 import numpy
 
+exodus_to_meshio_type = {
+    # curves
+    'BEAM': 'line',
+    'BEAM2': 'line2',
+    'BEAM3': 'line3',
+    # surfaces
+    'QUAD': 'quad',
+    'QUAD4': 'quad4',
+    'QUAD5': 'quad5',
+    'QUAD8': 'quad8',
+    'QUAD9': 'quad9',
+    # 'SHELL': 'quad',
+    # 'SHELL4': 'quad',
+    # 'SHELL8': 'quad',
+    # 'SHELL9': 'quad',
+    #
+    'TRIANGLE': 'triangle',
+    # 'TRI': 'triangle',
+    'TRI3': 'triangle3',
+    'TRI7': 'triangle7',
+    # 'TRISHELL': 'triangle',
+    # 'TRISHELL3': 'triangle',
+    # 'TRISHELL7': 'triangle',
+    #
+    'TRI6': 'triangle6',
+    # 'TRISHELL6': 'triangle6',
+    # volumes
+    'HEX': 'hexahedron',
+    'HEX8': 'hexahedron8',
+    'HEX9': 'hexahedron9',
+    'HEX20': 'hexahedron20',
+    'HEX27': 'hexahedron27',
+    #
+    'TETRA': 'tetra',
+    'TETRA4': 'tetra4',
+    'TETRA8': 'tetra8',
+    'TETRA10': 'tetra10',
+    'TETRA14': 'tetra14',
+    #
+    'PYRAMID': 'pyramid',
+    }
+meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
+
 
 def merge_variables(variable_names):
     # Exodus stores variables as "<name>_Z", "<name>_R" to form a
@@ -102,54 +145,17 @@ def read(filename):
                     for index in indices
                     ]).T
 
-    elem_types = {
-        # curves
-        'BEAM': 'line',
-        'BEAM2': 'line',
-        'BEAM3': 'line',
-        # surfaces
-        'QUAD': 'quad',
-        'QUAD4': 'quad',
-        'QUAD5': 'quad',
-        'QUAD8': 'quad',
-        'QUAD9': 'quad',
-        'SHELL': 'quad',
-        'SHELL4': 'quad',
-        'SHELL8': 'quad',
-        'SHELL9': 'quad',
-        #
-        'TRIANGLE': 'triangle',
-        'TRI': 'triangle',
-        'TRI3': 'triangle',
-        'TRI7': 'triangle',
-        'TRISHELL': 'triangle',
-        'TRISHELL3': 'triangle',
-        'TRISHELL7': 'triangle',
-        #
-        'TRI6': 'triangle6',
-        'TRISHELL6': 'triangle6',
-        # volumes
-        'HEX': 'hexahedron',
-        'HEX8': 'hexahedron',
-        'HEX9': 'hexahedron',
-        'HEX20': 'hexahedron',
-        'HEX27': 'hexahedron',
-        #
-        'TETRA': 'tetra',
-        'TETRA4': 'tetra',
-        'TETRA8': 'tetra',
-        'TETRA10': 'tetra',
-        'TETRA14': 'tetra',
-        #
-        'PYRAMID': 'pyramid',
-        }
-
     cells = {}
     for key in nc.variables:
         var = nc.variables[key]
         try:
-            if var.elem_type.upper() in elem_types:
-                cells[elem_types[var.elem_type.upper()]] = var[:] - 1
+            print('<<')
+            print(var)
+            print(var.elem_type)
+            print('>>')
+            if var.elem_type.upper() in exodus_to_meshio_type:
+                cells[exodus_to_meshio_type[var.elem_type.upper()]] \
+                    = var[:] - 1
         except AttributeError:
             pass
 
@@ -167,15 +173,30 @@ def write(filename,
           ):
     # from .legacy_writer import write as w
     # w('exodus', filename, points, cells, point_data, cell_data, field_data)
-    # exit(1)
+    # return
+
     import netCDF4
 
     rootgrp = netCDF4.Dataset(filename, 'w')
 
+    # points
     rootgrp.createDimension('pts', len(points))
     for k, s in enumerate(['x', 'y', 'z']):
-        coord = rootgrp.createVariable('coord' + s, 'f8', 'pts')
-        coord[:] = points[:, k]
+        # TODO dtype
+        data = rootgrp.createVariable('coord' + s, 'f8', 'pts')
+        data[:] = points[:, k]
+
+    # cells
+    for key, values in cells.items():
+        # TODO dtype
+        rootgrp.createDimension('num_elems', values.shape[0])
+        rootgrp.createDimension('num_nodes_per_elem', values.shape[1])
+        data = rootgrp.createVariable(
+                meshio_to_exodus_type[key], 'i4',
+                ('num_elems', 'num_nodes_per_elem')
+                )
+        data.elem_type = meshio_to_exodus_type[key]
+        data[:] = values + 1
 
     rootgrp.close()
     return
