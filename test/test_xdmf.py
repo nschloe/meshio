@@ -5,6 +5,7 @@ import pytest
 
 import helpers
 import legacy_reader
+import legacy_writer
 
 vtk = pytest.importorskip('vtk')
 
@@ -48,11 +49,11 @@ def test_xdmf3(mesh):
 @pytest.mark.parametrize('mesh', test_set_reduced)
 def test_xdmf3_legacy_writer(mesh):
     # test with legacy writer
-    def legacy_writer(*args, **kwargs):
-        return meshio.legacy_writer.write('xdmf3', *args, **kwargs)
+    def lw(*args, **kwargs):
+        return legacy_writer.write('xdmf3', *args, **kwargs)
 
     helpers.write_read(
-        legacy_writer,
+        lw,
         meshio.xdmf_io.read,
         mesh, 1.0e-15
         )
@@ -85,13 +86,13 @@ def test_xdmf3_legacy_reader(mesh):
         ])
 def test_xdmf2_legacy_writer(mesh):
     # test with legacy writer
-    def legacy_writer(*args, **kwargs):
-        return meshio.legacy_writer.write('xdmf2', *args, **kwargs)
+    def lw(*args, **kwargs):
+        return legacy_writer.write('xdmf2', *args, **kwargs)
 
     helpers.write_read(
-        legacy_writer,
+        lw,
         meshio.xdmf_io.read,
-        # FIXME data is only stored in single precision
+        # The legacy writer stores data in only single precision
         # <https://gitlab.kitware.com/vtk/vtk/issues/17037>
         mesh, 1.0e-6
         )

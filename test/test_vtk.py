@@ -5,6 +5,7 @@ import pytest
 
 import helpers
 import legacy_reader
+import legacy_writer
 
 vtk = pytest.importorskip('vtk')
 
@@ -40,11 +41,11 @@ def test_ascii(mesh):
 @pytest.mark.parametrize('mesh', test_set)
 def test_ascii_legacy1(mesh):
     # test with legacy writer
-    def legacy_writer(*args, **kwargs):
-        return meshio.legacy_writer.write('vtk-ascii', *args, **kwargs)
+    def lw(*args, **kwargs):
+        return legacy_writer.write('vtk-ascii', *args, **kwargs)
 
     # The legacy writer only writes with low precision.
-    helpers.write_read(legacy_writer, meshio.vtk_io.read, mesh, 1.0e-11)
+    helpers.write_read(lw, meshio.vtk_io.read, mesh, 1.0e-11)
 
 
 @pytest.mark.parametrize('mesh', test_set)
@@ -72,16 +73,16 @@ def test_binary(mesh):
 @pytest.mark.parametrize('mesh', test_set)
 # test with legacy writer
 def test_binary_legacy1(mesh):
-    def legacy_writer(
+    def lw(
             filename, points, cells, point_data, cell_data, field_data
             ):
-        return meshio.legacy_writer.write(
+        return legacy_writer.write(
             'vtk-binary',
             filename, points, cells, point_data, cell_data, field_data
             )
 
     # The legacy writer only writes with low precision.
-    helpers.write_read(legacy_writer, meshio.vtk_io.read, mesh, 1.0e-11)
+    helpers.write_read(lw, meshio.vtk_io.read, mesh, 1.0e-11)
     return
 
 
