@@ -245,28 +245,16 @@ def write(filename,
     data = rootgrp.createVariable(
             'coord',
             numpy_to_exodus_dtype[points.dtype],
-            ('num_dim', 'num_nodes'),
-            fill_value=False
+            ('num_dim', 'num_nodes')
             )
     data[:] = points.T
 
     # cells
-    # TODO clean up
-    data = rootgrp.createVariable('eb_status', 'i4', 'num_el_blk')
-    data[:] = 1
-
+    # ParaView needs eb_prop1 -- some ID. The values don't seem to matter as
+    # long as they are different for the for different blocks.
     data = rootgrp.createVariable('eb_prop1', 'i4', 'num_el_blk')
-    # data.name = 'ID'
-    data[:] = 5
-
-    data = rootgrp.createVariable(
-            'eb_names', 'S1', ('num_el_blk', 'len_string'),
-            fill_value=b'x'
-            )
-    # Set the value multiple times; see bug
-    # <https://github.com/Unidata/netcdf4-python/issues/746>.
-    data[:] = b''
-
+    for k in range(len(cells)):
+        data[k] = k
     for k, (key, values) in enumerate(cells.items()):
         dim1 = 'num_el_in_blk{}'.format(k+1)
         dim2 = 'num_nod_per_el{}'.format(k+1)
@@ -287,28 +275,24 @@ def write(filename,
     num_nod_var = len(point_data)
     if num_nod_var > 0:
         rootgrp.createDimension('num_nod_var', num_nod_var)
+        # set names
         point_data_names = rootgrp.createVariable(
                 'name_nod_var', 'S1', ('num_nod_var', 'len_string'),
                 fill_value=b'x'
                 )
-        # Set the value multiple times; see bug
-        # <https://github.com/Unidata/netcdf4-python/issues/746>.
         point_data_names[:] = b''
-    for k, (name, data) in enumerate(point_data.items()):
-        assert len(name) == 1
-        point_data_names[k, 0] = name[0].encode('utf-8')
+        for k, name in enumerate(point_data.keys()):
+            for i, letter in enumerate(name):
+                point_data_names[k, i] = letter.encode('utf-8')
 
-        shp = []
-        for i, s in enumerate(data.shape):
-            shp.append('num_nod_data{}_{}'.format(i, name))
-            rootgrp.createDimension(shp[-1], s)
-
+        # set data
         node_data = rootgrp.createVariable(
-                'vals_nod_var{}'.format(k+1),
+                'vals_nod_var',
                 numpy_to_exodus_dtype[data.dtype],
-                shp
+                ('time_step', 'num_nod_var', 'num_nodes')
                 )
-        node_data[:] = data
+        for k, (name, data) in enumerate(point_data.items()):
+            node_data[0, k] = data
 
     rootgrp.close()
     return
