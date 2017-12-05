@@ -79,14 +79,16 @@ def _translate_mixed_cells(data):
     # (cell_type1, p0, p1, ... ,pk, cell_type2, p10, p11, ..., p1k, ...
 
     # http://www.xdmf.org/index.php/XDMF_Model_and_Format#Topology
+    # https://gitlab.kitware.com/xdmf/xdmf/blob/master/XdmfTopologyType.hpp#L394
     xdmf_idx_to_num_nodes = {
-        1: 1,
-        4: 3,
-        5: 4,
-        6: 4,
-        7: 5,
-        8: 6,
-        9: 8,
+        1: 1,  # vertex
+        4: 3,  # triangle
+        5: 4,  # quad
+        6: 4,  # tet
+        7: 5,  # pyramid
+        8: 6,  # wedge
+        9: 8,  # hex
+        11: 6,  # triangle6
         }
 
     # collect types and offsets

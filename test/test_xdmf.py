@@ -8,7 +8,7 @@ import legacy_reader
 
 vtk = pytest.importorskip('vtk')
 
-test_set = [
+test_set_full = [
     helpers.tri_mesh,
     helpers.triangle6_mesh,
     helpers.quad_mesh,
@@ -22,9 +22,19 @@ test_set = [
     helpers.add_cell_data(helpers.tri_mesh, 1),
     ]
 
+test_set_reduced = [
+    helpers.tri_mesh,
+    helpers.quad_mesh,
+    helpers.tri_quad_mesh,
+    helpers.tet_mesh,
+    helpers.hex_mesh,
+    helpers.add_point_data(helpers.tri_mesh, 1),
+    helpers.add_cell_data(helpers.tri_mesh, 1),
+    ]
+
 
 @pytest.mark.skipif(not hasattr(vtk, 'vtkXdmf3Writer'), reason='Need XDMF3')
-@pytest.mark.parametrize('mesh', test_set)
+@pytest.mark.parametrize('mesh', test_set_full)
 def test_xdmf3(mesh):
     helpers.write_read(
         meshio.xdmf_io.write,
@@ -35,7 +45,7 @@ def test_xdmf3(mesh):
 
 
 @pytest.mark.skipif(not hasattr(vtk, 'vtkXdmf3Writer'), reason='Need XDMF3')
-@pytest.mark.parametrize('mesh', test_set)
+@pytest.mark.parametrize('mesh', test_set_reduced)
 def test_xdmf3_legacy_writer(mesh):
     # test with legacy writer
     def legacy_writer(*args, **kwargs):
@@ -50,7 +60,7 @@ def test_xdmf3_legacy_writer(mesh):
 
 
 @pytest.mark.skipif(not hasattr(vtk, 'vtkXdmf3Reader'), reason='Need XDMF3')
-@pytest.mark.parametrize('mesh', test_set)
+@pytest.mark.parametrize('mesh', test_set_reduced)
 def test_xdmf3_legacy_reader(mesh):
     # test with legacy reader
     def lr(filename):
@@ -65,7 +75,14 @@ def test_xdmf3_legacy_reader(mesh):
 
 
 @pytest.mark.skipif(not hasattr(vtk, 'vtkXdmfWriter'), reason='Need XDMF3')
-@pytest.mark.parametrize('mesh', test_set)
+@pytest.mark.parametrize('mesh', [
+        helpers.tri_mesh,
+        helpers.quad_mesh,
+        helpers.tet_mesh,
+        helpers.hex_mesh,
+        helpers.add_point_data(helpers.tri_mesh, 1),
+        helpers.add_cell_data(helpers.tri_mesh, 1),
+        ])
 def test_xdmf2_legacy_writer(mesh):
     # test with legacy writer
     def legacy_writer(*args, **kwargs):
@@ -79,3 +96,7 @@ def test_xdmf2_legacy_writer(mesh):
         mesh, 1.0e-6
         )
     return
+
+
+if __name__ == '__main__':
+    test_xdmf3_legacy_writer(helpers.tri_mesh)
