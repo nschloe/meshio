@@ -407,18 +407,23 @@ def write(filename,
         for name, data in raw_from_cell_data(cell_data).items():
             numpy_to_xml_array(cd, name, '%.11e', data)
 
-    tree = ET.ElementTree(vtk_file)
+    write_xml(filename, vtk_file, pretty_xml)
+    return
 
-    if pretty_xml:
+
+def write_xml(filename, root, pretty_print=False, indent=4):
+    if pretty_print:
         # https://stackoverflow.com/a/17402424/353337
         def prettify(elem):
             import xml.dom.minidom
             rough_string = ET.tostring(elem, 'utf-8')
             reparsed = xml.dom.minidom.parseString(rough_string)
-            return reparsed.toprettyxml(indent=4*' ')
+            return reparsed.toprettyxml(indent=indent*' ')
 
         with open(filename, 'w') as f:
-            f.write(prettify(vtk_file))
+            f.write(prettify(root))
     else:
+        tree = ET.ElementTree(root)
         tree.write(filename)
+
     return
