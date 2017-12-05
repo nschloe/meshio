@@ -165,7 +165,17 @@ def write(filename,
           cell_data=None,
           field_data=None
           ):
-    from .legacy_writer import write as w
-    return w(
-        'exodus', filename, points, cells, point_data, cell_data, field_data
-        )
+    # from .legacy_writer import write as w
+    # w('exodus', filename, points, cells, point_data, cell_data, field_data)
+    # exit(1)
+    import netCDF4
+
+    rootgrp = netCDF4.Dataset(filename, 'w')
+
+    rootgrp.createDimension('pts', len(points))
+    for k, s in enumerate(['x', 'y', 'z']):
+        coord = rootgrp.createVariable('coord' + s, 'f8', 'pts')
+        coord[:] = points[:, k]
+
+    rootgrp.close()
+    return
