@@ -160,6 +160,20 @@ def read(filename):
     return points, cells, point_data, {}, {}
 
 
+numpy_to_exodus_dtype = {
+    numpy.dtype(numpy.float32): 'f4',
+    numpy.dtype(numpy.float64): 'f8',
+    numpy.dtype(numpy.int8): 'i1',
+    numpy.dtype(numpy.int16): 'i2',
+    numpy.dtype(numpy.int32): 'i4',
+    numpy.dtype(numpy.int64): 'i8',
+    numpy.dtype(numpy.uint8): 'u1',
+    numpy.dtype(numpy.uint16): 'u2',
+    numpy.dtype(numpy.uint32): 'u4',
+    numpy.dtype(numpy.uint64): 'u8',
+    }
+
+
 def write(filename,
           points,
           cells,
@@ -179,12 +193,15 @@ def write(filename,
     rootgrp.createDimension('num_nodes', len(points))
     for k, s in enumerate(['x', 'y', 'z']):
         # TODO dtype
-        data = rootgrp.createVariable('coord' + s, 'f8', 'num_nodes')
+        data = rootgrp.createVariable(
+                'coord' + s,
+                numpy_to_exodus_dtype[points.dtype],
+                'num_nodes'
+                )
         data[:] = points[:, k]
 
     # cells
     for key, values in cells.items():
-        # TODO dtype
         exodus_type = meshio_to_exodus_type[key]
         rootgrp.createDimension('num_' + exodus_type, values.shape[0])
         rootgrp.createDimension(
@@ -192,7 +209,8 @@ def write(filename,
                 values.shape[1]
                 )
         data = rootgrp.createVariable(
-                exodus_type, 'i4',
+                exodus_type,
+                numpy_to_exodus_dtype[values.dtype],
                 ('num_' + exodus_type, 'num_nodes_per_' + exodus_type)
                 )
         data.elem_type = meshio_to_exodus_type[key]
@@ -215,7 +233,6 @@ def write(filename,
         # <https://github.com/Unidata/netcdf4-python/issues/746>.
         point_data_names[:] = b''
     for k, (name, data) in enumerate(point_data.items()):
-        # TODO dtype
         assert len(name) == 1
         point_data_names[k, 0] = name[0].encode('utf-8')
 
@@ -226,7 +243,8 @@ def write(filename,
 
         node_data = rootgrp.createVariable(
                 'vals_nod_var{}'.format(k+1),
-                'f8', shp
+                numpy_to_exodus_dtype[data.dtype],
+                shp
                 )
         node_data[:] = data
 
