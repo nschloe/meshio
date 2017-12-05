@@ -60,58 +60,6 @@ exodus_to_meshio_type = {
 meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
-def merge_variables(variable_names):
-    # Exodus stores variables as "<name>_Z", "<name>_R" to form a
-    # two-dimensional value and "<name>X", "<name>Y", "<name>Z" to form a
-    # three-dimensional value. Separate those out first
-    n = len(variable_names)
-    is_accounted_for = n * [False]
-
-    variable_indices = {}
-
-    for k, var in enumerate(variable_names):
-        if is_accounted_for[k]:
-            continue
-
-        if var[-2:] == '_R':
-            k2 = [
-                i for i in range(k, n)
-                if variable_names[i] == var[:-2] + '_Z'
-                ]
-            assert len(k2) < 2
-            if k2:
-                variable_indices[var[:-2]] = [k, k2[0]]
-                is_accounted_for[k2[0]] = True
-            else:
-                variable_indices[var] = [k]
-            is_accounted_for[k] = True
-        elif var[-1] == 'X':
-            ky = [
-                i for i in range(k, n)
-                if variable_names[i] == var[:-1] + 'Y'
-                ]
-            assert len(ky) < 2
-            kz = [
-                i for i in range(k, n)
-                if variable_names[i] == var[:-1] + 'Z'
-                ]
-            assert len(kz) < 2
-            if ky and kz:
-                variable_indices[var[:-1]] = [k, ky[0], kz[0]]
-                is_accounted_for[ky[0]] = True
-                is_accounted_for[kz[0]] = True
-            else:
-                variable_indices[var] = [k]
-            is_accounted_for[k] = True
-        else:
-            variable_indices[var] = [k]
-            is_accounted_for[k] = True
-
-    assert all(is_accounted_for)
-
-    return variable_indices
-
-
 def read(filename):
     import netCDF4
 
@@ -162,16 +110,13 @@ def read(filename):
             b''.join(c).decode('UTF-8')
             for c in nc.variables['name_nod_var'][:]
             ]
-        variable_indices = merge_variables(variable_names)
-        for name, indices in variable_indices.items():
-            if len(indices) == 1:
-                point_data[name] = \
-                    nc.variables['vals_nod_var{}'.format(indices[0]+1)][:]
-            else:
-                point_data[name] = numpy.concatenate([
-                    nc.variables['vals_nod_var{}'.format(index+1)][:]
-                    for index in indices
-                    ]).T
+
+        point_data = {}
+        for k, name in enumerate(variable_names):
+            point_data[name] = nc.variables['vals_nod_var'][0, k]
+
+        print(point_data['a'].dtype)
+        print(point_data)
 
     nc.close()
     return points, cells, point_data, {}, {}
@@ -285,10 +230,12 @@ def write(filename,
             for i, letter in enumerate(name):
                 point_data_names[k, i] = letter.encode('utf-8')
 
-        # set data
+        # Set data.
+        # Deliberately take the dtype from the first data block.
+        first_key = list(point_data.keys())[0]
+        dtype = numpy_to_exodus_dtype[point_data[first_key].dtype]
         node_data = rootgrp.createVariable(
-                'vals_nod_var',
-                numpy_to_exodus_dtype[data.dtype],
+                'vals_nod_var', dtype,
                 ('time_step', 'num_nod_var', 'num_nodes')
                 )
         for k, (name, data) in enumerate(point_data.items()):
