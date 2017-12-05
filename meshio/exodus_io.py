@@ -189,11 +189,15 @@ def write(filename,
     # cells
     for key, values in cells.items():
         # TODO dtype
-        rootgrp.createDimension('num_elems', values.shape[0])
-        rootgrp.createDimension('num_nodes_per_elem', values.shape[1])
+        exodus_type = meshio_to_exodus_type[key]
+        rootgrp.createDimension('num_' + exodus_type, values.shape[0])
+        rootgrp.createDimension(
+                'num_nodes_per_' + exodus_type,
+                values.shape[1]
+                )
         data = rootgrp.createVariable(
-                meshio_to_exodus_type[key], 'i4',
-                ('num_elems', 'num_nodes_per_elem')
+                exodus_type, 'i4',
+                ('num_' + exodus_type, 'num_nodes_per_' + exodus_type)
                 )
         data.elem_type = meshio_to_exodus_type[key]
         data[:] = values + 1
