@@ -19,18 +19,19 @@ from .__about__ import __version__
 exodus_to_meshio_type = {
     # curves
     'BEAM': 'line',
-    'BEAM2': 'line2',
+    'BEAM2': 'line',
     'BEAM3': 'line3',
+    'BAR2': 'line',
     # surfaces
+    'SHELL': 'quad',
+    'SHELL4': 'quad',
+    'SHELL8': 'quad8',
+    'SHELL9': 'quad9',
     'QUAD': 'quad',
-    'QUAD4': 'quad4',
+    'QUAD4': 'quad',
     'QUAD5': 'quad5',
     'QUAD8': 'quad8',
     'QUAD9': 'quad9',
-    # 'SHELL': 'quad',
-    # 'SHELL4': 'quad',
-    # 'SHELL8': 'quad',
-    # 'SHELL9': 'quad',
     #
     'TRIANGLE': 'triangle',
     # 'TRI': 'triangle',
@@ -44,7 +45,7 @@ exodus_to_meshio_type = {
     # 'TRISHELL6': 'triangle6',
     # volumes
     'HEX': 'hexahedron',
-    'HEX8': 'hexahedron8',
+    'HEX8': 'hexahedron',
     'HEX9': 'hexahedron9',
     'HEX20': 'hexahedron20',
     'HEX27': 'hexahedron27',
@@ -73,47 +74,32 @@ def read(filename):
     # assert b''.join(nc.variables['coor_names'][1]) == b'Y'
     # assert b''.join(nc.variables['coor_names'][2]) == b'Z'
 
-    if 'coordx' in nc.variables:
-        points = [
-            nc.variables['coordx'][:],
-            nc.variables['coordy'][:],
-            ]
-        if 'coordz' in nc.variables:
-            points.append(nc.variables['coordz'][:])
-        else:
-            points.append(numpy.zeros(len(points[0])))
-        points = numpy.array(points).T
-    else:
-        assert 'coord' in nc.variables
-        points = nc.variables['coord'][:].T
-        if points.shape[1] == 2:
-            points = numpy.column_stack([
-                points,
-                numpy.zeros(len(points))
-                ])
-
-    # cells
+    points = numpy.zeros((len(nc.dimensions['num_nodes']), 3))
+    point_data_names = []
+    pd = []
     cells = {}
-    for key in nc.variables:
-        var = nc.variables[key]
-        try:
-            elem_type = var.elem_type
-        except AttributeError:
-            pass
-        else:
-            cells[exodus_to_meshio_type[elem_type.upper()]] = var[:] - 1
+    for key, value in nc.variables.items():
+        if key[:7] == 'connect':
+            meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
+            if meshio_type in cells:
+                cells[meshio_type] = \
+                    numpy.vstack([cells[meshio_type], value[:] - 1])
+            else:
+                cells[meshio_type] = value[:] - 1
+        elif key == 'coord':
+            points = nc.variables['coord'][:].T
+        elif key == 'coordx':
+            points[:, 0] = value[:]
+        elif key == 'coordy':
+            points[:, 1] = value[:]
+        elif key == 'coordz':
+            points[:, 2] = value[:]
+        elif key == 'name_nod_var':
+            point_data_names = [b''.join(c).decode('UTF-8') for c in value[:]]
+        elif key == 'vals_nod_var':
+            pd = value[0, :]
 
-    # point data
-    point_data = {}
-    if 'name_nod_var' in nc.variables:
-        variable_names = [
-            b''.join(c).decode('UTF-8')
-            for c in nc.variables['name_nod_var'][:]
-            ]
-
-        point_data = {}
-        for k, name in enumerate(variable_names):
-            point_data[name] = nc.variables['vals_nod_var'][0, k]
+    point_data = {name: dat for name, dat in zip(point_data_names, pd)}
 
     nc.close()
     return points, cells, point_data, {}, {}
