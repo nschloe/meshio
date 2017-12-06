@@ -315,7 +315,7 @@ class XdmfWriter(object):
           cell_data=None,
           field_data=None,
           pretty_xml=True,
-          data_format='XML',
+          data_format='HDF',
           ):
         assert data_format in ['XML', 'Binary', 'HDF'], (
             'Unknown XDMF data format '
@@ -324,7 +324,12 @@ class XdmfWriter(object):
 
         self.filename = filename
         self.data_format = data_format
-        self.binary_file_counter = 0
+        self.data_counter = 0
+
+        if data_format == 'HDF':
+            import h5py
+            self.h5_filename = os.path.splitext(self.filename)[0] + '.h5'
+            self.h5_file = h5py.File(self.h5_filename, 'w')
 
         xdmf_file = ET.Element('Xdmf', Version='3.0')
 
@@ -346,18 +351,22 @@ class XdmfWriter(object):
             s = BytesIO()
             numpy.savetxt(s, data.flatten(), fmt)
             return s.getvalue().decode()
+        elif self.data_format == 'Binary':
+            bin_filename = '{}{}.bin'.format(
+                    os.path.splitext(self.filename)[0],
+                    self.data_counter,
+                    )
+            self.data_counter += 1
+            # write binary data to file
+            with open(bin_filename, 'wb') as f:
+                data.tofile(f)
+            return bin_filename
 
-        assert self.data_format == 'Binary'
-
-        bin_filename = '{}{}.bin'.format(
-                os.path.splitext(self.filename)[0],
-                self.binary_file_counter,
-                )
-        self.binary_file_counter += 1
-        # write binary data to file
-        with open(bin_filename, 'wb') as f:
-            data.tofile(f)
-        return bin_filename
+        assert self.data_format == 'HDF'
+        name = 'data{}'.format(self.data_counter)
+        self.data_counter += 1
+        self.h5_file.create_dataset(name, data=data)
+        return self.h5_filename + ':/' + name
 
     def points(self, grid, points):
         geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
