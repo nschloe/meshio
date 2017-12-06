@@ -73,6 +73,9 @@ xdmf_idx_to_meshio_type = {
     }
 meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
 
+# See
+# <http://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
+# for XDMF types.
 xdmf_to_meshio_type = {
     'Polyvertex': 'vertex',
     'Triangle': 'triangle',
@@ -82,12 +85,12 @@ xdmf_to_meshio_type = {
     'Wedge': 'wedge',
     'Hexahedron': 'hexahedron',
     'Edge_3': 'line3',
-    'Tri_6': 'triangle6',
-    'Quad_8': 'quad8',
-    'Tet_10': 'tetra10',
+    'Triangle_6': 'triangle6',
+    'Quadrilateral_8': 'quad8',
+    'Tetrahedron_10': 'tetra10',
     'Pyramid_13': 'pyramid13',
     'Wedge_15': 'wedge15',
-    'Hex_20': 'hexahedron20',
+    'Hexahedron_20': 'hexahedron20',
     }
 meshio_to_xdmf_type = {v: k for k, v in xdmf_to_meshio_type.items()}
 
@@ -246,7 +249,11 @@ class XdmfReader(object):
                 cells[meshio_type] = self.read_data_item(data_items[0])
 
             elif c.tag == 'Geometry':
-                assert c.attrib['GeometryType'] == 'XYZ'
+                try:
+                    assert c.attrib['GeometryType'] == 'XYZ'
+                except KeyError:
+                    # The default is 'XYZ'
+                    pass
                 data_items = list(c)
                 assert len(data_items) == 1
                 points = self.read_data_item(data_items[0])
@@ -302,18 +309,35 @@ class XdmfReader(object):
 
                 data = self.read_data_item(data_item)
 
-                if c.attrib['Type'] == 'Mixed':
+                # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
+                # Allow both.
+                if 'Type' in c.attrib:
+                    assert 'TopologyType' not in c.attrib
+                    cell_type = c.attrib['Type']
+                else:
+                    cell_type = c.attrib['TopologyType']
+
+                if cell_type == 'Mixed':
                     cells = _translate_mixed_cells(data)
                 else:
-                    meshio_type = xdmf_to_meshio_type[c.attrib['Type']]
+                    meshio_type = xdmf_to_meshio_type[cell_type]
                     cells[meshio_type] = data
 
             elif c.tag == 'Geometry':
-                assert c.attrib['Type'] == 'XYZ'
+                try:
+                    geometry_type = c.attrib['GeometryType']
+                except KeyError:
+                    geometry_type = 'XYZ'
+
                 data_items = list(c)
                 assert len(data_items) == 1
                 data_item = data_items[0]
                 points = self.read_data_item(data_item)
+
+                if geometry_type == 'XY':
+                    points = numpy.column_stack([
+                        points, numpy.zeros(len(points))
+                        ])
 
             else:
                 assert c.tag == 'Attribute', \
