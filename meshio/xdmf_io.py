@@ -6,12 +6,17 @@ I/O for XDMF.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import os
+try:
+    from StringIO import cStringIO as BytesIO
+except ImportError:
+    from io import BytesIO
 import xml.etree.ElementTree as ET
 
 import h5py
 import numpy
 
-from .vtk_io import cell_data_from_raw
+from .vtk_io import cell_data_from_raw, raw_from_cell_data
+from .vtu_io import write_xml
 
 
 def read(filename):
@@ -31,30 +36,59 @@ def _xdmf_to_numpy_type(data_type, precision):
     return numpy.float64
 
 
+numpy_to_xdmf_dtype = {
+    numpy.dtype(numpy.int32): ('Int', '4'),
+    numpy.dtype(numpy.int64): ('Int', '8'),
+    numpy.dtype(numpy.float32): ('Float', '4'),
+    numpy.dtype(numpy.float64): ('Float', '8'),
+    }
+
+xdmf_idx_to_meshio_type = {
+    1: 'vertex',
+    4: 'triangle',
+    5: 'quad',
+    6: 'tetra',
+    7: 'pyramid',
+    8: 'wedge',
+    9: 'hexahedron',
+    }
+meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
+
+xdmf_to_meshio_type = {
+    'Polyvertex': 'vertex',
+    'Triangle': 'triangle',
+    'Quadrilateral': 'quad',
+    'Tetrahedron': 'tetra',
+    'Pyramid': 'pyramid',
+    'Wedge': 'wedge',
+    'Hexahedron': 'hexahedron',
+    'Edge_3': 'line3',
+    'Tri_6': 'triangle6',
+    'Quad_8': 'quad8',
+    'Tet_10': 'tetra10',
+    'Pyramid_13': 'pyramid13',
+    'Wedge_15': 'wedge15',
+    'Hex_20': 'hexahedron20',
+    }
+meshio_to_xdmf_type = {v: k for k, v in xdmf_to_meshio_type.items()}
+
+
 def _translate_mixed_cells(data):
     # Translate it into the cells dictionary.
     # `data` is a one-dimensional vector with
     # (cell_type1, p0, p1, ... ,pk, cell_type2, p10, p11, ..., p1k, ...
 
     # http://www.xdmf.org/index.php/XDMF_Model_and_Format#Topology
+    # https://gitlab.kitware.com/xdmf/xdmf/blob/master/XdmfTopologyType.hpp#L394
     xdmf_idx_to_num_nodes = {
-        1: 1,
-        4: 3,
-        5: 4,
-        6: 4,
-        7: 5,
-        8: 6,
-        9: 8,
-        }
-
-    xdmf_idx_to_meshio_type = {
-        1: 'vertex',
-        4: 'triangle',
-        5: 'quad',
-        6: 'tetra',
-        7: 'pyramid',
-        8: 'wedge',
-        9: 'hexahedron',
+        1: 1,  # vertex
+        4: 3,  # triangle
+        5: 4,  # quad
+        6: 4,  # tet
+        7: 5,  # pyramid
+        8: 6,  # wedge
+        9: 8,  # hex
+        11: 6,  # triangle6
         }
 
     # collect types and offsets
@@ -90,23 +124,6 @@ def _translate_mixed_cells(data):
 class XdmfReader(object):
     def __init__(self, filename):
         self.filename = filename
-        self.xdmf_to_meshio_type = {
-            'Polyvertex': 'vertex',
-            'Triangle': 'triangle',
-            'Quadrilateral': 'quad',
-            'Tetrahedron': 'tetra',
-            'Pyramid': 'pyramid',
-            'Wedge': 'wedge',
-            'Hexahedron': 'hexahedron',
-            'Edge_3': 'line3',
-            'Tri_6': 'triangle6',
-            'Quad_8': 'quad8',
-            'Tet_10': 'tetra10',
-            'Pyramid_13': 'pyramid13',
-            'Wedge_15': 'wedge15',
-            'Hex_20': 'hexahedron20',
-            }
-
         return
 
     def read(self):
@@ -181,8 +198,7 @@ class XdmfReader(object):
             if c.tag == 'Topology':
                 data_items = list(c)
                 assert len(data_items) == 1
-                meshio_type = \
-                    self.xdmf_to_meshio_type[c.attrib['TopologyType']]
+                meshio_type = xdmf_to_meshio_type[c.attrib['TopologyType']]
                 cells[meshio_type] = self.read_data_item(
                     data_items[0], dt_key='NumberType'
                     )
@@ -249,7 +265,7 @@ class XdmfReader(object):
                 if c.attrib['Type'] == 'Mixed':
                     cells = _translate_mixed_cells(data)
                 else:
-                    meshio_type = self.xdmf_to_meshio_type[c.attrib['Type']]
+                    meshio_type = xdmf_to_meshio_type[c.attrib['Type']]
                     cells[meshio_type] = data
 
             elif c.tag == 'Geometry':
@@ -283,29 +299,104 @@ class XdmfReader(object):
         return points, cells, point_data, cell_data, field_data
 
 
-# XDMF 2 writer
-# def write(filename,
-#           points,
-#           cells,
-#           point_data=None,
-#           cell_data=None,
-#           field_data=None
-#           ):
-#     from .legacy_writer import write as w
-#     return w(
-#         'xdmf2, filename, points, cells,
-#         point_data=point_data, cell_data=cell_data, field_data=field_data
-#         )
-
-
 def write(filename,
           points,
           cells,
           point_data=None,
           cell_data=None,
-          field_data=None
+          field_data=None,
+          pretty_xml=True
           ):
-    from .legacy_writer import write as w
-    return w(
-        'xdmf3', filename, points, cells, point_data, cell_data, field_data
+    # from .legacy_writer import write as w
+    # w('xdmf3', filename, points, cells, point_data, cell_data, field_data)
+    # exit(1)
+
+    def numpy_to_xml_string(data, fmt):
+        s = BytesIO()
+        numpy.savetxt(s, data.flatten(), fmt)
+        return s.getvalue().decode()
+
+    xdmf_file = ET.Element(
+        'Xdmf',
+        Version='3.0',
         )
+
+    domain = ET.SubElement(xdmf_file, 'Domain')
+    grid = ET.SubElement(domain, 'Grid', Name='Grid')
+
+    # points
+    geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
+    dt, prec = numpy_to_xdmf_dtype[points.dtype]
+    dim = '{} {}'.format(*points.shape)
+    data_item = ET.SubElement(
+            geo, 'DataItem',
+            DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+            )
+    data_item.text = numpy_to_xml_string(points, '%.15e')
+
+    # cells
+    if len(cells) == 1:
+        meshio_type = list(cells.keys())[0]
+        xdmf_type = meshio_to_xdmf_type[meshio_type]
+        topo = ET.SubElement(grid, 'Topology', Type=xdmf_type)
+        dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
+        dim = '{} {}'.format(*cells[meshio_type].shape)
+        data_item = ET.SubElement(
+                topo, 'DataItem',
+                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+                )
+        data_item.text = numpy_to_xml_string(cells[meshio_type], '%d')
+    elif len(cells) > 1:
+        topo = ET.SubElement(grid, 'Topology', Type='Mixed')
+        total_num_cells = sum(c.shape[0] for c in cells.values())
+        total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
+        dim = str(total_num_cell_items + total_num_cells)
+        # Deliberately take the data type of the first key
+        keys = list(cells.keys())
+        dt, prec = numpy_to_xdmf_dtype[cells[keys[0]].dtype]
+        data_item = ET.SubElement(
+                topo, 'DataItem',
+                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+                )
+        # prepend column with index
+        data_item.text = ''
+        for key, value in cells.items():
+            d = numpy.column_stack([
+                numpy.full(len(value), meshio_type_to_xdmf_index[key]),
+                value
+                ])
+            data_item.text += numpy_to_xml_string(d, '%d')
+
+    # point data
+    for name, data in point_data.items():
+        att = ET.SubElement(
+                grid, 'Attribute',
+                Name=name, Type='None', Center='Node'
+                )
+        dt, prec = numpy_to_xdmf_dtype[data.dtype]
+        dim = ' '.join([str(s) for s in data.shape])
+        data_item = ET.SubElement(
+                att, 'DataItem',
+                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+                )
+        data_item.text = numpy_to_xml_string(data, '%.15e')
+
+    # cell data
+    raw = raw_from_cell_data(cell_data)
+    for name, data in raw.items():
+        att = ET.SubElement(
+                grid, 'Attribute',
+                Name=name, Type='None', Center='Cell'
+                )
+        dt, prec = numpy_to_xdmf_dtype[data.dtype]
+        dim = ' '.join([str(s) for s in data.shape])
+        data_item = ET.SubElement(
+                att, 'DataItem',
+                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+                )
+        data_item.text = numpy_to_xml_string(data, '%.15e')
+
+    ET.register_namespace('xi', 'http://www.w3.org/2001/XInclude')
+
+    write_xml(filename, xdmf_file, pretty_xml, indent=2)
+    return
