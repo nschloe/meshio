@@ -32,14 +32,44 @@ numpy_to_xdmf_dtype = {
 xdmf_to_numpy_type = {v: k for k, v in numpy_to_xdmf_dtype.items()}
 
 
+# Check out
+# <https://gitlab.kitware.com/xdmf/xdmf/blob/master/XdmfTopologyType.cpp>
+# for the list of indices.
 xdmf_idx_to_meshio_type = {
-    1: 'vertex',
-    4: 'triangle',
-    5: 'quad',
-    6: 'tetra',
-    7: 'pyramid',
-    8: 'wedge',
-    9: 'hexahedron',
+    0x1: 'vertex',
+    0x4: 'triangle',
+    0x5: 'quad',
+    0x6: 'tetra',
+    0x7: 'pyramid',
+    0x8: 'wedge',
+    0x9: 'hexahedron',
+    0x22: 'line3',
+    0x23: 'quad9',
+    0x24: 'triangle6',
+    0x25: 'quad8',
+    0x26: 'tetra10',
+    0x27: 'pyramid13',
+    0x28: 'wedge15',
+    0x29: 'wedge18',
+    0x30: 'hexahedron20',
+    0x31: 'hexahedron24',
+    0x32: 'hexahedron27',
+    0x33: 'hexahedron64',
+    0x34: 'hexahedron125',
+    0x35: 'hexahedron216',
+    0x36: 'hexahedron343',
+    0x37: 'hexahedron512',
+    0x38: 'hexahedron729',
+    0x39: 'hexahedron1000',
+    0x40: 'hexahedron1331',
+    # 0x41: 'hexahedron_spectral_64',
+    # 0x42: 'hexahedron_spectral_125',
+    # 0x43: 'hexahedron_spectral_216',
+    # 0x44: 'hexahedron_spectral_343',
+    # 0x45: 'hexahedron_spectral_512',
+    # 0x46: 'hexahedron_spectral_729',
+    # 0x47: 'hexahedron_spectral_1000',
+    # 0x48: 'hexahedron_spectral_1331',
     }
 meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
 
