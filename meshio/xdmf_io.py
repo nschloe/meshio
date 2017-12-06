@@ -12,7 +12,6 @@ except ImportError:
     from io import BytesIO
 import xml.etree.ElementTree as ET
 
-import h5py
 import numpy
 
 from .vtk_io import cell_data_from_raw, raw_from_cell_data
@@ -143,6 +142,7 @@ class XdmfReader(object):
         return self.read_xdmf3(root)
 
     def read_data_item(self, data_item, dt_key='DataType'):
+        import h5py
         dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
         data_type = data_item.attrib[dt_key]
         precision = data_item.attrib['Precision']
