@@ -296,11 +296,6 @@ def write(filename,
     if not write_binary:
         logging.warning('VTU ASCII files are only meant for debugging.')
 
-    # from .legacy_writer import write as w
-    # filetype = 'vtu-binary' if write_binary else 'vtu-ascii'
-    # w(filetype, filename, points, cells, point_data, cell_data, field_data)
-    # exit(1)
-
     header_type = 'UInt32'
 
     vtk_file = ET.Element(

@@ -387,12 +387,6 @@ def write(filename,
           field_data=None,
           write_binary=True
           ):
-    # from .legacy_writer import write as w
-    # w('vtk-ascii',
-    #   filename, points, cells, point_data, cell_data, field_data
-    #   )
-    # return
-
     if not write_binary:
         logging.warning('VTK ASCII files are only meant for debugging.')
 

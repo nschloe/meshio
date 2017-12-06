@@ -307,10 +307,6 @@ def write(filename,
           field_data=None,
           pretty_xml=True
           ):
-    # from .legacy_writer import write as w
-    # w('xdmf3', filename, points, cells, point_data, cell_data, field_data)
-    # exit(1)
-
     def numpy_to_xml_string(data, fmt):
         s = BytesIO()
         numpy.savetxt(s, data.flatten(), fmt)
