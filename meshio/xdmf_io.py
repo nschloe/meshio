@@ -160,9 +160,7 @@ class XdmfReader(object):
                 ).reshape(dims)
 
         assert data_item.attrib['Format'] == 'HDF', \
-            'Unknown XDMF Format \'{}\'.'.format(
-                    data_item.attrib['Format']
-                    )
+            'Unknown XDMF Format \'{}\'.'.format(data_item.attrib['Format'])
 
         info = data_item.text.strip()
         filename, h5path = info.split(':')
@@ -400,22 +398,23 @@ class XdmfWriter(object):
             total_num_cell_items = \
                 sum(numpy.prod(c.shape) for c in cells.values())
             dim = str(total_num_cell_items + total_num_cells)
-            # Deliberately take the data type of the first key
-            keys = list(cells.keys())
-            dt, prec = numpy_to_xdmf_dtype[cells[keys[0]].dtype]
+            # prepend column with index
+            cd = numpy.concatenate([
+                numpy.column_stack([
+                    numpy.full(
+                        len(value), meshio_type_to_xdmf_index[key],
+                        dtype=value.dtype
+                        ),
+                    value
+                    ]).flatten()
+                for key, value in cells.items()
+                ])
+            dt, prec = numpy_to_xdmf_dtype[cd.dtype]
             data_item = ET.SubElement(
                     topo, 'DataItem',
                     DataType=dt, Dimensions=dim,
                     Format=self.data_format, Precision=prec
                     )
-            # prepend column with index
-            cd = numpy.concatenate([
-                numpy.column_stack([
-                    numpy.full(len(value), meshio_type_to_xdmf_index[key]),
-                    value
-                    ]).flatten()
-                for key, value in cells.items()
-                ])
             data_item.text = self.numpy_to_xml_string(cd, '%d')
         return
 
