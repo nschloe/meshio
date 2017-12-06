@@ -452,10 +452,7 @@ class XdmfWriter(object):
             data_item.text = self.numpy_to_xml_string(data, '%.15e')
         return
 
-    def write(self):
-        return
-
 
 def write(*args, **kwargs):
-    XdmfWriter(*args, **kwargs).write()
+    XdmfWriter(*args, **kwargs)
     return
