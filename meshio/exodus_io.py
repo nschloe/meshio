@@ -45,6 +45,7 @@ exodus_to_meshio_type = {
     # 'TRISHELL6': 'triangle6',
     # volumes
     'HEX': 'hexahedron',
+    'HEXAHEDRON': 'hexahedron',
     'HEX8': 'hexahedron',
     'HEX9': 'hexahedron9',
     'HEX20': 'hexahedron20',
@@ -198,8 +199,7 @@ def write(filename,
 
     # point data
     # The variable `name_nod_var` holds the names and indices of the node
-    # variables, the variables `vals_nod_var*` hold the actual data.
-    # rootgrp.createDimension('num_' + exodus_type, values.shape[0])
+    # variables, the variable `vals_nod_var` hold the actual data.
     num_nod_var = len(point_data)
     if num_nod_var > 0:
         rootgrp.createDimension('num_nod_var', num_nod_var)
