@@ -87,12 +87,9 @@ def write(
     '''Writes PERMAS dat files, cf.
     http://www.intes.de # PERMAS-ASCII-file-format
     '''
-    if point_data is None:
-        point_data = {}
-    if cell_data is None:
-        cell_data = {}
-    if field_data is None:
-        field_data = {}
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
 
     with open(filename, 'w') as fh:
         fh.write('!\n')
