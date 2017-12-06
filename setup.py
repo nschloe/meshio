@@ -40,7 +40,7 @@ setup(
         ],
     extras_require={
         'exodus': ['netCDF4'],
-        'hdf5': ['h5py'],  # MED, MOAB format
+        'hdf5': ['h5py'],  # MED, MOAB, XDMF formats
         },
     scripts=[
       'tools/meshio-convert',

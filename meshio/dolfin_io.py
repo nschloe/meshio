@@ -127,7 +127,7 @@ def _write_mesh(
 
     dolfin = ET.Element(
         'dolfin',
-        nsmap={'dolfin': 'http://fenicsproject.org/'}
+        nsmap={'dolfin': 'https://fenicsproject.org/'}
         )
 
     meshio_to_dolfin_type = {
@@ -202,7 +202,7 @@ def _write_cell_data(
         ):
     dolfin = ET.Element(
         'dolfin',
-        nsmap={'dolfin': 'http://fenicsproject.org/'}
+        nsmap={'dolfin': 'https://fenicsproject.org/'}
         )
 
     mesh_function = ET.SubElement(

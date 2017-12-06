@@ -396,7 +396,7 @@ def write(filename,
                 )
         data_item.text = numpy_to_xml_string(data, '%.15e')
 
-    ET.register_namespace('xi', 'http://www.w3.org/2001/XInclude')
+    ET.register_namespace('xi', 'https://www.w3.org/2001/XInclude/')
 
     write_xml(filename, xdmf_file, pretty_xml, indent=2)
     return

@@ -84,7 +84,7 @@ def read(filename, file_format=None):
     '''
     import os
 
-    # http://stackoverflow.com/questions/4843173/how-to-check-if-a-type-of-variable-is-string-in-python
+    # https://stackoverflow.com/q/4843173/353337
     assert isinstance(filename, str)
 
     if not file_format:
