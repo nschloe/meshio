@@ -317,7 +317,9 @@ class XdmfWriter(object):
             '\'{}\' (use \'XML\', \'Binary\', or \'HDF\'.)'.format(data_format)
             )
 
+        self.filename = filename
         self.data_format = data_format
+        self.binary_file_counter = 0
 
         xdmf_file = ET.Element('Xdmf', Version='3.0')
 
@@ -335,10 +337,22 @@ class XdmfWriter(object):
         return
 
     def numpy_to_xml_string(self, data, fmt):
-        assert self.data_format == 'XML'
-        s = BytesIO()
-        numpy.savetxt(s, data.flatten(), fmt)
-        return s.getvalue().decode()
+        if self.data_format == 'XML':
+            s = BytesIO()
+            numpy.savetxt(s, data.flatten(), fmt)
+            return s.getvalue().decode()
+
+        assert self.data_format == 'Binary'
+
+        bin_filename = '{}{}.bin'.format(
+                os.path.splitext(self.filename)[0],
+                self.binary_file_counter,
+                )
+        self.binary_file_counter += 1
+        # write binary data to file
+        with open(bin_filename, 'wb') as f:
+            data.tofile(f)
+        return bin_filename
 
     def points(self, grid, points):
         geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
