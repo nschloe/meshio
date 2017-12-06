@@ -96,6 +96,7 @@ def read(filename):
         elif key == 'coordz':
             points[:, 2] = value[:]
         elif key == 'name_nod_var':
+            value.set_auto_mask(False)
             point_data_names = [b''.join(c).decode('UTF-8') for c in value[:]]
         elif key == 'vals_nod_var':
             pd = value[0, :]
@@ -127,10 +128,6 @@ def write(filename,
           cell_data=None,
           field_data=None
           ):
-    # from .legacy_writer import write as w
-    # w('exodus', filename, points, cells, point_data, cell_data, field_data)
-    # return
-
     import netCDF4
 
     rootgrp = netCDF4.Dataset(filename, 'w')
@@ -163,11 +160,8 @@ def write(filename,
     # points
     coor_names = rootgrp.createVariable(
             'coor_names', 'S1', ('num_dim', 'len_string'),
-            fill_value=b'x'
             )
-    # Set the value multiple times; see bug
-    # <https://github.com/Unidata/netcdf4-python/issues/746>.
-    coor_names[:] = b''
+    coor_names.set_auto_mask(False)
     coor_names[0, 0] = 'X'
     coor_names[1, 0] = 'Y'
     coor_names[2, 0] = 'Z'
@@ -205,10 +199,9 @@ def write(filename,
         rootgrp.createDimension('num_nod_var', num_nod_var)
         # set names
         point_data_names = rootgrp.createVariable(
-                'name_nod_var', 'S1', ('num_nod_var', 'len_string'),
-                fill_value=b'x'
+                'name_nod_var', 'S1', ('num_nod_var', 'len_string')
                 )
-        point_data_names[:] = b''
+        point_data_names.set_auto_mask(False)
         for k, name in enumerate(point_data.keys()):
             for i, letter in enumerate(name):
                 point_data_names[k, i] = letter.encode('utf-8')
