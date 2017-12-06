@@ -2,6 +2,7 @@
 #
 '''
 I/O for XDMF.
+http://www.xdmf.org/index.php/XDMF_Model_and_Format
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
@@ -152,11 +153,14 @@ class XdmfReader(object):
                 data_item.text.split(),
                 dtype=_xdmf_to_numpy_type(data_type, precision)
                 ).reshape(dims)
+        elif data_item.attrib['Format'] == 'Binary':
+            return numpy.fromfile(
+                data_item.text.strip(),
+                dtype=_xdmf_to_numpy_type(data_type, precision)
+                ).reshape(dims)
 
         assert data_item.attrib['Format'] == 'HDF', \
-            'Unknown XDMF Format \'{}\'.'.format(
-                    data_item.attrib['Format']
-                    )
+            'Unknown XDMF Format \'{}\'.'.format(data_item.attrib['Format'])
 
         info = data_item.text.strip()
         filename, h5path = info.split(':')
@@ -299,100 +303,155 @@ class XdmfReader(object):
         return points, cells, point_data, cell_data, field_data
 
 
-def write(filename,
+class XdmfWriter(object):
+    def __init__(
+          self,
+          filename,
           points,
           cells,
           point_data=None,
           cell_data=None,
           field_data=None,
-          pretty_xml=True
+          pretty_xml=True,
+          data_format='HDF',
           ):
-    def numpy_to_xml_string(data, fmt):
-        s = BytesIO()
-        numpy.savetxt(s, data.flatten(), fmt)
-        return s.getvalue().decode()
-
-    xdmf_file = ET.Element(
-        'Xdmf',
-        Version='3.0',
-        )
-
-    domain = ET.SubElement(xdmf_file, 'Domain')
-    grid = ET.SubElement(domain, 'Grid', Name='Grid')
-
-    # points
-    geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
-    dt, prec = numpy_to_xdmf_dtype[points.dtype]
-    dim = '{} {}'.format(*points.shape)
-    data_item = ET.SubElement(
-            geo, 'DataItem',
-            DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+        assert data_format in ['XML', 'Binary', 'HDF'], (
+            'Unknown XDMF data format '
+            '\'{}\' (use \'XML\', \'Binary\', or \'HDF\'.)'.format(data_format)
             )
-    data_item.text = numpy_to_xml_string(points, '%.15e')
 
-    # cells
-    if len(cells) == 1:
-        meshio_type = list(cells.keys())[0]
-        xdmf_type = meshio_to_xdmf_type[meshio_type]
-        topo = ET.SubElement(grid, 'Topology', Type=xdmf_type)
-        dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
-        dim = '{} {}'.format(*cells[meshio_type].shape)
+        self.filename = filename
+        self.data_format = data_format
+        self.data_counter = 0
+
+        if data_format == 'HDF':
+            import h5py
+            self.h5_filename = os.path.splitext(self.filename)[0] + '.h5'
+            self.h5_file = h5py.File(self.h5_filename, 'w')
+
+        xdmf_file = ET.Element('Xdmf', Version='3.0')
+
+        domain = ET.SubElement(xdmf_file, 'Domain')
+        grid = ET.SubElement(domain, 'Grid', Name='Grid')
+
+        self.points(grid, points)
+        self.cells(cells, grid)
+        self.point_data(point_data, grid)
+        self.cell_data(cell_data, grid)
+
+        ET.register_namespace('xi', 'https://www.w3.org/2001/XInclude/')
+
+        write_xml(filename, xdmf_file, pretty_xml, indent=2)
+        return
+
+    def numpy_to_xml_string(self, data, fmt):
+        if self.data_format == 'XML':
+            s = BytesIO()
+            numpy.savetxt(s, data.flatten(), fmt)
+            return s.getvalue().decode()
+        elif self.data_format == 'Binary':
+            bin_filename = '{}{}.bin'.format(
+                    os.path.splitext(self.filename)[0],
+                    self.data_counter,
+                    )
+            self.data_counter += 1
+            # write binary data to file
+            with open(bin_filename, 'wb') as f:
+                data.tofile(f)
+            return bin_filename
+
+        assert self.data_format == 'HDF'
+        name = 'data{}'.format(self.data_counter)
+        self.data_counter += 1
+        self.h5_file.create_dataset(name, data=data)
+        return self.h5_filename + ':/' + name
+
+    def points(self, grid, points):
+        geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
+        dt, prec = numpy_to_xdmf_dtype[points.dtype]
+        dim = '{} {}'.format(*points.shape)
         data_item = ET.SubElement(
-                topo, 'DataItem',
-                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
+                geo, 'DataItem',
+                DataType=dt, Dimensions=dim,
+                Format=self.data_format, Precision=prec
                 )
-        data_item.text = numpy_to_xml_string(cells[meshio_type], '%d')
-    elif len(cells) > 1:
-        topo = ET.SubElement(grid, 'Topology', Type='Mixed')
-        total_num_cells = sum(c.shape[0] for c in cells.values())
-        total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
-        dim = str(total_num_cell_items + total_num_cells)
-        # Deliberately take the data type of the first key
-        keys = list(cells.keys())
-        dt, prec = numpy_to_xdmf_dtype[cells[keys[0]].dtype]
-        data_item = ET.SubElement(
-                topo, 'DataItem',
-                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
-                )
-        # prepend column with index
-        data_item.text = ''
-        for key, value in cells.items():
-            d = numpy.column_stack([
-                numpy.full(len(value), meshio_type_to_xdmf_index[key]),
-                value
+        data_item.text = self.numpy_to_xml_string(points, '%.15e')
+        return
+
+    def cells(self, cells, grid):
+        if len(cells) == 1:
+            meshio_type = list(cells.keys())[0]
+            xdmf_type = meshio_to_xdmf_type[meshio_type]
+            topo = ET.SubElement(grid, 'Topology', Type=xdmf_type)
+            dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
+            dim = '{} {}'.format(*cells[meshio_type].shape)
+            data_item = ET.SubElement(
+                    topo, 'DataItem',
+                    DataType=dt, Dimensions=dim,
+                    Format=self.data_format, Precision=prec
+                    )
+            data_item.text = \
+                self.numpy_to_xml_string(cells[meshio_type], '%d')
+        elif len(cells) > 1:
+            topo = ET.SubElement(grid, 'Topology', Type='Mixed')
+            total_num_cells = sum(c.shape[0] for c in cells.values())
+            total_num_cell_items = \
+                sum(numpy.prod(c.shape) for c in cells.values())
+            dim = str(total_num_cell_items + total_num_cells)
+            # prepend column with index
+            cd = numpy.concatenate([
+                numpy.column_stack([
+                    numpy.full(
+                        len(value), meshio_type_to_xdmf_index[key],
+                        dtype=value.dtype
+                        ),
+                    value
+                    ]).flatten()
+                for key, value in cells.items()
                 ])
-            data_item.text += numpy_to_xml_string(d, '%d')
+            dt, prec = numpy_to_xdmf_dtype[cd.dtype]
+            data_item = ET.SubElement(
+                    topo, 'DataItem',
+                    DataType=dt, Dimensions=dim,
+                    Format=self.data_format, Precision=prec
+                    )
+            data_item.text = self.numpy_to_xml_string(cd, '%d')
+        return
 
-    # point data
-    for name, data in point_data.items():
-        att = ET.SubElement(
-                grid, 'Attribute',
-                Name=name, Type='None', Center='Node'
-                )
-        dt, prec = numpy_to_xdmf_dtype[data.dtype]
-        dim = ' '.join([str(s) for s in data.shape])
-        data_item = ET.SubElement(
-                att, 'DataItem',
-                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
-                )
-        data_item.text = numpy_to_xml_string(data, '%.15e')
+    def point_data(self, point_data, grid):
+        for name, data in point_data.items():
+            att = ET.SubElement(
+                    grid, 'Attribute',
+                    Name=name, Type='None', Center='Node'
+                    )
+            dt, prec = numpy_to_xdmf_dtype[data.dtype]
+            dim = ' '.join([str(s) for s in data.shape])
+            data_item = ET.SubElement(
+                    att, 'DataItem',
+                    DataType=dt, Dimensions=dim,
+                    Format=self.data_format, Precision=prec
+                    )
+            data_item.text = self.numpy_to_xml_string(data, '%.15e')
+        return
 
-    # cell data
-    raw = raw_from_cell_data(cell_data)
-    for name, data in raw.items():
-        att = ET.SubElement(
-                grid, 'Attribute',
-                Name=name, Type='None', Center='Cell'
-                )
-        dt, prec = numpy_to_xdmf_dtype[data.dtype]
-        dim = ' '.join([str(s) for s in data.shape])
-        data_item = ET.SubElement(
-                att, 'DataItem',
-                DataType=dt, Dimensions=dim, Format='XML', Precision=prec
-                )
-        data_item.text = numpy_to_xml_string(data, '%.15e')
+    def cell_data(self, cell_data, grid):
+        raw = raw_from_cell_data(cell_data)
+        for name, data in raw.items():
+            att = ET.SubElement(
+                    grid, 'Attribute',
+                    Name=name, Type='None', Center='Cell'
+                    )
+            dt, prec = numpy_to_xdmf_dtype[data.dtype]
+            dim = ' '.join([str(s) for s in data.shape])
+            data_item = ET.SubElement(
+                    att, 'DataItem',
+                    DataType=dt, Dimensions=dim,
+                    Format=self.data_format, Precision=prec
+                    )
+            data_item.text = self.numpy_to_xml_string(data, '%.15e')
+        return
 
-    ET.register_namespace('xi', 'https://www.w3.org/2001/XInclude/')
 
-    write_xml(filename, xdmf_file, pretty_xml, indent=2)
+def write(*args, **kwargs):
+    XdmfWriter(*args, **kwargs)
     return
