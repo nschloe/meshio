@@ -92,33 +92,33 @@ def read(filename, file_format=None):
         _, extension = os.path.splitext(filename)
         file_format = _extension_to_filetype[extension]
 
-    if file_format in ['ansys', 'ansys-ascii', 'ansys-binary']:
-        out = ansys_io.read(filename)
-    elif file_format in ['gmsh', 'gmsh-ascii', 'gmsh-binary']:
-        out = gmsh_io.read(filename)
-    elif file_format == 'med':
-        out = med_io.read(filename)
-    elif file_format == 'medit':
-        out = medit_io.read(filename)
-    elif file_format == 'dolfin-xml':
-        out = dolfin_io.read(filename)
-    elif file_format == 'permas':
-        out = permas_io.read(filename)
-    elif file_format == 'moab':
-        out = h5m_io.read(filename)
-    elif file_format == 'off':
-        out = off_io.read(filename)
-    elif file_format in ['vtu-ascii', 'vtu-binary']:
-        out = vtu_io.read(filename)
-    elif file_format in ['vtk-ascii', 'vtk-binary']:
-        out = vtk_io.read(filename)
-    elif file_format in ['xdmf']:
-        out = xdmf_io.read(filename)
-    else:
-        assert file_format == 'exodus'
-        out = exodus_io.read(filename)
+    format_to_reader = {
+        'ansys': ansys_io,
+        'ansys-ascii': ansys_io,
+        'ansys-binary': ansys_io,
+        #
+        'gmsh': gmsh_io,
+        'gmsh-ascii': gmsh_io,
+        'gmsh-binary': gmsh_io,
+        #
+        'med': med_io,
+        'medit': medit_io,
+        'dolfin-xml': dolfin_io,
+        'permas': permas_io,
+        'moab': h5m_io,
+        'off': off_io,
+        #
+        'vtu-ascii': vtu_io,
+        'vtu-binary': vtu_io,
+        #
+        'vtk-ascii': vtk_io,
+        'vtk-binary': vtk_io,
+        #
+        'xdmf': xdmf_io,
+        'exodus': exodus_io,
+        }
 
-    return out
+    return format_to_reader[file_format].read(filename)
 
 
 def write(filename,
