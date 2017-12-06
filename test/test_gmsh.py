@@ -15,6 +15,9 @@ test_set = [
         helpers.tet10_mesh,
         helpers.hex_mesh,
         helpers.hex20_mesh,
+        helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
+        helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
+        helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
         ]
 
 
