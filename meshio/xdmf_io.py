@@ -73,6 +73,9 @@ xdmf_idx_to_meshio_type = {
     }
 meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
 
+# See
+# <http://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
+# for XDMF types.
 xdmf_to_meshio_type = {
     'Polyvertex': 'vertex',
     'Triangle': 'triangle',
@@ -82,12 +85,12 @@ xdmf_to_meshio_type = {
     'Wedge': 'wedge',
     'Hexahedron': 'hexahedron',
     'Edge_3': 'line3',
-    'Tri_6': 'triangle6',
-    'Quad_8': 'quad8',
-    'Tet_10': 'tetra10',
+    'Triangle_6': 'triangle6',
+    'Quadrilateral_8': 'quad8',
+    'Tetrahedron_10': 'tetra10',
     'Pyramid_13': 'pyramid13',
     'Wedge_15': 'wedge15',
-    'Hex_20': 'hexahedron20',
+    'Hexahedron_20': 'hexahedron20',
     }
 meshio_to_xdmf_type = {v: k for k, v in xdmf_to_meshio_type.items()}
 
@@ -161,11 +164,27 @@ class XdmfReader(object):
 
         return self.read_xdmf3(root)
 
-    def read_data_item(self, data_item, dt_key='DataType'):
+    def read_data_item(self, data_item):
         import h5py
         dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
-        data_type = data_item.attrib[dt_key]
-        precision = data_item.attrib['Precision']
+
+        # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files
+        # out there use both keys interchangeably.
+        if 'DataType' in data_item.attrib:
+            assert 'NumberType' not in data_item.attrib
+            data_type = data_item.attrib['DataType']
+        elif 'NumberType' in data_item.attrib:
+            assert 'DataType' not in data_item.attrib
+            data_type = data_item.attrib['NumberType']
+        else:
+            # Default, see
+            # <http://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
+            data_type = 'Float'
+
+        try:
+            precision = data_item.attrib['Precision']
+        except KeyError:
+            precision = '4'
 
         if data_item.attrib['Format'] == 'XML':
             return numpy.array(
@@ -209,7 +228,12 @@ class XdmfReader(object):
             'XDMF reader: Only supports one grid right now.'
         grid = grids[0]
         assert grid.tag == 'Grid'
-        assert grid.attrib['GridType'] == 'Uniform'
+
+        try:
+            assert grid.attrib['GridType'] == 'Uniform'
+        except KeyError:
+            # The default is 'Uniform'
+            pass
 
         points = None
         cells = {}
@@ -222,17 +246,17 @@ class XdmfReader(object):
                 data_items = list(c)
                 assert len(data_items) == 1
                 meshio_type = xdmf_to_meshio_type[c.attrib['TopologyType']]
-                cells[meshio_type] = self.read_data_item(
-                    data_items[0], dt_key='NumberType'
-                    )
+                cells[meshio_type] = self.read_data_item(data_items[0])
 
             elif c.tag == 'Geometry':
-                assert c.attrib['GeometryType'] == 'XYZ'
+                try:
+                    assert c.attrib['GeometryType'] == 'XYZ'
+                except KeyError:
+                    # The default is 'XYZ'
+                    pass
                 data_items = list(c)
                 assert len(data_items) == 1
-                points = self.read_data_item(
-                        data_items[0], dt_key='NumberType'
-                        )
+                points = self.read_data_item(data_items[0])
 
             else:
                 assert c.tag == 'Attribute', \
@@ -244,7 +268,7 @@ class XdmfReader(object):
                 data_items = list(c)
                 assert len(data_items) == 1
 
-                data = self.read_data_item(data_items[0], dt_key='NumberType')
+                data = self.read_data_item(data_items[0])
 
                 name = c.attrib['Name']
                 if c.attrib['Center'] == 'Node':
@@ -285,18 +309,35 @@ class XdmfReader(object):
 
                 data = self.read_data_item(data_item)
 
-                if c.attrib['Type'] == 'Mixed':
+                # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
+                # Allow both.
+                if 'Type' in c.attrib:
+                    assert 'TopologyType' not in c.attrib
+                    cell_type = c.attrib['Type']
+                else:
+                    cell_type = c.attrib['TopologyType']
+
+                if cell_type == 'Mixed':
                     cells = _translate_mixed_cells(data)
                 else:
-                    meshio_type = xdmf_to_meshio_type[c.attrib['Type']]
+                    meshio_type = xdmf_to_meshio_type[cell_type]
                     cells[meshio_type] = data
 
             elif c.tag == 'Geometry':
-                assert c.attrib['Type'] == 'XYZ'
+                try:
+                    geometry_type = c.attrib['GeometryType']
+                except KeyError:
+                    geometry_type = 'XYZ'
+
                 data_items = list(c)
                 assert len(data_items) == 1
                 data_item = data_items[0]
                 points = self.read_data_item(data_item)
+
+                if geometry_type == 'XY':
+                    points = numpy.column_stack([
+                        points, numpy.zeros(len(points))
+                        ])
 
             else:
                 assert c.tag == 'Attribute', \
