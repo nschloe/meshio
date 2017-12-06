@@ -23,25 +23,14 @@ def read(filename):
     return XdmfReader(filename).read()
 
 
-def _xdmf_to_numpy_type(data_type, precision):
-    if data_type == 'Int' and precision == '4':
-        return numpy.int32
-    elif data_type == 'Int' and precision == '8':
-        return numpy.int64
-    elif data_type == 'Float' and precision == '4':
-        return numpy.float32
-
-    assert data_type == 'Float' and precision == '8', \
-        'Unknown XDMF type ({}, {}).'.format(data_type, precision)
-    return numpy.float64
-
-
 numpy_to_xdmf_dtype = {
     numpy.dtype(numpy.int32): ('Int', '4'),
     numpy.dtype(numpy.int64): ('Int', '8'),
     numpy.dtype(numpy.float32): ('Float', '4'),
     numpy.dtype(numpy.float64): ('Float', '8'),
     }
+xdmf_to_numpy_type = {v: k for k, v in numpy_to_xdmf_dtype.items()}
+
 
 xdmf_idx_to_meshio_type = {
     1: 'vertex',
@@ -151,12 +140,12 @@ class XdmfReader(object):
         if data_item.attrib['Format'] == 'XML':
             return numpy.array(
                 data_item.text.split(),
-                dtype=_xdmf_to_numpy_type(data_type, precision)
+                dtype=xdmf_to_numpy_type[(data_type, precision)]
                 ).reshape(dims)
         elif data_item.attrib['Format'] == 'Binary':
             return numpy.fromfile(
                 data_item.text.strip(),
-                dtype=_xdmf_to_numpy_type(data_type, precision)
+                dtype=xdmf_to_numpy_type[(data_type, precision)]
                 ).reshape(dims)
 
         assert data_item.attrib['Format'] == 'HDF', \
@@ -233,7 +222,7 @@ class XdmfReader(object):
                 elif c.attrib['Center'] == 'Cell':
                     cell_data_raw[name] = data
                 else:
-                    # TODO
+                    # TODO field data?
                     assert c.attrib['Center'] == 'Grid'
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
