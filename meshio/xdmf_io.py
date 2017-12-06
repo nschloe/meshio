@@ -153,6 +153,11 @@ class XdmfReader(object):
                 data_item.text.split(),
                 dtype=_xdmf_to_numpy_type(data_type, precision)
                 ).reshape(dims)
+        elif data_item.attrib['Format'] == 'Binary':
+            return numpy.fromfile(
+                data_item.text.strip(),
+                dtype=_xdmf_to_numpy_type(data_type, precision)
+                ).reshape(dims)
 
         assert data_item.attrib['Format'] == 'HDF', \
             'Unknown XDMF Format \'{}\'.'.format(
@@ -395,14 +400,14 @@ class XdmfWriter(object):
                     Format=self.data_format, Precision=prec
                     )
             # prepend column with index
-            data_item.text = ''
-            for key, value in cells.items():
-                d = numpy.column_stack([
+            cd = numpy.concatenate([
+                numpy.column_stack([
                     numpy.full(len(value), meshio_type_to_xdmf_index[key]),
                     value
-                    ])
-                data_item.text += \
-                    self.numpy_to_xml_string(d, '%d')
+                    ]).flatten()
+                for key, value in cells.items()
+                ])
+            data_item.text = self.numpy_to_xml_string(cd, '%d')
         return
 
     def point_data(self, point_data, grid):
