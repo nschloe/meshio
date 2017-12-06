@@ -12,7 +12,6 @@ except ImportError:
     from io import BytesIO
 import xml.etree.ElementTree as ET
 
-import h5py
 import numpy
 
 from .vtk_io import cell_data_from_raw, raw_from_cell_data
@@ -143,6 +142,7 @@ class XdmfReader(object):
         return self.read_xdmf3(root)
 
     def read_data_item(self, data_item, dt_key='DataType'):
+        import h5py
         dims = [int(d) for d in data_item.attrib['Dimensions'].split()]
         data_type = data_item.attrib[dt_key]
         precision = data_item.attrib['Precision']
@@ -307,10 +307,6 @@ def write(filename,
           field_data=None,
           pretty_xml=True
           ):
-    # from .legacy_writer import write as w
-    # w('xdmf3', filename, points, cells, point_data, cell_data, field_data)
-    # exit(1)
-
     def numpy_to_xml_string(data, fmt):
         s = BytesIO()
         numpy.savetxt(s, data.flatten(), fmt)
@@ -396,7 +392,7 @@ def write(filename,
                 )
         data_item.text = numpy_to_xml_string(data, '%.15e')
 
-    ET.register_namespace('xi', 'http://www.w3.org/2001/XInclude')
+    ET.register_namespace('xi', 'https://www.w3.org/2001/XInclude/')
 
     write_xml(filename, xdmf_file, pretty_xml, indent=2)
     return

@@ -2,7 +2,7 @@
 #
 '''
 I/O for Gmsh's msh format, cf.
-<http://geuz.org/gmsh/doc/texinfo/gmsh.html#File-formats>.
+<http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
@@ -51,7 +51,7 @@ num_nodes_per_cell = {
     }
 
 # Translate meshio types to gmsh codes
-# http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
+# http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format
 _gmsh_to_meshio_type = {
         1: 'line',
         2: 'triangle',
@@ -298,7 +298,7 @@ def write(
         write_binary=True,
         ):
     '''Writes msh files, cf.
-    http://geuz.org/gmsh/doc/texinfo/gmsh.html#MSH-ASCII-file-format
+    <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     '''
     point_data = {} if point_data is None else point_data
     cell_data = {} if cell_data is None else cell_data

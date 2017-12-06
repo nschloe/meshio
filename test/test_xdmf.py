@@ -34,7 +34,6 @@ test_set_reduced = [
     ]
 
 
-@pytest.mark.skipif(not hasattr(vtk, 'vtkXdmf3Writer'), reason='Need XDMF3')
 @pytest.mark.parametrize('mesh', test_set_full)
 def test_xdmf3(mesh):
     helpers.write_read(
