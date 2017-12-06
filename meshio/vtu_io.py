@@ -30,14 +30,9 @@ from .gmsh_io import num_nodes_per_cell
 
 
 def num_bytes_to_num_base64_chars(num_bytes):
-    if num_bytes % 3 == 0:
-        num_chars = num_bytes // 3 * 4
-    elif num_bytes % 3 == 1:
-        num_chars = (num_bytes+2) // 3 * 4
-    else:
-        assert num_bytes % 3 == 2
-        num_chars = (num_bytes+1) // 3 * 4
-    return num_chars
+    # Rounding up in integer division works by double negation since Python
+    # always rounds down.
+    return -(-num_bytes // 3) * 4
 
 
 def _cells_from_data(connectivity, offsets, types):
