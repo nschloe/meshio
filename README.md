@@ -5,7 +5,9 @@
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.python.org/pypi/meshio)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=social&label=Stars&maxAge=2592000)](https://github.com/nschloe/meshio)
 
-![](https://nschloe.github.io/meshio/pp.png)
+<p align="center">
+  <img width="20%" src="https://nschloe.github.io/meshio/meshio_logo.png">
+</p>
 
 There are various mesh formats available for representing unstructured meshes,
 e.g.,
