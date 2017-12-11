@@ -6,7 +6,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=social&label=Stars&maxAge=2592000)](https://github.com/nschloe/meshio)
 
 <p align="center">
-  <img width="20%" src="https://nschloe.github.io/meshio/meshio_logo.png">
+  <img src="https://nschloe.github.io/meshio/meshio_logo.png" width="20%">
 </p>
 
 There are various mesh formats available for representing unstructured meshes,
