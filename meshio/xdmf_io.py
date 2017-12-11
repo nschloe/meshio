@@ -24,6 +24,8 @@ def read(filename):
 
 
 numpy_to_xdmf_dtype = {
+    numpy.dtype(numpy.uint32): ('UInt', '4'),
+    numpy.dtype(numpy.uint64): ('UInt', '8'),
     numpy.dtype(numpy.int32): ('Int', '4'),
     numpy.dtype(numpy.int64): ('Int', '8'),
     numpy.dtype(numpy.float32): ('Float', '4'),
@@ -85,12 +87,12 @@ xdmf_to_meshio_type = {
     'Wedge': 'wedge',
     'Hexahedron': 'hexahedron',
     'Edge_3': 'line3',
-    'Triangle_6': 'triangle6',
-    'Quadrilateral_8': 'quad8',
-    'Tetrahedron_10': 'tetra10',
+    'Tri_6': 'triangle6',
+    'Quad_8': 'quad8',
+    'Tet_10': 'tetra10',
     'Pyramid_13': 'pyramid13',
     'Wedge_15': 'wedge15',
-    'Hexahedron_20': 'hexahedron20',
+    'Hex_20': 'hexahedron20',
     }
 meshio_to_xdmf_type = {v: k for k, v in xdmf_to_meshio_type.items()}
 
