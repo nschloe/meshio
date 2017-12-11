@@ -26,6 +26,8 @@ def read(filename):
 numpy_to_xdmf_dtype = {
     numpy.dtype(numpy.int32): ('Int', '4'),
     numpy.dtype(numpy.int64): ('Int', '8'),
+    numpy.dtype(numpy.uint32): ('UInt', '4'),
+    numpy.dtype(numpy.uint64): ('UInt', '8'),
     numpy.dtype(numpy.float32): ('Float', '4'),
     numpy.dtype(numpy.float64): ('Float', '8'),
     }
