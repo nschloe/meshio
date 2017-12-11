@@ -76,23 +76,29 @@ meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
 # See
 # <http://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
 # for XDMF types.
-xdmf_to_meshio_type = {
-    'Polyvertex': 'vertex',
-    'Triangle': 'triangle',
-    'Quadrilateral': 'quad',
-    'Tetrahedron': 'tetra',
-    'Pyramid': 'pyramid',
-    'Wedge': 'wedge',
-    'Hexahedron': 'hexahedron',
-    'Edge_3': 'line3',
-    'Triangle_6': 'triangle6',
-    'Quadrilateral_8': 'quad8',
-    'Tetrahedron_10': 'tetra10',
-    'Pyramid_13': 'pyramid13',
-    'Wedge_15': 'wedge15',
-    'Hexahedron_20': 'hexahedron20',
+# There appears to be no particular consistency, so allow for different
+# alternatives as well.
+meshio_to_xdmf_type = {
+    'vertex': ['Polyvertex'],
+    'triangle': ['Triangle'],
+    'quad': ['Quadrilateral'],
+    'tetra': ['Tetrahedron'],
+    'pyramid': ['Pyramid'],
+    'wedge': ['Wedge'],
+    'hexahedron': ['Hexahedron'],
+    'line3': ['Edge_3'],
+    'triangle6': ['Triangle_6', 'Tri_6'],
+    'quad8': ['Quadrilateral_8', 'Quad_8'],
+    'tetra10': ['Tetrahedron_10', 'Tet_10'],
+    'pyramid13': ['Pyramid_13'],
+    'wedge15': ['Wedge_15'],
+    'hexahedron20': ['Hexahedron_20', 'Hex_20'],
     }
-meshio_to_xdmf_type = {v: k for k, v in xdmf_to_meshio_type.items()}
+xdmf_to_meshio_type = {
+        v: k
+        for k, vals in meshio_to_xdmf_type.items()
+        for v in vals
+        }
 
 
 def _translate_mixed_cells(data):
@@ -441,7 +447,7 @@ class XdmfWriter(object):
     def cells(self, cells, grid):
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
-            xdmf_type = meshio_to_xdmf_type[meshio_type]
+            xdmf_type = meshio_to_xdmf_type[meshio_type][0]
             topo = ET.SubElement(grid, 'Topology', Type=xdmf_type)
             dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
             dim = '{} {}'.format(*cells[meshio_type].shape)
