@@ -293,6 +293,7 @@ def write_read(writer, reader, mesh, atol):
 
     for cell_type, data in mesh['cells'].items():
         assert numpy.allclose(data, cells[cell_type])
+
     for key in input_point_data.keys():
         assert numpy.allclose(
             input_point_data[key], point_data[key],

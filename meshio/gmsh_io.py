@@ -152,7 +152,6 @@ def _read_nodes(f, is_ascii, int_size, data_size):
         dtype = [('index', numpy.int32), ('x', numpy.float64, (3,))]
         data = numpy.fromstring(f.read(num_bytes), dtype=dtype)
         assert (data['index'] == range(1, num_nodes+1)).all()
-        # vtk numpy support requires contiguous data
         points = numpy.ascontiguousarray(data['x'])
         line = f.readline().decode('utf-8')
         assert line == '\n'
@@ -267,6 +266,60 @@ def _read_cells(f, cells, cell_data, int_size, is_ascii):
     return has_additional_tag_data
 
 
+def _read_node_data(f, point_data, int_size, data_size, is_ascii):
+    # Read string tags
+    num_string_tags = int(f.readline().decode('utf-8'))
+    string_tags = [
+        f.readline().decode('utf-8').strip()
+        for k in range(num_string_tags)
+        ]
+    print(string_tags)
+    num_real_tags = int(f.readline().decode('utf-8'))
+    print(num_real_tags)
+    # time value; discard
+    f.readline()
+    num_integer_tags = int(f.readline().decode('utf-8'))
+    print(num_integer_tags)
+    integer_tags = [
+        int(f.readline().decode('utf-8'))
+        for k in range(num_integer_tags)
+        ]
+    print(integer_tags)
+    num_components = integer_tags[1]
+    num_items = integer_tags[2]
+    if is_ascii:
+        data = numpy.fromfile(
+            f, count=num_items*(1+num_components), sep=' '
+            ).reshape((num_items, 1+num_components))
+        # The first number is the index
+        data = data[:, 1:]
+    else:
+        # binary
+        num_bytes = num_items * (int_size + num_components * data_size)
+        assert numpy.int32(0).nbytes == int_size
+        assert numpy.float64(0.0).nbytes == data_size
+        dtype = [
+            ('index', numpy.int32),
+            ('values', numpy.float64, (num_components,))
+            ]
+        data = numpy.fromstring(f.read(num_bytes), dtype=dtype)
+        assert (data['index'] == range(1, num_items+1)).all()
+        data = numpy.ascontiguousarray(data['values'])
+        line = f.readline().decode('utf-8')
+        assert line == '\n'
+
+    line = f.readline().decode('utf-8')
+    assert line.strip() == '$EndNodeData'
+
+    # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
+    # If shape[1] == 1, cut it off.
+    if data.shape[1] == 1:
+        data = data[:, 0]
+
+    point_data[string_tags[0]] = data
+    return
+
+
 def read_buffer(f):
     # The format is specified at
     # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
@@ -295,11 +348,13 @@ def read_buffer(f):
             _read_physical_names(f, field_data)
         elif environ == 'Nodes':
             points = _read_nodes(f, is_ascii, int_size, data_size)
-        else:
-            assert environ == 'Elements', \
-                'Unknown environment \'{}\'.'.format(environ)
+        elif environ == 'Elements':
             has_additional_tag_data = \
                 _read_cells(f, cells, cell_data, int_size, is_ascii)
+        else:
+            assert environ == 'NodeData', \
+                'Unknown environment \'{}\'.'.format(environ)
+            _read_node_data(f, point_data, int_size, data_size, is_ascii)
 
     if has_additional_tag_data:
         logging.warning(
@@ -455,7 +510,7 @@ def _write_node_data(fh, point_data, write_binary):
     if write_binary:
         dtype = [
             ('index', numpy.int32),
-            ('data', numpy.float64, (num_components,))
+            ('data', numpy.float64, num_components)
             ]
         tmp = numpy.empty(len(point_data[key]), dtype=dtype)
         tmp['index'] = 1 + numpy.arange(len(point_data[key]))
