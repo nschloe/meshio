@@ -519,8 +519,13 @@ def _write_node_data(fh, point_data, write_binary):
         fh.write('\n'.encode('utf-8'))
     else:
         fmt = ' '.join(['{}'] + ['{!r}'] * num_components) + '\n'
-        for k, x in enumerate(point_data[key]):
-            fh.write(fmt.format(k+1, x).encode('utf-8'))
+        # TODO unify
+        if num_components == 1:
+            for k, x in enumerate(point_data[key]):
+                fh.write(fmt.format(k+1, x).encode('utf-8'))
+        else:
+            for k, x in enumerate(point_data[key]):
+                fh.write(fmt.format(k+1, *x).encode('utf-8'))
 
     fh.write('$EndNodeData\n'.encode('utf-8'))
     return
@@ -569,4 +574,5 @@ def write(
         _write_elements(fh, cells, cell_data, write_binary)
         if point_data:
             _write_node_data(fh, point_data, write_binary)
+
     return
