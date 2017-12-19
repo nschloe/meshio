@@ -201,20 +201,24 @@ def _clone(mesh):
     return mesh2
 
 
-def add_point_data(mesh, dim):
+def add_point_data(mesh, dim, tags=['a', 'b']):
     numpy.random.seed(0)
     mesh2 = _clone(mesh)
 
     if dim == 1:
-        data_a = numpy.random.rand(len(mesh['points']))
-        data_b = numpy.random.rand(len(mesh['points']))
+        data = [
+            numpy.random.rand(len(mesh['points']))
+            for _ in range(len(tags))
+            ]
     else:
-        data_a = numpy.random.rand(len(mesh['points']), dim)
-        data_b = numpy.random.rand(len(mesh['points']), dim)
+        data = [
+            numpy.random.rand(len(mesh['points']), dim)
+            for _ in range(len(tags))
+            ]
 
     mesh2['point_data'] = {
-            'a': data_a,
-            'b': data_b,
+            tag: d
+            for tag, d in zip(tags, data)
             }
     return mesh2
 

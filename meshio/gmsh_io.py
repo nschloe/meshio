@@ -400,6 +400,56 @@ def _write_elements(fh, cells, cell_data, write_binary):
     return
 
 
+def _write_node_data(fh, point_data, write_binary):
+    fh.write('$NodeData\n'.encode('utf-8'))
+    assert len(point_data) == 1, \
+        'Can only handle one point data field right now.'
+    key = list(point_data.keys())[0]
+    # <http://gmsh.info/doc/texinfo/gmsh.html>:
+    # > Number of string tags.
+    # > gives the number of string tags that follow. By default the first
+    # > string-tag is interpreted as the name of the post-processing view and
+    # > the second as the name of the interpolation scheme. The interpolation
+    # > scheme is provided in the $InterpolationScheme section (see below).
+    fh.write('{}\n'.format(len(point_data)).encode('utf-8'))
+    fh.write('{}\n'.format(key).encode('utf-8'))
+    fh.write('{}\n'.format(1).encode('utf-8'))
+    time_value = 0.0
+    fh.write('{}\n'.format(time_value).encode('utf-8'))
+    # three integer tags:
+    fh.write('{}\n'.format(3).encode('utf-8'))
+    # time step
+    fh.write('{}\n'.format(0).encode('utf-8'))
+    # number of components
+    num_components = (
+        point_data[key].shape[1] if len(point_data[key].shape) > 1
+        else 1
+        )
+    assert num_components in [1, 3, 9], \
+        'Gmsh only permits 1, 3, or 9 components per point data field.'
+    fh.write('{}\n'.format(num_components).encode('utf-8'))
+    # num data items
+    fh.write('{}\n'.format(point_data[key].shape[0]).encode('utf-8'))
+    # actually write the data
+    if write_binary:
+        dtype = [
+            ('index', numpy.int32),
+            ('data', numpy.float64, (num_components,))
+            ]
+        tmp = numpy.empty(len(point_data[key]), dtype=dtype)
+        tmp['index'] = 1 + numpy.arange(len(point_data[key]))
+        tmp['data'] = point_data[key]
+        fh.write(tmp.tostring())
+        fh.write('\n'.encode('utf-8'))
+    else:
+        fmt = ' '.join(['{}'] + ['{!r}'] * num_components) + '\n'
+        for k, x in enumerate(point_data[key]):
+            fh.write(fmt.format(k+1, x).encode('utf-8'))
+
+    fh.write('$EndNodeData\n'.encode('utf-8'))
+    return
+
+
 def write(
         filename,
         points,
@@ -441,4 +491,6 @@ def write(
 
         _write_nodes(fh, points, write_binary)
         _write_elements(fh, cells, cell_data, write_binary)
+        if point_data:
+            _write_node_data(fh, point_data, write_binary)
     return
