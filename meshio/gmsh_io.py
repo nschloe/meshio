@@ -270,7 +270,7 @@ def _read_cells(f, cells, int_size, is_ascii):
     return has_additional_tag_data
 
 
-def _read_node_data(f, point_data, int_size, data_size, is_ascii):
+def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
     # Read string tags
     num_string_tags = int(f.readline().decode('utf-8'))
     string_tags = [
@@ -311,66 +311,14 @@ def _read_node_data(f, point_data, int_size, data_size, is_ascii):
         assert line == '\n'
 
     line = f.readline().decode('utf-8')
-    assert line.strip() == '$EndNodeData'
+    assert line.strip() == '$End{}'.format(tag)
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.
     if data.shape[1] == 1:
         data = data[:, 0]
 
-    point_data[string_tags[0]] = data
-    return
-
-
-def _read_cell_data(f, cell_data_raw, int_size, data_size, is_ascii):
-    # Read string tags
-    num_string_tags = int(f.readline().decode('utf-8'))
-    string_tags = [
-        f.readline().decode('utf-8').strip()
-        for _ in range(num_string_tags)
-        ]
-    # The real tags typically only contain one value, the time.
-    # Discard it.
-    num_real_tags = int(f.readline().decode('utf-8'))
-    for _ in range(num_real_tags):
-        f.readline()
-    num_integer_tags = int(f.readline().decode('utf-8'))
-    integer_tags = [
-        int(f.readline().decode('utf-8'))
-        for _ in range(num_integer_tags)
-        ]
-    num_components = integer_tags[1]
-    num_items = integer_tags[2]
-    if is_ascii:
-        data = numpy.fromfile(
-            f, count=num_items*(1+num_components), sep=' '
-            ).reshape((num_items, 1+num_components))
-        # The first number is the index
-        data = data[:, 1:]
-    else:
-        # binary
-        num_bytes = num_items * (int_size + num_components * data_size)
-        assert numpy.int32(0).nbytes == int_size
-        assert numpy.float64(0.0).nbytes == data_size
-        dtype = [
-            ('index', numpy.int32),
-            ('values', numpy.float64, (num_components,))
-            ]
-        data = numpy.fromstring(f.read(num_bytes), dtype=dtype)
-        assert (data['index'] == range(1, num_items+1)).all()
-        data = numpy.ascontiguousarray(data['values'])
-        line = f.readline().decode('utf-8')
-        assert line == '\n'
-
-    line = f.readline().decode('utf-8')
-    assert line.strip() == '$EndElementData'
-
-    # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
-    # If shape[1] == 1, cut it off.
-    if data.shape[1] == 1:
-        data = data[:, 0]
-
-    cell_data_raw[string_tags[0]] = data
+    data_dict[string_tags[0]] = data
     return
 
 
@@ -406,11 +354,15 @@ def read_buffer(f):
             has_additional_tag_data = \
                 _read_cells(f, cells, int_size, is_ascii)
         elif environ == 'NodeData':
-            _read_node_data(f, point_data, int_size, data_size, is_ascii)
+            _read_data(
+                f, 'NodeData', point_data, int_size, data_size, is_ascii
+                )
         else:
             assert environ == 'ElementData', \
                 'Unknown environment \'{}\'.'.format(environ)
-            _read_cell_data(f, cell_data_raw, int_size, data_size, is_ascii)
+            _read_data(
+                f, 'ElementData', cell_data_raw, int_size, data_size, is_ascii
+                )
 
     if has_additional_tag_data:
         logging.warning(
