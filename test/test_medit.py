@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-import meshio
 import pytest
+
+import meshio
 
 import helpers
 

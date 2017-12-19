@@ -271,20 +271,18 @@ def _read_node_data(f, point_data, int_size, data_size, is_ascii):
     num_string_tags = int(f.readline().decode('utf-8'))
     string_tags = [
         f.readline().decode('utf-8').strip()
-        for k in range(num_string_tags)
+        for _ in range(num_string_tags)
         ]
-    print(string_tags)
+    # The real tags typically only contain one value, the time.
+    # Discard it.
     num_real_tags = int(f.readline().decode('utf-8'))
-    print(num_real_tags)
-    # time value; discard
-    f.readline()
+    for _ in range(num_real_tags):
+        f.readline()
     num_integer_tags = int(f.readline().decode('utf-8'))
-    print(num_integer_tags)
     integer_tags = [
         int(f.readline().decode('utf-8'))
-        for k in range(num_integer_tags)
+        for _ in range(num_integer_tags)
         ]
-    print(integer_tags)
     num_components = integer_tags[1]
     num_items = integer_tags[2]
     if is_ascii:
