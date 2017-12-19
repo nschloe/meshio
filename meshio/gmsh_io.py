@@ -11,6 +11,9 @@ import struct
 
 import numpy
 
+from .vtk_io import raw_from_cell_data, cell_data_from_raw
+
+
 num_nodes_per_cell = {
     'vertex': 1,
     'line': 2,
@@ -161,7 +164,7 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     return points
 
 
-def _read_cells(f, cells, cell_data, int_size, is_ascii):
+def _read_cells(f, cells, int_size, is_ascii):
     # The first line is the number of elements
     line = f.readline().decode('utf-8')
     total_num_cells = int(line)
@@ -190,16 +193,17 @@ def _read_cells(f, cells, cell_data, int_size, is_ascii):
             # and most codes using the MSH 2 format require at least the first
             # two tags (physical and elementary tags).
             # <<<
-            num_tags = data[2]
-            if t not in cell_data:
-                cell_data[t] = []
-            cell_data[t].append(data[3:3+num_tags])
+            # TODO properly discard
+            # num_tags = data[2]
+            # if t not in cell_data:
+            #     cell_data[t] = []
+            # cell_data[t].append(data[3:3+num_tags])
 
         # convert to numpy arrays
         for key in cells:
             cells[key] = numpy.array(cells[key], dtype=int)
-        for key in cell_data:
-            cell_data[key] = numpy.array(cell_data[key], dtype=int)
+        # for key in cell_data:
+        #     cell_data[key] = numpy.array(cell_data[key], dtype=int)
     else:
         # binary
         num_elems = 0
@@ -227,9 +231,9 @@ def _read_cells(f, cells, cell_data, int_size, is_ascii):
                 cells[t] = []
             cells[t].append(data[:, -num_nodes_per_elem:])
 
-            if t not in cell_data:
-                cell_data[t] = []
-            cell_data[t].append(data[:, 1:num_tags+1])
+            # if t not in cell_data:
+            #     cell_data[t] = []
+            # cell_data[t].append(data[:, 1:num_tags+1])
 
             num_elems += num_elems0
 
@@ -237,9 +241,9 @@ def _read_cells(f, cells, cell_data, int_size, is_ascii):
         for key in cells:
             cells[key] = numpy.vstack(cells[key])
 
-        # collect cell data
-        for key in cell_data:
-            cell_data[key] = numpy.vstack(cell_data[key])
+        # # collect cell data
+        # for key in cell_data:
+        #     cell_data[key] = numpy.vstack(cell_data[key])
 
         line = f.readline().decode('utf-8')
         assert line == '\n'
@@ -252,21 +256,21 @@ def _read_cells(f, cells, cell_data, int_size, is_ascii):
     for key in cells:
         cells[key] -= 1
 
-    # restrict to the standard two data items
-    output_cell_data = {}
-    for key in cell_data:
-        if cell_data[key].shape[1] > 2:
-            has_additional_tag_data = True
-        output_cell_data[key] = {}
-        if cell_data[key].shape[1] > 0:
-            output_cell_data[key]['physical'] = cell_data[key][:, 0]
-        if cell_data[key].shape[1] > 1:
-            output_cell_data[key]['geometrical'] = cell_data[key][:, 1]
-    cell_data = output_cell_data
+    # # restrict to the standard two data items
+    # output_cell_data = {}
+    # for key in cell_data:
+    #     if cell_data[key].shape[1] > 2:
+    #         has_additional_tag_data = True
+    #     output_cell_data[key] = {}
+    #     if cell_data[key].shape[1] > 0:
+    #         output_cell_data[key]['physical'] = cell_data[key][:, 0]
+    #     if cell_data[key].shape[1] > 1:
+    #         output_cell_data[key]['geometrical'] = cell_data[key][:, 1]
+    # cell_data = output_cell_data
     return has_additional_tag_data
 
 
-def _read_node_data(f, point_data, int_size, data_size, is_ascii):
+def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
     # Read string tags
     num_string_tags = int(f.readline().decode('utf-8'))
     string_tags = [
@@ -307,14 +311,14 @@ def _read_node_data(f, point_data, int_size, data_size, is_ascii):
         assert line == '\n'
 
     line = f.readline().decode('utf-8')
-    assert line.strip() == '$EndNodeData'
+    assert line.strip() == '$End{}'.format(tag)
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.
     if data.shape[1] == 1:
         data = data[:, 0]
 
-    point_data[string_tags[0]] = data
+    data_dict[string_tags[0]] = data
     return
 
 
@@ -326,7 +330,7 @@ def read_buffer(f):
     points = []
     cells = {}
     field_data = {}
-    cell_data = {}
+    cell_data_raw = {}
     point_data = {}
 
     is_ascii = None
@@ -348,16 +352,24 @@ def read_buffer(f):
             points = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == 'Elements':
             has_additional_tag_data = \
-                _read_cells(f, cells, cell_data, int_size, is_ascii)
+                _read_cells(f, cells, int_size, is_ascii)
+        elif environ == 'NodeData':
+            _read_data(
+                f, 'NodeData', point_data, int_size, data_size, is_ascii
+                )
         else:
-            assert environ == 'NodeData', \
+            assert environ == 'ElementData', \
                 'Unknown environment \'{}\'.'.format(environ)
-            _read_node_data(f, point_data, int_size, data_size, is_ascii)
+            _read_data(
+                f, 'ElementData', cell_data_raw, int_size, data_size, is_ascii
+                )
 
     if has_additional_tag_data:
         logging.warning(
             'The file contains tag data that couldn\'t be processed.'
             )
+
+    cell_data = cell_data_from_raw(cells, cell_data_raw)
 
     return points, cells, point_data, cell_data, field_data
 
@@ -404,7 +416,7 @@ def _write_nodes(fh, points, write_binary):
     return
 
 
-def _write_elements(fh, cells, cell_data, write_binary):
+def _write_elements(fh, cells, write_binary):
     # write elements
     fh.write('$Elements\n'.encode('utf-8'))
     # count all cells
@@ -413,34 +425,33 @@ def _write_elements(fh, cells, cell_data, write_binary):
 
     consecutive_index = 0
     for cell_type, node_idcs in cells.items():
-        # handle cell data
-        if cell_type in cell_data and cell_data[cell_type]:
-            for key in cell_data[cell_type]:
-                # assert data consistency
-                assert len(cell_data[cell_type][key]) == len(node_idcs)
-                # TODO assert that the data type is int
+        # if cell_type in cell_data and cell_data[cell_type]:
+        #     for key in cell_data[cell_type]:
+        #         # assert data consistency
+        #         assert len(cell_data[cell_type][key]) == len(node_idcs)
+        #         # TODO assert that the data type is int
 
-            # if a tag is present, make sure that there are 'physical' and
-            # 'geometrical' as well.
-            if 'physical' not in cell_data[cell_type]:
-                cell_data[cell_type]['physical'] = \
-                    numpy.ones(len(node_idcs), dtype=numpy.int32)
-            if 'geometrical' not in cell_data[cell_type]:
-                cell_data[cell_type]['geometrical'] = \
-                    numpy.ones(len(node_idcs), dtype=numpy.int32)
+        #     # if a tag is present, make sure that there are 'physical' and
+        #     # 'geometrical' as well.
+        #     if 'physical' not in cell_data[cell_type]:
+        #         cell_data[cell_type]['physical'] = \
+        #             numpy.ones(len(node_idcs), dtype=numpy.int32)
+        #     if 'geometrical' not in cell_data[cell_type]:
+        #         cell_data[cell_type]['geometrical'] = \
+        #             numpy.ones(len(node_idcs), dtype=numpy.int32)
 
-            # 'physical' and 'geometrical' go first; this is what the gmsh
-            # file format prescribes
-            keywords = list(cell_data[cell_type].keys())
-            keywords.remove('physical')
-            keywords.remove('geometrical')
-            sorted_keywords = ['physical', 'geometrical'] + keywords
-            fcd = numpy.column_stack([
-                    cell_data[cell_type][key] for key in sorted_keywords
-                    ])
-        else:
-            # no cell data
-            fcd = numpy.empty([len(node_idcs), 0], dtype=numpy.int32)
+        #     # 'physical' and 'geometrical' go first; this is what the gmsh
+        #     # file format prescribes
+        #     keywords = list(cell_data[cell_type].keys())
+        #     keywords.remove('physical')
+        #     keywords.remove('geometrical')
+        #     sorted_keywords = ['physical', 'geometrical'] + keywords
+        #     fcd = numpy.column_stack([
+        #             cell_data[cell_type][key] for key in sorted_keywords
+        #             ])
+        # else:
+        # no cell data
+        fcd = numpy.empty([len(node_idcs), 0], dtype=numpy.int32)
 
         if write_binary:
             # header
@@ -474,58 +485,57 @@ def _write_elements(fh, cells, cell_data, write_binary):
     return
 
 
-def _write_node_data(fh, point_data, write_binary):
-    fh.write('$NodeData\n'.encode('utf-8'))
-    assert len(point_data) == 1, \
-        'Can only handle one point data field right now.'
-    key = list(point_data.keys())[0]
+def _write_data(fh, tag, data, write_binary):
+    fh.write('${}\n'.format(tag).encode('utf-8'))
+    assert len(data) == 1, \
+        'Can only handle one data field right now.'
+    key = list(data.keys())[0]
     # <http://gmsh.info/doc/texinfo/gmsh.html>:
     # > Number of string tags.
     # > gives the number of string tags that follow. By default the first
     # > string-tag is interpreted as the name of the post-processing view and
     # > the second as the name of the interpolation scheme. The interpolation
     # > scheme is provided in the $InterpolationScheme section (see below).
-    fh.write('{}\n'.format(len(point_data)).encode('utf-8'))
+    fh.write('{}\n'.format(len(data)).encode('utf-8'))
     fh.write('{}\n'.format(key).encode('utf-8'))
     fh.write('{}\n'.format(1).encode('utf-8'))
-    time_value = 0.0
-    fh.write('{}\n'.format(time_value).encode('utf-8'))
+    fh.write('{}\n'.format(0.0).encode('utf-8'))
     # three integer tags:
     fh.write('{}\n'.format(3).encode('utf-8'))
     # time step
     fh.write('{}\n'.format(0).encode('utf-8'))
     # number of components
     num_components = (
-        point_data[key].shape[1] if len(point_data[key].shape) > 1
+        data[key].shape[1] if len(data[key].shape) > 1
         else 1
         )
     assert num_components in [1, 3, 9], \
-        'Gmsh only permits 1, 3, or 9 components per point data field.'
+        'Gmsh only permits 1, 3, or 9 components per data field.'
     fh.write('{}\n'.format(num_components).encode('utf-8'))
     # num data items
-    fh.write('{}\n'.format(point_data[key].shape[0]).encode('utf-8'))
+    fh.write('{}\n'.format(data[key].shape[0]).encode('utf-8'))
     # actually write the data
     if write_binary:
         dtype = [
             ('index', numpy.int32),
             ('data', numpy.float64, num_components)
             ]
-        tmp = numpy.empty(len(point_data[key]), dtype=dtype)
-        tmp['index'] = 1 + numpy.arange(len(point_data[key]))
-        tmp['data'] = point_data[key]
+        tmp = numpy.empty(len(data[key]), dtype=dtype)
+        tmp['index'] = 1 + numpy.arange(len(data[key]))
+        tmp['data'] = data[key]
         fh.write(tmp.tostring())
         fh.write('\n'.encode('utf-8'))
     else:
         fmt = ' '.join(['{}'] + ['{!r}'] * num_components) + '\n'
         # TODO unify
         if num_components == 1:
-            for k, x in enumerate(point_data[key]):
+            for k, x in enumerate(data[key]):
                 fh.write(fmt.format(k+1, x).encode('utf-8'))
         else:
-            for k, x in enumerate(point_data[key]):
+            for k, x in enumerate(data[key]):
                 fh.write(fmt.format(k+1, *x).encode('utf-8'))
 
-    fh.write('$EndNodeData\n'.encode('utf-8'))
+    fh.write('$End{}\n'.format(tag).encode('utf-8'))
     return
 
 
@@ -569,8 +579,11 @@ def write(
             _write_physical_names(fh, field_data)
 
         _write_nodes(fh, points, write_binary)
-        _write_elements(fh, cells, cell_data, write_binary)
+        _write_elements(fh, cells, write_binary)
         if point_data:
-            _write_node_data(fh, point_data, write_binary)
+            _write_data(fh, 'NodeData', point_data, write_binary)
+        if cell_data:
+            cell_data_raw = raw_from_cell_data(cell_data)
+            _write_data(fh, 'ElementData', cell_data_raw, write_binary)
 
     return

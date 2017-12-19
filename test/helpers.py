@@ -224,7 +224,7 @@ def add_point_data(mesh, dim, num_tags=2):
     return mesh2
 
 
-def add_cell_data(mesh, dim):
+def add_cell_data(mesh, dim, num_tags=2):
     mesh2 = _clone(mesh)
     numpy.random.seed(0)
     cell_data = {}
@@ -232,13 +232,13 @@ def add_cell_data(mesh, dim):
         num_cells = len(mesh['cells'][cell_type])
         if dim == 1:
             cell_data[cell_type] = {
-                'a': numpy.random.rand(num_cells),
-                'b': numpy.random.rand(num_cells),
+                string.ascii_lowercase[k]: numpy.random.rand(num_cells)
+                for k in range(num_tags)
                 }
         else:
             cell_data[cell_type] = {
-                'a': numpy.random.rand(num_cells, dim),
-                'b': numpy.random.rand(num_cells, dim),
+                string.ascii_lowercase[k]: numpy.random.rand(num_cells, dim)
+                for k in range(num_tags)
                 }
 
     mesh2['cell_data'] = cell_data
