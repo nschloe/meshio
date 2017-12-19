@@ -288,6 +288,118 @@ def read_buffer(f):
     return points, cells, point_data, cell_data, field_data
 
 
+def _write_physical_names(fh, field_data):
+    # Write physical names
+    entries = []
+    for phys_name in field_data:
+        try:
+            phys_num, phys_dim = field_data[phys_name]
+            phys_num, phys_dim = int(phys_num), int(phys_dim)
+            entries.append((phys_dim, phys_num, phys_name))
+        except (ValueError, TypeError):
+            logging.warning(
+                'Field data contains entry that cannot be processed.'
+            )
+    entries.sort()
+    if entries:
+        fh.write('$PhysicalNames\n'.encode('utf-8'))
+        fh.write('{}\n'.format(len(entries)).encode('utf-8'))
+        for entry in entries:
+            fh.write('{} {} "{}"\n'.format(*entry).encode('utf-8'))
+        fh.write('$EndPhysicalNames\n'.encode('utf-8'))
+    return
+
+
+def _write_nodes(fh, points, write_binary):
+    fh.write('$Nodes\n'.encode('utf-8'))
+    fh.write('{}\n'.format(len(points)).encode('utf-8'))
+    if write_binary:
+        dtype = [('index', numpy.int32), ('x', numpy.float64, (3,))]
+        tmp = numpy.empty(len(points), dtype=dtype)
+        tmp['index'] = 1 + numpy.arange(len(points))
+        tmp['x'] = points
+        fh.write(tmp.tostring())
+        fh.write('\n'.encode('utf-8'))
+    else:
+        for k, x in enumerate(points):
+            fh.write(
+                '{} {!r} {!r} {!r}\n'.format(k+1, x[0], x[1], x[2])
+                .encode('utf-8')
+                )
+    fh.write('$EndNodes\n'.encode('utf-8'))
+    return
+
+
+def _write_elements(fh, cells, cell_data, write_binary):
+    # write elements
+    fh.write('$Elements\n'.encode('utf-8'))
+    # count all cells
+    total_num_cells = sum([data.shape[0] for _, data in cells.items()])
+    fh.write('{}\n'.format(total_num_cells).encode('utf-8'))
+
+    consecutive_index = 0
+    for cell_type, node_idcs in cells.items():
+        # handle cell data
+        if cell_type in cell_data and cell_data[cell_type]:
+            for key in cell_data[cell_type]:
+                # assert data consistency
+                assert len(cell_data[cell_type][key]) == len(node_idcs)
+                # TODO assert that the data type is int
+
+            # if a tag is present, make sure that there are 'physical' and
+            # 'geometrical' as well.
+            if 'physical' not in cell_data[cell_type]:
+                cell_data[cell_type]['physical'] = \
+                    numpy.ones(len(node_idcs), dtype=numpy.int32)
+            if 'geometrical' not in cell_data[cell_type]:
+                cell_data[cell_type]['geometrical'] = \
+                    numpy.ones(len(node_idcs), dtype=numpy.int32)
+
+            # 'physical' and 'geometrical' go first; this is what the gmsh
+            # file format prescribes
+            keywords = list(cell_data[cell_type].keys())
+            keywords.remove('physical')
+            keywords.remove('geometrical')
+            sorted_keywords = ['physical', 'geometrical'] + keywords
+            fcd = numpy.column_stack([
+                    cell_data[cell_type][key] for key in sorted_keywords
+                    ])
+        else:
+            # no cell data
+            fcd = numpy.empty([len(node_idcs), 0], dtype=numpy.int32)
+
+        if write_binary:
+            # header
+            fh.write(struct.pack('i', _meshio_to_gmsh_type[cell_type]))
+            fh.write(struct.pack('i', node_idcs.shape[0]))
+            fh.write(struct.pack('i', fcd.shape[1]))
+            # actual data
+            a = numpy.arange(
+                len(node_idcs), dtype=numpy.int32
+                )[:, numpy.newaxis]
+            a += 1 + consecutive_index
+            array = numpy.hstack([a, fcd, node_idcs + 1])
+            fh.write(array.tostring())
+        else:
+            form = '{} ' + str(_meshio_to_gmsh_type[cell_type]) \
+                + ' ' + str(fcd.shape[1]) \
+                + ' {} {}\n'
+            for k, c in enumerate(node_idcs):
+                fh.write(
+                    form.format(
+                        consecutive_index + k + 1,
+                        ' '.join([str(val) for val in fcd[k]]),
+                        ' '.join([str(cc + 1) for cc in c])
+                        ).encode('utf-8')
+                    )
+
+        consecutive_index += len(node_idcs)
+    if write_binary:
+        fh.write('\n'.encode('utf-8'))
+    fh.write('$EndElements\n'.encode('utf-8'))
+    return
+
+
 def write(
         filename,
         points,
@@ -324,108 +436,9 @@ def write(
             fh.write('\n'.encode('utf-8'))
         fh.write('$EndMeshFormat\n'.encode('utf-8'))
 
-        # Write physical names
         if field_data:
-            entries = []
-            for phys_name in field_data:
-                try:
-                    phys_num, phys_dim = field_data[phys_name]
-                    phys_num, phys_dim = int(phys_num), int(phys_dim)
-                    entries.append((phys_dim, phys_num, phys_name))
-                except (ValueError, TypeError):
-                    logging.warning(
-                        'Field data contains entry that cannot be processed.'
-                    )
-            entries.sort()
-            if entries:
-                fh.write('$PhysicalNames\n'.encode('utf-8'))
-                fh.write('{}\n'.format(len(entries)).encode('utf-8'))
-                for entry in entries:
-                    fh.write('{} {} "{}"\n'.format(*entry).encode('utf-8'))
-                fh.write('$EndPhysicalNames\n'.encode('utf-8'))
+            _write_physical_names(fh, field_data)
 
-        # Write nodes
-        fh.write('$Nodes\n'.encode('utf-8'))
-        fh.write('{}\n'.format(len(points)).encode('utf-8'))
-        if write_binary:
-            dtype = [('index', numpy.int32), ('x', numpy.float64, (3,))]
-            tmp = numpy.empty(len(points), dtype=dtype)
-            tmp['index'] = 1 + numpy.arange(len(points))
-            tmp['x'] = points
-            fh.write(tmp.tostring())
-            fh.write('\n'.encode('utf-8'))
-        else:
-            for k, x in enumerate(points):
-                fh.write(
-                    '{} {!r} {!r} {!r}\n'.format(k+1, x[0], x[1], x[2])
-                    .encode('utf-8')
-                    )
-        fh.write('$EndNodes\n'.encode('utf-8'))
-
-        fh.write('$Elements\n'.encode('utf-8'))
-        # count all cells
-        total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-        fh.write('{}\n'.format(total_num_cells).encode('utf-8'))
-
-        consecutive_index = 0
-        for cell_type, node_idcs in cells.items():
-            # handle cell data
-            if cell_type in cell_data and cell_data[cell_type]:
-                for key in cell_data[cell_type]:
-                    # assert data consistency
-                    assert len(cell_data[cell_type][key]) == len(node_idcs)
-                    # TODO assert that the data type is int
-
-                # if a tag is present, make sure that there are 'physical' and
-                # 'geometrical' as well.
-                if 'physical' not in cell_data[cell_type]:
-                    cell_data[cell_type]['physical'] = \
-                        numpy.ones(len(node_idcs), dtype=numpy.int32)
-                if 'geometrical' not in cell_data[cell_type]:
-                    cell_data[cell_type]['geometrical'] = \
-                        numpy.ones(len(node_idcs), dtype=numpy.int32)
-
-                # 'physical' and 'geometrical' go first; this is what the gmsh
-                # file format prescribes
-                keywords = list(cell_data[cell_type].keys())
-                keywords.remove('physical')
-                keywords.remove('geometrical')
-                sorted_keywords = ['physical', 'geometrical'] + keywords
-                fcd = numpy.column_stack([
-                        cell_data[cell_type][key] for key in sorted_keywords
-                        ])
-            else:
-                # no cell data
-                fcd = numpy.empty([len(node_idcs), 0], dtype=numpy.int32)
-
-            if write_binary:
-                # header
-                fh.write(struct.pack('i', _meshio_to_gmsh_type[cell_type]))
-                fh.write(struct.pack('i', node_idcs.shape[0]))
-                fh.write(struct.pack('i', fcd.shape[1]))
-                # actual data
-                a = numpy.arange(
-                    len(node_idcs), dtype=numpy.int32
-                    )[:, numpy.newaxis]
-                a += 1 + consecutive_index
-                array = numpy.hstack([a, fcd, node_idcs + 1])
-                fh.write(array.tostring())
-            else:
-                form = '{} ' + str(_meshio_to_gmsh_type[cell_type]) \
-                    + ' ' + str(fcd.shape[1]) \
-                    + ' {} {}\n'
-                for k, c in enumerate(node_idcs):
-                    fh.write(
-                        form.format(
-                            consecutive_index + k + 1,
-                            ' '.join([str(val) for val in fcd[k]]),
-                            ' '.join([str(cc + 1) for cc in c])
-                            ).encode('utf-8')
-                        )
-
-            consecutive_index += len(node_idcs)
-        if write_binary:
-            fh.write('\n'.encode('utf-8'))
-        fh.write('$EndElements\n'.encode('utf-8'))
-
+        _write_nodes(fh, points, write_binary)
+        _write_elements(fh, cells, cell_data, write_binary)
     return
