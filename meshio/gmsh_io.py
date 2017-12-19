@@ -425,7 +425,6 @@ def _write_elements(fh, cells, write_binary):
 
     consecutive_index = 0
     for cell_type, node_idcs in cells.items():
-        # handle cell data
         # if cell_type in cell_data and cell_data[cell_type]:
         #     for key in cell_data[cell_type]:
         #         # assert data consistency
@@ -511,7 +510,7 @@ def _write_data(fh, tag, data, write_binary):
         else 1
         )
     assert num_components in [1, 3, 9], \
-        'Gmsh only permits 1, 3, or 9 components per point data field.'
+        'Gmsh only permits 1, 3, or 9 components per data field.'
     fh.write('{}\n'.format(num_components).encode('utf-8'))
     # num data items
     fh.write('{}\n'.format(data[key].shape[0]).encode('utf-8'))
