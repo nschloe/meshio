@@ -9,7 +9,7 @@ default:
 	@echo "\"make publish\"?"
 
 README.rst: README.md
-	cat README.md | sed 's_<img src="\([^"]*\)" width="\([^"]*\)">_![](\1){width="\2"}_g' > /tmp/README.md
+	cat README.md | sed -e 's_<img src="\([^"]*\)" width="\([^"]*\)">_![](\1){width="\2"}_g' -e 's_<p[^>]*>__g' -e 's_</p>__g' > /tmp/README.md
 	pandoc /tmp/README.md -o README.rst
 	python setup.py check -r -s || exit 1
 
