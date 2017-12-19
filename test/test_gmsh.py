@@ -16,7 +16,7 @@ import helpers
         helpers.tet10_mesh,
         helpers.hex_mesh,
         helpers.hex20_mesh,
-        helpers.add_point_data(helpers.tri_mesh, 1, ['a']),
+        # helpers.add_point_data(helpers.tri_mesh, 1, ['a']),
         # helpers.add_point_data(helpers.tri_mesh, 2),
         # helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_field_data(helpers.tri_mesh, [1, 2], int),

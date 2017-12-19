@@ -97,6 +97,176 @@ def read(filename):
     return out
 
 
+def _read_header(f, int_size):
+    line = f.readline().decode('utf-8')
+    # Split the line
+    # 2.2 0 8
+    # into its components.
+    str_list = list(filter(None, line.split()))
+    assert str_list[0][0] == '2', 'Need mesh format 2'
+    assert str_list[1] in ['0', '1']
+    is_ascii = str_list[1] == '0'
+    data_size = int(str_list[2])
+    if not is_ascii:
+        # The next line is the integer 1 in bytes. Useful for checking
+        # endianness. Just assert that we get 1 here.
+        one = f.read(int_size)
+        assert struct.unpack('i', one)[0] == 1
+        line = f.readline().decode('utf-8')
+        assert line == '\n'
+    line = f.readline().decode('utf-8')
+    assert line.strip() == '$EndMeshFormat'
+    return data_size, is_ascii
+
+
+def _read_physical_names(f, field_data):
+    line = f.readline().decode('utf-8')
+    num_phys_names = int(line)
+    for _ in range(num_phys_names):
+        line = f.readline().decode('utf-8')
+        key = line.split(' ')[2].replace('"', '').replace('\n', '')
+        phys_group = int(line.split(' ')[1])
+        phys_dim = int(line.split(' ')[0])
+        value = numpy.array([phys_group, phys_dim], dtype=int)
+        field_data[key] = value
+    line = f.readline().decode('utf-8')
+    assert line.strip() == '$EndPhysicalNames'
+    return
+
+
+def _read_nodes(f, is_ascii, int_size, data_size):
+    # The first line is the number of nodes
+    line = f.readline().decode('utf-8')
+    num_nodes = int(line)
+    if is_ascii:
+        points = numpy.fromfile(
+            f, count=num_nodes*4, sep=' '
+            ).reshape((num_nodes, 4))
+        # The first number is the index
+        points = points[:, 1:]
+    else:
+        # binary
+        num_bytes = num_nodes * (int_size + 3 * data_size)
+        assert numpy.int32(0).nbytes == int_size
+        assert numpy.float64(0.0).nbytes == data_size
+        dtype = [('index', numpy.int32), ('x', numpy.float64, (3,))]
+        data = numpy.fromstring(f.read(num_bytes), dtype=dtype)
+        assert (data['index'] == range(1, num_nodes+1)).all()
+        # vtk numpy support requires contiguous data
+        points = numpy.ascontiguousarray(data['x'])
+        line = f.readline().decode('utf-8')
+        assert line == '\n'
+
+    line = f.readline().decode('utf-8')
+    assert line.strip() == '$EndNodes'
+    return points
+
+
+def _read_cells(f, cells, cell_data, int_size, is_ascii):
+    # The first line is the number of elements
+    line = f.readline().decode('utf-8')
+    total_num_cells = int(line)
+    has_additional_tag_data = False
+    if is_ascii:
+        for _ in range(total_num_cells):
+            line = f.readline().decode('utf-8')
+            data = [int(k) for k in filter(None, line.split())]
+            t = _gmsh_to_meshio_type[data[1]]
+            num_nodes_per_elem = num_nodes_per_cell[t]
+
+            if t not in cells:
+                cells[t] = []
+            cells[t].append(data[-num_nodes_per_elem:])
+
+            # data[2] gives the number of tags. The gmsh manual
+            # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
+            # says:
+            # >>>
+            # By default, the first tag is the number of the physical entity to
+            # which the element belongs; the second is the number of the
+            # elementary geometrical entity to which the element belongs; the
+            # third is the number of mesh partitions to which the element
+            # belongs, followed by the partition ids (negative partition ids
+            # indicate ghost cells). A zero tag is equivalent to no tag. Gmsh
+            # and most codes using the MSH 2 format require at least the first
+            # two tags (physical and elementary tags).
+            # <<<
+            num_tags = data[2]
+            if t not in cell_data:
+                cell_data[t] = []
+            cell_data[t].append(data[3:3+num_tags])
+
+        # convert to numpy arrays
+        for key in cells:
+            cells[key] = numpy.array(cells[key], dtype=int)
+        for key in cell_data:
+            cell_data[key] = numpy.array(cell_data[key], dtype=int)
+    else:
+        # binary
+        num_elems = 0
+        while num_elems < total_num_cells:
+            # read element header
+            elem_type = struct.unpack('i', f.read(int_size))[0]
+            t = _gmsh_to_meshio_type[elem_type]
+            num_nodes_per_elem = num_nodes_per_cell[t]
+            num_elems0 = struct.unpack('i', f.read(int_size))[0]
+            num_tags = struct.unpack('i', f.read(int_size))[0]
+            # assert num_tags >= 2
+
+            # read element data
+            num_bytes = 4 * (
+                num_elems0 * (1 + num_tags + num_nodes_per_elem)
+                )
+            shape = \
+                (num_elems0, 1 + num_tags + num_nodes_per_elem)
+            b = f.read(num_bytes)
+            data = numpy.fromstring(
+                b, dtype=numpy.int32
+                ).reshape(shape)
+
+            if t not in cells:
+                cells[t] = []
+            cells[t].append(data[:, -num_nodes_per_elem:])
+
+            if t not in cell_data:
+                cell_data[t] = []
+            cell_data[t].append(data[:, 1:num_tags+1])
+
+            num_elems += num_elems0
+
+        # collect cells
+        for key in cells:
+            cells[key] = numpy.vstack(cells[key])
+
+        # collect cell data
+        for key in cell_data:
+            cell_data[key] = numpy.vstack(cell_data[key])
+
+        line = f.readline().decode('utf-8')
+        assert line == '\n'
+
+    line = f.readline().decode('utf-8')
+    assert line.strip() == '$EndElements'
+
+    # Subtract one to account for the fact that python indices are
+    # 0-based.
+    for key in cells:
+        cells[key] -= 1
+
+    # restrict to the standard two data items
+    output_cell_data = {}
+    for key in cell_data:
+        if cell_data[key].shape[1] > 2:
+            has_additional_tag_data = True
+        output_cell_data[key] = {}
+        if cell_data[key].shape[1] > 0:
+            output_cell_data[key]['physical'] = cell_data[key][:, 0]
+        if cell_data[key].shape[1] > 1:
+            output_cell_data[key]['geometrical'] = cell_data[key][:, 1]
+    cell_data = output_cell_data
+    return has_additional_tag_data
+
+
 def read_buffer(f):
     # The format is specified at
     # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
@@ -108,7 +278,6 @@ def read_buffer(f):
     cell_data = {}
     point_data = {}
 
-    has_additional_tag_data = False
     is_ascii = None
     int_size = 4
     data_size = None
@@ -119,166 +288,18 @@ def read_buffer(f):
             break
         assert line[0] == '$'
         environ = line[1:].strip()
-        if environ == 'MeshFormat':
-            line = f.readline().decode('utf-8')
-            # Split the line
-            # 2.2 0 8
-            # into its components.
-            str_list = list(filter(None, line.split()))
-            assert str_list[0][0] == '2', 'Need mesh format 2'
-            assert str_list[1] in ['0', '1']
-            is_ascii = str_list[1] == '0'
-            data_size = int(str_list[2])
-            if not is_ascii:
-                # The next line is the integer 1 in bytes. Useful to check
-                # endianness. Just assert that we get 1 here.
-                one = f.read(int_size)
-                assert struct.unpack('i', one)[0] == 1
-                line = f.readline().decode('utf-8')
-                assert line == '\n'
-            line = f.readline().decode('utf-8')
-            assert line.strip() == '$EndMeshFormat'
-        elif environ == 'PhysicalNames':
-            line = f.readline().decode('utf-8')
-            num_phys_names = int(line)
-            for _ in range(num_phys_names):
-                line = f.readline().decode('utf-8')
-                key = line.split(' ')[2].replace('"', '').replace('\n', '')
-                phys_group = int(line.split(' ')[1])
-                phys_dim = int(line.split(' ')[0])
-                value = numpy.array([phys_group, phys_dim], dtype=int)
-                field_data[key] = value
-            line = f.readline().decode('utf-8')
-            assert line.strip() == '$EndPhysicalNames'
-        elif environ == 'Nodes':
-            # The first line is the number of nodes
-            line = f.readline().decode('utf-8')
-            num_nodes = int(line)
-            if is_ascii:
-                points = numpy.fromfile(
-                    f, count=num_nodes*4, sep=' '
-                    ).reshape((num_nodes, 4))
-                # The first number is the index
-                points = points[:, 1:]
-            else:
-                # binary
-                num_bytes = num_nodes * (int_size + 3 * data_size)
-                assert numpy.int32(0).nbytes == int_size
-                assert numpy.float64(0.0).nbytes == data_size
-                dtype = [('index', numpy.int32), ('x', numpy.float64, (3,))]
-                data = numpy.fromstring(f.read(num_bytes), dtype=dtype)
-                assert (data['index'] == range(1, num_nodes+1)).all()
-                # vtk numpy support requires contiguous data
-                points = numpy.ascontiguousarray(data['x'])
-                line = f.readline().decode('utf-8')
-                assert line == '\n'
 
-            line = f.readline().decode('utf-8')
-            assert line.strip() == '$EndNodes'
+        if environ == 'MeshFormat':
+            data_size, is_ascii = _read_header(f, int_size)
+        elif environ == 'PhysicalNames':
+            _read_physical_names(f, field_data)
+        elif environ == 'Nodes':
+            points = _read_nodes(f, is_ascii, int_size, data_size)
         else:
             assert environ == 'Elements', \
                 'Unknown environment \'{}\'.'.format(environ)
-            # The first line is the number of elements
-            line = f.readline().decode('utf-8')
-            total_num_cells = int(line)
-            if is_ascii:
-                for _ in range(total_num_cells):
-                    line = f.readline().decode('utf-8')
-                    data = [int(k) for k in filter(None, line.split())]
-                    t = _gmsh_to_meshio_type[data[1]]
-                    num_nodes_per_elem = num_nodes_per_cell[t]
-
-                    if t not in cells:
-                        cells[t] = []
-                    cells[t].append(data[-num_nodes_per_elem:])
-
-                    # data[2] gives the number of tags. The gmsh manual
-                    # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
-                    # says:
-                    # >>>
-                    # By default, the first tag is the number of the physical
-                    # entity to which the element belongs; the second is the
-                    # number of the elementary geometrical entity to which the
-                    # element belongs; the third is the number of mesh
-                    # partitions to which the element belongs, followed by the
-                    # partition ids (negative partition ids indicate ghost
-                    # cells). A zero tag is equivalent to no tag. Gmsh and most
-                    # codes using the MSH 2 format require at least the first
-                    # two tags (physical and elementary tags).
-                    # <<<
-                    num_tags = data[2]
-                    if t not in cell_data:
-                        cell_data[t] = []
-                    cell_data[t].append(data[3:3+num_tags])
-
-                # convert to numpy arrays
-                for key in cells:
-                    cells[key] = numpy.array(cells[key], dtype=int)
-                for key in cell_data:
-                    cell_data[key] = numpy.array(cell_data[key], dtype=int)
-            else:
-                # binary
-                num_elems = 0
-                while num_elems < total_num_cells:
-                    # read element header
-                    elem_type = struct.unpack('i', f.read(int_size))[0]
-                    t = _gmsh_to_meshio_type[elem_type]
-                    num_nodes_per_elem = num_nodes_per_cell[t]
-                    num_elems0 = struct.unpack('i', f.read(int_size))[0]
-                    num_tags = struct.unpack('i', f.read(int_size))[0]
-                    # assert num_tags >= 2
-
-                    # read element data
-                    num_bytes = 4 * (
-                        num_elems0 * (1 + num_tags + num_nodes_per_elem)
-                        )
-                    shape = \
-                        (num_elems0, 1 + num_tags + num_nodes_per_elem)
-                    b = f.read(num_bytes)
-                    data = numpy.fromstring(
-                        b, dtype=numpy.int32
-                        ).reshape(shape)
-
-                    if t not in cells:
-                        cells[t] = []
-                    cells[t].append(data[:, -num_nodes_per_elem:])
-
-                    if t not in cell_data:
-                        cell_data[t] = []
-                    cell_data[t].append(data[:, 1:num_tags+1])
-
-                    num_elems += num_elems0
-
-                # collect cells
-                for key in cells:
-                    cells[key] = numpy.vstack(cells[key])
-
-                # collect cell data
-                for key in cell_data:
-                    cell_data[key] = numpy.vstack(cell_data[key])
-
-                line = f.readline().decode('utf-8')
-                assert line == '\n'
-
-            line = f.readline().decode('utf-8')
-            assert line.strip() == '$EndElements'
-
-            # Subtract one to account for the fact that python indices are
-            # 0-based.
-            for key in cells:
-                cells[key] -= 1
-
-            # restrict to the standard two data items
-            output_cell_data = {}
-            for key in cell_data:
-                if cell_data[key].shape[1] > 2:
-                    has_additional_tag_data = True
-                output_cell_data[key] = {}
-                if cell_data[key].shape[1] > 0:
-                    output_cell_data[key]['physical'] = cell_data[key][:, 0]
-                if cell_data[key].shape[1] > 1:
-                    output_cell_data[key]['geometrical'] = cell_data[key][:, 1]
-            cell_data = output_cell_data
+            has_additional_tag_data = \
+                _read_cells(f, cells, cell_data, int_size, is_ascii)
 
     if has_additional_tag_data:
         logging.warning(
