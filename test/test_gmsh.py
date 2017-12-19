@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-import meshio
 import pytest
+
+import meshio
 
 import helpers
 
@@ -16,6 +17,9 @@ import helpers
         helpers.tet10_mesh,
         helpers.hex_mesh,
         helpers.hex20_mesh,
+        helpers.add_point_data(helpers.tri_mesh, 1, num_tags=1),
+        helpers.add_point_data(helpers.tri_mesh, 3, num_tags=1),
+        helpers.add_point_data(helpers.tri_mesh, 9, num_tags=1),
         helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
         helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         helpers.add_field_data(helpers.hex_mesh, [1, 3], int),

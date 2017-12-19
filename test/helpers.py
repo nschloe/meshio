@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import os
+import string
 
 import numpy
 
@@ -201,20 +202,24 @@ def _clone(mesh):
     return mesh2
 
 
-def add_point_data(mesh, dim):
+def add_point_data(mesh, dim, num_tags=2):
     numpy.random.seed(0)
     mesh2 = _clone(mesh)
 
     if dim == 1:
-        data_a = numpy.random.rand(len(mesh['points']))
-        data_b = numpy.random.rand(len(mesh['points']))
+        data = [
+            numpy.random.rand(len(mesh['points']))
+            for _ in range(num_tags)
+            ]
     else:
-        data_a = numpy.random.rand(len(mesh['points']), dim)
-        data_b = numpy.random.rand(len(mesh['points']), dim)
+        data = [
+            numpy.random.rand(len(mesh['points']), dim)
+            for _ in range(num_tags)
+            ]
 
     mesh2['point_data'] = {
-            'a': data_a,
-            'b': data_b,
+            string.ascii_lowercase[k]: d
+            for k, d in enumerate(data)
             }
     return mesh2
 
@@ -289,6 +294,7 @@ def write_read(writer, reader, mesh, atol):
 
     for cell_type, data in mesh['cells'].items():
         assert numpy.allclose(data, cells[cell_type])
+
     for key in input_point_data.keys():
         assert numpy.allclose(
             input_point_data[key], point_data[key],

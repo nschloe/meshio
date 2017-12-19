@@ -192,7 +192,7 @@ def _numpy_type_to_dolfin_type(dtype):
         # issubtype handles all of int8, int16, float64 etc.
         if numpy.issubdtype(dtype, numpy.dtype(t)):
             return t
-    return
+    return None
 
 
 def _write_cell_data(

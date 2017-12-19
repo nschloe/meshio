@@ -1,9 +1,9 @@
 # meshio
 
-[![Build Status](https://travis-ci.org/nschloe/meshio.svg?branch=master)](https://travis-ci.org/nschloe/meshio)
+[![CircleCI](https://img.shields.io/circleci/project/github/nschloe/meshio/master.svg)](https://circleci.com/gh/nschloe/meshio)
 [![codecov.io](https://codecov.io/github/nschloe/meshio/branch/master/graphs/badge.svg)](https://codecov.io/github/nschloe/meshio/branch/master)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.python.org/pypi/meshio)
-[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=social&label=Stars&maxAge=2592000)](https://github.com/nschloe/meshio)
+[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=social&label=Stars)](https://github.com/nschloe/meshio)
 
 <p align="center">
   <img src="https://nschloe.github.io/meshio/meshio_logo.png" width="20%">

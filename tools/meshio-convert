@@ -4,8 +4,9 @@ Convert a mesh file to another.
 '''
 from __future__ import print_function
 
-import meshio
 import numpy
+
+import meshio
 
 
 def _main():
