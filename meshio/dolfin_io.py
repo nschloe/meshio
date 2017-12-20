@@ -19,44 +19,41 @@ def _read_mesh(filename):
         'triangle': ('triangle', 3),
         'tetrahedron': ('tetra', 4),
         }
-    # TODO allocate the entire point and cell arrays at once
-    # The size info is in the parent tags.
-    # See <https://stackoverflow.com/q/47906792/353337>.
 
     # Use iterparse() to avoid loading the entire file via parse(). iterparse()
     # allows to discard elements (via clear()) after they have been processed.
     # See <https://stackoverflow.com/a/326541/353337>.
-    points = []
-    cells = {}
-    for event, elem in ET.iterparse(filename):
-        if elem.tag == 'vertex':
-            points.append(numpy.zeros(3))
-            for k, key in enumerate(['x', 'y', 'z']):
-                if key in elem.attrib:
-                    points[-1][k] = float(elem.attrib[key])
-        elif elem.tag in ['triangle', 'tetrahedron']:
-            cell_type, npc = dolfin_to_meshio_type[elem.tag]
-            if cell_type not in cells:
-                cells[cell_type] = []
-            cells[cell_type].append(numpy.empty(npc, dtype=int))
-            for k in range(npc):
-                cells[cell_type][-1][k] = int(elem.attrib['v{}'.format(k)])
-        elif elem.tag == 'vertices':
-            # Convert to numpy arrays
-            points = numpy.array(points)
-            assert int(elem.attrib['size']) == len(points)
-        elif elem.tag == 'cells':
-            # Convert to numpy arrays
-            for key in cells:
-                cells[key] = numpy.array(cells[key])
-            assert int(elem.attrib['size']) \
-                == sum([len(c) for c in cells.values()])
-        elif elem.tag == 'mesh':
-            # {'celltype': 'tetrahedron', 'dim': '3'}
-            pass
-        elif elem.tag == 'dolfin':
+    for event, elem in ET.iterparse(filename, events=('start', 'end')):
+        if event == 'end':
+            continue
+
+        if elem.tag == 'dolfin':
             assert elem.attrib['nsmap'] \
                 == '{\'dolfin\': \'https://fenicsproject.org/\'}'
+        elif elem.tag == 'mesh':
+            dim = int(elem.attrib['dim'])
+            cell_type, npc = dolfin_to_meshio_type[elem.attrib['celltype']]
+        elif elem.tag == 'vertices':
+            points = numpy.empty((int(elem.attrib['size']), 3))
+            keys = ['x', 'y']
+            if dim == 2:
+                points[:, 2] = 0.0
+            else:
+                assert dim == 3
+                keys += ['z']
+        elif elem.tag == 'vertex':
+            k = int(elem.attrib['index'])
+            points[k] = [float(elem.attrib[key]) for key in keys]
+        elif elem.tag == 'cells':
+            cells = {
+                cell_type:
+                numpy.empty((int(elem.attrib['size']), npc), dtype=int)
+                }
+        elif elem.tag in ['triangle', 'tetrahedron']:
+            k = int(elem.attrib['index'])
+            cells[cell_type][k] = [
+                int(elem.attrib['v{}'.format(i)]) for i in range(npc)
+                ]
         else:
             logging.warning('Unknown entry %s. Ignoring.', elem.tag)
 
