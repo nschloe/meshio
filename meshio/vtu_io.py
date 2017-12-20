@@ -16,7 +16,7 @@ except ImportError:
 # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
 #
 # Use Python's native xml parser to avoid this error.
-import xml.etree.ElementTree as ET
+import xml.etree.cElementTree as ET
 import zlib
 
 import numpy
