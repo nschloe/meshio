@@ -15,55 +15,49 @@ import numpy
 
 
 def _read_mesh(filename):
-    tree = ET.parse(filename)
-    root = tree.getroot()
-
-    meshes = list(root)
-    assert len(meshes) == 1
-    mesh = meshes[0]
-
-    assert mesh.tag == 'mesh'
-
     dolfin_to_meshio_type = {
         'triangle': ('triangle', 3),
         'tetrahedron': ('tetra', 4),
         }
 
-    cell_type, npc = dolfin_to_meshio_type[mesh.attrib['celltype']]
-
-    is_2d = mesh.attrib['dim'] == '2'
-    if not is_2d:
-        assert mesh.attrib['dim'] == '3'
-
-    points = None
-    cells = {
-        cell_type: None
-        }
-
-    for child in mesh:
-        if child.tag == 'vertices':
-            num_verts = int(child.attrib['size'])
-            points = numpy.empty((num_verts, 3))
-            for vert in child:
-                assert vert.tag == 'vertex'
-                idx = int(vert.attrib['index'])
-                points[idx, 0] = vert.attrib['x']
-                points[idx, 1] = vert.attrib['y']
-                if is_2d:
-                    points[idx, 2] = 0.0
-                else:
-                    points[idx, 2] = vert.attrib['z']
-
-        elif child.tag == 'cells':
-            num_cells = int(child.attrib['size'])
-            cells[cell_type] = numpy.empty((num_cells, npc), dtype=int)
-            for cell in child:
-                assert dolfin_to_meshio_type[cell.tag][0] == cell_type
-                idx = int(cell.attrib['index'])
-                for k in range(npc):
-                    cells[cell_type][idx, k] = cell.attrib['v{}'.format(k)]
+    # Use iterparse() to avoid loading the entire file via parse(). iterparse()
+    # allows to discard elements (via clear()) after they have been processed.
+    # See <https://stackoverflow.com/a/326541/353337>.
+    points = []
+    cells = {}
+    for event, elem in ET.iterparse(filename):
+        if elem.tag == 'vertex':
+            points.append(numpy.zeros(3))
+            for k, key in enumerate(['x', 'y', 'z']):
+                if key in elem.attrib:
+                    points[-1][k] = float(elem.attrib[key])
+        elif elem.tag in ['triangle', 'tetrahedron']:
+            cell_type, npc = dolfin_to_meshio_type[elem.tag]
+            if cell_type not in cells:
+                cells[cell_type] = []
+            cells[cell_type].append(numpy.empty(npc, dtype=int))
+            for k in range(npc):
+                cells[cell_type][-1][k] = int(elem.attrib['v{}'.format(k)])
+        elif elem.tag == 'vertices':
+            # Convert to numpy arrays
+            points = numpy.array(points)
+            assert int(elem.attrib['size']) == len(points)
+        elif elem.tag == 'cells':
+            # Convert to numpy arrays
+            for key in cells:
+                cells[key] = numpy.array(cells[key])
+            assert int(elem.attrib['size']) \
+                == sum([len(c) for c in cells.values()])
+        elif elem.tag == 'mesh':
+            # {'celltype': 'tetrahedron', 'dim': '3'}
+            pass
+        elif elem.tag == 'dolfin':
+            assert elem.attrib['nsmap'] \
+                == '{\'dolfin\': \'https://fenicsproject.org/\'}'
         else:
-            logging.warning('Unknown entry %s. Ignoring.', child.tag)
+            logging.warning('Unknown entry %s. Ignoring.', elem.tag)
+
+        elem.clear()
 
     return points, cells, cell_type
 
@@ -81,7 +75,7 @@ def _read_cell_data(filename, cell_type):
         dir_name = os.getcwd()
 
     # Loop over all files in the same directory as `filename`.
-    basename = os.path.splitext(os.path.basename(filename))[0]
+    basename = os.path.splitext(filename)[0]
     for f in os.listdir(dir_name):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
