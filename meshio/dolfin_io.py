@@ -19,6 +19,9 @@ def _read_mesh(filename):
         'triangle': ('triangle', 3),
         'tetrahedron': ('tetra', 4),
         }
+    # TODO allocate the entire point and cell arrays at once
+    # The size info is in the parent tags.
+    # See <https://stackoverflow.com/q/47906792/353337>.
 
     # Use iterparse() to avoid loading the entire file via parse(). iterparse()
     # allows to discard elements (via clear()) after they have been processed.
