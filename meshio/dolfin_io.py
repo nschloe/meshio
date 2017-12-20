@@ -43,7 +43,7 @@ def _read_mesh(filename):
                 keys += ['z']
         elif elem.tag == 'vertex':
             k = int(elem.attrib['index'])
-            points[k] = [float(elem.attrib[key]) for key in keys]
+            points[k][:dim] = [float(elem.attrib[key]) for key in keys]
         elif elem.tag == 'cells':
             cells = {
                 cell_type:
