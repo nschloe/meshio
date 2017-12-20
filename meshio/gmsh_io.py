@@ -169,6 +169,7 @@ def _read_cells(f, cells, int_size, is_ascii):
     line = f.readline().decode('utf-8')
     total_num_cells = int(line)
     has_additional_tag_data = False
+    cell_tags = {}
     if is_ascii:
         for _ in range(total_num_cells):
             line = f.readline().decode('utf-8')
@@ -193,17 +194,16 @@ def _read_cells(f, cells, int_size, is_ascii):
             # and most codes using the MSH 2 format require at least the first
             # two tags (physical and elementary tags).
             # <<<
-            # TODO properly discard
-            # num_tags = data[2]
-            # if t not in cell_data:
-            #     cell_data[t] = []
-            # cell_data[t].append(data[3:3+num_tags])
+            num_tags = data[2]
+            if t not in cell_tags:
+                cell_tags[t] = []
+            cell_tags[t].append(data[3:3+num_tags])
 
         # convert to numpy arrays
         for key in cells:
             cells[key] = numpy.array(cells[key], dtype=int)
-        # for key in cell_data:
-        #     cell_data[key] = numpy.array(cell_data[key], dtype=int)
+        for key in cell_tags:
+            cell_tags[key] = numpy.array(cell_tags[key], dtype=int)
     else:
         # binary
         num_elems = 0
@@ -231,9 +231,9 @@ def _read_cells(f, cells, int_size, is_ascii):
                 cells[t] = []
             cells[t].append(data[:, -num_nodes_per_elem:])
 
-            # if t not in cell_data:
-            #     cell_data[t] = []
-            # cell_data[t].append(data[:, 1:num_tags+1])
+            if t not in cell_tags:
+                cell_tags[t] = []
+            cell_tags[t].append(data[:, 1:num_tags+1])
 
             num_elems += num_elems0
 
@@ -241,9 +241,9 @@ def _read_cells(f, cells, int_size, is_ascii):
         for key in cells:
             cells[key] = numpy.vstack(cells[key])
 
-        # # collect cell data
-        # for key in cell_data:
-        #     cell_data[key] = numpy.vstack(cell_data[key])
+        # collect cell tags
+        for key in cell_tags:
+            cell_tags[key] = numpy.vstack(cell_tags[key])
 
         line = f.readline().decode('utf-8')
         assert line == '\n'
@@ -256,18 +256,17 @@ def _read_cells(f, cells, int_size, is_ascii):
     for key in cells:
         cells[key] -= 1
 
-    # # restrict to the standard two data items
-    # output_cell_data = {}
-    # for key in cell_data:
-    #     if cell_data[key].shape[1] > 2:
-    #         has_additional_tag_data = True
-    #     output_cell_data[key] = {}
-    #     if cell_data[key].shape[1] > 0:
-    #         output_cell_data[key]['physical'] = cell_data[key][:, 0]
-    #     if cell_data[key].shape[1] > 1:
-    #         output_cell_data[key]['geometrical'] = cell_data[key][:, 1]
-    # cell_data = output_cell_data
-    return has_additional_tag_data
+    # restrict to the standard two data items (physical, geometrical)
+    output_cell_tags = {}
+    for key in cell_tags:
+        if cell_tags[key].shape[1] > 2:
+            has_additional_tag_data = True
+        output_cell_tags[key] = {}
+        if cell_tags[key].shape[1] > 0:
+            output_cell_tags[key]['physical'] = cell_tags[key][:, 0]
+        if cell_tags[key].shape[1] > 1:
+            output_cell_tags[key]['geometrical'] = cell_tags[key][:, 1]
+    return has_additional_tag_data, output_cell_tags
 
 
 def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
@@ -331,6 +330,7 @@ def read_buffer(f):
     cells = {}
     field_data = {}
     cell_data_raw = {}
+    cell_tags = {}
     point_data = {}
 
     is_ascii = None
@@ -351,7 +351,7 @@ def read_buffer(f):
         elif environ == 'Nodes':
             points = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == 'Elements':
-            has_additional_tag_data = \
+            has_additional_tag_data, cell_tags = \
                 _read_cells(f, cells, int_size, is_ascii)
         elif environ == 'NodeData':
             _read_data(
@@ -370,6 +370,14 @@ def read_buffer(f):
             )
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
+
+    # merge cell_tags into cell_data
+    for key, tag_dict in cell_tags.items():
+        if key not in cell_data:
+            cell_data[key] = {}
+        for name, item_list in tag_dict.items():
+            assert name not in cell_data[key]
+            cell_data[key][name] = item_list
 
     return points, cells, point_data, cell_data, field_data
 
