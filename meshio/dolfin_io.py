@@ -9,7 +9,7 @@ I/O for DOLFIN's XML format, cf.
 import logging
 import os
 import re
-import xml.etree.ElementTree as ET
+import xml.etree.cElementTree as ET
 
 import numpy
 

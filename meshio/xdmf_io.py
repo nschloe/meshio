@@ -11,7 +11,7 @@ try:
     from StringIO import cStringIO as BytesIO
 except ImportError:
     from io import BytesIO
-import xml.etree.ElementTree as ET
+import xml.etree.cElementTree as ET
 
 import numpy
 
