@@ -493,19 +493,16 @@ def _write_elements(fh, cells, write_binary):
     return
 
 
-def _write_data(fh, tag, data, write_binary):
+def _write_data(fh, tag, name, data, write_binary):
     fh.write('${}\n'.format(tag).encode('utf-8'))
-    assert len(data) == 1, \
-        'Can only handle one data field right now.'
-    key = list(data.keys())[0]
     # <http://gmsh.info/doc/texinfo/gmsh.html>:
     # > Number of string tags.
     # > gives the number of string tags that follow. By default the first
     # > string-tag is interpreted as the name of the post-processing view and
     # > the second as the name of the interpolation scheme. The interpolation
     # > scheme is provided in the $InterpolationScheme section (see below).
-    fh.write('{}\n'.format(len(data)).encode('utf-8'))
-    fh.write('{}\n'.format(key).encode('utf-8'))
+    fh.write('{}\n'.format(1).encode('utf-8'))
+    fh.write('{}\n'.format(name).encode('utf-8'))
     fh.write('{}\n'.format(1).encode('utf-8'))
     fh.write('{}\n'.format(0.0).encode('utf-8'))
     # three integer tags:
@@ -513,34 +510,31 @@ def _write_data(fh, tag, data, write_binary):
     # time step
     fh.write('{}\n'.format(0).encode('utf-8'))
     # number of components
-    num_components = (
-        data[key].shape[1] if len(data[key].shape) > 1
-        else 1
-        )
+    num_components = data.shape[1] if len(data.shape) > 1 else 1
     assert num_components in [1, 3, 9], \
         'Gmsh only permits 1, 3, or 9 components per data field.'
     fh.write('{}\n'.format(num_components).encode('utf-8'))
     # num data items
-    fh.write('{}\n'.format(data[key].shape[0]).encode('utf-8'))
+    fh.write('{}\n'.format(data.shape[0]).encode('utf-8'))
     # actually write the data
     if write_binary:
         dtype = [
             ('index', numpy.int32),
             ('data', numpy.float64, num_components)
             ]
-        tmp = numpy.empty(len(data[key]), dtype=dtype)
-        tmp['index'] = 1 + numpy.arange(len(data[key]))
-        tmp['data'] = data[key]
+        tmp = numpy.empty(len(data), dtype=dtype)
+        tmp['index'] = 1 + numpy.arange(len(data))
+        tmp['data'] = data
         fh.write(tmp.tostring())
         fh.write('\n'.encode('utf-8'))
     else:
         fmt = ' '.join(['{}'] + ['{!r}'] * num_components) + '\n'
         # TODO unify
         if num_components == 1:
-            for k, x in enumerate(data[key]):
+            for k, x in enumerate(data):
                 fh.write(fmt.format(k+1, x).encode('utf-8'))
         else:
-            for k, x in enumerate(data[key]):
+            for k, x in enumerate(data):
                 fh.write(fmt.format(k+1, *x).encode('utf-8'))
 
     fh.write('$End{}\n'.format(tag).encode('utf-8'))
@@ -588,10 +582,10 @@ def write(
 
         _write_nodes(fh, points, write_binary)
         _write_elements(fh, cells, write_binary)
-        if point_data:
-            _write_data(fh, 'NodeData', point_data, write_binary)
-        if cell_data:
-            cell_data_raw = raw_from_cell_data(cell_data)
-            _write_data(fh, 'ElementData', cell_data_raw, write_binary)
+        for name, dat in point_data.items():
+            _write_data(fh, 'NodeData', name, dat, write_binary)
+        cell_data_raw = raw_from_cell_data(cell_data)
+        for name, dat in cell_data_raw.items():
+            _write_data(fh, 'ElementData', name, dat, write_binary)
 
     return
