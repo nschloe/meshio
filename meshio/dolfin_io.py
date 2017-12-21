@@ -28,8 +28,11 @@ def _read_mesh(filename):
             continue
 
         if elem.tag == 'dolfin':
-            assert elem.attrib['nsmap'] \
-                == '{\'dolfin\': \'https://fenicsproject.org/\'}'
+            # Don't be too strict with the assertion. Some meshe files don't
+            # have the proper tags.
+            # assert elem.attrib['nsmap'] \
+            #     == '{\'dolfin\': \'https://fenicsproject.org/\'}'
+            pass
         elif elem.tag == 'mesh':
             dim = int(elem.attrib['dim'])
             cell_type, npc = dolfin_to_meshio_type[elem.attrib['celltype']]
