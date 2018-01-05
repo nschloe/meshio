@@ -37,9 +37,20 @@ def read_buffer(f):
     # Now, all facets contain the point coordinate. Try to identify individual
     # points and build the data arrays.
     # TODO equip `unique()` with a tolerance
-    points, idx = \
-        numpy.unique(numpy.concatenate(facets), axis=0, return_inverse=True)
-    cells = {'triangle': idx.reshape(-1, 3)}
+    print('conc')
+    print(numpy.concatenate(facets))
+    print()
+    pts = numpy.concatenate(facets)
+    # Use return_index so we can use sort on `idx` such that the order is
+    # preserved; see <https://stackoverflow.com/a/15637512/353337>.
+    _, idx, inv = numpy.unique(
+            pts, axis=0,
+            return_index=True, return_inverse=True
+            )
+    k = numpy.argsort(idx)
+    points = pts[idx[k]]
+    inv_k = numpy.argsort(k)
+    cells = {'triangle': inv_k[inv].reshape(-1, 3)}
 
     return points, cells, {}, {}, {}
 
