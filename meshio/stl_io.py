@@ -89,7 +89,7 @@ def _read_binary(f):
     num_triangles = data[0]
 
     facets = []
-    for k in range(num_triangles):
+    for _ in range(num_triangles):
         # discard the normal
         f.read(12)
         facets.append(
