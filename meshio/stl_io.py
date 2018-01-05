@@ -69,7 +69,39 @@ def write(
         point_data=None,
         cell_data=None,
         field_data=None,
-        write_binary=True,
+        write_binary=False,
         ):
+    assert not point_data, \
+        'STL cannot write point data.'
+    assert not field_data, \
+        'STL cannot write field data.'
+    assert len(cells.keys()) == 1 and list(cells.keys())[0] == 'triangle', \
+        'STL can only write triangle cells.'
+
+    pts = points[cells['triangle']]
+    # compute normals
+    normals = numpy.cross(pts[:, 1] - pts[:, 0], pts[:, 2] - pts[:, 0])
+    nrm = numpy.sqrt(numpy.einsum('ij,ij->i', normals, normals))
+    normals = (normals.T / nrm).T
+
+    with open(filename, 'wb') as fh:
+        fh.write('solid\n'.encode('utf-8'))
+
+        for local_pts, normal in zip(pts, normals):
+            # facet normal 0.455194 -0.187301 -0.870469
+            #  outer loop
+            #   vertex 266.36 234.594 14.6145
+            #   vertex 268.582 234.968 15.6956
+            #   vertex 267.689 232.646 15.7283
+            #  endloop
+            # endfacet
+            fh.write('facet normal {} {} {}\n'.format(*normal).encode('utf-8'))
+            fh.write(' outer loop\n'.encode('utf-8'))
+            for pt in local_pts:
+                fh.write('  vertex {} {} {}\n'.format(*pt).encode('utf-8'))
+            fh.write(' endloop\n'.encode('utf-8'))
+            fh.write('endfacet\n'.encode('utf-8'))
+
+        fh.write('endsolid\n'.encode('utf-8'))
 
     return

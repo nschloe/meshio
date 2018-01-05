@@ -190,13 +190,13 @@ def write(filename,
         off_io.write(filename, points, cells)
     elif file_format == 'permas':
         permas_io.write(filename, points, cells)
-    elif file_format == 'stl':
+    elif file_format in ['stl-ascii', 'stl-binary']:
         stl_io.write(
             filename, points, cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
-            write_binary=(file_format == 'stl-binary')
+            write_binary=(file_format != 'stl-ascii')
             )
     elif file_format == 'vtu-ascii':
         vtu_io.write(
