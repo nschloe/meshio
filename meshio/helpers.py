@@ -9,6 +9,7 @@ from . import medit_io
 from . import gmsh_io
 from . import off_io
 from . import permas_io
+from . import stl_io
 from . import vtk_io
 from . import vtu_io
 from . import xdmf_io
@@ -24,6 +25,8 @@ input_filetypes = [
         'permas',
         'moab',
         'off',
+        'stl-ascii',
+        'stl-binary',
         'vtk-ascii',
         'vtk-binary',
         'vtu-ascii',
@@ -43,6 +46,8 @@ output_filetypes = [
         'permas',
         'moab',
         'off',
+        'stl-ascii',
+        'stl-binary',
         'vtk-ascii',
         'vtk-binary',
         'vtu-ascii',
@@ -64,6 +69,7 @@ _extension_to_filetype = {
     '.dato.gz': 'permas',
     '.h5m': 'moab',
     '.off': 'off',
+    '.stl': 'stl-binary',
     '.vtu': 'vtu-binary',
     '.vtk': 'vtk-binary',
     '.xdmf': 'xdmf',
@@ -107,6 +113,10 @@ def read(filename, file_format=None):
         'permas': permas_io,
         'moab': h5m_io,
         'off': off_io,
+        #
+        'stl': stl_io,
+        'stl-ascii': stl_io,
+        'stl-binary': stl_io,
         #
         'vtu-ascii': vtu_io,
         'vtu-binary': vtu_io,
@@ -180,6 +190,14 @@ def write(filename,
         off_io.write(filename, points, cells)
     elif file_format == 'permas':
         permas_io.write(filename, points, cells)
+    elif file_format == 'stl':
+        stl_io.write(
+            filename, points, cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data,
+            write_binary=(file_format == 'stl-binary')
+            )
     elif file_format == 'vtu-ascii':
         vtu_io.write(
             filename, points, cells,
