@@ -21,6 +21,7 @@ e.g.,
  * [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats)
  * [OFF](http://segeval.cs.princeton.edu/public/off_format.html)
  * [PERMAS](http://www.intes.de)
+ * [STL](https://en.wikipedia.org/wiki/STL_(file_format))
  * [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format)
