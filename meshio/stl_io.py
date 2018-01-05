@@ -18,18 +18,7 @@ def read(filename):
 
 
 def read_buffer(f):
-    # The format is specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
-
-    # Initialize the optional data fields
-    points = []
-    cells = {}
-    field_data = {}
-    cell_data = {}
-    point_data = {}
-
     line = f.readline().decode('utf-8')
-    print(line)
     assert line[:5] == 'solid'
 
     facets = []
@@ -45,9 +34,14 @@ def read_buffer(f):
         line = f.readline().decode('utf-8')
         assert line.strip() == 'endfacet'
 
-    print(facets)
-    exit(1)
-    return points, cells, point_data, cell_data, field_data
+    # Now, all facets contain the point coordinate. Try to identify individual
+    # points and build the data arrays.
+    # TODO equip `unique()` with a tolerance
+    points, idx = \
+        numpy.unique(numpy.concatenate(facets), axis=0, return_inverse=True)
+    cells = {'triangle': idx.reshape(-1, 3)}
+
+    return points, cells, {}, {}, {}
 
 
 def _read_facet(f):
