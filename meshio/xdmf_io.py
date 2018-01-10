@@ -351,7 +351,9 @@ class XdmfReader(object):
                 assert c.tag == 'Attribute', \
                     'Unknown section \'{}\'.'.format(c.tag)
 
-                assert c.attrib['Type'] == 'None'
+                # Don't be too struct here: FEniCS, for example, calls this
+                # 'AttributeType'.
+                # assert c.attrib['Type'] == 'None'
 
                 data_items = list(c)
                 assert len(data_items) == 1
@@ -387,6 +389,10 @@ class XdmfWriter(object):
             'Unknown XDMF data format '
             '\'{}\' (use \'XML\', \'Binary\', or \'HDF\'.)'.format(data_format)
             )
+
+        point_data = {} if point_data is None else point_data
+        cell_data = {} if cell_data is None else cell_data
+        field_data = {} if field_data is None else field_data
 
         self.filename = filename
         self.data_format = data_format
@@ -435,7 +441,7 @@ class XdmfWriter(object):
         return self.h5_filename + ':/' + name
 
     def points(self, grid, points):
-        geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
+        geo = ET.SubElement(grid, 'Geometry', Type='XYZ')
         dt, prec = numpy_to_xdmf_dtype[points.dtype]
         dim = '{} {}'.format(*points.shape)
         data_item = ET.SubElement(
