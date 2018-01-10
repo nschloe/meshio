@@ -390,6 +390,10 @@ class XdmfWriter(object):
             '\'{}\' (use \'XML\', \'Binary\', or \'HDF\'.)'.format(data_format)
             )
 
+        point_data = {} if point_data is None else point_data
+        cell_data = {} if cell_data is None else cell_data
+        field_data = {} if field_data is None else field_data
+
         self.filename = filename
         self.data_format = data_format
         self.data_counter = 0
