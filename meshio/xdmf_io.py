@@ -441,7 +441,7 @@ class XdmfWriter(object):
         return self.h5_filename + ':/' + name
 
     def points(self, grid, points):
-        geo = ET.SubElement(grid, 'Geometry', Origin='', Type='XYZ')
+        geo = ET.SubElement(grid, 'Geometry', Type='XYZ')
         dt, prec = numpy_to_xdmf_dtype[points.dtype]
         dim = '{} {}'.format(*points.shape)
         data_item = ET.SubElement(
