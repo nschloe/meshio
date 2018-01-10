@@ -351,7 +351,9 @@ class XdmfReader(object):
                 assert c.tag == 'Attribute', \
                     'Unknown section \'{}\'.'.format(c.tag)
 
-                assert c.attrib['Type'] == 'None'
+                # Don't be too struct here: FEniCS, for example, calls this
+                # 'AttributeType'.
+                # assert c.attrib['Type'] == 'None'
 
                 data_items = list(c)
                 assert len(data_items) == 1
