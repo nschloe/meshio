@@ -15,7 +15,8 @@ import xml.etree.cElementTree as ET
 
 import numpy
 
-from .vtk_io import cell_data_from_raw, raw_from_cell_data
+from .gmsh_io import cell_data_from_raw
+from .vtk_io import raw_from_cell_data
 from .vtu_io import write_xml
 
 
