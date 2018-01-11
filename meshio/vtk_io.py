@@ -364,7 +364,7 @@ def translate_cells(data, offsets, types, cell_data_raw):
             numpy.arange(1, n+1) + o for o in offsets[b]
             ])
         cells[meshio_type] = data[indices]
-        cell_data[tpe] = \
+        cell_data[meshio_type] = \
             {key: value[b] for key, value in cell_data_raw.items()}
 
     return cells, cell_data
