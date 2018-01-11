@@ -16,7 +16,7 @@ import helpers
     'test.post.gz',
     'test.h5m',
     'test.off',
-    # 'test.vtk',
+    'test.vtk',
     'test.vtu',
     'test.xmf',
     ])
@@ -28,6 +28,7 @@ def test_generic_io(filename):
             )
 
     points, cells, _, _, _ = meshio.helpers.read('test.vtk')
+
     assert (abs(points - helpers.tri_mesh['points']) < 1.0e-15).all()
     assert (
         helpers.tri_mesh['cells']['triangle'] == cells['triangle']

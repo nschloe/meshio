@@ -9,7 +9,6 @@ import logging
 import numpy
 
 from .__about__ import __version__
-from .tools import get_byteorder
 
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
@@ -405,13 +404,10 @@ def write(filename,
                 len(points), numpy_to_vtk_dtype[points.dtype]
                 ).encode('utf-8'))
 
-        # Binary data must be big endian, see
-        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
-        if get_byteorder(points) == '<':
-            points.byteswap(inplace=True)
-
         if write_binary:
-            points.tofile(f, sep='')
+            # Binary data must be big endian, see
+            # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+            points.astype(points.dtype.newbyteorder('>')).tofile(f, sep='')
         else:
             # ascii
             points.tofile(f, sep=' ')
@@ -494,9 +490,7 @@ def _write_field_data(f, data, write_binary):
             numpy_to_vtk_dtype[values.dtype]
             )).encode('utf-8'))
         if write_binary:
-            if get_byteorder(values) == '<':
-                values.byteswap(inplace=True)
-            values.tofile(f, sep='')
+            values.astype(values.dtype.newbyteorder('>')).tofile(f, sep='')
         else:
             # ascii
             values.tofile(f, sep=' ')
