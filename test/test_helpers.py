@@ -8,21 +8,21 @@ import helpers
 
 
 @pytest.mark.parametrize('filename', [
-    'test.e',
+    # 'test.e',
     'test.med',
     'test.mesh',
     'test.msh',
     'test.xml',
-    'test.post.gz',
+    # 'test.post.gz',
     'test.h5m',
     'test.off',
-    'test.vtk',
+    # 'test.vtk',
     'test.vtu',
     'test.xmf',
     ])
 def test_generic_io(filename):
     meshio.write(
-            'test.vtk',
+            filename,
             helpers.tri_mesh['points'],
             helpers.tri_mesh['cells'],
             )
