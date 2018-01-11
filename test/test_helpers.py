@@ -13,7 +13,7 @@ import helpers
     'test.mesh',
     'test.msh',
     'test.xml',
-    'test.post.gz',
+    'test.post',
     'test.h5m',
     'test.off',
     'test.vtk',
@@ -22,12 +22,13 @@ import helpers
     ])
 def test_generic_io(filename):
     meshio.write(
-            'test.vtk',
+            filename,
             helpers.tri_mesh['points'],
             helpers.tri_mesh['cells'],
             )
 
-    points, cells, _, _, _ = meshio.helpers.read('test.vtk')
+    points, cells, _, _, _ = meshio.helpers.read(filename)
+
     assert (abs(points - helpers.tri_mesh['points']) < 1.0e-15).all()
     assert (
         helpers.tri_mesh['cells']['triangle'] == cells['triangle']

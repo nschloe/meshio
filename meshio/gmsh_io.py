@@ -11,7 +11,7 @@ import struct
 
 import numpy
 
-from .vtk_io import raw_from_cell_data, cell_data_from_raw
+from .vtk_io import raw_from_cell_data
 
 
 num_nodes_per_cell = {
@@ -380,6 +380,18 @@ def read_buffer(f):
             cell_data[key][name] = item_list
 
     return points, cells, point_data, cell_data, field_data
+
+
+def cell_data_from_raw(cells, cell_data_raw):
+    cell_data = {k: {} for k in cells}
+    for key in cell_data_raw:
+        d = cell_data_raw[key]
+        r = 0
+        for k in cells:
+            cell_data[k][key] = d[r:r+len(cells[k])]
+            r += len(cells[k])
+
+    return cell_data
 
 
 def _write_physical_names(fh, field_data):

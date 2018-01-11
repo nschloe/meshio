@@ -145,7 +145,8 @@ def read_buffer(f):
                 # binary
                 num_bytes = numpy.dtype(dtype).itemsize
                 total_num_bytes = num_points * (3 * num_bytes)
-                # Binary point data is big-endian. okay...
+                # Binary data is big endian, see
+                # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
                 dtype = dtype.newbyteorder('>')
                 points = \
                     numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
@@ -246,9 +247,7 @@ def read_buffer(f):
     assert ct is not None, \
         'Required section CELL_TYPES not found.'
 
-    cells = translate_cells(c, offsets, ct)
-
-    cell_data = cell_data_from_raw(cells, cell_data_raw)
+    cells, cell_data = translate_cells(c, offsets, ct, cell_data_raw)
 
     return points, cells, point_data, cell_data, field_data
 
@@ -314,7 +313,8 @@ def _read_fields(f, num_fields, is_ascii):
             # binary
             num_bytes = numpy.dtype(dtype).itemsize
             total_num_bytes = shape0 * shape1 * num_bytes
-            # Binary data is big-endian. okay...
+            # Binary data is big endian, see
+            # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
             dtype = dtype.newbyteorder('>')
             dat = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
             line = f.readline().decode('utf-8')
@@ -326,18 +326,6 @@ def _read_fields(f, num_fields, is_ascii):
         data[name] = dat
 
     return data
-
-
-def cell_data_from_raw(cells, cell_data_raw):
-    cell_data = {k: {} for k in cells}
-    for key in cell_data_raw:
-        d = cell_data_raw[key]
-        r = 0
-        for k in cells:
-            cell_data[k][key] = d[r:r+len(cells[k])]
-            r += len(cells[k])
-
-    return cell_data
 
 
 def raw_from_cell_data(cell_data):
@@ -355,7 +343,7 @@ def raw_from_cell_data(cell_data):
     return cell_data_raw
 
 
-def translate_cells(data, offsets, types):
+def translate_cells(data, offsets, types, cell_data_raw):
     # Translate it into the cells dictionary.
     # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
@@ -367,6 +355,7 @@ def translate_cells(data, offsets, types):
     bins = {u: numpy.where(types == u)[0] for u in uniques}
 
     cells = {}
+    cell_data = {}
     for tpe, b in bins.items():
         meshio_type = vtk_to_meshio_type[tpe]
         n = data[offsets[b[0]]]
@@ -375,8 +364,10 @@ def translate_cells(data, offsets, types):
             numpy.arange(1, n+1) + o for o in offsets[b]
             ])
         cells[meshio_type] = data[indices]
+        cell_data[meshio_type] = \
+            {key: value[b] for key, value in cell_data_raw.items()}
 
-    return cells
+    return cells, cell_data
 
 
 def write(filename,
@@ -403,7 +394,9 @@ def write(filename,
                 ).encode('utf-8'))
 
         if write_binary:
-            points.byteswap().tofile(f, sep='')
+            # Binary data must be big endian, see
+            # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+            points.astype(points.dtype.newbyteorder('>')).tofile(f, sep='')
         else:
             # ascii
             points.tofile(f, sep=' ')
@@ -486,7 +479,7 @@ def _write_field_data(f, data, write_binary):
             numpy_to_vtk_dtype[values.dtype]
             )).encode('utf-8'))
         if write_binary:
-            values.byteswap().tofile(f, sep='')
+            values.astype(values.dtype.newbyteorder('>')).tofile(f, sep='')
         else:
             # ascii
             values.tofile(f, sep=' ')

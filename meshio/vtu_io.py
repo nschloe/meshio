@@ -11,6 +11,7 @@ try:
     from StringIO import cStringIO as BytesIO
 except ImportError:
     from io import BytesIO
+import sys
 # lxml cannot parse large files and instead throws the exception
 #
 # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
@@ -22,10 +23,7 @@ import zlib
 import numpy
 
 from .__about__ import __version__
-from .vtk_io import (
-    vtk_to_meshio_type, meshio_to_vtk_type, cell_data_from_raw,
-    raw_from_cell_data
-    )
+from .vtk_io import vtk_to_meshio_type, meshio_to_vtk_type, raw_from_cell_data
 from .gmsh_io import num_nodes_per_cell
 
 
@@ -35,7 +33,7 @@ def num_bytes_to_num_base64_chars(num_bytes):
     return -(-num_bytes // 3) * 4
 
 
-def _cells_from_data(connectivity, offsets, types):
+def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     # Translate it into the cells dictionary.
     # `connectivity` is a one-dimensional vector with
     # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
@@ -49,6 +47,7 @@ def _cells_from_data(connectivity, offsets, types):
     assert len(offsets) == len(types)
 
     cells = {}
+    cell_data = {}
     for tpe, b in bins.items():
         meshio_type = vtk_to_meshio_type[tpe]
         n = num_nodes_per_cell[meshio_type]
@@ -57,8 +56,10 @@ def _cells_from_data(connectivity, offsets, types):
             numpy.arange(n) + o - n for o in offsets[b]
             ])
         cells[meshio_type] = connectivity[indices]
+        cell_data[meshio_type] = \
+            {key: value[b] for key, value in cell_data_raw.items()}
 
-    return cells
+    return cells, cell_data
 
 
 vtu_to_numpy_type = {
@@ -192,12 +193,10 @@ class VtuReader(object):
         assert 'offsets' in cells
         assert 'types' in cells
 
-        cells = _cells_from_data(
-                cells['connectivity'], cells['offsets'], cells['types']
+        cells, cell_data = _cells_from_data(
+                cells['connectivity'], cells['offsets'], cells['types'],
+                cell_data_raw
                 )
-
-        # get cell data in shape
-        cell_data = cell_data_from_raw(cells, cell_data_raw)
 
         self.points = points
         self.cells = cells
@@ -291,16 +290,36 @@ def write(filename,
     if not write_binary:
         logging.warning('VTU ASCII files are only meant for debugging.')
 
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
+
     header_type = 'UInt32'
 
     vtk_file = ET.Element(
         'VTKFile',
         type='UnstructuredGrid',
         version='0.1',
-        byte_order='LittleEndian',
+        # Use the native endianness. Not strictly necessary, but this
+        # simplifies things a bit.
+        byte_order=(
+            'LittleEndian' if sys.byteorder == 'little' else 'BigEndian'
+            ),
         header_type=header_type,
         compressor='vtkZLibDataCompressor'
         )
+
+    # swap the data to match the system byteorder
+    # Don't use byteswap to make sure that the dtype is changed; see
+    # <https://github.com/numpy/numpy/issues/10372>.
+    points = points.astype(points.dtype.newbyteorder('='))
+    for data in point_data.values():
+        data = data.astype(data.dtype.newbyteorder('='))
+    for data in cell_data.values():
+        for dat in data.values():
+            dat = dat.astype(dat.dtype.newbyteorder('='))
+    for data in field_data.values():
+        data = data.astype(data.dtype.newbyteorder('='))
 
     def chunk_it(array, n):
         out = []
