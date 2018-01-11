@@ -130,6 +130,10 @@ def write(filename,
           ):
     import netCDF4
 
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
+
     rootgrp = netCDF4.Dataset(filename, 'w')
 
     # set global data

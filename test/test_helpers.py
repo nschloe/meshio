@@ -8,7 +8,7 @@ import helpers
 
 
 @pytest.mark.parametrize('filename', [
-    # 'test.e',
+    'test.e',
     'test.med',
     'test.mesh',
     'test.msh',
