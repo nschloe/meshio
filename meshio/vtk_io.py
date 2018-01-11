@@ -147,7 +147,8 @@ def read_buffer(f):
                 # binary
                 num_bytes = numpy.dtype(dtype).itemsize
                 total_num_bytes = num_points * (3 * num_bytes)
-                # Binary point data is big-endian. okay...
+                # Binary data is big endian, see
+                # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
                 dtype = dtype.newbyteorder('>')
                 points = \
                     numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
@@ -316,7 +317,8 @@ def _read_fields(f, num_fields, is_ascii):
             # binary
             num_bytes = numpy.dtype(dtype).itemsize
             total_num_bytes = shape0 * shape1 * num_bytes
-            # Binary data is big-endian. okay...
+            # Binary data is big endian, see
+            # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
             dtype = dtype.newbyteorder('>')
             dat = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
             line = f.readline().decode('utf-8')
@@ -412,8 +414,8 @@ def write(filename,
                 len(points), numpy_to_vtk_dtype[points.dtype]
                 ).encode('utf-8'))
 
-        # Paraview van only read big-endian data, so assume this is the
-        # standard.
+        # Binary data must be big endian, see
+        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         if _get_byteorder(points) == '<':
             points.byteswap(inplace=True)
 
