@@ -151,7 +151,8 @@ def write(filename,
 
     if not file_format:
         # deduct file format from extension
-        _, extension = os.path.splitext(filename)
+        # _, extension = os.path.splitext(filename)
+        extension = '.' + filename.split(os.extsep, 1)[-1]
         file_format = _extension_to_filetype[extension]
 
     # check cells for sanity

@@ -13,7 +13,7 @@ import helpers
     'test.mesh',
     'test.msh',
     'test.xml',
-    # 'test.post.gz',
+    'test.post.gz',
     'test.h5m',
     'test.off',
     # 'test.vtk',
