@@ -11,6 +11,7 @@ try:
     from StringIO import cStringIO as BytesIO
 except ImportError:
     from io import BytesIO
+import sys
 # lxml cannot parse large files and instead throws the exception
 #
 # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
@@ -289,16 +290,36 @@ def write(filename,
     if not write_binary:
         logging.warning('VTU ASCII files are only meant for debugging.')
 
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
+
     header_type = 'UInt32'
 
     vtk_file = ET.Element(
         'VTKFile',
         type='UnstructuredGrid',
         version='0.1',
-        byte_order='LittleEndian',
+        # Use the native endianness. Not strictly necessary, but this
+        # simplifies things a bit.
+        byte_order=(
+            'LittleEndian' if sys.byteorder == 'little' else 'BigEndian'
+            ),
         header_type=header_type,
         compressor='vtkZLibDataCompressor'
         )
+
+    # swap the data to match the system byteorder
+    # Don't use byteswap to make sure that the dtype is changed; see
+    # <https://github.com/numpy/numpy/issues/10372>.
+    points = points.astype(points.dtype.newbyteorder('='))
+    for data in point_data.values():
+        data = data.astype(data.dtype.newbyteorder('='))
+    for data in cell_data.values():
+        for dat in data.values():
+            dat = dat.astype(dat.dtype.newbyteorder('='))
+    for data in field_data.values():
+        data = data.astype(data.dtype.newbyteorder('='))
 
     def chunk_it(array, n):
         out = []

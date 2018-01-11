@@ -5,12 +5,11 @@ I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-import sys
-
 import logging
 import numpy
 
 from .__about__ import __version__
+from .tools import get_byteorder
 
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
@@ -383,14 +382,6 @@ def translate_cells(data, offsets, types):
     return cells
 
 
-def _get_byteorder(array):
-    if array.dtype.byteorder in ['>', '<']:
-        return array.dtype.byteorder
-
-    assert array.dtype.byteorder == '='
-    return '<' if sys.byteorder == 'little' else '>'
-
-
 def write(filename,
           points,
           cells,
@@ -416,7 +407,7 @@ def write(filename,
 
         # Binary data must be big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
-        if _get_byteorder(points) == '<':
+        if get_byteorder(points) == '<':
             points.byteswap(inplace=True)
 
         if write_binary:
@@ -503,7 +494,7 @@ def _write_field_data(f, data, write_binary):
             numpy_to_vtk_dtype[values.dtype]
             )).encode('utf-8'))
         if write_binary:
-            if _get_byteorder(values) == '<':
+            if get_byteorder(values) == '<':
                 values.byteswap(inplace=True)
             values.tofile(f, sep='')
         else:
