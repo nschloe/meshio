@@ -415,7 +415,7 @@ def write(filename,
         # Paraview van only read big-endian data, so assume this is the
         # standard.
         if _get_byteorder(points) == '<':
-            points = points.byteswap()
+            points.byteswap(inplace=True)
 
         if write_binary:
             points.tofile(f, sep='')
@@ -502,7 +502,7 @@ def _write_field_data(f, data, write_binary):
             )).encode('utf-8'))
         if write_binary:
             if _get_byteorder(values) == '<':
-                values = values.byteswap()
+                values.byteswap(inplace=True)
             values.tofile(f, sep='')
         else:
             # ascii
