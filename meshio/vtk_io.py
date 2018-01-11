@@ -5,6 +5,8 @@ I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
+import sys
+
 import logging
 import numpy
 
@@ -379,6 +381,14 @@ def translate_cells(data, offsets, types):
     return cells
 
 
+def _get_byteorder(array):
+    if array.dtype.byteorder in ['>', '<']:
+        return array.dtype.byteorder
+
+    assert array.dtype.byteorder == '='
+    return '<' if sys.byteorder == 'little' else '>'
+
+
 def write(filename,
           points,
           cells,
@@ -402,8 +412,13 @@ def write(filename,
                 len(points), numpy_to_vtk_dtype[points.dtype]
                 ).encode('utf-8'))
 
+        # Paraview van only read big-endian data, so assume this is the
+        # standard.
+        if _get_byteorder(points) == '<':
+            points = points.byteswap()
+
         if write_binary:
-            points.byteswap().tofile(f, sep='')
+            points.tofile(f, sep='')
         else:
             # ascii
             points.tofile(f, sep=' ')
@@ -486,7 +501,9 @@ def _write_field_data(f, data, write_binary):
             numpy_to_vtk_dtype[values.dtype]
             )).encode('utf-8'))
         if write_binary:
-            values.byteswap().tofile(f, sep='')
+            if _get_byteorder(values) == '<':
+                values = values.byteswap()
+            values.tofile(f, sep='')
         else:
             # ascii
             values.tofile(f, sep=' ')
