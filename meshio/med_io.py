@@ -77,7 +77,40 @@ def read(filename):
     if 'QU4' in mai:
         cells['quad'] = mai['QU4']['NOD'][()].reshape(4, -1).T - 1
 
-    return points, cells, {}, {}, {}
+    # Read nodal and cell data
+    cha = f['CHA']  # champs (fields) in french
+    point_data, cell_data, field_data = _read_data(cha)
+
+    return points, cells, point_data, cell_data, field_data
+
+
+def _read_data(cha):
+    point_data = {}
+    cell_data = {}
+    field_data = {}
+    for name, data in cha.items():
+        submeshes = data.keys()
+        assert len(submeshes) == 1
+        data = data[list(submeshes)[0]]
+        supp = list(data.keys())[0]
+
+        if supp == 'NOE':
+            point_data[name] = _read_nodal_data(data)
+        else:
+            pass
+
+    return point_data, cell_data, field_data
+
+
+def _read_nodal_data(data):
+    nodal_dataset = data['NOE'][data['NOE'].attrs['PFL']]
+    number = nodal_dataset.attrs['NBR']
+    values = nodal_dataset['CO'][()].reshape(-1, number).T
+    return values
+
+
+def _read_cell_data(data):
+    pass
 
 
 def write(
