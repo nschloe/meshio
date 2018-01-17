@@ -77,9 +77,12 @@ def read(filename):
     if 'QU4' in mai:
         cells['quad'] = mai['QU4']['NOD'][()].reshape(4, -1).T - 1
 
-    # Read nodal and cell data
-    cha = f['CHA']  # champs (fields) in french
-    point_data, cell_data, field_data = _read_data(cha)
+    # Read nodal and cell data if they exist
+    try:
+        cha = f['CHA']  # champs (fields) in french
+        point_data, cell_data, field_data = _read_data(cha)
+    except KeyError:
+        point_data, cell_data, field_data = {}, {}, {}
 
     return points, cells, point_data, cell_data, field_data
 
