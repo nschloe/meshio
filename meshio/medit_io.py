@@ -84,6 +84,10 @@ def write(
         cell_data=None,
         field_data=None
         ):
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
+
     with open(filename, 'wb') as fh:
         fh.write(b'MeshVersionFormatted 1\n')
         fh.write(b'# Created by meshio\n')

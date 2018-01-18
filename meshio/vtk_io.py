@@ -381,6 +381,10 @@ def write(filename,
     if not write_binary:
         logging.warning('VTK ASCII files are only meant for debugging.')
 
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
+
     with open(filename, 'wb') as f:
         f.write('# vtk DataFile Version 4.2\n'.encode('utf-8'))
         f.write('written by meshio v{}\n'.format(__version__).encode('utf-8'))
