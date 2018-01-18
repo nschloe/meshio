@@ -90,8 +90,6 @@ def read(filename, file_format=None):
     :returns field_data: Field data read from file.
     :type field_data: dict
     '''
-    import os
-
     # https://stackoverflow.com/q/4843173/353337
     assert isinstance(filename, str)
 
