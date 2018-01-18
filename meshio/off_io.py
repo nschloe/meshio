@@ -99,6 +99,9 @@ def write(
         cell_data=None,
         field_data=None
         ):
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
 
     for key in cells:
         assert key in ['triangle'], 'Can only deal with triangular faces'
