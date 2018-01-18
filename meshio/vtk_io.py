@@ -264,7 +264,7 @@ def _read_scalar_field(f, num_data, split):
     # > The parameter numComp must range between (1,4) inclusive; [...]
     assert 0 < num_comp < 5
 
-    dtype, _ = vtk_to_numpy_dtype[data_type]
+    dtype = vtk_to_numpy_dtype[data_type]
     lt, _ = f.readline().decode('utf-8').split()
     assert lt == 'LOOKUP_TABLE'
     data = numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
@@ -276,7 +276,7 @@ def _read_vector_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
 
-    dtype, _ = vtk_to_numpy_dtype[data_type]
+    dtype = vtk_to_numpy_dtype[data_type]
     data = numpy.fromfile(
         f, count=3*num_data, sep=' ', dtype=dtype
         ).reshape(-1, 3)
@@ -288,7 +288,7 @@ def _read_tensor_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
 
-    dtype, _ = vtk_to_numpy_dtype[data_type]
+    dtype = vtk_to_numpy_dtype[data_type]
     data = numpy.fromfile(
         f, count=9*num_data, sep=' ', dtype=dtype
         ).reshape(-1, 3, 3)
