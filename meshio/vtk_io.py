@@ -391,64 +391,9 @@ def write(filename,
         f.write(('BINARY\n' if write_binary else 'ASCII\n').encode('utf-8'))
         f.write('DATASET UNSTRUCTURED_GRID\n'.encode('utf-8'))
 
-        # write points
-        f.write(
-            'POINTS {} {}\n'.format(
-                len(points), numpy_to_vtk_dtype[points.dtype]
-                ).encode('utf-8'))
-
-        if write_binary:
-            # Binary data must be big endian, see
-            # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
-            points.astype(points.dtype.newbyteorder('>')).tofile(f, sep='')
-        else:
-            # ascii
-            points.tofile(f, sep=' ')
-        f.write('\n'.encode('utf-8'))
-
-        # write cells
-        total_num_cells = sum([len(c) for c in cells.values()])
-        total_num_idx = sum([numpy.prod(c.shape) for c in cells.values()])
-        # For each cell, the number of nodes is stored
-        total_num_idx += total_num_cells
-        f.write(
-            'CELLS {} {}\n'.format(total_num_cells, total_num_idx)
-            .encode('utf-8'))
-        if write_binary:
-            for key in cells:
-                n = cells[key].shape[1]
-                d = numpy.column_stack([
-                    numpy.full(len(cells[key]), n), cells[key]
-                    ]).astype(numpy.dtype('>i4'))
-                f.write(d.tostring())
-            if write_binary:
-                f.write('\n'.encode('utf-8'))
-        else:
-            # ascii
-            for key in cells:
-                n = cells[key].shape[1]
-                for cell in cells[key]:
-                    f.write((' '.join([
-                        '{}'.format(idx)
-                        for idx in numpy.concatenate([[n], cell])
-                        ]) + '\n').encode('utf-8'))
-
-        # write cell types
-        f.write('CELL_TYPES {}\n'.format(total_num_cells).encode('utf-8'))
-        if write_binary:
-            for key in cells:
-                d = numpy.full(
-                    len(cells[key]), meshio_to_vtk_type[key]
-                    ).astype(numpy.dtype('>i4'))
-                f.write(d.tostring())
-            f.write('\n'.encode('utf-8'))
-        else:
-            # ascii
-            for key in cells:
-                for _ in range(len(cells[key])):
-                    f.write(
-                        '{}\n'.format(meshio_to_vtk_type[key]).encode('utf-8')
-                        )
+        # write points and cells
+        _write_points(f, points, write_binary)
+        _write_cells(f, cells, write_binary)
 
         # write point data
         if point_data:
@@ -458,10 +403,74 @@ def write(filename,
 
         # write cell data
         if cell_data:
+            total_num_cells = sum([len(c) for c in cells.values()])
             cell_data_raw = raw_from_cell_data(cell_data)
             f.write('CELL_DATA {}\n'.format(total_num_cells).encode('utf-8'))
             _write_field_data(f, cell_data_raw, write_binary)
 
+    return
+
+
+def _write_points(f, points, write_binary):
+    f.write(
+        'POINTS {} {}\n'.format(
+            len(points), numpy_to_vtk_dtype[points.dtype]
+            ).encode('utf-8'))
+
+    if write_binary:
+        # Binary data must be big endian, see
+        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        points.astype(points.dtype.newbyteorder('>')).tofile(f, sep='')
+    else:
+        # ascii
+        points.tofile(f, sep=' ')
+    f.write('\n'.encode('utf-8'))
+    return
+
+
+def _write_cells(f, cells, write_binary):
+    total_num_cells = sum([len(c) for c in cells.values()])
+    total_num_idx = sum([numpy.prod(c.shape) for c in cells.values()])
+    # For each cell, the number of nodes is stored
+    total_num_idx += total_num_cells
+    f.write(
+        'CELLS {} {}\n'.format(total_num_cells, total_num_idx)
+        .encode('utf-8'))
+    if write_binary:
+        for key in cells:
+            n = cells[key].shape[1]
+            d = numpy.column_stack([
+                numpy.full(len(cells[key]), n), cells[key]
+                ]).astype(numpy.dtype('>i4'))
+            f.write(d.tostring())
+        if write_binary:
+            f.write('\n'.encode('utf-8'))
+    else:
+        # ascii
+        for key in cells:
+            n = cells[key].shape[1]
+            for cell in cells[key]:
+                f.write((' '.join([
+                    '{}'.format(idx)
+                    for idx in numpy.concatenate([[n], cell])
+                    ]) + '\n').encode('utf-8'))
+
+    # write cell types
+    f.write('CELL_TYPES {}\n'.format(total_num_cells).encode('utf-8'))
+    if write_binary:
+        for key in cells:
+            d = numpy.full(
+                len(cells[key]), meshio_to_vtk_type[key]
+                ).astype(numpy.dtype('>i4'))
+            f.write(d.tostring())
+        f.write('\n'.encode('utf-8'))
+    else:
+        # ascii
+        for key in cells:
+            for _ in range(len(cells[key])):
+                f.write(
+                    '{}\n'.format(meshio_to_vtk_type[key]).encode('utf-8')
+                    )
     return
 
 
@@ -475,7 +484,7 @@ def _write_field_data(f, data, write_binary):
             num_components = 1
         else:
             assert len(values.shape) == 2, \
-                'Only one and two-dimensional point data supported.'
+                'Only one and two-dimensional field data supported.'
             num_tuples = values.shape[0]
             num_components = values.shape[1]
         f.write(('{} {} {} {}\n'.format(
