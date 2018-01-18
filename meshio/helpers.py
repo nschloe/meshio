@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #
+import os
+
 from . import ansys_io
 from . import dolfin_io
 from . import exodus_io
@@ -147,7 +149,9 @@ def write(filename,
     :params point_data: Named additional point data to write to the file.
     :type point_data: dict
     '''
-    import os
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
 
     if not file_format:
         # deduct file format from extension
