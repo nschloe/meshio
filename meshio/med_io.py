@@ -9,73 +9,49 @@ I/O for MED/Salome, cf.
 import numpy
 
 
+meshio_to_med_type = {
+    'triangle': 'TR3',
+    'tetra': 'TE4',
+    'hexahedron': 'HE8',
+    'quad': 'QU4',
+    'vertex': 'PO1',
+    'line': 'SE2',
+    }
+
+
 def read(filename):
     import h5py
 
     f = h5py.File(filename, 'r')
 
-    # def print_group(grp, indent=0):
-    #     for key in grp:
-    #         if isinstance(key, int) or \
-    #                 isinstance(key, float) or \
-    #                 isinstance(key, numpy.int32) or \
-    #                 isinstance(key, numpy.int64):
-    #             print(indent*' ' + repr(key))
-    #         elif isinstance(key, numpy.ndarray):
-    #             print(indent*' ' + repr(key))
-    #         else:
-    #             try:
-    #                 print(indent*' ' + str(grp[key]))
-    #                 print(indent*' ' + str(list(grp[key].attrs.items())))
-    #                 print_group(grp[key], indent=indent+4)
-    #             except TypeError:
-    #                 print(type(key))
-    #                 break
-    #     return
-    #
-    # print_group(f)
-
-    # <HDF5 group "/ENS_MAA" (1 members)>
+    # Mesh ensemble
     ens_maa = f['ENS_MAA']
     meshes = ens_maa.keys()
-    assert len(meshes) == 1
-
+    assert len(meshes) == 1, 'Must only contain exactly 1 mesh'
     mesh = ens_maa[list(meshes)[0]]
 
+    # Possible time-stepping
     if 'NOE' not in mesh:
         # One needs NOE (node) and MAI (french maillage, meshing) data. If they
-        # are not available in the mesh, check for the submesh.
-        submeshes = mesh.keys()
-        assert len(submeshes) == 1
-        mesh = mesh[list(submeshes)[0]]
+        # are not available in the mesh, check for time-steppings.
+        ts = mesh.keys()
+        assert len(ts) == 1, 'Must only contain exactly 1 time-step'
+        mesh = mesh[list(ts)[0]]
 
+    # Points
     pts_dataset = mesh['NOE']['COO']
     number = pts_dataset.attrs['NBR']
     points = pts_dataset[()].reshape(-1, number).T
     if points.shape[1] == 2:
         points = numpy.column_stack([points, numpy.zeros(len(points))])
 
+    # Cells
     cells = {}
-
     mai = mesh['MAI']
-
-    if 'PO1' in mai:
-        cells['vertex'] = mai['PO1']['NOD'][()].reshape(1, -1).T - 1
-
-    if 'SE2' in mai:
-        cells['line'] = mai['SE2']['NOD'][()].reshape(2, -1).T - 1
-
-    if 'TR3' in mai:
-        cells['triangle'] = mai['TR3']['NOD'][()].reshape(3, -1).T - 1
-
-    if 'TE4' in mai:
-        cells['tetra'] = mai['TE4']['NOD'][()].reshape(4, -1).T - 1
-
-    if 'HE8' in mai:
-        cells['hexahedron'] = mai['HE8']['NOD'][()].reshape(8, -1).T - 1
-
-    if 'QU4' in mai:
-        cells['quad'] = mai['QU4']['NOD'][()].reshape(4, -1).T - 1
+    for key, med_type in meshio_to_med_type.items():
+        if med_type in mai:
+            nn = int(med_type[-1])
+            cells[key] = mai[med_type]['NOD'][()].reshape(nn, -1).T - 1
 
     # Read nodal and cell data if they exist
     try:
@@ -176,22 +152,12 @@ def write(
     coo.attrs.create('CGT', 1)
     coo.attrs.create('NBR', len(points))
 
-    # Elements (mailles in french)
+    # Cells (mailles in french)
     mai_group = ts.create_group('MAI')
     mai_group.attrs.create('CGT', 1)
-
-    d = {
-        'triangle': 'TR3',
-        'tetra': 'TE4',
-        'hexahedron': 'HE8',
-        'quad': 'QU4',
-        'vertex': 'PO1',
-        'line': 'SE2',
-        }
-
-    for key in d:
+    for key, med_type in meshio_to_med_type.items():
         if key in cells:
-            mai = mai_group.create_group(d[key])
+            mai = mai_group.create_group(med_type)
             mai.attrs.create('CGT', 1)
             mai.attrs.create('CGS', 1)
             mai.attrs.create('PFL', profile.encode('ascii'))
