@@ -35,11 +35,22 @@ numpy_to_xdmf_dtype = {
 xdmf_to_numpy_type = {v: k for k, v in numpy_to_xdmf_dtype.items()}
 
 
+dtype_to_format_string = {
+    numpy.dtype(numpy.int32): '%d',
+    numpy.dtype(numpy.int64): '%d',
+    numpy.dtype(numpy.uint32): '%d',
+    numpy.dtype(numpy.uint64): '%d',
+    numpy.dtype(numpy.float32): '%.7e',
+    numpy.dtype(numpy.float64): '%.15e',
+    }
+
+
 # Check out
 # <https://gitlab.kitware.com/xdmf/xdmf/blob/master/XdmfTopologyType.cpp>
 # for the list of indices.
 xdmf_idx_to_meshio_type = {
     0x1: 'vertex',
+    0x2: 'line',
     0x4: 'triangle',
     0x5: 'quad',
     0x6: 'tetra',
@@ -83,6 +94,7 @@ meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
 # alternatives as well.
 meshio_to_xdmf_type = {
     'vertex': ['Polyvertex'],
+    'line': ['Polyline'],
     'triangle': ['Triangle'],
     'quad': ['Quadrilateral'],
     'tetra': ['Tetrahedron'],
@@ -419,9 +431,10 @@ class XdmfWriter(object):
         write_xml(filename, xdmf_file, pretty_xml, indent=2)
         return
 
-    def numpy_to_xml_string(self, data, fmt):
+    def numpy_to_xml_string(self, data):
         if self.data_format == 'XML':
             s = BytesIO()
+            fmt = dtype_to_format_string[data.dtype]
             numpy.savetxt(s, data.flatten(), fmt)
             return s.getvalue().decode()
         elif self.data_format == 'Binary':
@@ -450,7 +463,7 @@ class XdmfWriter(object):
                 DataType=dt, Dimensions=dim,
                 Format=self.data_format, Precision=prec
                 )
-        data_item.text = self.numpy_to_xml_string(points, '%.15e')
+        data_item.text = self.numpy_to_xml_string(points)
         return
 
     def cells(self, cells, grid):
@@ -466,22 +479,22 @@ class XdmfWriter(object):
                     Format=self.data_format, Precision=prec
                     )
             data_item.text = \
-                self.numpy_to_xml_string(cells[meshio_type], '%d')
+                self.numpy_to_xml_string(cells[meshio_type])
         elif len(cells) > 1:
             topo = ET.SubElement(grid, 'Topology', Type='Mixed')
             total_num_cells = sum(c.shape[0] for c in cells.values())
             total_num_cell_items = \
                 sum(numpy.prod(c.shape) for c in cells.values())
             dim = str(total_num_cell_items + total_num_cells)
-            # prepend column with index
+            # Lines translate to Polylines, and one needs to specify the exact
+            # number of nodes. Hence, prepend 2.
+            if 'line' in cells:
+                cells['line'] = numpy.insert(cells['line'], 0, 2, axis=1)
             cd = numpy.concatenate([
-                numpy.column_stack([
-                    numpy.full(
-                        len(value), meshio_type_to_xdmf_index[key],
-                        dtype=value.dtype
-                        ),
-                    value
-                    ]).flatten()
+                # prepend column with xdmf type index
+                numpy.insert(
+                    value, 0, meshio_type_to_xdmf_index[key], axis=1
+                    ).flatten()
                 for key, value in cells.items()
                 ])
             dt, prec = numpy_to_xdmf_dtype[cd.dtype]
@@ -490,7 +503,7 @@ class XdmfWriter(object):
                     DataType=dt, Dimensions=dim,
                     Format=self.data_format, Precision=prec
                     )
-            data_item.text = self.numpy_to_xml_string(cd, '%d')
+            data_item.text = self.numpy_to_xml_string(cd)
         return
 
     def point_data(self, point_data, grid):
@@ -506,7 +519,7 @@ class XdmfWriter(object):
                     DataType=dt, Dimensions=dim,
                     Format=self.data_format, Precision=prec
                     )
-            data_item.text = self.numpy_to_xml_string(data, '%.15e')
+            data_item.text = self.numpy_to_xml_string(data)
         return
 
     def cell_data(self, cell_data, grid):
@@ -523,7 +536,7 @@ class XdmfWriter(object):
                     DataType=dt, Dimensions=dim,
                     Format=self.data_format, Precision=prec
                     )
-            data_item.text = self.numpy_to_xml_string(data, '%.15e')
+            data_item.text = self.numpy_to_xml_string(data)
         return
 
 
