@@ -3,10 +3,15 @@
 '''
 I/O for Medit's format, cf.
 <https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html>.
+Check out
+<https://hal.inria.fr/inria-00069921/fr/>
+<https://www.ljll.math.upmc.fr/frey/publications/RT-0253.pdf>
+for something like a specification.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 from itertools import islice
+import logging
 import numpy
 
 
@@ -113,7 +118,14 @@ def write(
             }
 
         for key, data in cells.items():
-            medit_name, num = medit_from_meshio[key]
+            try:
+                medit_name, num = medit_from_meshio[key]
+            except KeyError:
+                msg = (
+                    'MEDIT\'s mesh format doesn\'t know {} cells. Skipping.'
+                    ).format(key)
+                logging.warning(msg)
+                continue
             fh.write(b'\n')
             fh.write('{}\n'.format(medit_name).encode('utf-8'))
             fh.write('{}\n'.format(len(data)).encode('utf-8'))
