@@ -92,12 +92,14 @@ def _read_data(cha):
     cell_data = {}
     field_data = {}
     for name, data in cha.items():
-        submeshes = data.keys()
-        assert len(submeshes) == 1
-        data = data[list(submeshes)[0]]
+        supps = ['NOE', 'MAI']
+        if all(supp not in data for supp in supps):
+            submeshes = data.keys()
+            assert len(submeshes) == 1
+            data = data[list(submeshes)[0]]
         supp = list(data.keys())[0]
 
-        if supp == 'NOE':
+        if supp == 'NOE':  # continuous nodal data
             point_data[name] = _read_nodal_data(data)
         else:
             pass
@@ -109,6 +111,8 @@ def _read_nodal_data(data):
     nodal_dataset = data['NOE'][data['NOE'].attrs['PFL']]
     number = nodal_dataset.attrs['NBR']
     values = nodal_dataset['CO'][()].reshape(-1, number).T
+    if values.shape[1] == 1:  # cut off for 1d arrays
+        values = values[:, 0]
     return values
 
 
@@ -133,35 +137,48 @@ def write(
 
     f = h5py.File(filename, 'w')
 
-    # Pretend this is a MED 2.3.1 file
+    # Strangely the version must be 3.0.x
+    # Any version >= 3.1.0 will NOT work with SALOME 8.3
     info = f.create_group('INFOS_GENERALES')
-    info.attrs.create('MAJ', 2)
-    info.attrs.create('MIN', 3)
-    info.attrs.create('REL', 1)
+    info.attrs.create('MAJ', 3)
+    info.attrs.create('MIN', 0)
+    info.attrs.create('REL', 0)
 
+    # Meshes
     ens_maa = f.create_group('ENS_MAA')
-
-    mesh_name = 'mesh0'
+    mesh_name = 'mesh'
     mesh = ens_maa.create_group(mesh_name)
-
-    # dimensionality
-    mesh.attrs.create('DIM', points.shape[1])
-    # description
+    mesh.attrs.create('DIM', points.shape[1])  # mesh dimension
+    mesh.attrs.create('ESP', points.shape[1])  # spatial dimension
+    mesh.attrs.create('REP', 0)  # cartesian coordinate system (repère in french)
+    mesh.attrs.create('UNT', b'')  # time unit
+    mesh.attrs.create('UNI', b'')  # spatial unit
+    mesh.attrs.create('SRT', 1)  # sorting type MED_SORT_ITDT
+    mesh.attrs.create('NOM', _comp_nom(points.shape[1]).encode('ascii'))  # component names
     mesh.attrs.create('DES', b'Mesh created with meshio')
-    # No idea what that means
-    mesh.attrs.create('TYP', 0)
+    mesh.attrs.create('TYP', 0)  # mesh type (MED_NON_STRUCTURE)
 
-    fas = mesh.create_group('FAS')
-    fz = fas.create_group('FAMILLE_ZERO')
-    fz.attrs.create('NUM', 0)
+    # Time-step
+    step = '-0000000000000000001-0000000000000000001'  # NDT NOR
+    ts = mesh.create_group(step)
+    ts.attrs.create('CGT', 1)
+    ts.attrs.create('NDT', -1)  # no time step (-1)
+    ts.attrs.create('NOR', -1)  # no iteration step (-1)
+    ts.attrs.create('PDT', -1.0)  # current time
 
-    # points with tags
-    noe_group = mesh.create_group('NOE')
-    dataset = noe_group.create_dataset('COO', data=points.T.flatten())
-    dataset.attrs.create('NBR', len(points))
-    tags = numpy.zeros(len(points), dtype=int)
-    dataset = noe_group.create_dataset('FAM', data=tags)
-    dataset.attrs.create('NBR', len(points))
+    # Points
+    noe_group = ts.create_group('NOE')
+    noe_group.attrs.create('CGT', 1)
+    noe_group.attrs.create('CGS', 1)
+    profile = 'MED_NO_PROFILE_INTERNAL'
+    noe_group.attrs.create('PFL', profile.encode('ascii'))
+    coo = noe_group.create_dataset('COO', data=points.T.flatten())
+    coo.attrs.create('CGT', 1)
+    coo.attrs.create('NBR', len(points))
+
+    # Elements (mailles in french)
+    mai_group = ts.create_group('MAI')
+    mai_group.attrs.create('CGT', 1)
 
     d = {
         'triangle': 'TR3',
@@ -172,15 +189,62 @@ def write(
         'line': 'SE2',
         }
 
-    # maillage (french, meshing)
-    mai_group = mesh.create_group('MAI')
     for key in d:
         if key in cells:
-            group = mai_group.create_group(d[key])
-            zeros = numpy.zeros(len(cells[key]), dtype=int)
-            fam = group.create_dataset('FAM', data=zeros)
-            fam.attrs.create('NBR', len(cells[key]))
-            nod = group.create_dataset('NOD', data=cells[key].T.flatten() + 1)
+            mai = mai_group.create_group(d[key])
+            mai.attrs.create('CGT', 1)
+            mai.attrs.create('CGS', 1)
+            mai.attrs.create('PFL', profile.encode('ascii'))
+            nod = mai.create_dataset('NOD', data=cells[key].T.flatten() + 1)
+            nod.attrs.create('CGT', 1)
             nod.attrs.create('NBR', len(cells[key]))
 
+    # Subgroups (familles in french)
+    fas = f.create_group('FAS')
+    fm = fas.create_group(mesh_name)
+    fz = fm.create_group('FAMILLE_ZERO')  # must be defined in any case
+    fz.attrs.create('NUM', 0)
+
+    # Write nodal data
+    if point_data:
+        cha = f.create_group('CHA')
+        for name, data in point_data.items():
+            # Field
+            field = cha.create_group(name)
+            field.attrs.create('MAI', mesh_name.encode('ascii'))
+            field.attrs.create('TYP', 6)  # MED_FLOAT64
+            field.attrs.create('UNI', b'')  # physical unit
+            field.attrs.create('UNT', b'')
+            nco = 1 if data.ndim == 1 else data.shape[1]
+            field.attrs.create('NCO', nco)  # number of components
+            field.attrs.create('NOM', _comp_nom(nco).encode('ascii'))  # component names
+
+            # Time-step
+            step = '0000000000000000000100000000000000000001'
+            ts = field.create_group(step)
+            ts.attrs.create('NDT', 1)  # time step 1
+            ts.attrs.create('NOR', 1)  # iteration step 1
+            ts.attrs.create('PDT', 0.0)  # current time
+            ts.attrs.create('RDT', -1)  # NDT of the mesh
+            ts.attrs.create('ROR', -1)  # NOR of the mesh
+
+            # Values
+            noe = ts.create_group('NOE')
+            noe.attrs.create('GAU', b'')  # no associated Gauss points
+            noe.attrs.create('PFL', profile.encode('ascii'))
+            pfl = noe.create_group(profile)
+            pfl.attrs.create('NBR', len(data))  # number of points
+            pfl.attrs.create('NGA', 1)  # number of Gauss points (by default 1)
+            pfl.attrs.create('GAU', b'')
+            pfl.create_dataset('CO', data=data.T.flatten())
+
     return
+
+
+def _comp_nom(nco):
+    '''
+    To be correctly read in a MED viewer, each component must be a
+    string of width 16. Since we do not know the physical nature of
+    the data, we just use V1, V2, ...
+    '''
+    return ''.join(['V%-15d' % (i+1) for i in range(nco)])

@@ -182,7 +182,7 @@ def write(filename,
             write_binary=(file_format == 'gmsh-binary')
             )
     elif file_format == 'med':
-        med_io.write(filename, points, cells)
+        med_io.write(filename, points, cells, point_data=point_data)
     elif file_format == 'medit':
         medit_io.write(filename, points, cells)
     elif file_format == 'dolfin-xml':
