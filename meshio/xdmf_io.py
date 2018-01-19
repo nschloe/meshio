@@ -467,7 +467,6 @@ class XdmfWriter(object):
         return
 
     def cells(self, cells, grid):
-        # cells.pop('line', None)
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
             xdmf_type = meshio_to_xdmf_type[meshio_type][0]
@@ -489,14 +488,12 @@ class XdmfWriter(object):
             dim = str(total_num_cell_items + total_num_cells)
             # Lines translate to Polylines, and one needs to specify the exact
             # number of nodes. Hence, prepend 2.
-            # if 'line' in cells:
-            #     cells['line'] = numpy.insert(cells['line'], 0, 2, axis=1)
-            # print(cells)
-            # exit(1)
-            # prepend column with xdmf type index
+            if 'line' in cells:
+                cells['line'] = numpy.insert(cells['line'], 0, 2, axis=1)
             cd = numpy.concatenate([
+                # prepend column with xdmf type index
                 numpy.insert(
-                    value, 0, meshio_type_to_xdmf_index[key]
+                    value, 0, meshio_type_to_xdmf_index[key], axis=1
                     ).flatten()
                 for key, value in cells.items()
                 ])
