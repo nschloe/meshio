@@ -5,6 +5,7 @@ I/O for MED/Salome, cf.
 <http://docs.salome-platform.org/latest/dev/MEDCoupling/med-file.html>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
+                  Tianyi Li <tianyikillua@gmail.com>
 '''
 import numpy
 
