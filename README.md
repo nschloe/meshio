@@ -1,7 +1,7 @@
 # meshio
 
 [![CircleCI](https://img.shields.io/circleci/project/github/nschloe/meshio/master.svg)](https://circleci.com/gh/nschloe/meshio)
-[![codecov.io](https://codecov.io/github/nschloe/meshio/branch/master/graphs/badge.svg)](https://codecov.io/github/nschloe/meshio/branch/master)
+[![codecov](https://img.shields.io/codecov/c/github/nschloe/meshio.svg)](https://codecov.io/gh/nschloe/meshio)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.python.org/pypi/meshio)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=social&label=Stars)](https://github.com/nschloe/meshio)
 
