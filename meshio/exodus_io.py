@@ -3,9 +3,8 @@
 '''
 I/O for Exodus II.
 
-See
-<http://prod.sandia.gov/techlib/access-control.cgi/1992/922137.pdf>,
-in particular Appendix A (Implementation of EXODUS II with netCDF).
+See <http://prod.sandia.gov/techlib/access-control.cgi/1992/922137.pdf>, in
+particular Appendix A (page 171, Implementation of EXODUS II with netCDF).
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
