@@ -263,9 +263,9 @@ def _read_cells(f, cells, int_size, is_ascii):
             has_additional_tag_data = True
         output_cell_tags[key] = {}
         if cell_tags[key].shape[1] > 0:
-            output_cell_tags[key]['physical'] = cell_tags[key][:, 0]
+            output_cell_tags[key]['gmsh:physical'] = cell_tags[key][:, 0]
         if cell_tags[key].shape[1] > 1:
-            output_cell_tags[key]['geometrical'] = cell_tags[key][:, 1]
+            output_cell_tags[key]['gmsh:geometrical'] = cell_tags[key][:, 1]
     return has_additional_tag_data, output_cell_tags
 
 
@@ -436,7 +436,7 @@ def _write_nodes(fh, points, write_binary):
     return
 
 
-def _write_elements(fh, cells, write_binary):
+def _write_elements(fh, cells, tag_data, write_binary):
     # write elements
     fh.write('$Elements\n'.encode('utf-8'))
     # count all cells
@@ -445,33 +445,16 @@ def _write_elements(fh, cells, write_binary):
 
     consecutive_index = 0
     for cell_type, node_idcs in cells.items():
-        # if cell_type in cell_data and cell_data[cell_type]:
-        #     for key in cell_data[cell_type]:
-        #         # assert data consistency
-        #         assert len(cell_data[cell_type][key]) == len(node_idcs)
-        #         # TODO assert that the data type is int
+        tags = []
+        for key in ['gmsh:physical', 'gmsh:geometrical']:
+            try:
+                tags.append(tag_data[cell_type][key])
+            except KeyError:
+                pass
+        fcd = numpy.concatenate([tags]).T
 
-        #     # if a tag is present, make sure that there are 'physical' and
-        #     # 'geometrical' as well.
-        #     if 'physical' not in cell_data[cell_type]:
-        #         cell_data[cell_type]['physical'] = \
-        #             numpy.ones(len(node_idcs), dtype=numpy.int32)
-        #     if 'geometrical' not in cell_data[cell_type]:
-        #         cell_data[cell_type]['geometrical'] = \
-        #             numpy.ones(len(node_idcs), dtype=numpy.int32)
-
-        #     # 'physical' and 'geometrical' go first; this is what the gmsh
-        #     # file format prescribes
-        #     keywords = list(cell_data[cell_type].keys())
-        #     keywords.remove('physical')
-        #     keywords.remove('geometrical')
-        #     sorted_keywords = ['physical', 'geometrical'] + keywords
-        #     fcd = numpy.column_stack([
-        #             cell_data[cell_type][key] for key in sorted_keywords
-        #             ])
-        # else:
-        # no cell data
-        fcd = numpy.empty([len(node_idcs), 0], dtype=numpy.int32)
+        if not fcd:
+            fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
 
         if write_binary:
             # header
@@ -592,11 +575,24 @@ def write(
         if field_data:
             _write_physical_names(fh, field_data)
 
+        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the
+        # rest is actual cell data.
+        tag_data = {}
+        other_data = {}
+        for cell_type, a in cell_data.items():
+            tag_data[cell_type] = {}
+            other_data[cell_type] = {}
+            for key, data in a.items():
+                if key in ['gmsh:physical', 'gmsh:geometrical']:
+                    tag_data[cell_type][key] = data
+                else:
+                    other_data[cell_type][key] = data
+
         _write_nodes(fh, points, write_binary)
-        _write_elements(fh, cells, write_binary)
+        _write_elements(fh, cells, tag_data, write_binary)
         for name, dat in point_data.items():
             _write_data(fh, 'NodeData', name, dat, write_binary)
-        cell_data_raw = raw_from_cell_data(cell_data)
+        cell_data_raw = raw_from_cell_data(other_data)
         for name, dat in cell_data_raw.items():
             _write_data(fh, 'ElementData', name, dat, write_binary)
 
