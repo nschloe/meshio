@@ -453,7 +453,8 @@ def _write_elements(fh, cells, tag_data, write_binary):
                 pass
         fcd = numpy.concatenate([tags]).T
 
-        if not fcd:
+        # pylint: disable=len-as-condition
+        if len(fcd) == 0:
             fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
 
         if write_binary:
