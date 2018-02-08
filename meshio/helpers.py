@@ -95,7 +95,7 @@ def read(filename, file_format=None):
 
     if not file_format:
         # deduce file format from extension
-        extension = '.' + filename.split(os.extsep, 1)[-1]
+        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
         file_format = _extension_to_filetype[extension]
 
     format_to_reader = {
@@ -153,8 +153,7 @@ def write(filename,
 
     if not file_format:
         # deduce file format from extension
-        # _, extension = os.path.splitext(filename)
-        extension = '.' + filename.split(os.extsep, 1)[-1]
+        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
         file_format = _extension_to_filetype[extension]
 
     # check cells for sanity
