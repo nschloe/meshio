@@ -94,8 +94,8 @@ def read(filename, file_format=None):
     assert isinstance(filename, str)
 
     if not file_format:
-        # deduct file format from extension
-        extension = '.' + filename.split(os.extsep, 1)[-1]
+        # deduce file format from extension
+        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
         file_format = _extension_to_filetype[extension]
 
     format_to_reader = {
@@ -152,9 +152,8 @@ def write(filename,
     field_data = {} if field_data is None else field_data
 
     if not file_format:
-        # deduct file format from extension
-        # _, extension = os.path.splitext(filename)
-        extension = '.' + filename.split(os.extsep, 1)[-1]
+        # deduce file format from extension
+        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
         file_format = _extension_to_filetype[extension]
 
     # check cells for sanity
