@@ -78,7 +78,7 @@ def _read_cell_data(filename, cell_type):
         dir_name = os.getcwd()
 
     # Loop over all files in the same directory as `filename`.
-    basename = os.path.splitext(filename)[0]
+    basename = os.path.splitext(os.path.basename(filename))[0]
     for f in os.listdir(dir_name):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
@@ -86,7 +86,7 @@ def _read_cell_data(filename, cell_type):
         if not out:
             continue
         name = out.group(1)
-        tree = ET.parse(f)
+        tree = ET.parse(os.path.join(dir_name, f))
         root = tree.getroot()
 
         mesh_functions = list(root)
