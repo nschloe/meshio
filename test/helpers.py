@@ -2,6 +2,7 @@
 #
 import os
 import string
+import tempfile
 
 import numpy
 
@@ -272,7 +273,7 @@ def write_read(writer, reader, mesh, atol):
     except KeyError:
         input_field_data = {}
 
-    filename = 'test.dat'
+    _, filename = tempfile.mkstemp()
 
     writer(
         filename,
