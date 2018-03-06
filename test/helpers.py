@@ -273,7 +273,8 @@ def write_read(writer, reader, mesh, atol):
     except KeyError:
         input_field_data = {}
 
-    _, filename = tempfile.mkstemp()
+    handle, filename = tempfile.mkstemp()
+    os.close(handle)
 
     writer(
         filename,
