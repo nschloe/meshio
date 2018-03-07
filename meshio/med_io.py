@@ -117,15 +117,13 @@ def _read_cell_data(cell_data, name, supp, data):
     return cell_data
 
 
-def write(
-        filename,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None,
-        add_global_ids=True
-        ):
+def write(filename,
+          points,
+          cells,
+          point_data=None,
+          cell_data=None,
+          field_data=None,
+          add_global_ids=True):
     import h5py
 
     point_data = {} if point_data is None else point_data

@@ -22,10 +22,10 @@ import helpers
     ])
 def test_generic_io(filename):
     meshio.write(
-            filename,
-            helpers.tri_mesh['points'],
-            helpers.tri_mesh['cells'],
-            )
+        filename,
+        helpers.tri_mesh['points'],
+        helpers.tri_mesh['cells'],
+        )
 
     points, cells, _, _, _ = meshio.helpers.read(filename)
 

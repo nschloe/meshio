@@ -81,13 +81,13 @@ def test_xdmf3_legacy_reader(mesh):
 
 @pytest.mark.skipif(not hasattr(vtk, 'vtkXdmfWriter'), reason='Need XDMF3')
 @pytest.mark.parametrize('mesh', [
-        helpers.tri_mesh,
-        helpers.quad_mesh,
-        helpers.tet_mesh,
-        helpers.hex_mesh,
-        helpers.add_point_data(helpers.tri_mesh, 1),
-        helpers.add_cell_data(helpers.tri_mesh, 1),
-        ])
+    helpers.tri_mesh,
+    helpers.quad_mesh,
+    helpers.tet_mesh,
+    helpers.hex_mesh,
+    helpers.add_point_data(helpers.tri_mesh, 1),
+    helpers.add_cell_data(helpers.tri_mesh, 1),
+    ])
 def test_xdmf2_legacy_writer(mesh):
     # test with legacy writer
     def lw(*args, **kwargs):

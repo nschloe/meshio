@@ -76,14 +76,12 @@ def read(filename):
     return points, cells, {}, {}, {}
 
 
-def write(
-        filename,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None
-        ):
+def write(filename,
+          points,
+          cells,
+          point_data=None,
+          cell_data=None,
+          field_data=None):
     '''Writes PERMAS dat files, cf.
     http://www.intes.de # PERMAS-ASCII-file-format
     '''

@@ -17,45 +17,45 @@ from . import vtu_io
 from . import xdmf_io
 
 input_filetypes = [
-        'ansys',
-        'exodus',
-        'gmsh-ascii',
-        'gmsh-binary',
-        'dolfin-xml',
-        'med',
-        'medit',
-        'permas',
-        'moab',
-        'off',
-        'stl-ascii',
-        'stl-binary',
-        'vtk-ascii',
-        'vtk-binary',
-        'vtu-ascii',
-        'vtu-binary',
-        'xdmf',
-        ]
+    'ansys',
+    'exodus',
+    'gmsh-ascii',
+    'gmsh-binary',
+    'dolfin-xml',
+    'med',
+    'medit',
+    'permas',
+    'moab',
+    'off',
+    'stl-ascii',
+    'stl-binary',
+    'vtk-ascii',
+    'vtk-binary',
+    'vtu-ascii',
+    'vtu-binary',
+    'xdmf',
+    ]
 
 output_filetypes = [
-        'ansys-ascii',
-        'ansys-binary',
-        'exodus',
-        'gmsh-ascii',
-        'gmsh-binary',
-        'dolfin-xml',
-        'med',
-        'medit',
-        'permas',
-        'moab',
-        'off',
-        'stl-ascii',
-        'stl-binary',
-        'vtk-ascii',
-        'vtk-binary',
-        'vtu-ascii',
-        'vtu-binary',
-        'xdmf',
-        ]
+    'ansys-ascii',
+    'ansys-binary',
+    'exodus',
+    'gmsh-ascii',
+    'gmsh-binary',
+    'dolfin-xml',
+    'med',
+    'medit',
+    'permas',
+    'moab',
+    'off',
+    'stl-ascii',
+    'stl-binary',
+    'vtk-ascii',
+    'vtk-binary',
+    'vtu-ascii',
+    'vtu-binary',
+    'xdmf',
+    ]
 
 _extension_to_filetype = {
     '.e': 'exodus',
@@ -137,8 +137,7 @@ def write(filename,
           point_data=None,
           cell_data=None,
           field_data=None,
-          file_format=None
-          ):
+          file_format=None):
     '''Writes mesh together with data to a file.
 
     :params filename: File to write to.

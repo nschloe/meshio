@@ -194,9 +194,9 @@ class VtuReader(object):
         assert 'types' in cells
 
         cells, cell_data = _cells_from_data(
-                cells['connectivity'], cells['offsets'], cells['types'],
-                cell_data_raw
-                )
+            cells['connectivity'], cells['offsets'], cells['types'],
+            cell_data_raw
+            )
 
         self.points = points
         self.cells = cells
@@ -231,18 +231,18 @@ class VtuReader(object):
         num_bytes_per_item = numpy.dtype(dtype).itemsize
 
         byte_offsets = numpy.concatenate(
-                [[0], numpy.cumsum(block_sizes, dtype=block_sizes.dtype)]
-                )
+            [[0], numpy.cumsum(block_sizes, dtype=block_sizes.dtype)]
+            )
         # https://github.com/numpy/numpy/issues/10135
         byte_offsets = byte_offsets.astype(numpy.int64)
 
         # process the compressed data
         block_data = numpy.concatenate([
-                numpy.fromstring(zlib.decompress(
-                    byte_array[byte_offsets[k]:byte_offsets[k+1]]
-                    ), dtype=dtype)
-                for k in range(num_blocks)
-                ])
+            numpy.fromstring(zlib.decompress(
+                byte_array[byte_offsets[k]:byte_offsets[k+1]]
+                ), dtype=dtype)
+            for k in range(num_blocks)
+            ])
 
         return block_data
 
@@ -262,8 +262,8 @@ class VtuReader(object):
 
             offset = int(c.attrib['offset'])
             data = self.read_binary(
-                    self.appended_data[offset:], c.attrib['type']
-                    )
+                self.appended_data[offset:], c.attrib['type']
+                )
 
         if 'NumberOfComponents' in c.attrib:
             data = data.reshape(-1, int(c.attrib['NumberOfComponents']))
@@ -285,8 +285,7 @@ def write(filename,
           cell_data=None,
           field_data=None,
           write_binary=True,
-          pretty_xml=True
-          ):
+          pretty_xml=True):
     if not write_binary:
         logging.warning('VTU ASCII files are only meant for debugging.')
 

@@ -30,10 +30,10 @@ test_set = [
 @pytest.mark.parametrize('mesh', test_set)
 def test_io(mesh):
     helpers.write_read(
-            meshio.exodus_io.write,
-            meshio.exodus_io.read,
-            mesh, 1.0e-15
-            )
+        meshio.exodus_io.write,
+        meshio.exodus_io.read,
+        mesh, 1.0e-15
+        )
     return
 
 

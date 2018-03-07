@@ -10,9 +10,9 @@ h5py = pytest.importorskip('h5py')
 
 
 @pytest.mark.parametrize('mesh', [
-        helpers.tri_mesh,
-        helpers.tet_mesh,
-        ])
+    helpers.tri_mesh,
+    helpers.tet_mesh,
+    ])
 def test_io(mesh):
     helpers.write_read(
         meshio.h5m_io.write,

@@ -56,39 +56,39 @@ num_nodes_per_cell = {
 # Translate meshio types to gmsh codes
 # http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format
 _gmsh_to_meshio_type = {
-        1: 'line',
-        2: 'triangle',
-        3: 'quad',
-        4: 'tetra',
-        5: 'hexahedron',
-        6: 'wedge',
-        7: 'pyramid',
-        8: 'line3',
-        9: 'triangle6',
-        10: 'quad9',
-        11: 'tetra10',
-        12: 'hexahedron27',
-        13: 'prism18',
-        14: 'pyramid14',
-        15: 'vertex',
-        16: 'quad8',
-        17: 'hexahedron20',
-        21: 'triangle10',
-        23: 'triangle15',
-        25: 'triangle21',
-        26: 'line4',
-        27: 'line5',
-        28: 'line6',
-        29: 'tetra20',
-        30: 'tetra35',
-        31: 'tetra56',
-        36: 'quad16',
-        37: 'quad25',
-        38: 'quad36',
-        92: 'hexahedron64',
-        93: 'hexahedron125',
-        94: 'hexahedron216',
-        }
+    1: 'line',
+    2: 'triangle',
+    3: 'quad',
+    4: 'tetra',
+    5: 'hexahedron',
+    6: 'wedge',
+    7: 'pyramid',
+    8: 'line3',
+    9: 'triangle6',
+    10: 'quad9',
+    11: 'tetra10',
+    12: 'hexahedron27',
+    13: 'prism18',
+    14: 'pyramid14',
+    15: 'vertex',
+    16: 'quad8',
+    17: 'hexahedron20',
+    21: 'triangle10',
+    23: 'triangle15',
+    25: 'triangle21',
+    26: 'line4',
+    27: 'line5',
+    28: 'line6',
+    29: 'tetra20',
+    30: 'tetra35',
+    31: 'tetra56',
+    36: 'quad16',
+    37: 'quad25',
+    38: 'quad36',
+    92: 'hexahedron64',
+    93: 'hexahedron125',
+    94: 'hexahedron216',
+    }
 _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
 
 
@@ -537,15 +537,13 @@ def _write_data(fh, tag, name, data, write_binary):
     return
 
 
-def write(
-        filename,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None,
-        write_binary=True,
-        ):
+def write(filename,
+          points,
+          cells,
+          point_data=None,
+          cell_data=None,
+          field_data=None,
+          write_binary=True):
     '''Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     '''

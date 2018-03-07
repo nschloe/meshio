@@ -376,8 +376,7 @@ def write(filename,
           point_data=None,
           cell_data=None,
           field_data=None,
-          write_binary=True
-          ):
+          write_binary=True):
     if not write_binary:
         logging.warning('VTK ASCII files are only meant for debugging.')
 

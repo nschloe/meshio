@@ -26,14 +26,14 @@ def read(filetype, filename):
 
     def _read_cells(vtk_mesh):
         data = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-                vtk_mesh.GetCells().GetData()
-                ))
+            vtk_mesh.GetCells().GetData()
+            ))
         offsets = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-                vtk_mesh.GetCellLocationsArray()
-                ))
+            vtk_mesh.GetCellLocationsArray()
+            ))
         types = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-                vtk_mesh.GetCellTypesArray()
-                ))
+            vtk_mesh.GetCellTypesArray()
+            ))
 
         # `data` is a one-dimensional vector with
         # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
@@ -102,8 +102,8 @@ def read(filetype, filename):
 
     # Explicitly extract points, cells, point data, field data
     points = numpy.copy(numpy_support.vtk_to_numpy(
-            vtk_mesh.GetPoints().GetData()
-            ))
+        vtk_mesh.GetPoints().GetData()
+        ))
     cells = _read_cells(vtk_mesh)
 
     point_data = _read_data(vtk_mesh.GetPointData())
