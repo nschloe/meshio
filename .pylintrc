@@ -12,4 +12,3 @@ disable=
     too-many-locals,
     too-many-statements,
     unused-argument,
-    wildcard-import,
