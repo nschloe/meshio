@@ -55,8 +55,7 @@ def write(filetype,
           cells,
           point_data=None,
           cell_data=None,
-          field_data=None
-          ):
+          field_data=None):
     # pylint: disable=import-error
     import vtk
 

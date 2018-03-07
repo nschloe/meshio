@@ -73,9 +73,9 @@ def data_from_facets(facets):
     # Use return_index so we can use sort on `idx` such that the order is
     # preserved; see <https://stackoverflow.com/a/15637512/353337>.
     _, idx, inv = numpy.unique(
-            pts, axis=0,
-            return_index=True, return_inverse=True
-            )
+        pts, axis=0,
+        return_index=True, return_inverse=True
+        )
     k = numpy.argsort(idx)
     points = pts[idx[k]]
     inv_k = numpy.argsort(k)
@@ -102,15 +102,13 @@ def _read_binary(f):
     return points, cells, {}, {}, {}
 
 
-def write(
-        filename,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None,
-        write_binary=False,
-        ):
+def write(filename,
+          points,
+          cells,
+          point_data=None,
+          cell_data=None,
+          field_data=None,
+          write_binary=False):
     assert not point_data, \
         'STL cannot write point data.'
     assert not field_data, \

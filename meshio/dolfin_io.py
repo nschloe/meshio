@@ -114,12 +114,7 @@ def read(filename):
     return points, cells, point_data, cell_data, field_data
 
 
-def _write_mesh(
-        filename,
-        points,
-        cell_type,
-        cells
-        ):
+def _write_mesh(filename, points, cell_type, cells):
     stripped_cells = {cell_type: cells[cell_type]}
 
     dolfin = ET.Element(
@@ -136,19 +131,19 @@ def _write_mesh(
         discarded_cells = list(cells.keys())
         discarded_cells.remove(cell_type)
         logging.warning(
-          'DOLFIN XML can only handle one cell type at a time. '
-          'Using %s, discarding %s.',
-          cell_type, ', '.join(discarded_cells)
-          )
+            'DOLFIN XML can only handle one cell type at a time. '
+            'Using %s, discarding %s.',
+            cell_type, ', '.join(discarded_cells)
+            )
 
     dim = 2 if all(points[:, 2] == 0) else 3
 
     mesh = ET.SubElement(
-            dolfin,
-            'mesh',
-            celltype=meshio_to_dolfin_type[cell_type],
-            dim=str(dim)
-            )
+        dolfin,
+        'mesh',
+        celltype=meshio_to_dolfin_type[cell_type],
+        dim=str(dim)
+        )
     vertices = ET.SubElement(mesh, 'vertices', size=str(len(points)))
 
     for k, point in enumerate(points):
@@ -192,23 +187,19 @@ def _numpy_type_to_dolfin_type(dtype):
     return None
 
 
-def _write_cell_data(
-        filename,
-        dim,
-        cell_data
-        ):
+def _write_cell_data(filename, dim, cell_data):
     dolfin = ET.Element(
         'dolfin',
         nsmap={'dolfin': 'https://fenicsproject.org/'}
         )
 
     mesh_function = ET.SubElement(
-            dolfin,
-            'mesh_function',
-            type=_numpy_type_to_dolfin_type(cell_data.dtype),
-            dim=str(dim),
-            size=str(len(cell_data))
-            )
+        dolfin,
+        'mesh_function',
+        type=_numpy_type_to_dolfin_type(cell_data.dtype),
+        dim=str(dim),
+        size=str(len(cell_data))
+        )
 
     for k, value in enumerate(cell_data):
         ET.SubElement(
@@ -223,14 +214,12 @@ def _write_cell_data(
     return
 
 
-def write(
-        filename,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None
-        ):
+def write(filename,
+          points,
+          cells,
+          point_data=None,
+          cell_data=None,
+          field_data=None):
     logging.warning(
         'Dolfin\'s XML is a legacy format. Consider using XDMF instead.'
         )

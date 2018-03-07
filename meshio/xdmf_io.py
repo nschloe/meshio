@@ -110,10 +110,10 @@ meshio_to_xdmf_type = {
     'hexahedron20': ['Hexahedron_20', 'Hex_20'],
     }
 xdmf_to_meshio_type = {
-        v: k
-        for k, vals in meshio_to_xdmf_type.items()
-        for v in vals
-        }
+    v: k
+    for k, vals in meshio_to_xdmf_type.items()
+    for v in vals
+    }
 
 
 def _translate_mixed_cells(data):
@@ -226,9 +226,9 @@ class XdmfReader(object):
 
         # The HDF5 file path is given with respect to the XDMF (XML) file.
         full_hdf5_path = os.path.join(
-                os.path.dirname(self.filename),
-                filename
-                )
+            os.path.dirname(self.filename),
+            filename
+            )
 
         f = h5py.File(full_hdf5_path, 'r')
         assert h5path[0] == '/'
@@ -387,17 +387,15 @@ class XdmfReader(object):
 
 
 class XdmfWriter(object):
-    def __init__(
-          self,
-          filename,
-          points,
-          cells,
-          point_data=None,
-          cell_data=None,
-          field_data=None,
-          pretty_xml=True,
-          data_format='HDF',
-          ):
+    def __init__(self,
+                 filename,
+                 points,
+                 cells,
+                 point_data=None,
+                 cell_data=None,
+                 field_data=None,
+                 pretty_xml=True,
+                 data_format='HDF'):
         assert data_format in ['XML', 'Binary', 'HDF'], (
             'Unknown XDMF data format '
             '\'{}\' (use \'XML\', \'Binary\', or \'HDF\'.)'.format(data_format)
@@ -439,9 +437,9 @@ class XdmfWriter(object):
             return s.getvalue().decode()
         elif self.data_format == 'Binary':
             bin_filename = '{}{}.bin'.format(
-                    os.path.splitext(self.filename)[0],
-                    self.data_counter,
-                    )
+                os.path.splitext(self.filename)[0],
+                self.data_counter,
+                )
             self.data_counter += 1
             # write binary data to file
             with open(bin_filename, 'wb') as f:
@@ -459,10 +457,10 @@ class XdmfWriter(object):
         dt, prec = numpy_to_xdmf_dtype[points.dtype]
         dim = '{} {}'.format(*points.shape)
         data_item = ET.SubElement(
-                geo, 'DataItem',
-                DataType=dt, Dimensions=dim,
-                Format=self.data_format, Precision=prec
-                )
+            geo, 'DataItem',
+            DataType=dt, Dimensions=dim,
+            Format=self.data_format, Precision=prec
+            )
         data_item.text = self.numpy_to_xml_string(points)
         return
 
@@ -474,10 +472,10 @@ class XdmfWriter(object):
             dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
             dim = '{} {}'.format(*cells[meshio_type].shape)
             data_item = ET.SubElement(
-                    topo, 'DataItem',
-                    DataType=dt, Dimensions=dim,
-                    Format=self.data_format, Precision=prec
-                    )
+                topo, 'DataItem',
+                DataType=dt, Dimensions=dim,
+                Format=self.data_format, Precision=prec
+                )
             data_item.text = \
                 self.numpy_to_xml_string(cells[meshio_type])
         elif len(cells) > 1:
@@ -499,26 +497,26 @@ class XdmfWriter(object):
                 ])
             dt, prec = numpy_to_xdmf_dtype[cd.dtype]
             data_item = ET.SubElement(
-                    topo, 'DataItem',
-                    DataType=dt, Dimensions=dim,
-                    Format=self.data_format, Precision=prec
-                    )
+                topo, 'DataItem',
+                DataType=dt, Dimensions=dim,
+                Format=self.data_format, Precision=prec
+                )
             data_item.text = self.numpy_to_xml_string(cd)
         return
 
     def point_data(self, point_data, grid):
         for name, data in point_data.items():
             att = ET.SubElement(
-                    grid, 'Attribute',
-                    Name=name, Type='None', Center='Node'
-                    )
+                grid, 'Attribute',
+                Name=name, Type='None', Center='Node'
+                )
             dt, prec = numpy_to_xdmf_dtype[data.dtype]
             dim = ' '.join([str(s) for s in data.shape])
             data_item = ET.SubElement(
-                    att, 'DataItem',
-                    DataType=dt, Dimensions=dim,
-                    Format=self.data_format, Precision=prec
-                    )
+                att, 'DataItem',
+                DataType=dt, Dimensions=dim,
+                Format=self.data_format, Precision=prec
+                )
             data_item.text = self.numpy_to_xml_string(data)
         return
 
@@ -526,16 +524,16 @@ class XdmfWriter(object):
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(
-                    grid, 'Attribute',
-                    Name=name, Type='None', Center='Cell'
-                    )
+                grid, 'Attribute',
+                Name=name, Type='None', Center='Cell'
+                )
             dt, prec = numpy_to_xdmf_dtype[data.dtype]
             dim = ' '.join([str(s) for s in data.shape])
             data_item = ET.SubElement(
-                    att, 'DataItem',
-                    DataType=dt, Dimensions=dim,
-                    Format=self.data_format, Precision=prec
-                    )
+                att, 'DataItem',
+                DataType=dt, Dimensions=dim,
+                Format=self.data_format, Precision=prec
+                )
             data_item.text = self.numpy_to_xml_string(data)
         return
 

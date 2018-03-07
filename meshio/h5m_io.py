@@ -110,15 +110,13 @@ def read(filename):
     return points, cells, point_data, cell_data, field_data
 
 
-def write(
-        filename,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None,
-        add_global_ids=True
-        ):
+def write(filename,
+          points,
+          cells,
+          point_data=None,
+          cell_data=None,
+          field_data=None,
+          add_global_ids=True):
     '''Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     '''
@@ -206,31 +204,30 @@ def write(
     tstt.create_dataset(
         'history',
         data=[
-         __name__.encode('utf-8'),
-         __about__.__version__.encode('utf-8'),
-         str(datetime.now()).encode('utf-8')
-        ]
-        )
+            __name__.encode('utf-8'),
+            __about__.__version__.encode('utf-8'),
+            str(datetime.now()).encode('utf-8')
+            ])
 
     # number of nodes to h5m name, element type
     meshio_to_h5m_type = {
-            'line': {'name': 'Edge2', 'type': 1},
-            'triangle': {'name': 'Tri3', 'type': 2},
-            'tetra': {'name': 'Tet4', 'type': 5}
-            }
+        'line': {'name': 'Edge2', 'type': 1},
+        'triangle': {'name': 'Tri3', 'type': 2},
+        'tetra': {'name': 'Tet4', 'type': 5}
+        }
     for key, data in cells.items():
         if key not in meshio_to_h5m_type:
             logging.warning(
-                    'Unsupported H5M element type \'%s\'. Skipping.', key
-                    )
+                'Unsupported H5M element type \'%s\'. Skipping.', key
+                )
             continue
         this_type = meshio_to_h5m_type[key]
         elem_group = elements.create_group(this_type['name'])
         elem_group.attrs.create(
-                'element_type',
-                this_type['type'],
-                dtype=elem_dt
-                )
+            'element_type',
+            this_type['type'],
+            dtype=elem_dt
+            )
         # h5m node indices are 1-based
         conn = elem_group.create_dataset('connectivity', data=(data + 1))
         conn.attrs.create('start_id', global_id)
@@ -248,5 +245,4 @@ def write(
 
     # set max_id
     tstt.attrs.create('max_id', global_id, dtype='u8')
-
     return

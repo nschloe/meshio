@@ -126,8 +126,7 @@ def write(filename,
           cells,
           point_data=None,
           cell_data=None,
-          field_data=None
-          ):
+          field_data=None):
     import netCDF4
 
     point_data = {} if point_data is None else point_data
@@ -163,17 +162,17 @@ def write(filename,
 
     # points
     coor_names = rootgrp.createVariable(
-            'coor_names', 'S1', ('num_dim', 'len_string'),
-            )
+        'coor_names', 'S1', ('num_dim', 'len_string'),
+        )
     coor_names.set_auto_mask(False)
     coor_names[0, 0] = 'X'
     coor_names[1, 0] = 'Y'
     coor_names[2, 0] = 'Z'
     data = rootgrp.createVariable(
-            'coord',
-            numpy_to_exodus_dtype[points.dtype],
-            ('num_dim', 'num_nodes')
-            )
+        'coord',
+        numpy_to_exodus_dtype[points.dtype],
+        ('num_dim', 'num_nodes')
+        )
     data[:] = points.T
 
     # cells
@@ -189,8 +188,8 @@ def write(filename,
         rootgrp.createDimension(dim2, values.shape[1])
         dtype = numpy_to_exodus_dtype[values.dtype]
         data = rootgrp.createVariable(
-                'connect{}'.format(k+1), dtype, (dim1, dim2)
-                )
+            'connect{}'.format(k+1), dtype, (dim1, dim2)
+            )
         data.elem_type = meshio_to_exodus_type[key]
         # Exodus is 1-based
         data[:] = values + 1
@@ -203,8 +202,8 @@ def write(filename,
         rootgrp.createDimension('num_nod_var', num_nod_var)
         # set names
         point_data_names = rootgrp.createVariable(
-                'name_nod_var', 'S1', ('num_nod_var', 'len_string')
-                )
+            'name_nod_var', 'S1', ('num_nod_var', 'len_string')
+            )
         point_data_names.set_auto_mask(False)
         for k, name in enumerate(point_data.keys()):
             for i, letter in enumerate(name):
@@ -215,9 +214,9 @@ def write(filename,
         first_key = list(point_data.keys())[0]
         dtype = numpy_to_exodus_dtype[point_data[first_key].dtype]
         node_data = rootgrp.createVariable(
-                'vals_nod_var', dtype,
-                ('time_step', 'num_nod_var', 'num_nodes')
-                )
+            'vals_nod_var', dtype,
+            ('time_step', 'num_nod_var', 'num_nodes')
+            )
         for k, (name, data) in enumerate(point_data.items()):
             node_data[0, k] = data
 

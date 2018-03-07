@@ -16,10 +16,10 @@ with open(os.path.join(base_dir, 'meshio', '__about__.py'), 'rb') as f:
 def read(fname):
     try:
         content = codecs.open(
-            os.path.join(os.path.dirname(__file__), fname),
+            os.path.join(base_dir, fname),
             encoding='utf-8'
             ).read()
-    except FileNotFoundError:
+    except IOError:
         content = ''
     return content
 
@@ -45,8 +45,8 @@ setup(
         'hdf5': ['h5py'],  # MED, MOAB, XDMF formats
         },
     scripts=[
-      'tools/meshio-convert',
-      ],
+        'tools/meshio-convert',
+        ],
     classifiers=[
         about['__status__'],
         about['__license__'],

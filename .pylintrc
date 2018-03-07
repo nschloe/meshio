@@ -1,16 +1,14 @@
 [MESSAGES CONTROL]
 
 disable=
-    invalid-name,
-    too-many-locals,
-    missing-docstring,
-    too-many-arguments,
-    too-many-statements,
-    no-member,
-    bad-continuation,
-    unused-argument,
-    too-many-branches,
     duplicate-code,
     fixme,
-    wildcard-import,
-    locally-disabled
+    invalid-name,
+    locally-disabled,
+    missing-docstring,
+    no-member,
+    too-many-arguments,
+    too-many-branches,
+    too-many-locals,
+    too-many-statements,
+    unused-argument,

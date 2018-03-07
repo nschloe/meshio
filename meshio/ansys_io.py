@@ -81,8 +81,8 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
         # read point data
         total_bytes = dim * bytes_per_item * num_points
         pts = numpy.fromstring(
-                f.read(total_bytes), dtype=dtype
-                ).reshape((num_points, dim))
+            f.read(total_bytes), dtype=dtype
+            ).reshape((num_points, dim))
 
     # make sure that the data set is properly closed
     _skip_close(f, 2)
@@ -104,14 +104,14 @@ def _read_cells(f, line):
     element_type = a[4]
 
     element_type_to_key_num_nodes = {
-            0: ('mixed', None),
-            1: ('triangle', 3),
-            2: ('tetra', 4),
-            3: ('quad', 4),
-            4: ('hexahedron', 8),
-            5: ('pyra', 5),
-            6: ('wedge', 6),
-            }
+        0: ('mixed', None),
+        1: ('triangle', 3),
+        2: ('tetra', 4),
+        3: ('quad', 4),
+        4: ('hexahedron', 8),
+        5: ('pyra', 5),
+        6: ('wedge', 6),
+        }
 
     key, num_nodes_per_cell = \
         element_type_to_key_num_nodes[element_type]
@@ -157,10 +157,10 @@ def _read_cells(f, line):
         total_bytes = \
             bytes_per_item * num_nodes_per_cell * num_cells
         data = numpy.fromstring(
-                f.read(total_bytes),
-                count=(num_nodes_per_cell*num_cells),
-                dtype=dtype
-                ).reshape((num_cells, num_nodes_per_cell))
+            f.read(total_bytes),
+            count=(num_nodes_per_cell*num_cells),
+            dtype=dtype
+            ).reshape((num_cells, num_nodes_per_cell))
 
     # make sure that the data set is properly closed
     _skip_close(f, 2)
@@ -186,11 +186,11 @@ def _read_faces(f, line):
     element_type = a[4]
 
     element_type_to_key_num_nodes = {
-            0: ('mixed', None),
-            2: ('line', 2),
-            3: ('triangle', 3),
-            4: ('quad', 4)
-            }
+        0: ('mixed', None),
+        2: ('line', 2),
+        3: ('triangle', 3),
+        4: ('quad', 4)
+        }
 
     key, num_nodes_per_cell = \
         element_type_to_key_num_nodes[element_type]
@@ -326,10 +326,10 @@ def read(filename):
             elif re.match('(|20|30)10', index):
                 # points
                 pts, first_point_index_overall, last_point_index = \
-                        _read_points(
-                                f, line, first_point_index_overall,
-                                last_point_index
-                                )
+                    _read_points(
+                        f, line, first_point_index_overall,
+                        last_point_index
+                        )
 
                 if pts is not None:
                     points.append(pts)
@@ -384,15 +384,13 @@ def read(filename):
     return points, cells, point_data, cell_data, field_data
 
 
-def write(
-        filename,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None,
-        write_binary=True,
-        ):
+def write(filename,
+          points,
+          cells,
+          point_data=None,
+          cell_data=None,
+          field_data=None,
+          write_binary=True):
     point_data = {} if point_data is None else point_data
     cell_data = {} if cell_data is None else cell_data
     field_data = {} if field_data is None else field_data
@@ -433,13 +431,13 @@ def write(
 
         # Write cells
         meshio_to_ansys_type = {
-                'triangle': 1,
-                'tetra': 2,
-                'quad': 3,
-                'hexahedron': 4,
-                'pyra': 5,
-                'wedge': 6,
-                }
+            'triangle': 1,
+            'tetra': 2,
+            'quad': 3,
+            'hexahedron': 4,
+            'pyra': 5,
+            'wedge': 6,
+            }
         first_index = 0
         binary_dtypes = {
             # numpy.int16 is not allowed
