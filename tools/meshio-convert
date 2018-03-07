@@ -45,10 +45,10 @@ def _main():
         # also adapt the point data
         for key in point_data:
             point_data[key] = numpy.delete(
-                    point_data[key],
-                    orphaned_nodes,
-                    axis=0
-                    )
+                point_data[key],
+                orphaned_nodes,
+                axis=0
+                )
 
         # reset GLOBAL_ID
         if 'GLOBAL_ID' in point_data:
@@ -83,10 +83,10 @@ def _parse_options():
     import argparse
 
     parser = argparse.ArgumentParser(
-            description=(
-                'Convert between mesh formats.'
-                )
+        description=(
+            'Convert between mesh formats.'
             )
+        )
 
     parser.add_argument(
         'infile',
@@ -117,10 +117,10 @@ def _parse_options():
         )
 
     parser.add_argument(
-            '--prune', '-p',
-            action='store_true',
-            help='remove lower order cells, remove orphaned nodes'
-            )
+        '--prune', '-p',
+        action='store_true',
+        help='remove lower order cells, remove orphaned nodes'
+        )
 
     parser.add_argument(
         '--version', '-v',
