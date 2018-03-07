@@ -273,18 +273,18 @@ def write_read(writer, reader, mesh, atol):
     except KeyError:
         input_field_data = {}
 
-    handle, filename = tempfile.mkstemp()
-    os.close(handle)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        filepath = os.path.join(temp_dir, 'test.dat')
 
-    writer(
-        filename,
-        mesh['points'], mesh['cells'],
-        point_data=input_point_data,
-        cell_data=input_cell_data,
-        field_data=input_field_data,
-        )
+        writer(
+            filepath,
+            mesh['points'], mesh['cells'],
+            point_data=input_point_data,
+            cell_data=input_cell_data,
+            field_data=input_field_data,
+            )
 
-    points, cells, point_data, cell_data, field_data = reader(filename)
+        points, cells, point_data, cell_data, field_data = reader(filepath)
 
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
@@ -316,5 +316,4 @@ def write_read(writer, reader, mesh, atol):
             atol=atol, rtol=0.0
             )
 
-    os.remove(filename)
     return
