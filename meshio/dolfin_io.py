@@ -179,12 +179,20 @@ def _write_mesh(filename, points, cell_type, cells):
 
 
 def _numpy_type_to_dolfin_type(dtype):
-    types = ['int', 'uint', 'float']
-    for t in types:
-        # issubtype handles all of int8, int16, float64 etc.
-        if numpy.issubdtype(dtype, numpy.dtype(t)):
-            return t
+    types = {
+        'int': [numpy.int8, numpy.int16, numpy.int32, numpy.int64],
+        'uint': [numpy.uint8, numpy.uint16, numpy.uint32, numpy.uint64],
+        'float': [numpy.float16, numpy.float32, numpy.float64],
+        }
+    out = None
+    for key, numpy_types in types.items():
+        for numpy_type in numpy_types:
+            if numpy.issubdtype(dtype, numpy_type):
+                return key
+
+    assert False
     return None
+
 
 
 def _write_cell_data(filename, dim, cell_data):
@@ -234,7 +242,10 @@ def write(filename,
         assert 'triangle' in cells
         cell_type = 'triangle'
 
+    print('a')
     _write_mesh(filename, points, cell_type, cells)
+
+    print('b')
 
     if cell_type in cell_data:
         for key, data in cell_data[cell_type].items():
@@ -242,4 +253,5 @@ def write(filename,
                 '{}_{}.xml'.format(os.path.splitext(filename)[0], key)
             dim = 2 if all(points[:, 2] == 0) else 3
             _write_cell_data(cell_data_filename, dim, numpy.array(data))
+    print('c')
     return
