@@ -184,13 +184,12 @@ def _numpy_type_to_dolfin_type(dtype):
         'uint': [numpy.uint8, numpy.uint16, numpy.uint32, numpy.uint64],
         'float': [numpy.float16, numpy.float32, numpy.float64],
         }
-    out = None
     for key, numpy_types in types.items():
         for numpy_type in numpy_types:
             if numpy.issubdtype(dtype, numpy_type):
                 return key
 
-    assert False
+    assert False, 'Could not convert NumPy data type to DOLFIN data type.'
     return None
 
 
