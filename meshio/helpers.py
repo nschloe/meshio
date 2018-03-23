@@ -82,7 +82,6 @@ _extension_to_filetype = {
 def check_filename(filename, file_format=None):
     # Checks the input and output file name and format.
     # https://stackoverflow.com/q/4843173/353337
-    assert isinstance(filename, str), 'Filename is not a string.: {}'.format(filename)
     assert isinstance(filename, str), 'Invalid input \'{}\''.format(filename)
 
     if not file_format:
