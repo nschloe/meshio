@@ -82,17 +82,16 @@ _extension_to_filetype = {
 def check_filename(filename, file_format=None):
     # Checks the input and output file name and format.
     # https://stackoverflow.com/q/4843173/353337
-    assert isinstance(filename, str), 'No such file or directory: {}'.format(filename)
+    assert isinstance(filename, str), 'Filename is not a string.: {}'.format(filename)
 
     if not file_format:
         # deduce file format from extension
         extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
         # check whether the file format is supported
-        if extension in _extension_to_filetype:
-            file_format = _extension_to_filetype[extension]
-        else:
-            assert False, ('Unknown file extension \'{}\' of \'{}\'.'
-                           .format(extension, filename))
+        assert extension in _extension_to_filetype, ('Unknown file extension \'{}\' of \'{}\'.'
+                                                     .format(extension, filename))
+        file_format = _extension_to_filetype[extension]
+
     return filename, file_format
 
 
@@ -140,9 +139,8 @@ def read(filename, file_format=None):
         'exodus': exodus_io,
     }
     # check whether the user specified format is supported
-    if file_format not in format_to_reader:
-        assert False, ('Unknown file format \'{}\' of \'{}\'.'
-                       .format(file_format, filename))
+    assert file_format in format_to_reader, ('Unknown file format \'{}\' of \'{}\'.'
+                                             .format(file_format, filename))
     return format_to_reader[file_format].read(filename)
 
 
