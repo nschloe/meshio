@@ -76,7 +76,23 @@ _extension_to_filetype = {
     '.vtk': 'vtk-binary',
     '.xdmf': 'xdmf',
     '.xmf': 'xdmf',
-    }
+}
+
+
+def check_filename(filename, file_format=None):
+    # Checks the input and output file name and format.
+    # https://stackoverflow.com/q/4843173/353337
+    assert isinstance(filename, str), 'Invalid input \'{}\''.format(filename)
+
+    if not file_format:
+        # deduce file format from extension
+        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
+        # check whether the file format is supported
+        assert extension in _extension_to_filetype, ('Unknown file extension \'{}\' of \'{}\'.'
+                                                     .format(extension, filename))
+        file_format = _extension_to_filetype[extension]
+
+    return filename, file_format
 
 
 def read(filename, file_format=None):
@@ -90,13 +106,8 @@ def read(filename, file_format=None):
     :returns field_data: Field data read from file.
     :type field_data: dict
     '''
-    # https://stackoverflow.com/q/4843173/353337
-    assert isinstance(filename, str)
 
-    if not file_format:
-        # deduce file format from extension
-        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
-        file_format = _extension_to_filetype[extension]
+    filename, file_format = check_filename(filename, file_format)
 
     format_to_reader = {
         'ansys': ansys_io,
@@ -126,8 +137,10 @@ def read(filename, file_format=None):
         #
         'xdmf': xdmf_io,
         'exodus': exodus_io,
-        }
-
+    }
+    # check whether the user specified format is supported
+    assert file_format in format_to_reader, ('Unknown file format \'{}\' of \'{}\'.'
+                                             .format(file_format, filename))
     return format_to_reader[file_format].read(filename)
 
 
@@ -150,10 +163,7 @@ def write(filename,
     cell_data = {} if cell_data is None else cell_data
     field_data = {} if field_data is None else field_data
 
-    if not file_format:
-        # deduce file format from extension
-        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
-        file_format = _extension_to_filetype[extension]
+    filename, file_format = check_filename(filename, file_format)
 
     # check cells for sanity
     for key in cells:
