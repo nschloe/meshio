@@ -273,7 +273,7 @@ def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
     # Read string tags
     num_string_tags = int(f.readline().decode('utf-8'))
     string_tags = [
-        f.readline().decode('utf-8').strip()
+        f.readline().decode('utf-8').strip().replace('"', '')
         for _ in range(num_string_tags)
         ]
     # The real tags typically only contain one value, the time.
