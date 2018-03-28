@@ -96,6 +96,9 @@ def read(filename, file_format=None):
     if not file_format:
         # deduce file format from extension
         extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
+        assert extension in _extension_to_filetype, \
+            'Could not deduce file format from extension \'{}\'.' \
+            .format(extension)
         file_format = _extension_to_filetype[extension]
 
     format_to_reader = {
@@ -128,6 +131,9 @@ def read(filename, file_format=None):
         'exodus': exodus_io,
         }
 
+    assert file_format in format_to_reader, \
+        'Unknown file format \'{}\' of \'{}\'.'.format(file_format, filename)
+
     return format_to_reader[file_format].read(filename)
 
 
@@ -153,6 +159,9 @@ def write(filename,
     if not file_format:
         # deduce file format from extension
         extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
+        assert extension in _extension_to_filetype, \
+            'Could not deduce file format from extension \'{}\'.' \
+            .format(extension)
         file_format = _extension_to_filetype[extension]
 
     # check cells for sanity
