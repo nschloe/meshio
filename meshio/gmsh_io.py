@@ -468,6 +468,7 @@ def _write_elements(fh, cells, tag_data, write_binary):
                 )[:, numpy.newaxis]
             a += 1 + consecutive_index
             array = numpy.hstack([a, fcd, node_idcs + 1])
+            assert array.dtype == numpy.int32
             fh.write(array.tostring())
         else:
             form = '{} ' + str(_meshio_to_gmsh_type[cell_type]) \
@@ -583,7 +584,7 @@ def write(filename,
             other_data[cell_type] = {}
             for key, data in a.items():
                 if key in ['gmsh:physical', 'gmsh:geometrical']:
-                    tag_data[cell_type][key] = data
+                    tag_data[cell_type][key] = data.astype(numpy.int32)
                 else:
                     other_data[cell_type][key] = data
 
