@@ -241,10 +241,7 @@ def write(filename,
         assert 'triangle' in cells
         cell_type = 'triangle'
 
-    print('a')
     _write_mesh(filename, points, cell_type, cells)
-
-    print('b')
 
     if cell_type in cell_data:
         for key, data in cell_data[cell_type].items():
@@ -252,5 +249,4 @@ def write(filename,
                 '{}_{}.xml'.format(os.path.splitext(filename)[0], key)
             dim = 2 if all(points[:, 2] == 0) else 3
             _write_cell_data(cell_data_filename, dim, numpy.array(data))
-    print('c')
     return

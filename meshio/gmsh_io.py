@@ -273,7 +273,7 @@ def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
     # Read string tags
     num_string_tags = int(f.readline().decode('utf-8'))
     string_tags = [
-        f.readline().decode('utf-8').strip()
+        f.readline().decode('utf-8').strip().replace('"', '')
         for _ in range(num_string_tags)
         ]
     # The real tags typically only contain one value, the time.
@@ -468,6 +468,7 @@ def _write_elements(fh, cells, tag_data, write_binary):
                 )[:, numpy.newaxis]
             a += 1 + consecutive_index
             array = numpy.hstack([a, fcd, node_idcs + 1])
+            assert array.dtype == numpy.int32
             fh.write(array.tostring())
         else:
             form = '{} ' + str(_meshio_to_gmsh_type[cell_type]) \
@@ -498,7 +499,7 @@ def _write_data(fh, tag, name, data, write_binary):
     # > the second as the name of the interpolation scheme. The interpolation
     # > scheme is provided in the $InterpolationScheme section (see below).
     fh.write('{}\n'.format(1).encode('utf-8'))
-    fh.write('{}\n'.format(name).encode('utf-8'))
+    fh.write('"{}"\n'.format(name).encode('utf-8'))
     fh.write('{}\n'.format(1).encode('utf-8'))
     fh.write('{}\n'.format(0.0).encode('utf-8'))
     # three integer tags:
@@ -583,7 +584,7 @@ def write(filename,
             other_data[cell_type] = {}
             for key, data in a.items():
                 if key in ['gmsh:physical', 'gmsh:geometrical']:
-                    tag_data[cell_type][key] = data
+                    tag_data[cell_type][key] = data.astype(numpy.int32)
                 else:
                     other_data[cell_type][key] = data
 

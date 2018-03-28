@@ -14,14 +14,7 @@ with open(os.path.join(base_dir, 'meshio', '__about__.py'), 'rb') as f:
 
 
 def read(fname):
-    try:
-        content = codecs.open(
-            os.path.join(base_dir, fname),
-            encoding='utf-8'
-            ).read()
-    except IOError:
-        content = ''
-    return content
+    return codecs.open(os.path.join(base_dir, fname), encoding='utf-8').read()
 
 
 setup(
@@ -31,9 +24,12 @@ setup(
     author_email=about['__author_email__'],
     packages=find_packages(),
     description='I/O for various mesh formats',
-    long_description=read('README.rst'),
+    long_description=read('README.md'),
+    long_description_content_type='text/markdown',
     url='https://github.com/nschloe/meshio',
-    download_url='https://pypi.python.org/pypi/meshio',
+    project_urls={
+        'Issues': 'https://github.com/nschloe/meshio/issues',
+        },
     license=about['__license__'],
     platforms='any',
     install_requires=[
@@ -41,6 +37,7 @@ setup(
         'pipdate',
         ],
     extras_require={
+        'all': ['netCDF4', 'h5py'],
         'exodus': ['netCDF4'],
         'hdf5': ['h5py'],  # MED, MOAB, XDMF formats
         },
