@@ -17,11 +17,6 @@ jobs:
       - run: pip3 install .[exodus,hdf5]
       # Make sure to get numpy 1.13.0
       - run: pip3 install -U numpy
-      # make sure that rst converts correctly
-      - run: apt install -y pandoc
-      - run: pip3 install docutils pygments
-      - run: make README.rst
-      - run: python3 setup.py check -r -s
       # The actual test
       - run: pylint setup.py meshio/ test/*.py tools/meshio-convert
       - run: cd test/ && pytest --cov meshio
