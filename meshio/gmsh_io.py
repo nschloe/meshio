@@ -510,6 +510,12 @@ def _write_data(fh, tag, name, data, write_binary):
     num_components = data.shape[1] if len(data.shape) > 1 else 1
     assert num_components in [1, 3, 9], \
         'Gmsh only permits 1, 3, or 9 components per data field.'
+
+    # Cut off the last dimension in case it's 1. This avoids problems with
+    # writing the data.
+    if len(data.shape) > 1 and data.shape[1] == 1:
+        data = data[:, 0]
+
     fh.write('{}\n'.format(num_components).encode('utf-8'))
     # num data items
     fh.write('{}\n'.format(data.shape[0]).encode('utf-8'))
