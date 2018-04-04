@@ -9,14 +9,20 @@ I/O for MED/Salome, cf.
 '''
 import numpy
 
-
+# https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {
-    'triangle': 'TR3',
-    'tetra': 'TE4',
-    'hexahedron': 'HE8',
-    'quad': 'QU4',
     'vertex': 'PO1',
     'line': 'SE2',
+    'line3': 'SE3',
+    'triangle': 'TR3',
+    'triangle6': 'TR6',
+    'quad': 'QU4',
+    'quad8': 'QU8',
+    'tetra': 'TE4',
+    'tetra10': 'T10',
+    'pyramid': 'PY5',
+    'pyramid13': 'P13',
+    'hexahedron': 'HE8'
     }
 med_to_meshio_type = {v: k for k, v in meshio_to_med_type.items()}
 
@@ -52,7 +58,7 @@ def read(filename):
     mai = mesh['MAI']
     for key, med_type in meshio_to_med_type.items():
         if med_type in mai:
-            nn = int(med_type[-1])
+            nn = int(''.join(filter(str.isdigit, med_type)))
             cells[key] = mai[med_type]['NOD'][()].reshape(nn, -1).T - 1
 
     # Read nodal and cell data if they exist
@@ -70,15 +76,24 @@ def _read_data(cha):
     cell_data = {}
     field_data = {}
     for name, data in cha.items():
-        ts = data.keys()
-        data = data[list(ts)[-1]]  # only read the last time-step
+        ts = sorted(data.keys())  # associated time-steps
+        if len(ts) == 1:  # single time-step
+            names = [name]  # do not change field name
+        else:  # many time-steps
+            names = [None] * len(ts)
+            for i, key in enumerate(ts):
+                t = data[key].attrs['PDT']  # current time
+                names[i] = name + "[{:d}] - {:g}".format(i, t)
 
         # MED field can contain multiple types of data
-        for supp in data:
-            if supp == 'NOE':  # continuous nodal (NOEU) data
-                point_data[name] = _read_nodal_data(data)
-            else:  # Gauss points (ELGA) or DG (ELNO) data
-                cell_data = _read_cell_data(cell_data, name, supp, data)
+        for i, key in enumerate(ts):
+            datum = data[key]  # at a particular time step
+            name = names[i]
+            for supp in datum:
+                if supp == 'NOE':  # continuous nodal (NOEU) data
+                    point_data[name] = _read_nodal_data(datum)
+                else:  # Gauss points (ELGA) or DG (ELNO) data
+                    cell_data = _read_cell_data(cell_data, name, supp, datum)
 
     return point_data, cell_data, field_data
 
