@@ -76,15 +76,24 @@ def _read_data(cha):
     cell_data = {}
     field_data = {}
     for name, data in cha.items():
-        ts = data.keys()
-        data = data[list(ts)[-1]]  # only read the last time-step
+        ts = sorted(data.keys())  # associated time-steps
+        if len(ts) == 1:  # single time-step
+            names = [name]  # do not change field name
+        else:  # many time-steps
+            names = [None] * len(ts)
+            for i, key in enumerate(ts):
+                t = data[key].attrs['PDT']  # current time
+                names[i] = name + "[{:d}] - {:g}".format(i, t)
 
         # MED field can contain multiple types of data
-        for supp in data:
-            if supp == 'NOE':  # continuous nodal (NOEU) data
-                point_data[name] = _read_nodal_data(data)
-            else:  # Gauss points (ELGA) or DG (ELNO) data
-                cell_data = _read_cell_data(cell_data, name, supp, data)
+        for i, key in enumerate(ts):
+            datum = data[key]  # at a particular time step
+            name = names[i]
+            for supp in datum:
+                if supp == 'NOE':  # continuous nodal (NOEU) data
+                    point_data[name] = _read_nodal_data(datum)
+                else:  # Gauss points (ELGA) or DG (ELNO) data
+                    cell_data = _read_cell_data(cell_data, name, supp, datum)
 
     return point_data, cell_data, field_data
 
