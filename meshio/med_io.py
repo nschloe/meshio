@@ -9,14 +9,20 @@ I/O for MED/Salome, cf.
 '''
 import numpy
 
-
+# https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {
-    'triangle': 'TR3',
-    'tetra': 'TE4',
-    'hexahedron': 'HE8',
-    'quad': 'QU4',
     'vertex': 'PO1',
     'line': 'SE2',
+    'line3': 'SE3',
+    'triangle': 'TR3',
+    'triangle6': 'TR6',
+    'quad': 'QU4',
+    'quad8': 'QU8',
+    'tetra': 'TE4',
+    'tetra10': 'T10',
+    'pyramid': 'PY5',
+    'pyramid13': 'P13',
+    'hexahedron': 'HE8'
     }
 med_to_meshio_type = {v: k for k, v in meshio_to_med_type.items()}
 
@@ -52,7 +58,7 @@ def read(filename):
     mai = mesh['MAI']
     for key, med_type in meshio_to_med_type.items():
         if med_type in mai:
-            nn = int(med_type[-1])
+            nn = int(''.join(filter(str.isdigit, med_type)))
             cells[key] = mai[med_type]['NOD'][()].reshape(nn, -1).T - 1
 
     # Read nodal and cell data if they exist
