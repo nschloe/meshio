@@ -467,8 +467,13 @@ class XdmfWriter(object):
     def cells(self, cells, grid):
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
+            num_cells = len(cells[meshio_type])
             xdmf_type = meshio_to_xdmf_type[meshio_type][0]
-            topo = ET.SubElement(grid, 'Topology', Type=xdmf_type)
+            topo = ET.SubElement(
+                grid, 'Topology',
+                Type=xdmf_type,
+                NumberOfElements=str(num_cells)
+                )
             dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
             dim = '{} {}'.format(*cells[meshio_type].shape)
             data_item = ET.SubElement(
@@ -479,8 +484,12 @@ class XdmfWriter(object):
             data_item.text = \
                 self.numpy_to_xml_string(cells[meshio_type])
         elif len(cells) > 1:
-            topo = ET.SubElement(grid, 'Topology', Type='Mixed')
             total_num_cells = sum(c.shape[0] for c in cells.values())
+            topo = ET.SubElement(
+                grid, 'Topology',
+                Type='Mixed',
+                NumberOfElements=str(total_num_cells)
+                )
             total_num_cell_items = \
                 sum(numpy.prod(c.shape) for c in cells.values())
             dim = str(total_num_cell_items + total_num_cells)

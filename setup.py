@@ -27,9 +27,6 @@ setup(
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
     url='https://github.com/nschloe/meshio',
-    project_urls={
-        'Issues': 'https://github.com/nschloe/meshio/issues',
-        },
     license=about['__license__'],
     platforms='any',
     install_requires=[
