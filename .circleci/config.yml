@@ -8,12 +8,12 @@ jobs:
       - image: ubuntu:18.04
     steps:
       - run: apt-get update
+      # <https://stackoverflow.com/a/44333806/353337>
+      - run: DEBIAN_FRONTEND=noninteractive apt install tzdata
       - run: apt-get install -y git python3-h5py python3-netcdf4 python3-vtk7 python3-pip
       - run: pip3 install -U pytest pytest-cov pylint
       - checkout
       - run: pip3 install .[exodus,hdf5]
-      # Make sure to get numpy 1.13.0
-      - run: pip3 install -U numpy
       # The actual test
       - run: pylint setup.py meshio/ test/*.py tools/meshio-convert
       - run: cd test/ && pytest --cov meshio
