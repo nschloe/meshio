@@ -31,7 +31,7 @@ num_nodes_per_cell = {
     'quad9': 9,
     'tetra10': 10,
     'hexahedron27': 27,
-    'prism18': 18,
+    'wedge18': 18,
     'pyramid14': 14,
     #
     'line4': 4,
@@ -97,7 +97,7 @@ _gmsh_to_meshio_type = {
     10: 'quad9',
     11: 'tetra10',
     12: 'hexahedron27',
-    13: 'prism18',
+    13: 'wedge18',
     14: 'pyramid14',
     15: 'vertex',
     16: 'quad8',
