@@ -492,11 +492,13 @@ class XdmfWriter(object):
                 )
             total_num_cell_items = \
                 sum(numpy.prod(c.shape) for c in cells.values())
-            dim = str(total_num_cell_items + total_num_cells)
+            dim = total_num_cell_items + total_num_cells
             # Lines translate to Polylines, and one needs to specify the exact
             # number of nodes. Hence, prepend 2.
             if 'line' in cells:
                 cells['line'] = numpy.insert(cells['line'], 0, 2, axis=1)
+                dim += len(cells['line'])
+            dim = str(dim)
             cd = numpy.concatenate([
                 # prepend column with xdmf type index
                 numpy.insert(
