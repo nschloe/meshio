@@ -22,6 +22,8 @@ import helpers
     'test.vtk',
     'test.vtu',
     'test.xmf',
+    'test.1.off',
+    'test.1.mesh',
     ])
 def test_generic_io(filename):
     with tempfile.TemporaryDirectory() as temp_dir:

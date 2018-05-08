@@ -95,7 +95,7 @@ def read(filename, file_format=None):
 
     if not file_format:
         # deduce file format from extension
-        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
+        extension = os.path.splitext(filename)[1]
         assert extension in _extension_to_filetype, \
             'Could not deduce file format from extension \'{}\'.' \
             .format(extension)
@@ -158,7 +158,7 @@ def write(filename,
 
     if not file_format:
         # deduce file format from extension
-        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
+        extension = os.path.splitext(filename)[1]
         assert extension in _extension_to_filetype, \
             'Could not deduce file format from extension \'{}\'.' \
             .format(extension)
