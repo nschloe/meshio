@@ -17,6 +17,7 @@ import helpers
     'test.msh',
     'test.xml',
     'test.post',
+    'test.post.gz',
     'test.h5m',
     'test.off',
     'test.vtk',

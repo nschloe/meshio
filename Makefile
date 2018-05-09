@@ -22,3 +22,6 @@ publish: tag upload
 clean:
 	@find . | grep -E "(__pycache__|\.pyc|\.pyo$\)" | xargs rm -rf
 	@rm -rf *.egg-info/ build/ dist/
+
+lint:
+	pylint setup.py meshio/ test/*.py tools/meshio-convert
