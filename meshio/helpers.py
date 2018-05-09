@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-import os
+import pathlib
 
 from . import ansys_io
 from . import dolfin_io
@@ -78,6 +78,17 @@ _extension_to_filetype = {
     '.xmf': 'xdmf',
     }
 
+def _filetype_from_filename(filename):
+    suffixes = pathlib.PurePath(filename).suffixes
+    ext = ''
+    for i in reversed(range(len(suffixes))):
+        ext = suffixes[i] + ext
+        if ext in _extension_to_filetype:
+            return _extension_to_filetype[ext]
+
+    raise RuntimeError('Could not deduce file format from extension \'{}\'.'
+                       .format(ext))
+
 
 def read(filename, file_format=None):
     '''Reads an unstructured mesh with added data.
@@ -95,11 +106,7 @@ def read(filename, file_format=None):
 
     if not file_format:
         # deduce file format from extension
-        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
-        assert extension in _extension_to_filetype, \
-            'Could not deduce file format from extension \'{}\'.' \
-            .format(extension)
-        file_format = _extension_to_filetype[extension]
+        file_format = _filetype_from_filename(filename)
 
     format_to_reader = {
         'ansys': ansys_io,
@@ -158,11 +165,7 @@ def write(filename,
 
     if not file_format:
         # deduce file format from extension
-        extension = '.' + os.path.basename(filename).split(os.extsep, 1)[-1]
-        assert extension in _extension_to_filetype, \
-            'Could not deduce file format from extension \'{}\'.' \
-            .format(extension)
-        file_format = _extension_to_filetype[extension]
+        file_format = _filetype_from_filename(filename)
 
     # check cells for sanity
     for key in cells:
