@@ -103,5 +103,10 @@ def test_xdmf2_legacy_writer(mesh):
     return
 
 
+def test_generic_io():
+    helpers.generic_io('test.xdmf')
+    return
+
+
 if __name__ == '__main__':
     test_xdmf3_legacy_writer(helpers.tri_mesh)

@@ -17,3 +17,8 @@ def test_io(mesh):
         mesh, 1.0e-15
         )
     return
+
+
+def test_generic_io():
+    helpers.generic_io('test.off')
+    return
