@@ -24,4 +24,6 @@ def test_io(mesh):
 
 def test_generic_io():
     helpers.generic_io('test.mesh')
+    # With additional, insignificant suffix:
+    helpers.generic_io('test.0.mesh')
     return

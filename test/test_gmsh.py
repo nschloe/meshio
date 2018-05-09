@@ -38,4 +38,6 @@ def test_gmsh(mesh, write_binary):
 
 def test_generic_io():
     helpers.generic_io('test.msh')
+    # With additional, insignificant suffix:
+    helpers.generic_io('test.0.msh')
     return

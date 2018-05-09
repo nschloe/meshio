@@ -70,6 +70,8 @@ def test_legacy_reader(mesh, write_binary):
 
 def test_generic_io():
     helpers.generic_io('test.vtk')
+    # With additional, insignificant suffix:
+    helpers.generic_io('test.0.vtk')
     return
 
 
