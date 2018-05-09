@@ -9,15 +9,13 @@ import meshio
 
 import helpers
 
+pytest.importorskip('h5py')
 
 @pytest.mark.parametrize('filename', [
-    'test.mesh',
-    'test.msh',
-    'test.xml',
-    'test.post',
-    'test.off',
-    'test.vtk',
-    'test.vtu',
+    'test.e',
+    'test.med',
+    'test.h5m',
+    'test.xmf',
     ])
 def test_generic_io(filename):
     with tempfile.TemporaryDirectory() as temp_dir:
