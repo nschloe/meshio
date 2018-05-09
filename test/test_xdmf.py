@@ -105,6 +105,8 @@ def test_xdmf2_legacy_writer(mesh):
 
 def test_generic_io():
     helpers.generic_io('test.xdmf')
+    # With additional, insignificant suffix:
+    helpers.generic_io('test.0.xdmf')
     return
 
 
