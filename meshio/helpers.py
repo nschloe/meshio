@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-import os
 import pathlib
 
 from . import ansys_io
@@ -88,7 +87,7 @@ def _filetype_from_filename(filename):
             return _extension_to_filetype[ext]
 
     raise RuntimeError('Could not deduce file format from extension \'{}\'.'
-        .format(ext))
+                       .format(ext))
 
 
 def read(filename, file_format=None):
