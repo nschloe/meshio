@@ -453,7 +453,8 @@ class XdmfWriter(object):
         return self.h5_filename + ':/' + name
 
     def points(self, grid, points):
-        geo = ET.SubElement(grid, 'Geometry', Type='XYZ')
+        geo = ET.SubElement(grid, 'Geometry',
+                            GeometryType='XYZ')
         dt, prec = numpy_to_xdmf_dtype[points.dtype]
         dim = '{} {}'.format(*points.shape)
         data_item = ET.SubElement(
@@ -471,7 +472,7 @@ class XdmfWriter(object):
             xdmf_type = meshio_to_xdmf_type[meshio_type][0]
             topo = ET.SubElement(
                 grid, 'Topology',
-                Type=xdmf_type,
+                TopologyType=xdmf_type,
                 NumberOfElements=str(num_cells)
                 )
             dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
@@ -487,7 +488,7 @@ class XdmfWriter(object):
             total_num_cells = sum(c.shape[0] for c in cells.values())
             topo = ET.SubElement(
                 grid, 'Topology',
-                Type='Mixed',
+                TopologyType='Mixed',
                 NumberOfElements=str(total_num_cells)
                 )
             total_num_cell_items = \

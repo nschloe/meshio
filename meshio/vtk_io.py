@@ -60,21 +60,22 @@ meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
 # These are all VTK data types. One sometimes finds 'vtktypeint64', but
 # this is ill-formed.
-vtk_to_numpy_dtype = {
-    'bit': numpy.dtype('bool'),
-    'unsigned_char': numpy.dtype('uint8'),
-    'char': numpy.dtype('int8'),
-    'unsigned_short': numpy.dtype('uint16'),
-    'short': numpy.dtype('int16'),
-    'unsigned_int': numpy.dtype('uint32'),
+vtk_to_numpy_dtype_name = {
+    'bit': 'bool',
+    'unsigned_char': 'uint8',
+    'char': 'int8',
+    'unsigned_short': 'uint16',
+    'short': 'int16',
+    'unsigned_int': 'uint32',
     'int': numpy.dtype('int32'),
-    'unsigned_long': numpy.dtype('int64'),
-    'long': numpy.dtype('int64'),
-    'float': numpy.dtype('float32'),
-    'double': numpy.dtype('float64'),
+    'unsigned_long': 'int64',
+    'long': 'int64',
+    'float': 'float32',
+    'double': 'float64',
     }
 
-numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype.items()}
+numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype_name.items()}
+
 
 
 def read(filename):
@@ -135,7 +136,7 @@ def read_buffer(f):
             active = 'POINTS'
             num_points = int(split[1])
             data_type = split[2]
-            dtype = vtk_to_numpy_dtype[data_type]
+            dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
             if is_ascii:
                 points = numpy.fromfile(
                     f, count=num_points*3, sep=' ',
@@ -264,7 +265,7 @@ def _read_scalar_field(f, num_data, split):
     # > The parameter numComp must range between (1,4) inclusive; [...]
     assert 0 < num_comp < 5
 
-    dtype = vtk_to_numpy_dtype[data_type]
+    dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
     lt, _ = f.readline().decode('utf-8').split()
     assert lt == 'LOOKUP_TABLE'
     data = numpy.fromfile(f, count=num_data, sep=' ', dtype=dtype)
@@ -276,7 +277,7 @@ def _read_vector_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
 
-    dtype = vtk_to_numpy_dtype[data_type]
+    dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
     data = numpy.fromfile(
         f, count=3*num_data, sep=' ', dtype=dtype
         ).reshape(-1, 3)
@@ -288,7 +289,7 @@ def _read_tensor_field(f, num_data, split):
     data_name = split[1]
     data_type = split[2]
 
-    dtype = vtk_to_numpy_dtype[data_type]
+    dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
     data = numpy.fromfile(
         f, count=9*num_data, sep=' ', dtype=dtype
         ).reshape(-1, 3, 3)
@@ -303,7 +304,7 @@ def _read_fields(f, num_fields, is_ascii):
             f.readline().decode('utf-8').split()
         shape0 = int(shape0)
         shape1 = int(shape1)
-        dtype = vtk_to_numpy_dtype[data_type]
+        dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
 
         if is_ascii:
             dat = numpy.fromfile(
@@ -413,7 +414,7 @@ def write(filename,
 def _write_points(f, points, write_binary):
     f.write(
         'POINTS {} {}\n'.format(
-            len(points), numpy_to_vtk_dtype[points.dtype]
+            len(points), numpy_to_vtk_dtype[points.dtype.name]
             ).encode('utf-8'))
 
     if write_binary:
@@ -488,7 +489,7 @@ def _write_field_data(f, data, write_binary):
             num_components = values.shape[1]
         f.write(('{} {} {} {}\n'.format(
             name, num_components, num_tuples,
-            numpy_to_vtk_dtype[values.dtype]
+            numpy_to_vtk_dtype[values.dtype.name]
             )).encode('utf-8'))
         if write_binary:
             values.astype(values.dtype.newbyteorder('>')).tofile(f, sep='')

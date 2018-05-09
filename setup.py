@@ -31,7 +31,7 @@ setup(
     platforms='any',
     install_requires=[
         'numpy',
-        'pipdate',
+        'pipdate >=0.2.0, <0.3.0',
         ],
     extras_require={
         'all': ['netCDF4', 'h5py'],
