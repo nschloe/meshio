@@ -161,9 +161,9 @@ def write(filename,
             elif permas_type[1] in elem_2D:
                 fh.write(
                     (12 * ' ' +
-                    '{} GEODAT = GD_{} MATERIAL = DUMMY_MATERIAL\n'.format(
-                        permas_type[1], permas_type[1]
-                    )).encode('utf-8'))
+                     '{} GEODAT = GD_{} MATERIAL = DUMMY_MATERIAL\n'.format(
+                         permas_type[1], permas_type[1]
+                     )).encode('utf-8'))
             else:
                 assert permas_type[1] in elem_1D
         fh.write('!\n'.encode('utf-8'))
