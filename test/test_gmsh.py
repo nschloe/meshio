@@ -34,3 +34,8 @@ def test_gmsh(mesh, write_binary):
 
     helpers.write_read(writer, meshio.gmsh_io.read, mesh, 1.0e-15)
     return
+
+
+def test_generic_io():
+    helpers.generic_io('test.msh')
+    return

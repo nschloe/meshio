@@ -68,5 +68,10 @@ def test_legacy_reader(mesh, write_binary):
     return
 
 
+def test_generic_io():
+    helpers.generic_io('test.vtk')
+    return
+
+
 if __name__ == '__main__':
     test(helpers.tri_mesh, write_binary=True)

@@ -64,3 +64,8 @@ def test_legacy_reader(mesh):
 
     helpers.write_read(meshio.exodus_io.write, lr, mesh, 1.0e-4)
     return
+
+
+def test_generic_io():
+    helpers.generic_io('test.e')
+    return

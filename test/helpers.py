@@ -6,6 +6,8 @@ import tempfile
 
 import numpy
 
+import meshio
+
 # In general:
 # Use values with an infinite decimal representation to test precision.
 
@@ -318,4 +320,14 @@ def write_read(writer, reader, mesh, atol):
             atol=atol, rtol=0.0
             )
 
+    return
+
+
+def generic_io(filename):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        filepath = os.path.join(temp_dir, filename)
+        meshio.write(filepath, tri_mesh['points'], tri_mesh['cells'])
+        points, cells, _, _, _ = meshio.helpers.read(filepath)
+        assert (abs(points - tri_mesh['points']) < 1.0e-15).all()
+        assert (tri_mesh['cells']['triangle'] == cells['triangle']).all()
     return
