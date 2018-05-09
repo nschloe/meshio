@@ -16,6 +16,16 @@ with open(os.path.join(base_dir, 'meshio', '__about__.py'), 'rb') as f:
 def read(fname):
     return codecs.open(os.path.join(base_dir, fname), encoding='utf-8').read()
 
+install_requires = [
+    'numpy',
+    'pipdate >=0.2.0, <0.3.0',
+    ]
+
+extras_require = {
+    'all': ['netCDF4', 'h5py'],
+    'exodus': ['netCDF4'],
+    'hdf5': ['h5py'],  # MED, MOAB, XDMF formats
+    }
 
 setup(
     name='meshio',
@@ -29,15 +39,12 @@ setup(
     url='https://github.com/nschloe/meshio',
     license=about['__license__'],
     platforms='any',
-    install_requires=[
-        'numpy',
-        'pipdate >=0.2.0, <0.3.0',
-        ],
-    extras_require={
-        'all': ['netCDF4', 'h5py'],
-        'exodus': ['netCDF4'],
-        'hdf5': ['h5py'],  # MED, MOAB, XDMF formats
-        },
+    install_requires=install_requires,
+    extras_require=extras_require,
+    setup_requires=['pytest-runner'],
+    tests_require=list(set(['pytest']) |
+                       set(install_requires) |
+                       set(extras_require['all'])),
     scripts=[
         'tools/meshio-convert',
         ],
