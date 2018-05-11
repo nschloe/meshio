@@ -10,7 +10,7 @@ for something like a specification.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-from itertools import islice
+import re
 import logging
 import numpy
 
@@ -22,24 +22,51 @@ def read(filename):
     return points, cells, {}, {}, {}
 
 
-def read_buffer(f):
+class _ItemReader:
+    def __init__(self, file, delimiter=r'\s+'):
+        # Items can be separated by any whitespace, including new lines.
+        self._re_delimiter = re.compile(delimiter, re.MULTILINE)
+        self._file = file
+        self._line = []
+        self._line_ptr = 0
+
+    def next_items(self, n):
+        '''Returns the n next items.
+
+        Throws StopIteration when there is not enough data to return n items.
+        '''
+        items = []
+        while len(items) < n:
+            if self._line_ptr >= len(self._line):
+                # Load the next line.
+                line = next(self._file).strip()
+                # Skip all comment and empty lines.
+                while not line or line[0] == '#':
+                    line = next(self._file).strip()
+                self._line = self._re_delimiter.split(line)
+                self._line_ptr = 0
+            n_read = min(n - len(items), len(self._line) - self._line_ptr)
+            items.extend(self._line[self._line_ptr:self._line_ptr + n_read])
+            self._line_ptr += n_read
+        return items
+
+    def next_item(self):
+        return self.next_items(1)[0]
+
+
+def read_buffer(file):
     dim = 0
     cells = {}
 
+    reader = _ItemReader(file)
+
     while True:
         try:
-            line = next(islice(f, 1))
+            keyword = reader.next_item()
         except StopIteration:
             break
 
-        stripped = line.strip()
-
-        # skip comments and empty lines
-        if not stripped or stripped[0] == '#':
-            continue
-
-        assert stripped[0].isalpha()
-        keyword = stripped.split(' ')[0]
+        assert keyword.isalpha()
 
         meshio_from_medit = {
             'Edges': ('line', 2),
@@ -47,29 +74,28 @@ def read_buffer(f):
             'Quadrilaterals': ('quad', 4),
             'Tetrahedra': ('tetra', 4),
             'Hexahedra': ('hexahedra', 8)
-            }
+        }
 
         if keyword == 'MeshVersionFormatted':
-            assert stripped[-1] == '1'
+            assert reader.next_item() == '1'
         elif keyword == 'Dimension':
-            dim = int(stripped[-1])
+            dim = int(reader.next_item())
         elif keyword == 'Vertices':
             assert dim > 0
-            # The first line is the number of nodes
-            line = next(islice(f, 1))
-            num_verts = int(line)
+            # The first value is the number of nodes
+            num_verts = int(reader.next_item())
             points = numpy.empty((num_verts, dim), dtype=float)
-            for k, line in enumerate(islice(f, num_verts)):
+            for k in range(num_verts):
                 # Throw away the label immediately
-                points[k] = numpy.array(line.split(), dtype=float)[:-1]
+                points[k] = numpy.array(
+                    reader.next_items(dim + 1), dtype=float)[:-1]
         elif keyword in meshio_from_medit:
             meshio_name, num = meshio_from_medit[keyword]
-            # The first line is the number of elements
-            line = next(islice(f, 1))
-            num_cells = int(line)
+            # The first value is the number of elements
+            num_cells = int(reader.next_item())
             cell_data = numpy.empty((num_cells, num), dtype=int)
-            for k, line in enumerate(islice(f, num_cells)):
-                data = numpy.array(line.split(), dtype=int)
+            for k in range(num_cells):
+                data = numpy.array(reader.next_items(num + 1), dtype=int)
                 # Throw away the label
                 cell_data[k] = data[:-1]
 
@@ -113,15 +139,14 @@ def write(filename,
             'quad': ('Quadrilaterals', 4),
             'tetra': ('Tetrahedra', 4),
             'hexahedra': ('Hexahedra', 8)
-            }
+        }
 
         for key, data in cells.items():
             try:
                 medit_name, num = medit_from_meshio[key]
             except KeyError:
-                msg = (
-                    'MEDIT\'s mesh format doesn\'t know {} cells. Skipping.'
-                    ).format(key)
+                msg = ('MEDIT\'s mesh format doesn\'t know {} cells. Skipping.'
+                      ).format(key)
                 logging.warning(msg)
                 continue
             fh.write(b'\n')
