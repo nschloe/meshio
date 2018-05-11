@@ -87,7 +87,7 @@ def read_buffer(file):
             points = numpy.empty((num_verts, dim), dtype=float)
             for k in range(num_verts):
                 # Throw away the label immediately
-                points[k, :] = numpy.array(
+                points[k] = numpy.array(
                     reader.next_items(dim + 1), dtype=float)[:-1]
         elif keyword in meshio_from_medit:
             meshio_name, num = meshio_from_medit[keyword]
@@ -97,7 +97,7 @@ def read_buffer(file):
             for k in range(num_cells):
                 data = numpy.array(reader.next_items(num + 1), dtype=int)
                 # Throw away the label
-                cell_data[k, :] = data[:-1]
+                cell_data[k] = data[:-1]
 
             # adapt 0-base
             cells[meshio_name] = cell_data - 1
