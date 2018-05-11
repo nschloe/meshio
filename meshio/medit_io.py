@@ -146,7 +146,7 @@ def write(filename,
                 medit_name, num = medit_from_meshio[key]
             except KeyError:
                 msg = ('MEDIT\'s mesh format doesn\'t know {} cells. Skipping.'
-                       ).format(key)
+                      ).format(key)
                 logging.warning(msg)
                 continue
             fh.write(b'\n')
