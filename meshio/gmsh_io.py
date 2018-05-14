@@ -266,7 +266,6 @@ def _read_cells(f, cells, int_size, is_ascii):
                 cell_tags[t] = []
             cell_tags[t].append(data[3:3+num_tags])
 
-
         # convert to numpy arrays
         for key in cells:
             cells[key] = numpy.array(cells[key], dtype=int)
@@ -332,11 +331,12 @@ def _read_cells(f, cells, int_size, is_ascii):
             'gmsh:geometrical': [],
             }
         for item in cell_tags[key]:
-            if len(item) > 1:
+            # pylint: disable=len-as-condition
+            if len(item) > 0:
                 output_cell_tags[key]['gmsh:physical'].append(item[0])
-            if len(item) > 2:
+            if len(item) > 1:
                 output_cell_tags[key]['gmsh:geometrical'].append(item[1])
-            if len(item) > 3:
+            if len(item) > 2:
                 has_additional_tag_data = True
         output_cell_tags[key]['gmsh:physical'] = \
             numpy.array(output_cell_tags[key]['gmsh:physical'], dtype=int)
