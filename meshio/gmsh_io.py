@@ -266,11 +266,12 @@ def _read_cells(f, cells, int_size, is_ascii):
                 cell_tags[t] = []
             cell_tags[t].append(data[3:3+num_tags])
 
+
         # convert to numpy arrays
         for key in cells:
             cells[key] = numpy.array(cells[key], dtype=int)
-        for key in cell_tags:
-            cell_tags[key] = numpy.array(cell_tags[key], dtype=int)
+        # Cannot convert cell_tags[key] to numpy array: There may be a
+        # different number of tags for each cell.
     else:
         # binary
         num_elems = 0
@@ -326,13 +327,22 @@ def _read_cells(f, cells, int_size, is_ascii):
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {}
     for key in cell_tags:
-        if cell_tags[key].shape[1] > 2:
-            has_additional_tag_data = True
-        output_cell_tags[key] = {}
-        if cell_tags[key].shape[1] > 0:
-            output_cell_tags[key]['gmsh:physical'] = cell_tags[key][:, 0]
-        if cell_tags[key].shape[1] > 1:
-            output_cell_tags[key]['gmsh:geometrical'] = cell_tags[key][:, 1]
+        output_cell_tags[key] = {
+            'gmsh:physical': [],
+            'gmsh:geometrical': [],
+            }
+        for item in cell_tags[key]:
+            if len(item) > 1:
+                output_cell_tags[key]['gmsh:physical'].append(item[0])
+            if len(item) > 2:
+                output_cell_tags[key]['gmsh:geometrical'].append(item[1])
+            if len(item) > 3:
+                has_additional_tag_data = True
+        output_cell_tags[key]['gmsh:physical'] = \
+            numpy.array(output_cell_tags[key]['gmsh:physical'], dtype=int)
+        output_cell_tags[key]['gmsh:geometrical'] = \
+            numpy.array(output_cell_tags[key]['gmsh:geometrical'], dtype=int)
+
     return has_additional_tag_data, output_cell_tags
 
 
