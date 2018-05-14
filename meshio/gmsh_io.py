@@ -331,6 +331,7 @@ def _read_cells(f, cells, int_size, is_ascii):
             'gmsh:geometrical': [],
             }
         for item in cell_tags[key]:
+            # pylint: disable=len-as-condition
             if len(item) > 0:
                 output_cell_tags[key]['gmsh:physical'].append(item[0])
             if len(item) > 1:
