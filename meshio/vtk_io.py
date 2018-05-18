@@ -171,9 +171,9 @@ def read_buffer(f):
                 assert line == '\n'
 
             offsets = []
-            if len(c) > 0:
+            if c.shape[0] > 0:
                 offsets.append(0)
-                while offsets[-1] + c[offsets[-1]] + 1 < len(c):
+                while offsets[-1] + c[offsets[-1]] + 1 < c.shape[0]:
                     offsets.append(offsets[-1] + c[offsets[-1]] + 1)
             offsets = numpy.array(offsets)
 
