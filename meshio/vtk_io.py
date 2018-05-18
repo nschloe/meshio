@@ -57,6 +57,41 @@ vtk_to_meshio_type = {
     }
 meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
+vtk_type_to_numnodes = numpy.array([
+    0,  # 0: 'empty',
+    1,   # 1: 'vertex',
+    -1,  # 2: 'poly_vertex',
+    2,   # 3: 'line',
+    -1,  # 4: 'poly_line',
+    3,  # 5: 'triangle',
+    -1,  # 6: 'triangle_strip',
+    -1,  # 7: 'polygon',
+    -1,  # 8: 'pixel',
+    4,  # 9: 'quad',
+    4,  # 10: 'tetra',
+    -1,  # 11: 'voxel',
+    8,  # 12: 'hexahedron',
+    6,  # 13: 'wedge',
+    5,  # 14: 'pyramid',
+    10,  # 15: 'penta_prism',
+    12,  # 16: 'hexa_prism',
+    3,  # 21: 'line3',
+    6,  # 22: 'triangle6',
+    8,  # 23: 'quad8',
+    10,  # 24: 'tetra10',
+    20, # 25: 'hexahedron20',
+    15, # 26: 'wedge15',
+    13,  # 27: 'pyramid13',
+    9,  # 28: 'quad9',
+    27, # 29: 'hexahedron27',
+    6, # 30: 'quad6',
+    12, # 31: 'wedge12',
+    18, # 32: 'wedge18',
+    24, # 33: 'hexahedron24',
+    7, # 34: 'triangle7',
+    4, # 35: 'line4',
+    ], dtype=int)
+
 
 # These are all VTK data types. One sometimes finds 'vtktypeint64', but
 # this is ill-formed.
@@ -170,13 +205,6 @@ def read_buffer(f):
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
-            offsets = []
-            if c.shape[0] > 0:
-                offsets.append(0)
-                while offsets[-1] + c[offsets[-1]] + 1 < c.shape[0]:
-                    offsets.append(offsets[-1] + c[offsets[-1]] + 1)
-            offsets = numpy.array(offsets)
-
         elif section == 'CELL_TYPES':
             active = 'CELL_TYPES'
 
@@ -249,7 +277,7 @@ def read_buffer(f):
     assert ct is not None, \
         'Required section CELL_TYPES not found.'
 
-    cells, cell_data = translate_cells(c, offsets, ct, cell_data_raw)
+    cells, cell_data = translate_cells(c, ct, cell_data_raw)
 
     return points, cells, point_data, cell_data, field_data
 
@@ -345,10 +373,19 @@ def raw_from_cell_data(cell_data):
     return cell_data_raw
 
 
-def translate_cells(data, offsets, types, cell_data_raw):
+def translate_cells(data, types, cell_data_raw):
+    # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
     # Translate it into the cells dictionary.
     # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+
+    # Deduct offsets from the cell types. This is much faster than manually
+    # going through the data array. Slight disadvantage: This doesn't work for
+    # cells with a custom number of points.
+    numnodes = vtk_type_to_numnodes[types]
+    assert numpy.all(numnodes >= 0)
+    offsets = numpy.cumsum(numnodes+ 1) - (numnodes+1)
+    assert numpy.all(numnodes == data[offsets])
 
     # Collect types into bins.
     # See <https://stackoverflow.com/q/47310359/353337> for better
