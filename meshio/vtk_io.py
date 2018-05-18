@@ -190,7 +190,8 @@ def read_buffer(f):
                 total_num_bytes = num_items * num_bytes
                 ct = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
                 line = f.readline().decode('utf-8')
-                assert line == '\n'
+                # Sometimes, there's no newline at the end
+                assert line.strip() == ''
 
         elif section == 'POINT_DATA':
             active = 'POINT_DATA'
