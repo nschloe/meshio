@@ -13,7 +13,7 @@ jobs:
       - run: apt-get install -y git python3-h5py python3-netcdf4 python3-vtk7 python3-pip
       - run: pip3 install -U pytest pytest-cov pylint
       - checkout
-      - run: pip3 install .[exodus,hdf5]
+      - run: pip3 install .[all]
       # The actual test
       - run: pylint setup.py meshio/ test/*.py tools/meshio-convert
       - run: cd test/ && pytest --cov meshio

@@ -57,6 +57,35 @@ vtk_to_meshio_type = {
     }
 meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
+vtk_type_to_numnodes = {
+    0: 0,  # empty
+    1: 1,  # vertex
+    3: 2,  # line
+    5: 3,  # triangle
+    9: 4,  # quad
+    10: 4,  # tetra
+    12: 8,  # hexahedron
+    13: 6,  # wedge
+    14: 5,  # pyramid
+    15: 10,  # penta_prism
+    16: 12,  # hexa_prism
+    21: 3,  # line3
+    22: 6,  # triangle6
+    23: 8,  # quad8
+    24: 10,  # tetra10
+    25: 20,  # hexahedron20
+    26: 15,  # wedge15
+    27: 13,  # pyramid13
+    28: 9,  # quad9
+    29: 27,  # hexahedron27
+    30: 6,  # quad6
+    31: 12,  # wedge12
+    32: 18,  # wedge18
+    33: 24,  # hexahedron24
+    34: 7,  # triangle7
+    35: 4,  # line4
+    }
+
 
 # These are all VTK data types. One sometimes finds 'vtktypeint64', but
 # this is ill-formed.
@@ -103,7 +132,6 @@ def read_buffer(f):
     is_ascii = data_type == 'ASCII'
 
     c = None
-    offsets = None
     ct = None
 
     # One of the problem in reading VTK files are POINT_DATA and CELL_DATA
@@ -170,13 +198,6 @@ def read_buffer(f):
                 line = f.readline().decode('utf-8')
                 assert line == '\n'
 
-            offsets = []
-            if len(c) > 0:
-                offsets.append(0)
-                while offsets[-1] + c[offsets[-1]] + 1 < len(c):
-                    offsets.append(offsets[-1] + c[offsets[-1]] + 1)
-            offsets = numpy.array(offsets)
-
         elif section == 'CELL_TYPES':
             active = 'CELL_TYPES'
 
@@ -190,7 +211,8 @@ def read_buffer(f):
                 total_num_bytes = num_items * num_bytes
                 ct = numpy.fromstring(f.read(total_num_bytes), dtype='>i4')
                 line = f.readline().decode('utf-8')
-                assert line == '\n'
+                # Sometimes, there's no newline at the end
+                assert line.strip() == ''
 
         elif section == 'POINT_DATA':
             active = 'POINT_DATA'
@@ -248,7 +270,7 @@ def read_buffer(f):
     assert ct is not None, \
         'Required section CELL_TYPES not found.'
 
-    cells, cell_data = translate_cells(c, offsets, ct, cell_data_raw)
+    cells, cell_data = translate_cells(c, ct, cell_data_raw)
 
     return points, cells, point_data, cell_data, field_data
 
@@ -344,7 +366,8 @@ def raw_from_cell_data(cell_data):
     return cell_data_raw
 
 
-def translate_cells(data, offsets, types, cell_data_raw):
+def translate_cells(data, types, cell_data_raw):
+    # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
     # Translate it into the cells dictionary.
     # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
@@ -352,8 +375,16 @@ def translate_cells(data, offsets, types, cell_data_raw):
     # Collect types into bins.
     # See <https://stackoverflow.com/q/47310359/353337> for better
     # alternatives.
-    uniques = numpy.unique(types)
-    bins = {u: numpy.where(types == u)[0] for u in uniques}
+    bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
+
+    # Deduct offsets from the cell types. This is much faster than manually
+    # going through the data array. Slight disadvantage: This doesn't work for
+    # cells with a custom number of points.
+    numnodes = numpy.empty(len(types), dtype=int)
+    for tpe, idx in bins.items():
+        numnodes[idx] = vtk_type_to_numnodes[tpe]
+    offsets = numpy.cumsum(numnodes+ 1) - (numnodes+1)
+    assert numpy.all(numnodes == data[offsets])
 
     cells = {}
     cell_data = {}
@@ -361,9 +392,7 @@ def translate_cells(data, offsets, types, cell_data_raw):
         meshio_type = vtk_to_meshio_type[tpe]
         n = data[offsets[b[0]]]
         assert (data[offsets[b]] == n).all()
-        indices = numpy.array([
-            numpy.arange(1, n+1) + o for o in offsets[b]
-            ])
+        indices = numpy.add.outer(offsets[b], numpy.arange(1, n+1))
         cells[meshio_type] = data[indices]
         cell_data[meshio_type] = \
             {key: value[b] for key, value in cell_data_raw.items()}
