@@ -138,7 +138,6 @@ def read_buffer(f):
     is_ascii = data_type == 'ASCII'
 
     c = None
-    offsets = None
     ct = None
 
     # One of the problem in reading VTK files are POINT_DATA and CELL_DATA
