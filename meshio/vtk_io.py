@@ -57,40 +57,34 @@ vtk_to_meshio_type = {
     }
 meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
-vtk_type_to_numnodes = numpy.array([
-    0,  # 0: 'empty',
-    1,   # 1: 'vertex',
-    -1,  # 2: 'poly_vertex',
-    2,   # 3: 'line',
-    -1,  # 4: 'poly_line',
-    3,  # 5: 'triangle',
-    -1,  # 6: 'triangle_strip',
-    -1,  # 7: 'polygon',
-    -1,  # 8: 'pixel',
-    4,  # 9: 'quad',
-    4,  # 10: 'tetra',
-    -1,  # 11: 'voxel',
-    8,  # 12: 'hexahedron',
-    6,  # 13: 'wedge',
-    5,  # 14: 'pyramid',
-    10,  # 15: 'penta_prism',
-    12,  # 16: 'hexa_prism',
-    3,  # 21: 'line3',
-    6,  # 22: 'triangle6',
-    8,  # 23: 'quad8',
-    10,  # 24: 'tetra10',
-    20, # 25: 'hexahedron20',
-    15, # 26: 'wedge15',
-    13,  # 27: 'pyramid13',
-    9,  # 28: 'quad9',
-    27, # 29: 'hexahedron27',
-    6, # 30: 'quad6',
-    12, # 31: 'wedge12',
-    18, # 32: 'wedge18',
-    24, # 33: 'hexahedron24',
-    7, # 34: 'triangle7',
-    4, # 35: 'line4',
-    ], dtype=int)
+vtk_type_to_numnodes = {
+        0: 0,  # empty
+        1: 1,  # vertex
+        3: 2,  # line
+        5: 3,  # triangle
+        9: 4,  # quad
+        10: 4,  # tetra
+        12: 8,  # hexahedron
+        13: 6,  # wedge
+        14: 5,  # pyramid
+        15: 10,  # penta_prism
+        16: 12,  # hexa_prism
+        21: 3,  # line3
+        22: 6,  # triangle6
+        23: 8,  # quad8
+        24: 10,  # tetra10
+        25: 20,  # hexahedron20
+        26: 15,  # wedge15
+        27: 13,  # pyramid13
+        28: 9,  # quad9
+        29: 27,  # hexahedron27
+        30: 6,  # quad6
+        31: 12,  # wedge12
+        32: 18,  # wedge18
+        33: 24,  # hexahedron24
+        34: 7,  # triangle7
+        35: 4,  # line4
+    }
 
 
 # These are all VTK data types. One sometimes finds 'vtktypeint64', but
@@ -378,19 +372,19 @@ def translate_cells(data, types, cell_data_raw):
     # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
 
-    # Deduct offsets from the cell types. This is much faster than manually
-    # going through the data array. Slight disadvantage: This doesn't work for
-    # cells with a custom number of points.
-    numnodes = vtk_type_to_numnodes[types]
-    assert numpy.all(numnodes >= 0)
-    offsets = numpy.cumsum(numnodes+ 1) - (numnodes+1)
-    assert numpy.all(numnodes == data[offsets])
-
     # Collect types into bins.
     # See <https://stackoverflow.com/q/47310359/353337> for better
     # alternatives.
-    uniques = numpy.unique(types)
-    bins = {u: numpy.where(types == u)[0] for u in uniques}
+    bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
+
+    # Deduct offsets from the cell types. This is much faster than manually
+    # going through the data array. Slight disadvantage: This doesn't work for
+    # cells with a custom number of points.
+    numnodes = numpy.empty(len(types), dtype=int)
+    for tpe, idx in bins.items():
+        numnodes[idx] = vtk_type_to_numnodes[tpe]
+    offsets = numpy.cumsum(numnodes+ 1) - (numnodes+1)
+    assert numpy.all(numnodes == data[offsets])
 
     cells = {}
     cell_data = {}
