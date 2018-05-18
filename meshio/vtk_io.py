@@ -362,8 +362,8 @@ def translate_cells(data, offsets, types, cell_data_raw):
         meshio_type = vtk_to_meshio_type[tpe]
         n = data[offsets[b[0]]]
         assert (data[offsets[b]] == n).all()
-        indices = numpy.array([
-            numpy.arange(1, n+1) + o for o in offsets[b]
+        indices = numpy.column_stack([
+            offsets[b] + (i+1) for i in range(n)
             ])
         cells[meshio_type] = data[indices]
         cell_data[meshio_type] = \
