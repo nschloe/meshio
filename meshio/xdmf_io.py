@@ -25,23 +25,23 @@ def read(filename):
 
 
 numpy_to_xdmf_dtype = {
-    numpy.dtype(numpy.int32): ('Int', '4'),
-    numpy.dtype(numpy.int64): ('Int', '8'),
-    numpy.dtype(numpy.uint32): ('UInt', '4'),
-    numpy.dtype(numpy.uint64): ('UInt', '8'),
-    numpy.dtype(numpy.float32): ('Float', '4'),
-    numpy.dtype(numpy.float64): ('Float', '8'),
+    'int32': ('Int', '4'),
+    'int64': ('Int', '8'),
+    'uint32': ('UInt', '4'),
+    'uint64': ('UInt', '8'),
+    'float32': ('Float', '4'),
+    'float64': ('Float', '8'),
     }
 xdmf_to_numpy_type = {v: k for k, v in numpy_to_xdmf_dtype.items()}
 
 
 dtype_to_format_string = {
-    numpy.dtype(numpy.int32): '%d',
-    numpy.dtype(numpy.int64): '%d',
-    numpy.dtype(numpy.uint32): '%d',
-    numpy.dtype(numpy.uint64): '%d',
-    numpy.dtype(numpy.float32): '%.7e',
-    numpy.dtype(numpy.float64): '%.15e',
+    'int32': '%d',
+    'int64': '%d',
+    'unit32': '%d',
+    'uint64': '%d',
+    'float32': '%.7e',
+    'float64': '%.15e',
     }
 
 
@@ -432,7 +432,7 @@ class XdmfWriter(object):
     def numpy_to_xml_string(self, data):
         if self.data_format == 'XML':
             s = BytesIO()
-            fmt = dtype_to_format_string[data.dtype]
+            fmt = dtype_to_format_string[data.dtype.name]
             numpy.savetxt(s, data.flatten(), fmt)
             return s.getvalue().decode()
         elif self.data_format == 'Binary':
@@ -455,7 +455,7 @@ class XdmfWriter(object):
     def points(self, grid, points):
         geo = ET.SubElement(grid, 'Geometry',
                             GeometryType='XYZ')
-        dt, prec = numpy_to_xdmf_dtype[points.dtype]
+        dt, prec = numpy_to_xdmf_dtype[points.dtype.name]
         dim = '{} {}'.format(*points.shape)
         data_item = ET.SubElement(
             geo, 'DataItem',
@@ -475,7 +475,7 @@ class XdmfWriter(object):
                 TopologyType=xdmf_type,
                 NumberOfElements=str(num_cells)
                 )
-            dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
+            dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype.name]
             dim = '{} {}'.format(*cells[meshio_type].shape)
             data_item = ET.SubElement(
                 topo, 'DataItem',
@@ -507,7 +507,7 @@ class XdmfWriter(object):
                     ).flatten()
                 for key, value in cells.items()
                 ])
-            dt, prec = numpy_to_xdmf_dtype[cd.dtype]
+            dt, prec = numpy_to_xdmf_dtype[cd.dtype.name]
             data_item = ET.SubElement(
                 topo, 'DataItem',
                 DataType=dt, Dimensions=dim,
@@ -522,7 +522,7 @@ class XdmfWriter(object):
                 grid, 'Attribute',
                 Name=name, Type='None', Center='Node'
                 )
-            dt, prec = numpy_to_xdmf_dtype[data.dtype]
+            dt, prec = numpy_to_xdmf_dtype[data.dtype.name]
             dim = ' '.join([str(s) for s in data.shape])
             data_item = ET.SubElement(
                 att, 'DataItem',
@@ -539,7 +539,7 @@ class XdmfWriter(object):
                 grid, 'Attribute',
                 Name=name, Type='None', Center='Cell'
                 )
-            dt, prec = numpy_to_xdmf_dtype[data.dtype]
+            dt, prec = numpy_to_xdmf_dtype[data.dtype.name]
             dim = ' '.join([str(s) for s in data.shape])
             data_item = ET.SubElement(
                 att, 'DataItem',
