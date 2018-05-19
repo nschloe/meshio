@@ -30,42 +30,42 @@ def read_buffer(f):
 
 
 def _read_ascii(f):
-    facets = []
-    while True:
-        line = f.readline().decode('utf-8')
+    # The file has the form
+    # ```
+    # solid foo
+    #   facet normal 0.455194 -0.187301 -0.870469
+    #    outer loop
+    #     vertex 266.36 234.594 14.6145
+    #     vertex 268.582 234.968 15.6956
+    #     vertex 267.689 232.646 15.7283
+    #    endloop
+    #   endfacet
+    #   # [...] more facets [...]
+    # endsolid
+    # ```
+    # In the interest of speed, don't verify the format and instead just skip
+    # the text.
+    data = numpy.loadtxt(
+        f,
+        comments=[
+            'solid',
+            'facet',
+            'outer loop',
+            'endloop',
+            'endfacet',
+            'endsolid'
+            ],
+        usecols=(1, 2, 3)
+        )
+    assert data.shape[0] % 3 == 0
 
-        if line[:8] == 'endsolid':
-            break
-
-        line = line.strip()
-        assert line[:5] == 'facet'
-        facets.append(_read_facet(f))
-        line = f.readline().decode('utf-8')
-        assert line.strip() == 'endfacet'
+    facets = numpy.split(data, data.shape[0] // 3)
 
     # Now, all facets contain the point coordinate. Try to identify individual
     # points and build the data arrays.
     points, cells = data_from_facets(facets)
 
     return points, cells, {}, {}, {}
-
-
-def _read_facet(f):
-    line = f.readline().decode('utf-8')
-    assert line.strip() == 'outer loop'
-
-    facet = numpy.empty((3, 3))
-
-    flt = numpy.vectorize(float)
-    for k in range(3):
-        parts = f.readline().decode('utf-8').split()
-        assert len(parts) == 4
-        assert parts[0] == 'vertex'
-        facet[k] = flt(parts[1:])
-
-    line = f.readline().decode('utf-8')
-    assert line.strip() == 'endloop'
-    return facet
 
 
 def data_from_facets(facets):
