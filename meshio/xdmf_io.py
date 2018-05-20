@@ -171,7 +171,8 @@ class XdmfReader(object):
     def read(self):
         from lxml import etree as ET
 
-        tree = ET.parse(self.filename)
+        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        tree = ET.parse(self.filename, parser)
         root = tree.getroot()
 
         assert root.tag == 'Xdmf'
