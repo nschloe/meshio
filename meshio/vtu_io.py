@@ -12,12 +12,7 @@ try:
 except ImportError:
     from io import BytesIO
 import sys
-# lxml cannot parse large files and instead throws the exception
-#
-# lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
-#
-# Use Python's native xml parser to avoid this error.
-import xml.etree.cElementTree as ET
+from lxml import etree as ET
 import zlib
 
 import numpy
@@ -88,7 +83,19 @@ class VtuReader(object):
         cells = {}
         field_data = {}
 
-        tree = ET.parse(filename)
+        # libxml2 and with it lxml have a safety net for memory overflows; see,
+        # e.g., <https://stackoverflow.com/q/33828728/353337>.
+        # This causes the error
+        # ```
+        # cannot parse large files and instead throws the exception
+        #
+        # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
+        # ```
+        # Setting huge_tree=True removes the limit. Another alternative would
+        # be to use Python's native xml parser to avoid this error,
+        # import xml.etree.cElementTree as ET
+        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        tree = ET.parse(filename, parser)
         root = tree.getroot()
 
         assert root.tag == 'VTKFile'
@@ -421,7 +428,9 @@ def write_xml(filename, root, pretty_print=False, indent=4):
         # https://stackoverflow.com/a/17402424/353337
         def prettify(elem):
             import xml.dom.minidom
-            rough_string = ET.tostring(elem, 'utf-8')
+            # TODO undo
+            # rough_string = ET.tostring(elem, 'utf-8')
+            rough_string = ET.tostring(elem)
             reparsed = xml.dom.minidom.parseString(rough_string)
             return reparsed.toprettyxml(indent=indent*' ')
 
