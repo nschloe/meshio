@@ -31,7 +31,7 @@ class _ItemReader:
         self._line_ptr = 0
 
     def next_items(self, n):
-        '''Returns the n next items.
+        '''Returns the next n items.
 
         Throws StopIteration when there is not enough data to return n items.
         '''

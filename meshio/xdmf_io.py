@@ -11,7 +11,6 @@ try:
     from StringIO import cStringIO as BytesIO
 except ImportError:
     from io import BytesIO
-import xml.etree.cElementTree as ET
 
 import numpy
 
@@ -25,23 +24,23 @@ def read(filename):
 
 
 numpy_to_xdmf_dtype = {
-    numpy.dtype(numpy.int32): ('Int', '4'),
-    numpy.dtype(numpy.int64): ('Int', '8'),
-    numpy.dtype(numpy.uint32): ('UInt', '4'),
-    numpy.dtype(numpy.uint64): ('UInt', '8'),
-    numpy.dtype(numpy.float32): ('Float', '4'),
-    numpy.dtype(numpy.float64): ('Float', '8'),
+    'int32': ('Int', '4'),
+    'int64': ('Int', '8'),
+    'uint32': ('UInt', '4'),
+    'uint64': ('UInt', '8'),
+    'float32': ('Float', '4'),
+    'float64': ('Float', '8'),
     }
 xdmf_to_numpy_type = {v: k for k, v in numpy_to_xdmf_dtype.items()}
 
 
 dtype_to_format_string = {
-    numpy.dtype(numpy.int32): '%d',
-    numpy.dtype(numpy.int64): '%d',
-    numpy.dtype(numpy.uint32): '%d',
-    numpy.dtype(numpy.uint64): '%d',
-    numpy.dtype(numpy.float32): '%.7e',
-    numpy.dtype(numpy.float64): '%.15e',
+    'int32': '%d',
+    'int64': '%d',
+    'unit32': '%d',
+    'uint64': '%d',
+    'float32': '%.7e',
+    'float64': '%.15e',
     }
 
 
@@ -170,7 +169,10 @@ class XdmfReader(object):
         return
 
     def read(self):
-        tree = ET.parse(self.filename)
+        from lxml import etree as ET
+
+        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        tree = ET.parse(self.filename, parser)
         root = tree.getroot()
 
         assert root.tag == 'Xdmf'
@@ -396,6 +398,7 @@ class XdmfWriter(object):
                  field_data=None,
                  pretty_xml=True,
                  data_format='HDF'):
+        from lxml import etree as ET
         assert data_format in ['XML', 'Binary', 'HDF'], (
             'Unknown XDMF data format '
             '\'{}\' (use \'XML\', \'Binary\', or \'HDF\'.)'.format(data_format)
@@ -426,13 +429,13 @@ class XdmfWriter(object):
 
         ET.register_namespace('xi', 'https://www.w3.org/2001/XInclude/')
 
-        write_xml(filename, xdmf_file, pretty_xml, indent=2)
+        write_xml(filename, xdmf_file, pretty_xml)
         return
 
     def numpy_to_xml_string(self, data):
         if self.data_format == 'XML':
             s = BytesIO()
-            fmt = dtype_to_format_string[data.dtype]
+            fmt = dtype_to_format_string[data.dtype.name]
             numpy.savetxt(s, data.flatten(), fmt)
             return s.getvalue().decode()
         elif self.data_format == 'Binary':
@@ -453,9 +456,10 @@ class XdmfWriter(object):
         return self.h5_filename + ':/' + name
 
     def points(self, grid, points):
+        from lxml import etree as ET
         geo = ET.SubElement(grid, 'Geometry',
                             GeometryType='XYZ')
-        dt, prec = numpy_to_xdmf_dtype[points.dtype]
+        dt, prec = numpy_to_xdmf_dtype[points.dtype.name]
         dim = '{} {}'.format(*points.shape)
         data_item = ET.SubElement(
             geo, 'DataItem',
@@ -466,6 +470,7 @@ class XdmfWriter(object):
         return
 
     def cells(self, cells, grid):
+        from lxml import etree as ET
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
             num_cells = len(cells[meshio_type])
@@ -475,7 +480,7 @@ class XdmfWriter(object):
                 TopologyType=xdmf_type,
                 NumberOfElements=str(num_cells)
                 )
-            dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype]
+            dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype.name]
             dim = '{} {}'.format(*cells[meshio_type].shape)
             data_item = ET.SubElement(
                 topo, 'DataItem',
@@ -507,7 +512,7 @@ class XdmfWriter(object):
                     ).flatten()
                 for key, value in cells.items()
                 ])
-            dt, prec = numpy_to_xdmf_dtype[cd.dtype]
+            dt, prec = numpy_to_xdmf_dtype[cd.dtype.name]
             data_item = ET.SubElement(
                 topo, 'DataItem',
                 DataType=dt, Dimensions=dim,
@@ -517,12 +522,13 @@ class XdmfWriter(object):
         return
 
     def point_data(self, point_data, grid):
+        from lxml import etree as ET
         for name, data in point_data.items():
             att = ET.SubElement(
                 grid, 'Attribute',
                 Name=name, Type='None', Center='Node'
                 )
-            dt, prec = numpy_to_xdmf_dtype[data.dtype]
+            dt, prec = numpy_to_xdmf_dtype[data.dtype.name]
             dim = ' '.join([str(s) for s in data.shape])
             data_item = ET.SubElement(
                 att, 'DataItem',
@@ -533,13 +539,14 @@ class XdmfWriter(object):
         return
 
     def cell_data(self, cell_data, grid):
+        from lxml import etree as ET
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(
                 grid, 'Attribute',
                 Name=name, Type='None', Center='Cell'
                 )
-            dt, prec = numpy_to_xdmf_dtype[data.dtype]
+            dt, prec = numpy_to_xdmf_dtype[data.dtype.name]
             dim = ' '.join([str(s) for s in data.shape])
             data_item = ET.SubElement(
                 att, 'DataItem',

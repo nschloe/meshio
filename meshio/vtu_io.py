@@ -12,12 +12,6 @@ try:
 except ImportError:
     from io import BytesIO
 import sys
-# lxml cannot parse large files and instead throws the exception
-#
-# lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
-#
-# Use Python's native xml parser to avoid this error.
-import xml.etree.cElementTree as ET
 import zlib
 
 import numpy
@@ -51,10 +45,8 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     for tpe, b in bins.items():
         meshio_type = vtk_to_meshio_type[tpe]
         n = num_nodes_per_cell[meshio_type]
-        indices = numpy.array([
-            # The offsets point to the _end_ of the indices
-            numpy.arange(n) + o - n for o in offsets[b]
-            ])
+        # The offsets point to the _end_ of the indices
+        indices = numpy.add.outer(offsets[b], numpy.arange(-n, 0))
         cells[meshio_type] = connectivity[indices]
         cell_data[meshio_type] = \
             {key: value[b] for key, value in cell_data_raw.items()}
@@ -84,13 +76,27 @@ class VtuReader(object):
     make them properties of this class.
     '''
     def __init__(self, filename):
+        from lxml import etree as ET
+
         points = None
         point_data = {}
         cell_data_raw = {}
         cells = {}
         field_data = {}
 
-        tree = ET.parse(filename)
+        # libxml2 and with it lxml have a safety net for memory overflows; see,
+        # e.g., <https://stackoverflow.com/q/33828728/353337>.
+        # This causes the error
+        # ```
+        # cannot parse large files and instead throws the exception
+        #
+        # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
+        # ```
+        # Setting huge_tree=True removes the limit. Another alternative would
+        # be to use Python's native xml parser to avoid this error,
+        # import xml.etree.cElementTree as ET
+        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        tree = ET.parse(filename, parser)
         root = tree.getroot()
 
         assert root.tag == 'VTKFile'
@@ -230,11 +236,10 @@ class VtuReader(object):
         dtype = vtu_to_numpy_type[data_type]
         num_bytes_per_item = numpy.dtype(dtype).itemsize
 
-        byte_offsets = numpy.concatenate(
-            [[0], numpy.cumsum(block_sizes, dtype=block_sizes.dtype)]
-            )
-        # https://github.com/numpy/numpy/issues/10135
-        byte_offsets = byte_offsets.astype(numpy.int64)
+        byte_offsets = \
+            numpy.empty(block_sizes.shape[0]+1, dtype=block_sizes.dtype)
+        byte_offsets[0] = 0
+        numpy.cumsum(block_sizes, out=byte_offsets[1:])
 
         # process the compressed data
         block_data = numpy.concatenate([
@@ -286,6 +291,8 @@ def write(filename,
           field_data=None,
           write_binary=True,
           pretty_xml=True):
+    from lxml import etree as ET
+
     if not write_binary:
         logging.warning('VTU ASCII files are only meant for debugging.')
 
@@ -419,19 +426,8 @@ def write(filename,
     return
 
 
-def write_xml(filename, root, pretty_print=False, indent=4):
-    if pretty_print:
-        # https://stackoverflow.com/a/17402424/353337
-        def prettify(elem):
-            import xml.dom.minidom
-            rough_string = ET.tostring(elem, 'utf-8')
-            reparsed = xml.dom.minidom.parseString(rough_string)
-            return reparsed.toprettyxml(indent=indent*' ')
-
-        with open(filename, 'w') as f:
-            f.write(prettify(root))
-    else:
-        tree = ET.ElementTree(root)
-        tree.write(filename)
-
+def write_xml(filename, root, pretty_print=False):
+    from lxml import etree as ET
+    tree = ET.ElementTree(root)
+    tree.write(filename, pretty_print=pretty_print)
     return

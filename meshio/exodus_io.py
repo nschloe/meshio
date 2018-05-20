@@ -108,16 +108,16 @@ def read(filename):
 
 
 numpy_to_exodus_dtype = {
-    numpy.dtype(numpy.float32): 'f4',
-    numpy.dtype(numpy.float64): 'f8',
-    numpy.dtype(numpy.int8): 'i1',
-    numpy.dtype(numpy.int16): 'i2',
-    numpy.dtype(numpy.int32): 'i4',
-    numpy.dtype(numpy.int64): 'i8',
-    numpy.dtype(numpy.uint8): 'u1',
-    numpy.dtype(numpy.uint16): 'u2',
-    numpy.dtype(numpy.uint32): 'u4',
-    numpy.dtype(numpy.uint64): 'u8',
+    'float32': 'f4',
+    'float64': 'f8',
+    'int8': 'i1',
+    'int16': 'i2',
+    'int32': 'i4',
+    'int64': 'i8',
+    'uint8': 'u1',
+    'uint16': 'u2',
+    'uint32': 'u4',
+    'uint64': 'u8',
     }
 
 
@@ -170,7 +170,7 @@ def write(filename,
     coor_names[2, 0] = 'Z'
     data = rootgrp.createVariable(
         'coord',
-        numpy_to_exodus_dtype[points.dtype],
+        numpy_to_exodus_dtype[points.dtype.name],
         ('num_dim', 'num_nodes')
         )
     data[:] = points.T
@@ -186,7 +186,7 @@ def write(filename,
         dim2 = 'num_nod_per_el{}'.format(k+1)
         rootgrp.createDimension(dim1, values.shape[0])
         rootgrp.createDimension(dim2, values.shape[1])
-        dtype = numpy_to_exodus_dtype[values.dtype]
+        dtype = numpy_to_exodus_dtype[values.dtype.name]
         data = rootgrp.createVariable(
             'connect{}'.format(k+1), dtype, (dim1, dim2)
             )
@@ -212,7 +212,7 @@ def write(filename,
         # Set data.
         # Deliberately take the dtype from the first data block.
         first_key = list(point_data.keys())[0]
-        dtype = numpy_to_exodus_dtype[point_data[first_key].dtype]
+        dtype = numpy_to_exodus_dtype[point_data[first_key].dtype.name]
         node_data = rootgrp.createVariable(
             'vals_nod_var', dtype,
             ('time_step', 'num_nod_var', 'num_nodes')
