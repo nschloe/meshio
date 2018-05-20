@@ -88,7 +88,9 @@ def _read_cell_data(filename, cell_type):
         if not out:
             continue
         name = out.group(1)
-        tree = ET.parse(os.path.join(dir_name, f), huge_tree=True)
+
+        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        tree = ET.parse(os.path.join(dir_name, f), parser)
         root = tree.getroot()
 
         mesh_functions = list(root)

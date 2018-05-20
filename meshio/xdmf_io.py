@@ -11,7 +11,6 @@ try:
     from StringIO import cStringIO as BytesIO
 except ImportError:
     from io import BytesIO
-import xml.etree.cElementTree as ET
 
 import numpy
 
@@ -170,6 +169,8 @@ class XdmfReader(object):
         return
 
     def read(self):
+        from lxml import etree as ET
+
         tree = ET.parse(self.filename)
         root = tree.getroot()
 
@@ -396,6 +397,7 @@ class XdmfWriter(object):
                  field_data=None,
                  pretty_xml=True,
                  data_format='HDF'):
+        from lxml import etree as ET
         assert data_format in ['XML', 'Binary', 'HDF'], (
             'Unknown XDMF data format '
             '\'{}\' (use \'XML\', \'Binary\', or \'HDF\'.)'.format(data_format)
@@ -453,6 +455,7 @@ class XdmfWriter(object):
         return self.h5_filename + ':/' + name
 
     def points(self, grid, points):
+        from lxml import etree as ET
         geo = ET.SubElement(grid, 'Geometry',
                             GeometryType='XYZ')
         dt, prec = numpy_to_xdmf_dtype[points.dtype.name]
@@ -466,6 +469,7 @@ class XdmfWriter(object):
         return
 
     def cells(self, cells, grid):
+        from lxml import etree as ET
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
             num_cells = len(cells[meshio_type])
@@ -517,6 +521,7 @@ class XdmfWriter(object):
         return
 
     def point_data(self, point_data, grid):
+        from lxml import etree as ET
         for name, data in point_data.items():
             att = ET.SubElement(
                 grid, 'Attribute',
@@ -533,6 +538,7 @@ class XdmfWriter(object):
         return
 
     def cell_data(self, cell_data, grid):
+        from lxml import etree as ET
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(
