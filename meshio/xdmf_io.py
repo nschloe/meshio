@@ -429,7 +429,7 @@ class XdmfWriter(object):
 
         ET.register_namespace('xi', 'https://www.w3.org/2001/XInclude/')
 
-        write_xml(filename, xdmf_file, pretty_xml, indent=2)
+        write_xml(filename, xdmf_file, pretty_xml)
         return
 
     def numpy_to_xml_string(self, data):

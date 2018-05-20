@@ -426,23 +426,8 @@ def write(filename,
     return
 
 
-def write_xml(filename, root, pretty_print=False, indent=4):
+def write_xml(filename, root, pretty_print=False):
     from lxml import etree as ET
-
-    if pretty_print:
-        # https://stackoverflow.com/a/17402424/353337
-        def prettify(elem):
-            import xml.dom.minidom
-            # TODO undo
-            # rough_string = ET.tostring(elem, 'utf-8')
-            rough_string = ET.tostring(elem)
-            reparsed = xml.dom.minidom.parseString(rough_string)
-            return reparsed.toprettyxml(indent=indent*' ')
-
-        with open(filename, 'w') as f:
-            f.write(prettify(root))
-    else:
-        tree = ET.ElementTree(root)
-        tree.write(filename)
-
+    tree = ET.ElementTree(root)
+    tree.write(filename, pretty_print=pretty_print)
     return
