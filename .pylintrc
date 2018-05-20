@@ -1,6 +1,7 @@
 [MESSAGES CONTROL]
 
 disable=
+    c-extension-no-member,
     duplicate-code,
     fixme,
     invalid-name,

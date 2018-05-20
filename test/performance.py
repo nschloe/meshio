@@ -2,9 +2,6 @@
 #
 import time
 
-import numpy
-import pytest
-
 import meshio
 
 
