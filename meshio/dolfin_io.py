@@ -9,12 +9,13 @@ I/O for DOLFIN's XML format, cf.
 import logging
 import os
 import re
-import xml.etree.cElementTree as ET
 
 import numpy
 
 
 def _read_mesh(filename):
+    from lxml import etree as ET
+
     dolfin_to_meshio_type = {
         'triangle': ('triangle', 3),
         'tetrahedron': ('tetra', 4),
@@ -36,6 +37,7 @@ def _read_mesh(filename):
         elif elem.tag == 'mesh':
             dim = int(elem.attrib['dim'])
             cell_type, npc = dolfin_to_meshio_type[elem.attrib['celltype']]
+            cell_tags = ['v{}'.format(i) for i in range(npc)]
         elif elem.tag == 'vertices':
             points = numpy.empty((int(elem.attrib['size']), 3))
             keys = ['x', 'y']
@@ -46,7 +48,7 @@ def _read_mesh(filename):
                 keys += ['z']
         elif elem.tag == 'vertex':
             k = int(elem.attrib['index'])
-            points[k][:dim] = [float(elem.attrib[key]) for key in keys]
+            points[k][:dim] = [elem.attrib[key] for key in keys]
         elif elem.tag == 'cells':
             cells = {
                 cell_type:
@@ -54,9 +56,7 @@ def _read_mesh(filename):
                 }
         elif elem.tag in ['triangle', 'tetrahedron']:
             k = int(elem.attrib['index'])
-            cells[cell_type][k] = [
-                int(elem.attrib['v{}'.format(i)]) for i in range(npc)
-                ]
+            cells[cell_type][k] = [elem.attrib[t] for t in cell_tags]
         else:
             logging.warning('Unknown entry %s. Ignoring.', elem.tag)
 
@@ -66,6 +66,8 @@ def _read_mesh(filename):
 
 
 def _read_cell_data(filename, cell_type):
+    from lxml import etree as ET
+
     dolfin_type_to_numpy_type = {
         'int': numpy.dtype('int'),
         'float': numpy.dtype('float'),
@@ -86,7 +88,7 @@ def _read_cell_data(filename, cell_type):
         if not out:
             continue
         name = out.group(1)
-        tree = ET.parse(os.path.join(dir_name, f))
+        tree = ET.parse(os.path.join(dir_name, f), huge_tree=True)
         root = tree.getroot()
 
         mesh_functions = list(root)
@@ -115,6 +117,8 @@ def read(filename):
 
 
 def _write_mesh(filename, points, cell_type, cells):
+    from lxml import etree as ET
+
     stripped_cells = {cell_type: cells[cell_type]}
 
     dolfin = ET.Element(
@@ -174,7 +178,7 @@ def _write_mesh(filename, points, cell_type, cells):
             idx += 1
 
     tree = ET.ElementTree(dolfin)
-    tree.write(filename)
+    tree.write(filename, pretty_print=True)
     return
 
 
@@ -195,6 +199,8 @@ def _numpy_type_to_dolfin_type(dtype):
 
 
 def _write_cell_data(filename, dim, cell_data):
+    from lxml import etree as ET
+
     dolfin = ET.Element(
         'dolfin',
         nsmap={'dolfin': 'https://fenicsproject.org/'}

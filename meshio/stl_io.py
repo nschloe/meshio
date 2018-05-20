@@ -29,7 +29,7 @@ def read_buffer(f):
     return _read_binary(f)
 
 
-def _read_ascii(f):
+def _read_ascii(f, use_pandas=True):
     # The file has the form
     # ```
     # solid foo
@@ -45,18 +45,33 @@ def _read_ascii(f):
     # ```
     # In the interest of speed, don't verify the format and instead just skip
     # the text.
-    data = numpy.loadtxt(
-        f,
-        comments=[
-            'solid',
-            'facet',
-            'outer loop',
-            'endloop',
-            'endfacet',
-            'endsolid'
-            ],
-        usecols=(1, 2, 3)
-        )
+    use_pandas = False
+    if use_pandas:
+        # Pandas is MUCH faster than numpy for i/o, see
+        # <https://stackoverflow.com/a/18260092/353337>.
+        import pandas
+        data = pandas.read_csv(
+                f,
+                skiprows=lambda row: row == 0 or (row-1)%7 in [0, 1, 5, 6],
+                skipfooter=1,
+                usecols=(1, 2, 3),
+                )
+        print(data)
+        exit(1)
+    else:
+        data = numpy.loadtxt(
+            f,
+            comments=[
+                'solid',
+                'facet',
+                'outer loop',
+                'endloop',
+                'endfacet',
+                'endsolid'
+                ],
+            usecols=(1, 2, 3)
+            )
+
     assert data.shape[0] % 3 == 0
 
     facets = numpy.split(data, data.shape[0] // 3)

@@ -12,7 +12,6 @@ try:
 except ImportError:
     from io import BytesIO
 import sys
-from lxml import etree as ET
 import zlib
 
 import numpy
@@ -77,6 +76,8 @@ class VtuReader(object):
     make them properties of this class.
     '''
     def __init__(self, filename):
+        from lxml import etree as ET
+
         points = None
         point_data = {}
         cell_data_raw = {}
@@ -290,6 +291,8 @@ def write(filename,
           field_data=None,
           write_binary=True,
           pretty_xml=True):
+    from lxml import etree as ET
+
     if not write_binary:
         logging.warning('VTU ASCII files are only meant for debugging.')
 
@@ -424,6 +427,8 @@ def write(filename,
 
 
 def write_xml(filename, root, pretty_print=False, indent=4):
+    from lxml import etree as ET
+
     if pretty_print:
         # https://stackoverflow.com/a/17402424/353337
         def prettify(elem):

@@ -34,9 +34,10 @@ setup(
         'pipdate >=0.2.0, <0.3.0',
         ],
     extras_require={
-        'all': ['netCDF4', 'h5py'],
+        'all': ['netCDF4', 'h5py', 'lxml'],
         'exodus': ['netCDF4'],
         'hdf5': ['h5py'],  # MED, MOAB, XDMF formats
+        'xml': ['lxml'],  # Dolfin, VTU, XDMF
         },
     scripts=[
         'tools/meshio-convert',
