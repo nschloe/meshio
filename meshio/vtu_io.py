@@ -51,10 +51,8 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     for tpe, b in bins.items():
         meshio_type = vtk_to_meshio_type[tpe]
         n = num_nodes_per_cell[meshio_type]
-        indices = numpy.array([
-            # The offsets point to the _end_ of the indices
-            numpy.arange(n) + o - n for o in offsets[b]
-            ])
+        # The offsets point to the _end_ of the indices
+        indices = numpy.add.outer(offsets[b], numpy.arange(-n, 0))
         cells[meshio_type] = connectivity[indices]
         cell_data[meshio_type] = \
             {key: value[b] for key, value in cell_data_raw.items()}
@@ -230,11 +228,10 @@ class VtuReader(object):
         dtype = vtu_to_numpy_type[data_type]
         num_bytes_per_item = numpy.dtype(dtype).itemsize
 
-        byte_offsets = numpy.concatenate(
-            [[0], numpy.cumsum(block_sizes, dtype=block_sizes.dtype)]
-            )
-        # https://github.com/numpy/numpy/issues/10135
-        byte_offsets = byte_offsets.astype(numpy.int64)
+        byte_offsets = \
+            numpy.empty(block_sizes.shape[0]+1, dtype=block_sizes.dtype)
+        byte_offsets[0] = 0
+        numpy.cumsum(block_sizes, out=byte_offsets[1:])
 
         # process the compressed data
         block_data = numpy.concatenate([
