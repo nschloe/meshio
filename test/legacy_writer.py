@@ -5,38 +5,38 @@ import numpy
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {
-    0: 'empty',
-    1: 'vertex',
+    0: "empty",
+    1: "vertex",
     # 2: 'poly_vertex',
-    3: 'line',
+    3: "line",
     # 4: 'poly_line',
-    5: 'triangle',
+    5: "triangle",
     # 6: 'triangle_strip',
     # 7: 'polygon',
     # 8: 'pixel',
-    9: 'quad',
-    10: 'tetra',
+    9: "quad",
+    10: "tetra",
     # 11: 'voxel',
-    12: 'hexahedron',
-    13: 'wedge',
-    14: 'pyramid',
-    15: 'penta_prism',
-    16: 'hexa_prism',
-    21: 'line3',
-    22: 'triangle6',
-    23: 'quad8',
-    24: 'tetra10',
-    25: 'hexahedron20',
-    26: 'wedge15',
-    27: 'pyramid13',
-    28: 'quad9',
-    29: 'hexahedron27',
-    30: 'quad6',
-    31: 'wedge12',
-    32: 'wedge18',
-    33: 'hexahedron24',
-    34: 'triangle7',
-    35: 'line4',
+    12: "hexahedron",
+    13: "wedge",
+    14: "pyramid",
+    15: "penta_prism",
+    16: "hexa_prism",
+    21: "line3",
+    22: "triangle6",
+    23: "quad8",
+    24: "tetra10",
+    25: "hexahedron20",
+    26: "wedge15",
+    27: "pyramid13",
+    28: "quad9",
+    29: "hexahedron27",
+    30: "quad6",
+    31: "wedge12",
+    32: "wedge18",
+    33: "hexahedron24",
+    34: "triangle7",
+    35: "line4",
     #
     # 60: VTK_HIGHER_ORDER_EDGE,
     # 61: VTK_HIGHER_ORDER_TRIANGLE,
@@ -46,16 +46,12 @@ vtk_to_meshio_type = {
     # 65: VTK_HIGHER_ORDER_WEDGE,
     # 66: VTK_HIGHER_ORDER_PYRAMID,
     # 67: VTK_HIGHER_ORDER_HEXAHEDRON,
-    }
+}
 
 
-def write(filetype,
-          filename,
-          points,
-          cells,
-          point_data=None,
-          cell_data=None,
-          field_data=None):
+def write(
+    filetype, filename, points, cells, point_data=None, cell_data=None, field_data=None
+):
     # pylint: disable=import-error
     import vtk
 
@@ -70,14 +66,12 @@ def write(filetype,
 
     # assert data integrity
     for key in point_data:
-        assert len(point_data[key]) == len(points), \
-                'Point data mismatch.'
+        assert len(point_data[key]) == len(points), "Point data mismatch."
 
     for key in cell_data:
-        assert key in cells, 'Cell data without cell'
+        assert key in cells, "Cell data without cell"
         for key2 in cell_data[key]:
-            assert len(cell_data[key][key2]) == len(cells[key]), \
-                    'Cell data mismatch.'
+            assert len(cell_data[key][key2]) == len(cells[key]), "Cell data mismatch."
 
     vtk_mesh = _generate_vtk_mesh(points, cells)
 
@@ -116,12 +110,9 @@ def write(filetype,
         for cell_type in cell_data:
             assert key in cell_data[cell_type]
     unified_cell_data = {
-        key: numpy.concatenate([
-            cell_data[cell_type][key]
-            for cell_type in cell_data
-            ])
+        key: numpy.concatenate([cell_data[cell_type][key] for cell_type in cell_data])
         for key in all_keys
-        }
+    }
     # add the array data to the mesh
     cd = vtk_mesh.GetCellData()
     for name, array in unified_cell_data.items():
@@ -132,27 +123,26 @@ def write(filetype,
     for key, value in field_data.items():
         fd.AddArray(_create_vtkarray(value, key))
 
-    if filetype in 'vtk-ascii':
-        logging.warning('VTK ASCII files are only meant for debugging.')
+    if filetype in "vtk-ascii":
+        logging.warning("VTK ASCII files are only meant for debugging.")
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToASCII()
-    elif filetype == 'vtk-binary':
+    elif filetype == "vtk-binary":
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileTypeToBinary()
-    elif filetype == 'vtu-ascii':
-        logging.warning('VTU ASCII files are only meant for debugging.')
+    elif filetype == "vtu-ascii":
+        logging.warning("VTU ASCII files are only meant for debugging.")
         writer = vtk.vtkXMLUnstructuredGridWriter()
         writer.SetDataModeToAscii()
-    elif filetype == 'vtu-binary':
+    elif filetype == "vtu-binary":
         writer = vtk.vtkXMLUnstructuredGridWriter()
         writer.SetDataModeToBinary()
-    elif filetype == 'xdmf2':
+    elif filetype == "xdmf2":
         writer = vtk.vtkXdmfWriter()
-    elif filetype == 'xdmf3':
+    elif filetype == "xdmf3":
         writer = vtk.vtkXdmf3Writer()
     else:
-        assert filetype == 'exodus', \
-            'Unknown file type \'{}\'.'.format(filename)
+        assert filetype == "exodus", "Unknown file type '{}'.".format(filename)
         writer = vtk.vtkExodusIIWriter()
         # if the mesh contains vtkmodeldata information, make use of it
         # and write out all time steps.
@@ -198,18 +188,19 @@ def _generate_vtk_mesh(points, cells):
         cell_types.append(numpy.empty(numcells, dtype=numpy.ubyte))
         cell_types[-1].fill(vtk_type)
         # add cell offsets
-        cell_offsets.append(numpy.arange(
-            len_array,
-            len_array + numcells * (num_local_nodes + 1),
-            num_local_nodes + 1,
-            dtype=numpy.int64
-            ))
+        cell_offsets.append(
+            numpy.arange(
+                len_array,
+                len_array + numcells * (num_local_nodes + 1),
+                num_local_nodes + 1,
+                dtype=numpy.int64,
+            )
+        )
         cell_connectivity.append(
             numpy.c_[
-                num_local_nodes * numpy.ones(numcells, dtype=data.dtype),
-                data
+                num_local_nodes * numpy.ones(numcells, dtype=data.dtype), data
             ].flatten()
-            )
+        )
         len_array += len(cell_connectivity[-1])
 
     cell_types = numpy.concatenate(cell_types)
@@ -217,9 +208,8 @@ def _generate_vtk_mesh(points, cells):
     cell_connectivity = numpy.concatenate(cell_connectivity)
 
     connectivity = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
-        cell_connectivity.astype(numpy.int64),
-        deep=1
-        )
+        cell_connectivity.astype(numpy.int64), deep=1
+    )
 
     # wrap the data into a vtkCellArray
     cell_array = vtk.vtkCellArray()
@@ -228,16 +218,12 @@ def _generate_vtk_mesh(points, cells):
     # Add cell data to the mesh
     mesh.SetCells(
         numpy_support.numpy_to_vtk(
-            cell_types,
-            deep=1,
-            array_type=vtk.vtkUnsignedCharArray().GetDataType()
-            ),
+            cell_types, deep=1, array_type=vtk.vtkUnsignedCharArray().GetDataType()
+        ),
         numpy_support.numpy_to_vtk(
-            cell_offsets,
-            deep=1,
-            array_type=vtk.vtkIdTypeArray().GetDataType()
-            ),
-        cell_array
-        )
+            cell_offsets, deep=1, array_type=vtk.vtkIdTypeArray().GetDataType()
+        ),
+        cell_array,
+    )
 
     return mesh

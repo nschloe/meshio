@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-'''
+"""
 I/O for PERMAS dat format, cf.
 
 .. moduleauthor:: Nils Wagner
-'''
+"""
 import gzip
 import re
 
@@ -14,38 +14,38 @@ from .__about__ import __version__, __website__
 
 
 def read(filename):
-    '''Reads a (compressed) PERMAS dato or post file.
-    '''
+    """Reads a (compressed) PERMAS dato or post file.
+    """
     # The format is specified at
     # <http://www.intes.de>.
 
     cells = {}
     meshio_to_permas_type = {
-        'vertex': (1, 'PLOT1'),
-        'line': (2, 'PLOTL2'),
-        'triangle': (3, 'TRIA3'),
-        'quad': (4, 'QUAD4'),
-        'tetra': (4, 'TET4'),
-        'hexahedron': (8, 'HEXE8'),
-        'wedge': (6, 'PENTA6'),
-        'pyramid': (5, 'PYRA5')
-        }
+        "vertex": (1, "PLOT1"),
+        "line": (2, "PLOTL2"),
+        "triangle": (3, "TRIA3"),
+        "quad": (4, "QUAD4"),
+        "tetra": (4, "TET4"),
+        "hexahedron": (8, "HEXE8"),
+        "wedge": (6, "PENTA6"),
+        "pyramid": (5, "PYRA5"),
+    }
 
-    opener = gzip.open if filename.endswith('.gz') else open
+    opener = gzip.open if filename.endswith(".gz") else open
 
-    with opener(filename, 'rb') as f:
+    with opener(filename, "rb") as f:
         while True:
-            line = f.readline().decode('utf-8')
-            if not line or re.search('\\$END STRUCTURE', line):
+            line = f.readline().decode("utf-8")
+            if not line or re.search("\\$END STRUCTURE", line):
                 break
             for meshio_type, permas_ele in meshio_to_permas_type.items():
                 num_nodes = permas_ele[0]
                 permas_type = permas_ele[1]
 
-                if re.search('\\$ELEMENT TYPE = {}'.format(permas_type), line):
+                if re.search("\\$ELEMENT TYPE = {}".format(permas_type), line):
                     while True:
-                        line = f.readline().decode('utf-8')
-                        if not line or line.startswith('!'):
+                        line = f.readline().decode("utf-8")
+                        if not line or line.startswith("!"):
                             break
                         data = numpy.array(line.split(), dtype=int)
                         if meshio_type in cells:
@@ -53,17 +53,17 @@ def read(filename):
                         else:
                             cells[meshio_type] = [data[-num_nodes:]]
 
-            if re.search('\\$COOR', line):
+            if re.search("\\$COOR", line):
                 points = []
                 while True:
-                    line = f.readline().decode('utf-8')
-                    if not line or line.startswith('!'):
+                    line = f.readline().decode("utf-8")
+                    if not line or line.startswith("!"):
                         break
                     for r in numpy.array(line.split(), dtype=float)[1:]:
                         points.append(r)
 
     points = numpy.array(points)
-    points = numpy.reshape(points, newshape=(len(points)//3, 3))
+    points = numpy.reshape(points, newshape=(len(points) // 3, 3))
     for key in cells:
         # Subtract one to account for the fact that python indices
         # are 0-based.
@@ -72,55 +72,53 @@ def read(filename):
     return points, cells, {}, {}, {}
 
 
-def write(filename,
-          points,
-          cells,
-          point_data=None,
-          cell_data=None,
-          field_data=None):
-    '''Writes PERMAS dat files, cf.
+def write(filename, points, cells, point_data=None, cell_data=None, field_data=None):
+    """Writes PERMAS dat files, cf.
     http://www.intes.de # PERMAS-ASCII-file-format
-    '''
+    """
     point_data = {} if point_data is None else point_data
     cell_data = {} if cell_data is None else cell_data
     field_data = {} if field_data is None else field_data
 
-    opener = gzip.open if filename.endswith('.gz') else open
+    opener = gzip.open if filename.endswith(".gz") else open
 
-    with opener(filename, 'wb') as fh:
-        fh.write('\n'.join([
-            '!',
-            '! File written by meshio version {}'.format(__version__),
-            '! Further information available at {}'.format(__website__),
-            '!',
-            '$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH'
-            '!',
-            '    $SITUATION NAME = REAL_MODES'
-            '        DFLT_COMP SYSTEM = NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1',
-            '    $END SITUATION'
-            '!',
-            '    $STRUCTURE',
-            '!',
-            ]).encode('utf-8'))
+    with opener(filename, "wb") as fh:
+        fh.write(
+            "\n".join(
+                [
+                    "!",
+                    "! File written by meshio version {}".format(__version__),
+                    "! Further information available at {}".format(__website__),
+                    "!",
+                    "$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH" "!",
+                    "    $SITUATION NAME = REAL_MODES"
+                    "        DFLT_COMP SYSTEM = NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1",
+                    "    $END SITUATION" "!",
+                    "    $STRUCTURE",
+                    "!",
+                ]
+            ).encode("utf-8")
+        )
 
         # Write nodes
-        fh.write('        $COOR NSET = ALL_NODES\n'.encode('utf-8'))
+        fh.write("        $COOR NSET = ALL_NODES\n".encode("utf-8"))
         for k, x in enumerate(points):
             fh.write(
-                '        {:8d} {:+.15f} {:+.15f} {:+.15f}\n'.format(
-                    k+1, x[0], x[1], x[2]
-                ).encode('utf-8'))
+                "        {:8d} {:+.15f} {:+.15f} {:+.15f}\n".format(
+                    k + 1, x[0], x[1], x[2]
+                ).encode("utf-8")
+            )
 
         meshio_to_permas_type = {
-            'vertex': (1, 'PLOT1'),
-            'line': (2, 'PLOTL2'),
-            'triangle': (3, 'TRIA3'),
-            'quad': (4, 'QUAD4'),
-            'tetra': (4, 'TET4'),
-            'hexahedron': (8, 'HEXE8'),
-            'wedge': (6, 'PENTA6'),
-            'pyramid': (5, 'PYRA5')
-            }
+            "vertex": (1, "PLOT1"),
+            "line": (2, "PLOTL2"),
+            "triangle": (3, "TRIA3"),
+            "quad": (4, "QUAD4"),
+            "tetra": (4, "TET4"),
+            "hexahedron": (8, "HEXE8"),
+            "wedge": (6, "PENTA6"),
+            "pyramid": (5, "PYRA5"),
+        }
         #
         # Avoid non-unique element numbers in case of multiple element types by
         # num_ele !!!
@@ -130,54 +128,55 @@ def write(filename,
         for meshio_type, cell in cells.items():
             numcells, num_local_nodes = cell.shape
             permas_type = meshio_to_permas_type[meshio_type]
-            fh.write('!\n'.encode('utf-8'))
+            fh.write("!\n".encode("utf-8"))
             fh.write(
-                '        $ELEMENT TYPE = {} ESET = {}\n'.format(
+                "        $ELEMENT TYPE = {} ESET = {}\n".format(
                     permas_type[1], permas_type[1]
-                ).encode('utf-8'))
+                ).encode("utf-8")
+            )
             for k, c in enumerate(cell):
-                form = '        {:8d} ' + \
-                    ' '.join(num_local_nodes * ['{:8d}']) + \
-                    '\n'
-                fh.write(form.format(k+num_ele+1, *(c + 1)).encode('utf-8'))
+                form = "        {:8d} " + " ".join(num_local_nodes * ["{:8d}"]) + "\n"
+                fh.write(form.format(k + num_ele + 1, *(c + 1)).encode("utf-8"))
             num_ele += numcells
 
-        fh.write('!\n'.encode('utf-8'))
-        fh.write('    $END STRUCTURE\n'.encode('utf-8'))
-        fh.write('!\n'.encode('utf-8'))
-        elem_3D = ['HEXE8', 'TET4', 'PENTA6', 'PYRA5']
-        elem_2D = ['TRIA3', 'QUAD4']
-        elem_1D = ['PLOT1', 'PLOTL2']
-        fh.write('    $SYSTEM NAME = NSV\n'.encode('utf-8'))
-        fh.write('!\n'.encode('utf-8'))
-        fh.write('        $ELPROP\n'.encode('utf-8'))
+        fh.write("!\n".encode("utf-8"))
+        fh.write("    $END STRUCTURE\n".encode("utf-8"))
+        fh.write("!\n".encode("utf-8"))
+        elem_3D = ["HEXE8", "TET4", "PENTA6", "PYRA5"]
+        elem_2D = ["TRIA3", "QUAD4"]
+        elem_1D = ["PLOT1", "PLOTL2"]
+        fh.write("    $SYSTEM NAME = NSV\n".encode("utf-8"))
+        fh.write("!\n".encode("utf-8"))
+        fh.write("        $ELPROP\n".encode("utf-8"))
         for meshio_type, cell in cells.items():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_3D:
                 fh.write(
-                    '            {} MATERIAL = DUMMY_MATERIAL\n'.format(
+                    "            {} MATERIAL = DUMMY_MATERIAL\n".format(
                         permas_type[1]
-                    ).encode('utf-8'))
+                    ).encode("utf-8")
+                )
             elif permas_type[1] in elem_2D:
                 fh.write(
-                    (12 * ' ' +
-                     '{} GEODAT = GD_{} MATERIAL = DUMMY_MATERIAL\n'.format(
-                         permas_type[1], permas_type[1]
-                     )).encode('utf-8'))
+                    (
+                        12 * " "
+                        + "{} GEODAT = GD_{} MATERIAL = DUMMY_MATERIAL\n".format(
+                            permas_type[1], permas_type[1]
+                        )
+                    ).encode("utf-8")
+                )
             else:
                 assert permas_type[1] in elem_1D
-        fh.write('!\n'.encode('utf-8'))
-        fh.write(
-            '        $GEODAT SHELL  CONT = THICK  NODES = ALL\n'
-            .encode('utf-8')
-            )
+        fh.write("!\n".encode("utf-8"))
+        fh.write("        $GEODAT SHELL  CONT = THICK  NODES = ALL\n".encode("utf-8"))
         for meshio_type, cell in cells.items():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_2D:
-                fh.write((
-                    12 * ' ' + 'GD_{} 1.0\n'.format(permas_type[1])
-                    ).encode('utf-8'))
-        fh.write('''!
+                fh.write(
+                    (12 * " " + "GD_{} 1.0\n".format(permas_type[1])).encode("utf-8")
+                )
+        fh.write(
+            """!
 !
     $END SYSTEM
 !
@@ -207,5 +206,8 @@ $ENTER MATERIAL
 $EXIT MATERIAL
 !
 $FIN
-'''.encode('utf-8'))
+""".encode(
+                "utf-8"
+            )
+        )
     return

@@ -8,7 +8,7 @@ import helpers
 import legacy_reader
 import legacy_writer
 
-vtk = pytest.importorskip('vtk')
+vtk = pytest.importorskip("vtk")
 
 
 test_set = [
@@ -27,11 +27,11 @@ test_set = [
     helpers.add_cell_data(helpers.tri_mesh, 1),
     helpers.add_cell_data(helpers.tri_mesh, 2),
     helpers.add_cell_data(helpers.tri_mesh, 3),
-    ]
+]
 
 
-@pytest.mark.parametrize('mesh', test_set)
-@pytest.mark.parametrize('write_binary', [True, False])
+@pytest.mark.parametrize("mesh", test_set)
+@pytest.mark.parametrize("write_binary", [True, False])
 def test(mesh, write_binary):
     def writer(*args, **kwargs):
         return meshio.vtk_io.write(*args, write_binary=write_binary, **kwargs)
@@ -40,12 +40,12 @@ def test(mesh, write_binary):
     return
 
 
-@pytest.mark.parametrize('mesh', test_set)
-@pytest.mark.parametrize('write_binary', [True, False])
+@pytest.mark.parametrize("mesh", test_set)
+@pytest.mark.parametrize("write_binary", [True, False])
 def test_legacy_writer(mesh, write_binary):
     # test with legacy writer
     def lw(*args, **kwargs):
-        mode = 'vtk-binary' if write_binary else 'vtk-ascii'
+        mode = "vtk-binary" if write_binary else "vtk-ascii"
         return legacy_writer.write(mode, *args, **kwargs)
 
     # The legacy writer only writes with low precision.
@@ -53,15 +53,15 @@ def test_legacy_writer(mesh, write_binary):
     return
 
 
-@pytest.mark.parametrize('mesh', test_set)
-@pytest.mark.parametrize('write_binary', [True, False])
+@pytest.mark.parametrize("mesh", test_set)
+@pytest.mark.parametrize("write_binary", [True, False])
 def test_legacy_reader(mesh, write_binary):
     def writer(*args, **kwargs):
         return meshio.vtk_io.write(*args, write_binary=write_binary, **kwargs)
 
     # test with legacy reader
     def lr(filename):
-        mode = 'vtk-binary' if write_binary else 'vtk-ascii'
+        mode = "vtk-binary" if write_binary else "vtk-ascii"
         return legacy_reader.read(mode, filename)
 
     helpers.write_read(writer, lr, mesh, 1.0e-15)
@@ -69,11 +69,11 @@ def test_legacy_reader(mesh, write_binary):
 
 
 def test_generic_io():
-    helpers.generic_io('test.vtk')
+    helpers.generic_io("test.vtk")
     # With additional, insignificant suffix:
-    helpers.generic_io('test.0.vtk')
+    helpers.generic_io("test.0.vtk")
     return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test(helpers.tri_mesh, write_binary=True)

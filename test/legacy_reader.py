@@ -11,29 +11,27 @@ def read(filetype, filename):
     from vtk.util import numpy_support
 
     def _read_data(data):
-        '''Extract numpy arrays from a VTK data set.
-        '''
+        """Extract numpy arrays from a VTK data set.
+        """
         # Go through all arrays, fetch data.
         out = {}
         for k in range(data.GetNumberOfArrays()):
             array = data.GetArray(k)
             if array:
                 array_name = array.GetName()
-                out[array_name] = numpy.copy(
-                    vtk.util.numpy_support.vtk_to_numpy(array)
-                    )
+                out[array_name] = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(array))
         return out
 
     def _read_cells(vtk_mesh):
-        data = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-            vtk_mesh.GetCells().GetData()
-            ))
-        offsets = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-            vtk_mesh.GetCellLocationsArray()
-            ))
-        types = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(
-            vtk_mesh.GetCellTypesArray()
-            ))
+        data = numpy.copy(
+            vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
+        )
+        offsets = numpy.copy(
+            vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCellLocationsArray())
+        )
+        types = numpy.copy(
+            vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCellTypesArray())
+        )
 
         # `data` is a one-dimensional vector with
         # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
@@ -50,12 +48,12 @@ def read(filetype, filename):
                 # sort the num_pts entries after the offsets into the columns
                 # of arr
                 for k in range(num_pts):
-                    arr[:, k] = data[os+k+1]
+                    arr[:, k] = data[os + k + 1]
                 cells[meshio_type] = arr
 
         return cells
 
-    if filetype in ['vtk', 'vtk-ascii', 'vtk-binary']:
+    if filetype in ["vtk", "vtk-ascii", "vtk-binary"]:
         reader = vtk.vtkUnstructuredGridReader()
         reader.SetFileName(filename)
         reader.SetReadAllNormals(1)
@@ -64,12 +62,12 @@ def read(filetype, filename):
         reader.SetReadAllVectors(1)
         reader.Update()
         vtk_mesh = reader.GetOutput()
-    elif filetype in ['vtu', 'vtu-ascii', 'vtu-binary']:
+    elif filetype in ["vtu", "vtu-ascii", "vtu-binary"]:
         reader = vtk.vtkXMLUnstructuredGridReader()
         reader.SetFileName(filename)
         reader.Update()
         vtk_mesh = reader.GetOutput()
-    elif filetype in ['xdmf', 'xdmf2']:
+    elif filetype in ["xdmf", "xdmf2"]:
         reader = vtk.vtkXdmfReader()
         reader.SetFileName(filename)
         reader.SetReadAllColorScalars(1)
@@ -81,7 +79,7 @@ def read(filetype, filename):
         reader.SetReadAllVectors(1)
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
-    elif filetype == 'xdmf3':
+    elif filetype == "xdmf3":
         reader = vtk.vtkXdmf3Reader()
         reader.SetFileName(filename)
         reader.SetReadAllColorScalars(1)
@@ -94,16 +92,13 @@ def read(filetype, filename):
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
     else:
-        assert filetype == 'exodus', \
-            'Unknown file type \'{}\'.'.format(filename)
+        assert filetype == "exodus", "Unknown file type '{}'.".format(filename)
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
         vtk_mesh = _read_exodusii_mesh(reader)
 
     # Explicitly extract points, cells, point data, field data
-    points = numpy.copy(numpy_support.vtk_to_numpy(
-        vtk_mesh.GetPoints().GetData()
-        ))
+    points = numpy.copy(numpy_support.vtk_to_numpy(vtk_mesh.GetPoints().GetData()))
     cells = _read_cells(vtk_mesh)
 
     point_data = _read_data(vtk_mesh.GetPointData())
@@ -117,7 +112,7 @@ def read(filetype, filename):
         num_cells = len(cells[cell_type])
         cd[cell_type] = {}
         for name, array in cell_data.items():
-            cd[cell_type][name] = array[index:index+num_cells]
+            cd[cell_type][name] = array[index : index + num_cells]
         index += num_cells
     cell_data = cd
 
@@ -125,8 +120,8 @@ def read(filetype, filename):
 
 
 def _read_exodusii_mesh(reader, timestep=None):
-    '''Uses a vtkExodusIIReader to return a vtkUnstructuredGrid.
-    '''
+    """Uses a vtkExodusIIReader to return a vtkUnstructuredGrid.
+    """
     # Fetch metadata.
     reader.UpdateInformation()
 
@@ -161,17 +156,17 @@ def _read_exodusii_mesh(reader, timestep=None):
         blk = out.GetBlock(i)
         for j in range(blk.GetNumberOfBlocks()):
             sub_block = blk.GetBlock(j)
-            if sub_block is not None and sub_block.IsA('vtkUnstructuredGrid'):
+            if sub_block is not None and sub_block.IsA("vtkUnstructuredGrid"):
                 vtk_mesh.append(sub_block)
 
-    assert vtk_mesh, 'No \'vtkUnstructuredGrid\' found!'
-    assert len(vtk_mesh) == 1, 'More than one \'vtkUnstructuredGrid\' found!'
+    assert vtk_mesh, "No 'vtkUnstructuredGrid' found!"
+    assert len(vtk_mesh) == 1, "More than one 'vtkUnstructuredGrid' found!"
 
     # Cut off trailing '_' from array names.
     for k in range(vtk_mesh[0].GetPointData().GetNumberOfArrays()):
         array = vtk_mesh[0].GetPointData().GetArray(k)
         array_name = array.GetName()
-        if array_name[-1] == '_':
+        if array_name[-1] == "_":
             array.SetName(array_name[0:-1])
 
     # time_values = reader.GetOutputInformation(0).Get(

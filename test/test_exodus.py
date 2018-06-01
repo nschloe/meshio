@@ -8,7 +8,7 @@ import helpers
 import legacy_reader
 import legacy_writer
 
-vtk = pytest.importorskip('vtk')
+vtk = pytest.importorskip("vtk")
 
 test_set = [
     helpers.tri_mesh,
@@ -23,51 +23,46 @@ test_set = [
     helpers.add_point_data(helpers.tri_mesh, 1),
     # helpers.add_point_data(helpers.tri_mesh, 2),
     # helpers.add_point_data(helpers.tri_mesh, 3),
-    ]
+]
 
 
-
-@pytest.mark.parametrize('mesh', test_set)
+@pytest.mark.parametrize("mesh", test_set)
 def test_io(mesh):
-    helpers.write_read(
-        meshio.exodus_io.write,
-        meshio.exodus_io.read,
-        mesh, 1.0e-15
-        )
+    helpers.write_read(meshio.exodus_io.write, meshio.exodus_io.read, mesh, 1.0e-15)
     return
 
 
-@pytest.mark.parametrize('mesh', [
-    helpers.tri_mesh,
-    helpers.quad_mesh,
-    helpers.tri_quad_mesh,
-    helpers.tet_mesh,
-    helpers.hex_mesh,
-    ])
+@pytest.mark.parametrize(
+    "mesh",
+    [
+        helpers.tri_mesh,
+        helpers.quad_mesh,
+        helpers.tri_quad_mesh,
+        helpers.tet_mesh,
+        helpers.hex_mesh,
+    ],
+)
 def test_legacy_writer(mesh):
     # test with legacy writer
     def lw(*args, **kwargs):
-        return legacy_writer.write('exodus', *args, **kwargs)
+        return legacy_writer.write("exodus", *args, **kwargs)
 
     # The legacy writer only writes with low precision.
     helpers.write_read(lw, meshio.exodus_io.read, mesh, 1.0e-15)
     return
 
 
-@pytest.mark.parametrize('mesh', [
-    helpers.tri_mesh,
-    helpers.hex_mesh,
-    ])
+@pytest.mark.parametrize("mesh", [helpers.tri_mesh, helpers.hex_mesh])
 def test_legacy_reader(mesh):
     def lr(filename):
-        return legacy_reader.read('exodus', filename)
+        return legacy_reader.read("exodus", filename)
 
     helpers.write_read(meshio.exodus_io.write, lr, mesh, 1.0e-4)
     return
 
 
 def test_generic_io():
-    helpers.generic_io('test.e')
+    helpers.generic_io("test.e")
     # With additional, insignificant suffix:
-    helpers.generic_io('test.0.e')
+    helpers.generic_io("test.0.e")
     return
