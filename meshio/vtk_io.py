@@ -158,56 +158,23 @@ def read_buffer(f):
             dataset_type = split[1]
             assert (
                 dataset_type == "UNSTRUCTURED_GRID"
-            ), "Only VTK UNSTRUCTURED_GRID supported."
+            ), "Only VTK UNSTRUCTURED_GRID supported (not {}).".format(dataset_type)
 
         elif section == "POINTS":
             active = "POINTS"
             num_points = int(split[1])
             data_type = split[2]
-            dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
-            if is_ascii:
-                points = numpy.fromfile(f, count=num_points * 3, sep=" ", dtype=dtype)
-            else:
-                # binary
-                num_bytes = numpy.dtype(dtype).itemsize
-                total_num_bytes = num_points * (3 * num_bytes)
-                # Binary data is big endian, see
-                # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
-                dtype = dtype.newbyteorder(">")
-                points = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
-                line = f.readline().decode("utf-8")
-                assert line == "\n"
-
-            points = points.reshape((num_points, 3))
+            points = _read_points(f, data_type, is_ascii, num_points)
 
         elif section == "CELLS":
             active = "CELLS"
-
             num_items = int(split[2])
-            if is_ascii:
-                c = numpy.fromfile(f, count=num_items, sep=" ", dtype=int)
-            else:
-                # binary
-                num_bytes = 4
-                total_num_bytes = num_items * num_bytes
-                c = numpy.fromstring(f.read(total_num_bytes), dtype=">i4")
-                line = f.readline().decode("utf-8")
-                assert line == "\n"
+            c = _read_cells(f, is_ascii, num_items)
 
         elif section == "CELL_TYPES":
             active = "CELL_TYPES"
-
             num_items = int(split[1])
-            if is_ascii:
-                ct = numpy.fromfile(f, count=int(num_items), sep=" ", dtype=int)
-            else:
-                # binary
-                num_bytes = 4
-                total_num_bytes = num_items * num_bytes
-                ct = numpy.fromstring(f.read(total_num_bytes), dtype=">i4")
-                line = f.readline().decode("utf-8")
-                # Sometimes, there's no newline at the end
-                assert line.strip() == ""
+            ct = _read_cell_types(f, is_ascii, num_items)
 
         elif section == "POINT_DATA":
             active = "POINT_DATA"
@@ -269,6 +236,52 @@ def read_buffer(f):
     cells, cell_data = translate_cells(c, ct, cell_data_raw)
 
     return points, cells, point_data, cell_data, field_data
+
+
+def _read_points(f, data_type, is_ascii, num_points):
+    dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+    if is_ascii:
+        points = numpy.fromfile(f, count=num_points * 3, sep=" ", dtype=dtype)
+    else:
+        # binary
+        num_bytes = numpy.dtype(dtype).itemsize
+        total_num_bytes = num_points * (3 * num_bytes)
+        # Binary data is big endian, see
+        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        dtype = dtype.newbyteorder(">")
+        points = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
+
+    return points.reshape((num_points, 3))
+
+
+def _read_cells(f, is_ascii, num_items):
+    if is_ascii:
+        c = numpy.fromfile(f, count=num_items, sep=" ", dtype=int)
+    else:
+        # binary
+        num_bytes = 4
+        total_num_bytes = num_items * num_bytes
+        c = numpy.fromstring(f.read(total_num_bytes), dtype=">i4")
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
+
+    return c
+
+
+def _read_cell_types(f, is_ascii, num_items):
+    if is_ascii:
+        ct = numpy.fromfile(f, count=int(num_items), sep=" ", dtype=int)
+    else:
+        # binary
+        num_bytes = 4
+        total_num_bytes = num_items * num_bytes
+        ct = numpy.fromstring(f.read(total_num_bytes), dtype=">i4")
+        line = f.readline().decode("utf-8")
+        # Sometimes, there's no newline at the end
+        assert line.strip() == ""
+    return ct
 
 
 def _read_scalar_field(f, num_data, split):
