@@ -6,6 +6,16 @@ from .__about__ import __version__, __author__, __author_email__, __website__
 
 from .helpers import read, write
 
+
+__all__ = [
+    "read",
+    "write",
+    "__version__",
+    "__author__",
+    "__author_email__",
+    "__website__",
+]
+
 try:
     import pipdate
 except ImportError:

@@ -51,6 +51,7 @@ vtk_to_meshio_type = {
 
 def _get_writer(filetype, filename):
     import vtk
+
     if filetype in "vtk-ascii":
         logging.warning("VTK ASCII files are only meant for debugging.")
         writer = vtk.vtkUnstructuredGridWriter()
