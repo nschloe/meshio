@@ -52,7 +52,6 @@ vtk_to_meshio_type = {
 def write(
     filetype, filename, points, cells, point_data=None, cell_data=None, field_data=None
 ):
-    # pylint: disable=import-error
     import vtk
 
     def _create_vtkarray(X, name):
@@ -159,7 +158,6 @@ def write(
 
 
 def _generate_vtk_mesh(points, cells):
-    # pylint: disable=import-error
     import vtk
     from vtk.util import numpy_support
 

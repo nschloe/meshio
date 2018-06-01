@@ -148,7 +148,6 @@ def read_buffer(f):
             break
 
         line = line.strip()
-        # pylint: disable=len-as-condition
         if len(line) == 0:
             continue
 

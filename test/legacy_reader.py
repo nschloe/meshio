@@ -6,7 +6,6 @@ from meshio.vtk_io import vtk_to_meshio_type
 
 
 def read(filetype, filename):
-    # pylint: disable=import-error
     import vtk
     from vtk.util import numpy_support
 

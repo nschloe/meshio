@@ -321,7 +321,6 @@ def _read_cells(f, cells, int_size, is_ascii):
     for key in cell_tags:
         output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
         for item in cell_tags[key]:
-            # pylint: disable=len-as-condition
             if len(item) > 0:
                 output_cell_tags[key]["gmsh:physical"].append(item[0])
             if len(item) > 1:
@@ -507,7 +506,6 @@ def _write_elements(fh, cells, tag_data, write_binary):
                 pass
         fcd = numpy.concatenate([tags]).T
 
-        # pylint: disable=len-as-condition
         if len(fcd) == 0:
             fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
 

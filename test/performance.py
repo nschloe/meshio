@@ -8,7 +8,6 @@ import meshio
 def generate_mesh():
     """Generates a fairly large mesh.
     """
-    # pylint: disable=import-error
     import pygmsh
 
     geom = pygmsh.built_in.Geometry()
