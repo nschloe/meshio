@@ -49,6 +49,36 @@ vtk_to_meshio_type = {
 }
 
 
+def _get_writer(filetype, filename):
+    import vtk
+    if filetype in "vtk-ascii":
+        logging.warning("VTK ASCII files are only meant for debugging.")
+        writer = vtk.vtkUnstructuredGridWriter()
+        writer.SetFileTypeToASCII()
+    elif filetype == "vtk-binary":
+        writer = vtk.vtkUnstructuredGridWriter()
+        writer.SetFileTypeToBinary()
+    elif filetype == "vtu-ascii":
+        logging.warning("VTU ASCII files are only meant for debugging.")
+        writer = vtk.vtkXMLUnstructuredGridWriter()
+        writer.SetDataModeToAscii()
+    elif filetype == "vtu-binary":
+        writer = vtk.vtkXMLUnstructuredGridWriter()
+        writer.SetDataModeToBinary()
+    elif filetype == "xdmf2":
+        writer = vtk.vtkXdmfWriter()
+    elif filetype == "xdmf3":
+        writer = vtk.vtkXdmf3Writer()
+    else:
+        assert filetype == "exodus", "Unknown file type '{}'.".format(filename)
+        writer = vtk.vtkExodusIIWriter()
+        # if the mesh contains vtkmodeldata information, make use of it
+        # and write out all time steps.
+        writer.WriteAllTimeStepsOn()
+
+    return writer
+
+
 def write(
     filetype, filename, points, cells, point_data=None, cell_data=None, field_data=None
 ):
@@ -122,30 +152,7 @@ def write(
     for key, value in field_data.items():
         fd.AddArray(_create_vtkarray(value, key))
 
-    if filetype in "vtk-ascii":
-        logging.warning("VTK ASCII files are only meant for debugging.")
-        writer = vtk.vtkUnstructuredGridWriter()
-        writer.SetFileTypeToASCII()
-    elif filetype == "vtk-binary":
-        writer = vtk.vtkUnstructuredGridWriter()
-        writer.SetFileTypeToBinary()
-    elif filetype == "vtu-ascii":
-        logging.warning("VTU ASCII files are only meant for debugging.")
-        writer = vtk.vtkXMLUnstructuredGridWriter()
-        writer.SetDataModeToAscii()
-    elif filetype == "vtu-binary":
-        writer = vtk.vtkXMLUnstructuredGridWriter()
-        writer.SetDataModeToBinary()
-    elif filetype == "xdmf2":
-        writer = vtk.vtkXdmfWriter()
-    elif filetype == "xdmf3":
-        writer = vtk.vtkXdmf3Writer()
-    else:
-        assert filetype == "exodus", "Unknown file type '{}'.".format(filename)
-        writer = vtk.vtkExodusIIWriter()
-        # if the mesh contains vtkmodeldata information, make use of it
-        # and write out all time steps.
-        writer.WriteAllTimeStepsOn()
+    writer = _get_writer(filetype, filename)
 
     writer.SetFileName(filename)
     try:
