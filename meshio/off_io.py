@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-'''
+"""
 I/O for the OFF surface format, cf.
 <https://en.wikipedia.org/wiki/OFF_(file_format)>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
-'''
+"""
 from itertools import islice
 import numpy
 
@@ -20,19 +20,19 @@ def read(filename):
 def read_buffer(f):
     # assert that the first line reads `OFF`
     line = next(islice(f, 1))
-    assert line.strip() == 'OFF'
+    assert line.strip() == "OFF"
 
     # fast forward to the next significant line
     while True:
         line = next(islice(f, 1))
         stripped = line.strip()
-        if stripped and stripped[0] != '#':
+        if stripped and stripped[0] != "#":
             break
 
     # This next line contains:
     # <number of vertices> <number of faces> <number of edges>
     # 2775 5558 0
-    num_verts, num_faces, num_edges = stripped.split(' ')
+    num_verts, num_faces, num_edges = stripped.split(" ")
     num_verts = int(num_verts)
     num_faces = int(num_faces)
     num_edges = int(num_edges)
@@ -51,7 +51,7 @@ def read_buffer(f):
             break
         stripped = line.strip()
         # skip comments and empty lines
-        if not stripped or stripped[0] == '#':
+        if not stripped or stripped[0] == "#":
             continue
 
         x, y, z = stripped.split()
@@ -73,55 +73,47 @@ def read_buffer(f):
         stripped = line.strip()
 
         # skip comments and empty lines
-        if not stripped or stripped[0] == '#':
+        if not stripped or stripped[0] == "#":
             continue
 
         data = stripped.split()
         num_points = int(data[0])
         assert num_points == len(data) - 1
-        assert num_points == 3, 'Can only handle triangular faces'
+        assert num_points == 3, "Can only handle triangular faces"
 
         data = [int(data[1]), int(data[2]), int(data[3])]
         triangles.append(data)
 
     cells = {}
     if triangles:
-        cells['triangle'] = numpy.array(triangles)
+        cells["triangle"] = numpy.array(triangles)
 
     return verts, cells
 
 
-def write(filename,
-          points,
-          cells,
-          point_data=None,
-          cell_data=None,
-          field_data=None):
+def write(filename, points, cells, point_data=None, cell_data=None, field_data=None):
     point_data = {} if point_data is None else point_data
     cell_data = {} if cell_data is None else cell_data
     field_data = {} if field_data is None else field_data
 
     for key in cells:
-        assert key in ['triangle'], 'Can only deal with triangular faces'
+        assert key in ["triangle"], "Can only deal with triangular faces"
 
-    tri = cells['triangle']
+    tri = cells["triangle"]
 
-    with open(filename, 'wb') as fh:
-        fh.write(b'OFF\n')
-        fh.write(b'# Created by meshio\n\n')
+    with open(filename, "wb") as fh:
+        fh.write(b"OFF\n")
+        fh.write(b"# Created by meshio\n\n")
 
         # counts
-        c = '{} {} {}\n\n'.format(len(points), len(tri), 0)
-        fh.write(c.encode('utf-8'))
+        c = "{} {} {}\n\n".format(len(points), len(tri), 0)
+        fh.write(c.encode("utf-8"))
 
         # vertices
-        numpy.savetxt(fh, points, '%r')
+        numpy.savetxt(fh, points, "%r")
 
         # triangles
-        data_with_label = numpy.c_[
-            tri.shape[1] * numpy.ones(tri.shape[0]),
-            tri
-            ]
-        numpy.savetxt(fh, data_with_label, '%d  %d %d %d')
+        data_with_label = numpy.c_[tri.shape[1] * numpy.ones(tri.shape[0]), tri]
+        numpy.savetxt(fh, data_with_label, "%d  %d %d %d")
 
     return

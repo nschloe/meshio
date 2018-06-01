@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-'''
+"""
 I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
-'''
+"""
 from datetime import datetime
 import logging
 import numpy
@@ -19,19 +19,19 @@ from . import __about__
 
 
 def read(filename):
-    '''Reads H5M files, cf.
+    """Reads H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
-    '''
+    """
     import h5py
 
-    f = h5py.File(filename, 'r')
-    dset = f['tstt']
+    f = h5py.File(filename, "r")
+    dset = f["tstt"]
 
-    points = dset['nodes']['coordinates'][()]
+    points = dset["nodes"]["coordinates"][()]
     # read point data
     point_data = {}
-    if 'tags' in dset['nodes']:
-        for name, dataset in dset['nodes']['tags'].items():
+    if "tags" in dset["nodes"]:
+        for name, dataset in dset["nodes"]["tags"].items():
             point_data[name] = dataset[()]
 
     # # Assert that the GLOBAL_IDs are contiguous.
@@ -40,16 +40,12 @@ def read(filename):
     # point_end_gid = point_start_gid + len(point_gids) - 1
     # assert all(point_gids == range(point_start_gid, point_end_gid + 1))
 
-    h5m_to_meshio_type = {
-        'Edge2': 'line',
-        'Tri3': 'triangle',
-        'Tet4': 'tetra'
-        }
+    h5m_to_meshio_type = {"Edge2": "line", "Tri3": "triangle", "Tet4": "tetra"}
     cells = {}
     cell_data = {}
-    for h5m_type, data in dset['elements'].items():
+    for h5m_type, data in dset["elements"].items():
         meshio_type = h5m_to_meshio_type[h5m_type]
-        conn = data['connectivity']
+        conn = data["connectivity"]
         # Note that the indices are off by 1 in h5m.
         cells[meshio_type] = conn[()] - 1
 
@@ -110,47 +106,49 @@ def read(filename):
     return points, cells, point_data, cell_data, field_data
 
 
-def write(filename,
-          points,
-          cells,
-          point_data=None,
-          cell_data=None,
-          field_data=None,
-          add_global_ids=True):
-    '''Writes H5M files, cf.
+def write(
+    filename,
+    points,
+    cells,
+    point_data=None,
+    cell_data=None,
+    field_data=None,
+    add_global_ids=True,
+):
+    """Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
-    '''
+    """
     import h5py
 
     point_data = {} if point_data is None else point_data
     cell_data = {} if cell_data is None else cell_data
     field_data = {} if field_data is None else field_data
 
-    f = h5py.File(filename, 'w')
+    f = h5py.File(filename, "w")
 
-    tstt = f.create_group('tstt')
+    tstt = f.create_group("tstt")
 
     # The base index for h5m is 1.
     global_id = 1
 
     # add nodes
-    nodes = tstt.create_group('nodes')
-    coords = nodes.create_dataset('coordinates', data=points)
-    coords.attrs.create('start_id', global_id)
+    nodes = tstt.create_group("nodes")
+    coords = nodes.create_dataset("coordinates", data=points)
+    coords.attrs.create("start_id", global_id)
     global_id += len(points)
 
     # Global tags
-    tstt_tags = tstt.create_group('tags')
+    tstt_tags = tstt.create_group("tags")
 
     # The GLOBAL_ID associated with a point is used to identify points if
     # distributed across several processes. mbpart automatically adds them,
     # too.
-    if 'GLOBAL_ID' not in point_data and add_global_ids:
-        point_data['GLOBAL_ID'] = numpy.arange(1, len(points)+1, )
+    if "GLOBAL_ID" not in point_data and add_global_ids:
+        point_data["GLOBAL_ID"] = numpy.arange(1, len(points) + 1)
 
     # add point data
     if point_data is not None:
-        tags = nodes.create_group('tags')
+        tags = nodes.create_group("tags")
         for key, data in point_data.items():
             if len(data.shape) == 1:
                 dtype = data.dtype
@@ -165,7 +163,7 @@ def write(filename,
 
             # Create entry in global tags
             g = tstt_tags.create_group(key)
-            g['type'] = dtype
+            g["type"] = dtype
             # Add a class tag:
             # From
             # <http://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
@@ -179,70 +177,68 @@ def write(filename,
             # /** \brief Unused */
             # #define mhdf_MESH_TYPE    3
             #
-            g.attrs['class'] = 2
+            g.attrs["class"] = 2
 
     # add elements
-    elements = tstt.create_group('elements')
+    elements = tstt.create_group("elements")
 
     elem_dt = h5py.special_dtype(
-        enum=('i', {
-            'Edge': 1,
-            'Tri': 2,
-            'Quad': 3,
-            'Polygon': 4,
-            'Tet': 5,
-            'Pyramid': 6,
-            'Prism': 7,
-            'Knife': 8,
-            'Hex': 9,
-            'Polyhedron': 10
-            })
+        enum=(
+            "i",
+            {
+                "Edge": 1,
+                "Tri": 2,
+                "Quad": 3,
+                "Polygon": 4,
+                "Tet": 5,
+                "Pyramid": 6,
+                "Prism": 7,
+                "Knife": 8,
+                "Hex": 9,
+                "Polyhedron": 10,
+            },
         )
+    )
 
-    tstt['elemtypes'] = elem_dt
+    tstt["elemtypes"] = elem_dt
 
     tstt.create_dataset(
-        'history',
+        "history",
         data=[
-            __name__.encode('utf-8'),
-            __about__.__version__.encode('utf-8'),
-            str(datetime.now()).encode('utf-8')
-            ])
+            __name__.encode("utf-8"),
+            __about__.__version__.encode("utf-8"),
+            str(datetime.now()).encode("utf-8"),
+        ],
+    )
 
     # number of nodes to h5m name, element type
     meshio_to_h5m_type = {
-        'line': {'name': 'Edge2', 'type': 1},
-        'triangle': {'name': 'Tri3', 'type': 2},
-        'tetra': {'name': 'Tet4', 'type': 5}
-        }
+        "line": {"name": "Edge2", "type": 1},
+        "triangle": {"name": "Tri3", "type": 2},
+        "tetra": {"name": "Tet4", "type": 5},
+    }
     for key, data in cells.items():
         if key not in meshio_to_h5m_type:
-            logging.warning(
-                'Unsupported H5M element type \'%s\'. Skipping.', key
-                )
+            logging.warning("Unsupported H5M element type '%s'. Skipping.", key)
             continue
         this_type = meshio_to_h5m_type[key]
-        elem_group = elements.create_group(this_type['name'])
-        elem_group.attrs.create(
-            'element_type',
-            this_type['type'],
-            dtype=elem_dt
-            )
+        elem_group = elements.create_group(this_type["name"])
+        elem_group.attrs.create("element_type", this_type["type"], dtype=elem_dt)
         # h5m node indices are 1-based
-        conn = elem_group.create_dataset('connectivity', data=(data + 1))
-        conn.attrs.create('start_id', global_id)
+        conn = elem_group.create_dataset("connectivity", data=(data + 1))
+        conn.attrs.create("start_id", global_id)
         global_id += len(data)
 
     # add cell data
     if cell_data:
-        tags = elem_group.create_group('tags')
+        tags = elem_group.create_group("tags")
         for key, value in cell_data.items():
             tags.create_dataset(key, data=value)
 
     # add empty set -- MOAB wants this
-    sets = tstt.create_group('sets')
-    sets.create_group('tags')
+    sets = tstt.create_group("sets")
+    sets.create_group("tags")
 
     # set max_id
-    tstt.attrs.create('max_id', global_id, dtype='u8')
+    tstt.attrs.create("max_id", global_id, dtype="u8")
     return
