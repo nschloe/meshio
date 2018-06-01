@@ -3,7 +3,7 @@ version: 2
 jobs:
 
   build:
-    working_directory: ~/meshio
+    working_directory: ~/work
     docker:
       - image: ubuntu:18.04
     steps:
@@ -13,10 +13,11 @@ jobs:
       - run: apt-get install -y git python3-h5py python3-netcdf4 python3-vtk7 python3-pip
       - run: pip3 install -U pytest pytest-cov pylint black
       - checkout
-      - run: pip3 install .[all]
-      # The actual test
-      - run: black --check setup.py meshio/ test/*.py tools/meshio-convert
+      # format and lint
+      - run: LC_ALL=C.UTF-8 black --check setup.py meshio/ test/*.py tools/meshio-convert
       - run: pylint setup.py meshio/ test/*.py tools/meshio-convert
+      # The actual test
+      - run: pip3 install .[all]
       - run: cd test/ && pytest --cov meshio
       # submit to codecov
       - run: apt-get install -y curl
