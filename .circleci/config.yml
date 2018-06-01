@@ -11,11 +11,10 @@ jobs:
       # <https://stackoverflow.com/a/44333806/353337>
       - run: DEBIAN_FRONTEND=noninteractive apt install tzdata
       - run: apt-get install -y git python3-h5py python3-netcdf4 python3-vtk7 python3-pip
-      - run: pip3 install -U pytest pytest-cov pylint black
+      - run: pip3 install -U pytest pytest-cov black
       - checkout
       # format and lint
       - run: LC_ALL=C.UTF-8 black --check setup.py meshio/ test/*.py tools/meshio-convert
-      - run: pylint setup.py meshio/ test/*.py tools/meshio-convert
       # The actual test
       - run: pip3 install .[all]
       - run: cd test/ && pytest --cov meshio

@@ -24,4 +24,4 @@ clean:
 	@rm -rf *.egg-info/ build/ dist/
 
 lint:
-	pylint setup.py meshio/ test/*.py tools/meshio-convert
+	black setup.py meshio/ test/*.py tools/meshio-convert
