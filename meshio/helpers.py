@@ -15,6 +15,7 @@ from . import stl_io
 from . import vtk_io
 from . import vtu_io
 from . import xdmf_io
+from . import abaqus_io
 
 input_filetypes = [
     "ansys",
@@ -34,6 +35,7 @@ input_filetypes = [
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
+	"abaqus-inp",
 ]
 
 output_filetypes = [
@@ -55,6 +57,7 @@ output_filetypes = [
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
+	"abaqus-inp",
 ]
 
 _extension_to_filetype = {
@@ -76,6 +79,7 @@ _extension_to_filetype = {
     ".vtk": "vtk-binary",
     ".xdmf": "xdmf",
     ".xmf": "xdmf",
+	".inp": "abaqus-inp",
 }
 
 
@@ -136,6 +140,8 @@ def read(filename, file_format=None):
         #
         "xdmf": xdmf_io,
         "exodus": exodus_io,
+		#
+        "abaqus-inp": abaqus_io,
     }
 
     assert file_format in format_to_reader, "Unknown file format '{}' of '{}'.".format(
