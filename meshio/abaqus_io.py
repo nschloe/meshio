@@ -96,10 +96,13 @@ def read(filename):
 
 def read_buffer(f):
     # Initialize the optional data fields
-    points = []
+    points = numpy.array([], dtype=numpy.float64)
     cells = {}
     nsets = {}
     elsets = {}
+    field_data = {}
+    cell_data = {}
+    point_data = {}
 
     while True:
         line = f.readline().decode("utf-8")
@@ -134,7 +137,9 @@ def read_buffer(f):
             else:
                 pass
 
-    return points, cells, nsets, elsets
+    num_nodes = len(points)/3
+    points = numpy.reshape(points, (num_nodes,3))
+    return points, cells, point_data, cell_data, field_data
 
 def _read_nodes(f, points):
     while True:
@@ -142,8 +147,8 @@ def _read_nodes(f, points):
         line = f.readline().decode("utf-8")
         if line.startswith("*"):
             break;
-        sline = line.strip().split(',')
-        points = numpy.append(points,sline)
+        data = [float(k) for k in filter(None, line.strip().split(','))]
+        points = numpy.append(points,data[-3:])
         
     f.seek(last_pos)
     return points
@@ -152,7 +157,7 @@ def _read_cells(f, line0, cells):
     sline = line0.split(',')[1:]
     etype_sline = sline[0]
     assert 'TYPE' in etype_sline, etype_sline
-    etype = etype_sline.split('=')[1]
+    etype = etype_sline.split('=')[1].strip()
     if etype not in abaqus_to_meshio_type:
         msg = "Element type not available: " + etype
         raise RuntimeError(msg)
@@ -166,8 +171,6 @@ def _read_cells(f, line0, cells):
         if line.startswith("*"):
             break;
         data = [int(k) for k in filter(None, line.split(','))]
-        print data
-
         cells[t].append(data[-num_nodes_per_elem:])
 
     # convert to numpy arrays
