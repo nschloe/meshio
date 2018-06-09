@@ -237,7 +237,7 @@ def read_set(f, params_map):
         if line.startswith("*"):
             break;
         set_ids += line.strip(', ').split(',')
-        
+
     if 'generate' in params_map:
         assert len(set_ids) == 3, set_ids
         set_ids = numpy.arange(int(set_ids[0]), int(set_ids[1]), int(set_ids[2]))
