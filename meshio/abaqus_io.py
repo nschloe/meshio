@@ -96,13 +96,14 @@ def read(filename):
 
 def read_buffer(f):
     # Initialize the optional data fields
-    points = numpy.array([], dtype=numpy.float64)
+    points = []
     cells = {}
     nsets = {}
     elsets = {}
     field_data = {}
     cell_data = {}
     point_data = {}
+    point_gid = numpy.array([], dtype=int )
 
     while True:
         line = f.readline().decode("utf-8")
@@ -117,7 +118,7 @@ def read_buffer(f):
             elif word.startswith('PREPRINT'):
                 pass
             elif word.startswith('NODE'):
-                points = _read_nodes(f, points)
+                points, point_gid = _read_nodes(f, point_gid, points)
             elif word.startswith('ELEMENT'):
                 cells = _read_cells( f, word, cells )
             elif word.startswith('NSET'):
@@ -139,19 +140,21 @@ def read_buffer(f):
 
     num_nodes = len(points)/3
     points = numpy.reshape(points, (num_nodes,3))
+    cells = _scan_cells(point_gid, cells)
     return points, cells, point_data, cell_data, field_data
 
-def _read_nodes(f, points):
+def _read_nodes(f, point_gid, points):
     while True:
         last_pos = f.tell()
         line = f.readline().decode("utf-8")
         if line.startswith("*"):
             break;
         data = [float(k) for k in filter(None, line.strip().split(','))]
+        point_gid = numpy.append( point_gid, int(data[0]) )
         points = numpy.append(points,data[-3:])
         
     f.seek(last_pos)
-    return points
+    return points, point_gid
 
 def _read_cells(f, line0, cells):
     sline = line0.split(',')[1:]
@@ -178,9 +181,14 @@ def _read_cells(f, line0, cells):
     # 0-based.
     for key in cells:
         cells[key] = numpy.array(cells[key], dtype=int)
-        cells[key] -= 1
 
     f.seek(last_pos)
+    return cells
+
+def _scan_cells(point_gid, cells):
+    for arr in cells.itervalues():
+        for value in numpy.nditer(arr,op_flags=['readwrite'] ):
+            value[...] = numpy.flatnonzero(point_gid == value)[0]
     return cells
 
 def get_param_map(word, required_keys=None):
