@@ -250,15 +250,27 @@ def read_set(f, params_map):
     f.seek(last_pos)
     return set_ids
 
-def write(filename,points,cells):
+def write(
+    filename,
+    points,
+    cells,
+    point_data=None,
+    cell_data=None,
+    field_data=None,
+    write_binary=True,
+):
+    point_data = {} if point_data is None else point_data
+    cell_data = {} if cell_data is None else cell_data
+    field_data = {} if field_data is None else field_data
+    
     with open(filename, "wt") as f:
         f.write('*Heading\n')
-        f.write(" Abaqus DataFile Version 6.14\n".encode("utf-8"))
-        f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
-        f.write('*Node\n'.encode("utf-8"))
+        f.write(" Abaqus DataFile Version 6.14\n")
+        f.write("written by meshio v{}\n".format(__version__))
+        f.write('*Node\n')
         for k, x in enumerate(points):
             f.write(
-                "{}, {!r}, {!r}, {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
+                "{}, {!r}, {!r}, {!r}\n".format(k + 1, x[0], x[1], x[2])
             )
         eid = 0
         for cell_type, node_idcs in cells.items():

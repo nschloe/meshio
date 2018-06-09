@@ -283,7 +283,11 @@ def write(
         abaqus_io.write(
             filename,
             points,
-            cells
+            cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data,
+            write_binary=False,
         )
     else:
         assert file_format == "exodus", "Unknown file format '{}' of '{}'.".format(
