@@ -252,20 +252,20 @@ def read_set(f, params_map):
     return set_ids
 
 def write(filename,points,cells):
-    with open(filename, "wb") as f:
+    with open(filename, "wt") as f:
         f.write('*Heading\n')
-        f.write(" abaqus DataFile Version 4.2\n".encode("utf-8"))
+        f.write(" Abaqus DataFile Version 6.14\n".encode("utf-8"))
         f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
         f.write('*Node\n'.encode("utf-8"))
         for k, x in enumerate(points):
             f.write(
-                "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
+                "{}, {!r}, {!r}, {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
             )
+        eid = 0
         for cell_type, node_idcs in cells.items():
-            f.write('*Element,type=%s\n'+ meshio_to_abaqus_type[cell_type])
-            for eid, elem in zip(eids, elems):
-                #print(elem)
-                nids_strs = (str(nid) for nid in elem.tolist())
-                #abq_file.write(str(eid) + ','.join(nids_strs) + '\n')
-                f.write(','.join(nids_strs) + '\n')
-        f.write('*endpart')
+            f.write('*Element,type='+ meshio_to_abaqus_type[cell_type]+'\n')
+            for row in node_idcs:
+                eid+=1
+                nids_strs = (str(nid+1) for nid in row.tolist())
+                f.write(str(eid) + ',' + ','.join(nids_strs) + '\n')
+        f.write('*end')

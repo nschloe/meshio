@@ -29,6 +29,7 @@ e.g.,
  * [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format)
+ * [ABAQUS inp] (http://abaqus.software.polimi.it/v6.14/books/key/default.htm)
 
 meshio can read and write all of these formats and smoothly converts between
 them. Simply call

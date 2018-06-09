@@ -79,7 +79,7 @@ _extension_to_filetype = {
     ".vtk": "vtk-binary",
     ".xdmf": "xdmf",
     ".xmf": "xdmf",
-	".inp": "abaqus-inp",
+    ".inp": "abaqus-inp",
 }
 
 
@@ -278,6 +278,12 @@ def write(
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
+        )
+    elif file_format == "abaqus-inp":
+        abaqus_io.write(
+            filename,
+            points,
+            cells
         )
     else:
         assert file_format == "exodus", "Unknown file format '{}' of '{}'.".format(
