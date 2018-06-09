@@ -151,7 +151,7 @@ def _read_nodes(f, point_gid, points):
         data = [float(k) for k in filter(None, line.strip().split(','))]
         point_gid = numpy.append( point_gid, int(data[0]) )
         points = numpy.append(points,data[-3:])
-        
+
     f.seek(last_pos)
     return points, point_gid
 
