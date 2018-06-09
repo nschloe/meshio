@@ -106,7 +106,7 @@ def read_buffer(f):
     point_gid = numpy.array([], dtype=int )
 
     while True:
-        line = f.readline().decode("utf-8")
+        line = f.readline()
         if not line:
             # EOF
             break
@@ -138,15 +138,14 @@ def read_buffer(f):
             else:
                 pass
 
-    num_nodes = len(points)/3
-    points = numpy.reshape(points, (num_nodes,3))
+    points = numpy.reshape(points, (-1,3))
     cells = _scan_cells(point_gid, cells)
     return points, cells, point_data, cell_data, field_data
 
 def _read_nodes(f, point_gid, points):
     while True:
         last_pos = f.tell()
-        line = f.readline().decode("utf-8")
+        line = f.readline()
         if line.startswith("*"):
             break;
         data = [float(k) for k in filter(None, line.strip().split(','))]
@@ -170,7 +169,7 @@ def _read_cells(f, line0, cells):
         cells[t] = []
     while True:
         last_pos = f.tell()
-        line = f.readline().decode("utf-8")
+        line = f.readline()
         if line.startswith("*"):
             break;
         data = [int(k) for k in filter(None, line.split(','))]
@@ -186,7 +185,7 @@ def _read_cells(f, line0, cells):
     return cells
 
 def _scan_cells(point_gid, cells):
-    for arr in cells.itervalues():
+    for arr in cells.values():
         for value in numpy.nditer(arr,op_flags=['readwrite'] ):
             value[...] = numpy.flatnonzero(point_gid == value)[0]
     return cells
@@ -234,7 +233,7 @@ def read_set(f, params_map):
     set_ids=[]
     while True:
         last_pos = f.tell()
-        line = f.readline().decode("utf-8")
+        line = f.readline()
         if line.startswith("*"):
             break;
         set_ids += line.strip(', ').split(',')
