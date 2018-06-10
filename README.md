@@ -5,7 +5,7 @@
 [![Codacy grade](https://img.shields.io/codacy/grade/dc23fe7f7d4540b0a405110b3ae97dc6.svg)](https://app.codacy.com/app/nschloe/meshio/dashboard)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.org/project/meshio)
-[![Debian CI](https://badges.debian.net/badges/debian/testing/python3-meshio/version.svg)](https://tracker.debian.org/pkg/python-meshio:q)
+[![Debian CI](https://badges.debian.net/badges/debian/testing/python3-meshio/version.svg)](https://tracker.debian.org/pkg/python-meshio)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1173115.svg)](https://doi.org/10.5281/zenodo.1173115)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?logo=github&label=Stars)](https://github.com/nschloe/meshio)
 
@@ -16,7 +16,7 @@
 There are various mesh formats available for representing unstructured meshes,
 e.g.,
 
- * [ABAQUS inp](http://http://abaqus.software.polimi.it/v6.14/index.html)
+ * [Abaqus](http://abaqus.software.polimi.it/v6.14/index.html)
  * [ANSYS msh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
  * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)

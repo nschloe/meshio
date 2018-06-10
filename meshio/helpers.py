@@ -18,7 +18,7 @@ from . import xdmf_io
 from . import abaqus_io
 
 input_filetypes = [
-    "abaqus-inp",
+    "abaqus",
     "ansys",
     "exodus",
     "gmsh-ascii",
@@ -39,7 +39,7 @@ input_filetypes = [
 ]
 
 output_filetypes = [
-    "abaqus-inp",
+    "abaqus",
     "ansys-ascii",
     "ansys-binary",
     "exodus",
@@ -79,7 +79,7 @@ _extension_to_filetype = {
     ".vtk": "vtk-binary",
     ".xdmf": "xdmf",
     ".xmf": "xdmf",
-    ".inp": "abaqus-inp",
+    ".inp": "abaqus",
 }
 
 
@@ -141,7 +141,7 @@ def read(filename, file_format=None):
         "xdmf": xdmf_io,
         "exodus": exodus_io,
         #
-        "abaqus-inp": abaqus_io,
+        "abaqus": abaqus_io,
     }
 
     assert file_format in format_to_reader, "Unknown file format '{}' of '{}'.".format(
@@ -279,7 +279,7 @@ def write(
             cell_data=cell_data,
             field_data=field_data,
         )
-    elif file_format == "abaqus-inp":
+    elif file_format == "abaqus":
         abaqus_io.write(
             filename,
             points,
