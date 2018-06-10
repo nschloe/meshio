@@ -18,6 +18,7 @@ from . import xdmf_io
 from . import abaqus_io
 
 input_filetypes = [
+    "abaqus-inp",
     "ansys",
     "exodus",
     "gmsh-ascii",
@@ -35,10 +36,10 @@ input_filetypes = [
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
-	"abaqus-inp",
 ]
 
 output_filetypes = [
+    "abaqus-inp",
     "ansys-ascii",
     "ansys-binary",
     "exodus",
@@ -57,7 +58,6 @@ output_filetypes = [
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
-	"abaqus-inp",
 ]
 
 _extension_to_filetype = {
@@ -140,7 +140,7 @@ def read(filename, file_format=None):
         #
         "xdmf": xdmf_io,
         "exodus": exodus_io,
-		#
+        #
         "abaqus-inp": abaqus_io,
     }
 

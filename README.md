@@ -16,6 +16,7 @@
 There are various mesh formats available for representing unstructured meshes,
 e.g.,
 
+ * [ABAQUS inp](http://http://abaqus.software.polimi.it/v6.14/index.html)
  * [ANSYS msh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
  * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
@@ -29,7 +30,6 @@ e.g.,
  * [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format)
- * [ABAQUS inp](http://abaqus.software.polimi.it/v6.14/index.html)
 
 meshio can read and write all of these formats and smoothly converts between
 them. Simply call
@@ -107,4 +107,3 @@ To create a new release
 ### License
 
 meshio is published under the [MIT license](https://en.wikipedia.org/wiki/MIT_License).
-

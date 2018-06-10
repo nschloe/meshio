@@ -21,7 +21,6 @@ import helpers
         helpers.hex20_mesh,
     ],
 )
-
 def test(mesh):
     def writer(*args, **kwargs):
         return meshio.abaqus_io.write(*args, **kwargs)
