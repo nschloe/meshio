@@ -16,7 +16,7 @@
 There are various mesh formats available for representing unstructured meshes,
 e.g.,
 
- * [ABAQUS inp](http://http://abaqus.software.polimi.it/v6.14/index.html)
+ * [Abaqus](http://abaqus.software.polimi.it/v6.14/index.html)
  * [ANSYS msh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
  * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
