@@ -87,7 +87,7 @@ def _parse_options():
         "--input-format",
         "-i",
         type=str,
-        choices=meshio.input_filetypes,
+        choices=meshio.helpers.input_filetypes,
         help="input file format",
         default=None,
     )
@@ -96,7 +96,7 @@ def _parse_options():
         "--output-format",
         "-o",
         type=str,
-        choices=meshio.output_filetypes,
+        choices=meshio.helpers.output_filetypes,
         help="output file format",
         default=None,
     )
