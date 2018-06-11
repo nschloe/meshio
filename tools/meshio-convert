@@ -15,63 +15,16 @@ def _main():
 
     # read mesh data
     mesh = meshio.read(args.infile, file_format=args.input_format)
-
-    print("Number of points: {}".format(len(mesh.points)))
-    print("Elements:")
-    for tpe, elems in mesh.cells.items():
-        print("  Number of {}s: {}".format(tpe, len(elems)))
-
-    if mesh.point_data:
-        print("Point data: {}".format(", ".join(mesh.point_data.keys())))
-
-    cell_data_keys = set()
-    for cell_type in mesh.cell_data:
-        cell_data_keys = cell_data_keys.union(mesh.cell_data[cell_type].keys())
-    if cell_data_keys:
-        print("Cell data: {}".format(", ".join(cell_data_keys)))
+    print(mesh)
 
     if args.prune:
-        mesh.cells.pop("vertex", None)
-        mesh.cells.pop("line", None)
-        if "tetra" in mesh.cells:
-            # remove_lower_order_cells
-            mesh.cells.pop("triangle", None)
-        # remove_orphaned_nodes.
-        # find which nodes are not mentioned in the cells and remove them
-        flat_cells = mesh.cells["tetra"].flatten()
-        orphaned_nodes = numpy.setdiff1d(numpy.arange(len(mesh.points)), flat_cells)
-        mesh.points = numpy.delete(mesh.points, orphaned_nodes, axis=0)
-        # also adapt the point data
-        for key in mesh.point_data:
-            mesh.point_data[key] = numpy.delete(
-                mesh.point_data[key], orphaned_nodes, axis=0
-            )
-
-        # reset GLOBAL_ID
-        if "GLOBAL_ID" in mesh.point_data:
-            mesh.point_data["GLOBAL_ID"] = numpy.arange(1, len(mesh.points) + 1)
-
-        # We now need to adapt the cells too.
-        diff = numpy.zeros(len(flat_cells), dtype=flat_cells.dtype)
-        for orphan in orphaned_nodes:
-            diff[numpy.argwhere(flat_cells > orphan)] += 1
-        flat_cells -= diff
-        mesh.cells["tetra"] = flat_cells.reshape(mesh.cells["tetra"].shape)
+        mesh.prune()
 
     # Some converters (like VTK) require `points` to be contiguous.
     mesh.points = numpy.ascontiguousarray(mesh.points)
 
     # write it out
-    meshio.write(
-        args.outfile,
-        mesh.points,
-        mesh.cells,
-        file_format=args.output_format,
-        point_data=mesh.point_data,
-        cell_data=mesh.cell_data,
-        field_data=mesh.field_data,
-    )
-
+    meshio.write(args.outfile, mesh, file_format=args.output_format)
     return
 
 
