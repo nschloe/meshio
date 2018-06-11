@@ -10,6 +10,7 @@ import logging
 import numpy
 
 from . import __about__
+from .mesh import Mesh
 
 
 # def _int_to_bool_list(num):
@@ -103,7 +104,9 @@ def read(filename):
 
     #             end = row[0] + 1
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def write(
@@ -143,41 +146,43 @@ def write(
     # The GLOBAL_ID associated with a point is used to identify points if
     # distributed across several processes. mbpart automatically adds them,
     # too.
-    if "GLOBAL_ID" not in point_data and add_global_ids:
-        point_data["GLOBAL_ID"] = numpy.arange(1, len(points) + 1)
+    # Copy to pd to avoid changing point_data. The items are not deep-copied.
+    pd = point_data.copy()
+    if "GLOBAL_ID" not in pd and add_global_ids:
+        pd["GLOBAL_ID"] = numpy.arange(1, len(points) + 1)
 
     # add point data
-    if point_data is not None:
+    if pd:
         tags = nodes.create_group("tags")
-        for key, data in point_data.items():
-            if len(data.shape) == 1:
-                dtype = data.dtype
-                tags.create_dataset(key, data=data)
-            else:
-                # H5M doesn't accept n-x-k arrays as data; it wants an n-x-1
-                # array with k-tuples as entries.
-                n, k = data.shape
-                dtype = numpy.dtype((data.dtype, (k,)))
-                dset = tags.create_dataset(key, (n,), dtype=dtype)
-                dset[:] = data
+    for key, data in pd.items():
+        if len(data.shape) == 1:
+            dtype = data.dtype
+            tags.create_dataset(key, data=data)
+        else:
+            # H5M doesn't accept n-x-k arrays as data; it wants an n-x-1
+            # array with k-tuples as entries.
+            n, k = data.shape
+            dtype = numpy.dtype((data.dtype, (k,)))
+            dset = tags.create_dataset(key, (n,), dtype=dtype)
+            dset[:] = data
 
-            # Create entry in global tags
-            g = tstt_tags.create_group(key)
-            g["type"] = dtype
-            # Add a class tag:
-            # From
-            # <http://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
-            # ```
-            # /* Was dense tag data in mesh database */
-            #  define mhdf_DENSE_TYPE   2
-            # /** \brief Was sparse tag data in mesh database */
-            # #define mhdf_SPARSE_TYPE  1
-            # /** \brief Was bit-field tag data in mesh database */
-            # #define mhdf_BIT_TYPE     0
-            # /** \brief Unused */
-            # #define mhdf_MESH_TYPE    3
-            #
-            g.attrs["class"] = 2
+        # Create entry in global tags
+        g = tstt_tags.create_group(key)
+        g["type"] = dtype
+        # Add a class tag:
+        # From
+        # <http://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
+        # ```
+        # /* Was dense tag data in mesh database */
+        #  define mhdf_DENSE_TYPE   2
+        # /** \brief Was sparse tag data in mesh database */
+        # #define mhdf_SPARSE_TYPE  1
+        # /** \brief Was bit-field tag data in mesh database */
+        # #define mhdf_BIT_TYPE     0
+        # /** \brief Unused */
+        # #define mhdf_MESH_TYPE    3
+        #
+        g.attrs["class"] = 2
 
     # add elements
     elements = tstt.create_group("elements")
