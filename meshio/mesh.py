@@ -38,8 +38,10 @@ class Mesh(object):
             self.cells.pop("triangle", None)
         # remove_orphaned_nodes.
         # find which nodes are not mentioned in the cells and remove them
-        flat_cells = self.cells["tetra"].flatten()
-        orphaned_nodes = numpy.setdiff1d(numpy.arange(len(self.points)), flat_cells)
+        all_cells_flat = numpy.concatenate(
+            [vals for vals in self.cells.values()]
+        ).flatten()
+        orphaned_nodes = numpy.setdiff1d(numpy.arange(len(self.points)), all_cells_flat)
         self.points = numpy.delete(self.points, orphaned_nodes, axis=0)
         # also adapt the point data
         for key in self.point_data:
@@ -52,9 +54,14 @@ class Mesh(object):
             self.point_data["GLOBAL_ID"] = numpy.arange(1, len(self.points) + 1)
 
         # We now need to adapt the cells too.
-        diff = numpy.zeros(len(flat_cells), dtype=flat_cells.dtype)
+        diff = numpy.zeros(len(all_cells_flat), dtype=all_cells_flat.dtype)
         for orphan in orphaned_nodes:
-            diff[numpy.argwhere(flat_cells > orphan)] += 1
-        flat_cells -= diff
-        self.cells["tetra"] = flat_cells.reshape(self.cells["tetra"].shape)
+            diff[numpy.argwhere(all_cells_flat > orphan)] += 1
+        all_cells_flat -= diff
+        k = 0
+        for key in self.cells:
+            s = self.cells[key].shape
+            n = numpy.prod(s)
+            self.cells[key] = all_cells_flat[k : k + n].reshape(s)
+            k += n
         return
