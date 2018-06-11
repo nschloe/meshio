@@ -9,12 +9,13 @@ I/O for the OFF surface format, cf.
 from itertools import islice
 import numpy
 
+from .mesh import Mesh
+
 
 def read(filename):
     with open(filename) as f:
         points, cells = read_buffer(f)
-
-    return points, cells, {}, {}, {}
+    return Mesh(points, cells)
 
 
 def read_buffer(f):
@@ -91,26 +92,22 @@ def read_buffer(f):
     return verts, cells
 
 
-def write(filename, points, cells, point_data=None, cell_data=None, field_data=None):
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
-
-    for key in cells:
+def write(filename, mesh):
+    for key in mesh.cells:
         assert key in ["triangle"], "Can only deal with triangular faces"
 
-    tri = cells["triangle"]
+    tri = mesh.cells["triangle"]
 
     with open(filename, "wb") as fh:
         fh.write(b"OFF\n")
         fh.write(b"# Created by meshio\n\n")
 
         # counts
-        c = "{} {} {}\n\n".format(len(points), len(tri), 0)
+        c = "{} {} {}\n\n".format(mesh.points.shape[0], len(tri), 0)
         fh.write(c.encode("utf-8"))
 
         # vertices
-        numpy.savetxt(fh, points, "%r")
+        numpy.savetxt(fh, mesh.points, "%r")
 
         # triangles
         data_with_label = numpy.c_[tri.shape[1] * numpy.ones(tri.shape[0]), tri]

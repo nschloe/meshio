@@ -15,6 +15,7 @@ except ImportError:
 
 import numpy
 
+from .mesh import Mesh
 from .gmsh_io import cell_data_from_raw
 from .vtk_io import raw_from_cell_data
 from .vtu_io import write_xml
@@ -293,7 +294,13 @@ class XdmfReader(object):
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
-        return points, cells, point_data, cell_data, field_data
+        return Mesh(
+            points,
+            cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data,
+        )
 
     def read_xdmf3(self, root):
         domains = list(root)
@@ -370,31 +377,23 @@ class XdmfReader(object):
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
-        return points, cells, point_data, cell_data, field_data
+        return Mesh(
+            points,
+            cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data,
+        )
 
 
 class XdmfWriter(object):
-    def __init__(
-        self,
-        filename,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None,
-        pretty_xml=True,
-        data_format="HDF",
-    ):
+    def __init__(self, filename, mesh, pretty_xml=True, data_format="HDF"):
         from lxml import etree as ET
 
         assert data_format in ["XML", "Binary", "HDF"], (
             "Unknown XDMF data format "
             "'{}' (use 'XML', 'Binary', or 'HDF'.)".format(data_format)
         )
-
-        point_data = {} if point_data is None else point_data
-        cell_data = {} if cell_data is None else cell_data
-        field_data = {} if field_data is None else field_data
 
         self.filename = filename
         self.data_format = data_format
@@ -411,10 +410,10 @@ class XdmfWriter(object):
         domain = ET.SubElement(xdmf_file, "Domain")
         grid = ET.SubElement(domain, "Grid", Name="Grid")
 
-        self.points(grid, points)
-        self.cells(cells, grid)
-        self.point_data(point_data, grid)
-        self.cell_data(cell_data, grid)
+        self.points(grid, mesh.points)
+        self.cells(mesh.cells, grid)
+        self.point_data(mesh.point_data, grid)
+        self.cell_data(mesh.cell_data, grid)
 
         ET.register_namespace("xi", "https://www.w3.org/2001/XInclude/")
 

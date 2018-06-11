@@ -10,6 +10,7 @@ import logging
 import numpy
 
 from . import __about__
+from .mesh import Mesh
 
 
 # def _int_to_bool_list(num):
@@ -103,26 +104,16 @@ def read(filename):
 
     #             end = row[0] + 1
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
-def write(
-    filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
-    field_data=None,
-    add_global_ids=True,
-):
+def write(filename, mesh, add_global_ids=True):
     """Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     """
     import h5py
-
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
 
     f = h5py.File(filename, "w")
 
@@ -133,9 +124,9 @@ def write(
 
     # add nodes
     nodes = tstt.create_group("nodes")
-    coords = nodes.create_dataset("coordinates", data=points)
+    coords = nodes.create_dataset("coordinates", data=mesh.points)
     coords.attrs.create("start_id", global_id)
-    global_id += len(points)
+    global_id += len(mesh.points)
 
     # Global tags
     tstt_tags = tstt.create_group("tags")
@@ -143,41 +134,43 @@ def write(
     # The GLOBAL_ID associated with a point is used to identify points if
     # distributed across several processes. mbpart automatically adds them,
     # too.
-    if "GLOBAL_ID" not in point_data and add_global_ids:
-        point_data["GLOBAL_ID"] = numpy.arange(1, len(points) + 1)
+    # Copy to pd to avoid changing point_data. The items are not deep-copied.
+    pd = mesh.point_data.copy()
+    if "GLOBAL_ID" not in pd and add_global_ids:
+        pd["GLOBAL_ID"] = numpy.arange(1, len(mesh.points) + 1)
 
     # add point data
-    if point_data is not None:
+    if pd:
         tags = nodes.create_group("tags")
-        for key, data in point_data.items():
-            if len(data.shape) == 1:
-                dtype = data.dtype
-                tags.create_dataset(key, data=data)
-            else:
-                # H5M doesn't accept n-x-k arrays as data; it wants an n-x-1
-                # array with k-tuples as entries.
-                n, k = data.shape
-                dtype = numpy.dtype((data.dtype, (k,)))
-                dset = tags.create_dataset(key, (n,), dtype=dtype)
-                dset[:] = data
+    for key, data in pd.items():
+        if len(data.shape) == 1:
+            dtype = data.dtype
+            tags.create_dataset(key, data=data)
+        else:
+            # H5M doesn't accept n-x-k arrays as data; it wants an n-x-1
+            # array with k-tuples as entries.
+            n, k = data.shape
+            dtype = numpy.dtype((data.dtype, (k,)))
+            dset = tags.create_dataset(key, (n,), dtype=dtype)
+            dset[:] = data
 
-            # Create entry in global tags
-            g = tstt_tags.create_group(key)
-            g["type"] = dtype
-            # Add a class tag:
-            # From
-            # <http://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
-            # ```
-            # /* Was dense tag data in mesh database */
-            #  define mhdf_DENSE_TYPE   2
-            # /** \brief Was sparse tag data in mesh database */
-            # #define mhdf_SPARSE_TYPE  1
-            # /** \brief Was bit-field tag data in mesh database */
-            # #define mhdf_BIT_TYPE     0
-            # /** \brief Unused */
-            # #define mhdf_MESH_TYPE    3
-            #
-            g.attrs["class"] = 2
+        # Create entry in global tags
+        g = tstt_tags.create_group(key)
+        g["type"] = dtype
+        # Add a class tag:
+        # From
+        # <http://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
+        # ```
+        # /* Was dense tag data in mesh database */
+        #  define mhdf_DENSE_TYPE   2
+        # /** \brief Was sparse tag data in mesh database */
+        # #define mhdf_SPARSE_TYPE  1
+        # /** \brief Was bit-field tag data in mesh database */
+        # #define mhdf_BIT_TYPE     0
+        # /** \brief Unused */
+        # #define mhdf_MESH_TYPE    3
+        #
+        g.attrs["class"] = 2
 
     # add elements
     elements = tstt.create_group("elements")
@@ -217,7 +210,7 @@ def write(
         "triangle": {"name": "Tri3", "type": 2},
         "tetra": {"name": "Tet4", "type": 5},
     }
-    for key, data in cells.items():
+    for key, data in mesh.cells.items():
         if key not in meshio_to_h5m_type:
             logging.warning("Unsupported H5M element type '%s'. Skipping.", key)
             continue
@@ -230,9 +223,9 @@ def write(
         global_id += len(data)
 
     # add cell data
-    if cell_data:
+    if mesh.cell_data:
         tags = elem_group.create_group("tags")
-        for key, value in cell_data.items():
+        for key, value in mesh.cell_data.items():
             tags.create_dataset(key, data=value)
 
     # add empty set -- MOAB wants this

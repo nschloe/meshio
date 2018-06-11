@@ -11,6 +11,7 @@ import struct
 
 import numpy
 
+from .mesh import Mesh
 from .vtk_io import raw_from_cell_data
 
 
@@ -163,8 +164,8 @@ def read(filename):
     """Reads a Gmsh msh file.
     """
     with open(filename, "rb") as f:
-        out = read_buffer(f)
-    return out
+        mesh = read_buffer(f)
+    return mesh
 
 
 def _read_header(f, int_size):
@@ -260,9 +261,10 @@ def _read_cells(f, cells, int_size, is_ascii):
             # two tags (physical and elementary tags).
             # <<<
             num_tags = data[2]
-            if t not in cell_tags:
-                cell_tags[t] = []
-            cell_tags[t].append(data[3 : 3 + num_tags])
+            if num_tags > 0:
+                if t not in cell_tags:
+                    cell_tags[t] = []
+                cell_tags[t].append(data[3 : 3 + num_tags])
 
         # convert to numpy arrays
         for key in cells:
@@ -435,7 +437,9 @@ def read_buffer(f):
             assert name not in cell_data[key]
             cell_data[key][name] = item_list
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def cell_data_from_raw(cells, cell_data_raw):
@@ -598,30 +602,18 @@ def _write_data(fh, tag, name, data, write_binary):
     return
 
 
-def write(
-    filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
-    field_data=None,
-    write_binary=True,
-):
+def write(filename, mesh, write_binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
-
     if write_binary:
-        for key in cells:
-            if cells[key].dtype != numpy.int32:
+        for key, value in mesh.cells.items():
+            if value.dtype != numpy.int32:
                 logging.warning(
                     "Binary Gmsh needs 32-bit integers (got %s). Converting.",
-                    cells[key].dtype,
+                    value.dtype,
                 )
-                cells[key] = numpy.array(cells[key], dtype=numpy.int32)
+                mesh.cells[key] = numpy.array(value, dtype=numpy.int32)
 
     with open(filename, "wb") as fh:
         mode_idx = 1 if write_binary else 0
@@ -636,14 +628,14 @@ def write(
             fh.write("\n".encode("utf-8"))
         fh.write("$EndMeshFormat\n".encode("utf-8"))
 
-        if field_data:
-            _write_physical_names(fh, field_data)
+        if mesh.field_data:
+            _write_physical_names(fh, mesh.field_data)
 
         # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the
         # rest is actual cell data.
         tag_data = {}
         other_data = {}
-        for cell_type, a in cell_data.items():
+        for cell_type, a in mesh.cell_data.items():
             tag_data[cell_type] = {}
             other_data[cell_type] = {}
             for key, data in a.items():
@@ -652,9 +644,9 @@ def write(
                 else:
                     other_data[cell_type][key] = data
 
-        _write_nodes(fh, points, write_binary)
-        _write_elements(fh, cells, tag_data, write_binary)
-        for name, dat in point_data.items():
+        _write_nodes(fh, mesh.points, write_binary)
+        _write_elements(fh, mesh.cells, tag_data, write_binary)
+        for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, write_binary)
         cell_data_raw = raw_from_cell_data(other_data)
         for name, dat in cell_data_raw.items():

@@ -8,6 +8,8 @@ I/O for the STL format, cf.
 """
 import numpy
 
+from .mesh import Mesh
+
 
 def read(filename):
     """Reads a Gmsh msh file.
@@ -70,7 +72,7 @@ def _read_ascii(f):
     # points and build the data arrays.
     points, cells = data_from_facets(facets)
 
-    return points, cells, {}, {}, {}
+    return Mesh(points, cells)
 
 
 def data_from_facets(facets):
@@ -103,28 +105,18 @@ def _read_binary(f):
         f.read(2)
 
     points, cells = data_from_facets(numpy.array(facets))
-    return points, cells, {}, {}, {}
+    return Mesh(points, cells)
 
 
-def write(
-    filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
-    field_data=None,
-    write_binary=False,
-):
-    assert not point_data, "STL cannot write point data."
-    assert not field_data, "STL cannot write field data."
+def write(filename, mesh, write_binary=False):
     assert (
-        len(cells.keys()) == 1 and list(cells.keys())[0] == "triangle"
+        len(mesh.cells.keys()) == 1 and list(mesh.cells.keys())[0] == "triangle"
     ), "STL can only write triangle cells."
 
     if write_binary:
-        _write_binary(filename, points, cells)
+        _write_binary(filename, mesh.points, mesh.cells)
     else:
-        _write_ascii(filename, points, cells)
+        _write_ascii(filename, mesh.points, mesh.cells)
 
     return
 

@@ -10,6 +10,7 @@ import re
 import numpy
 
 from .__about__ import __version__
+from .mesh import Mesh
 
 
 def _skip_to(f, char):
@@ -363,40 +364,30 @@ def read(filename):
     for key in cells:
         cells[key] -= first_point_index_overall
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
-def write(
-    filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
-    field_data=None,
-    write_binary=True,
-):
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
-
+def write(filename, mesh, write_binary=True):
     with open(filename, "wb") as fh:
         # header
         fh.write(('(1 "meshio {}")\n'.format(__version__)).encode("utf8"))
 
         # dimension
-        dim = 2 if all(points[:, 2] == 0.0) else 3
+        dim = 2 if all(mesh.points[:, 2] == 0.0) else 3
         fh.write(("(2 {})\n".format(dim)).encode("utf8"))
 
         # total number of nodes
         first_node_index = 1
         fh.write(
-            ("(10 (0 {:x} {:x} 0))\n".format(first_node_index, len(points))).encode(
-                "utf8"
-            )
+            (
+                "(10 (0 {:x} {:x} 0))\n".format(first_node_index, len(mesh.points))
+            ).encode("utf8")
         )
 
         # total number of cells
-        total_num_cells = sum([len(c) for c in cells])
+        total_num_cells = sum([len(c) for c in mesh.cells])
         fh.write(("(12 (0 1 {:x} 0))\n".format(total_num_cells)).encode("utf8"))
 
         # Write nodes
@@ -404,16 +395,16 @@ def write(
         fh.write(
             (
                 "({} (1 {:x} {:x} 1 {:x}))(\n".format(
-                    key, first_node_index, points.shape[0], points.shape[1]
+                    key, first_node_index, mesh.points.shape[0], mesh.points.shape[1]
                 )
             ).encode("utf8")
         )
         if write_binary:
-            fh.write(points.tostring())
+            fh.write(mesh.points.tostring())
             fh.write("\n)".encode("utf8"))
             fh.write("End of Binary Section 3010)\n".encode("utf8"))
         else:
-            numpy.savetxt(fh, points, fmt="%.15e")
+            numpy.savetxt(fh, mesh.points, fmt="%.15e")
             fh.write(("))\n").encode("utf8"))
 
         # Write cells
@@ -431,7 +422,7 @@ def write(
             numpy.dtype("int32"): "2012",
             numpy.dtype("int64"): "3012",
         }
-        for cell_type, values in cells.items():
+        for cell_type, values in mesh.cells.items():
             key = binary_dtypes[values.dtype] if write_binary else "12"
             last_index = first_index + len(values) - 1
             fh.write(

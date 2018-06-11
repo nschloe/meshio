@@ -18,6 +18,7 @@ import zlib
 import numpy
 
 from .__about__ import __version__
+from .mesh import Mesh
 from .vtk_io import vtk_to_meshio_type, meshio_to_vtk_type, raw_from_cell_data
 from .gmsh_io import num_nodes_per_cell
 
@@ -273,33 +274,20 @@ class VtuReader(object):
 
 def read(filename):
     reader = VtuReader(filename)
-    return (
+    return Mesh(
         reader.points,
         reader.cells,
-        reader.point_data,
-        reader.cell_data,
-        reader.field_data,
+        point_data=reader.point_data,
+        cell_data=reader.cell_data,
+        field_data=reader.field_data,
     )
 
 
-def write(
-    filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
-    field_data=None,
-    write_binary=True,
-    pretty_xml=True,
-):
+def write(filename, mesh, write_binary=True, pretty_xml=True):
     from lxml import etree as ET
 
     if not write_binary:
         logging.warning("VTU ASCII files are only meant for debugging.")
-
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
 
     header_type = "UInt32"
 
@@ -317,13 +305,13 @@ def write(
     # swap the data to match the system byteorder
     # Don't use byteswap to make sure that the dtype is changed; see
     # <https://github.com/numpy/numpy/issues/10372>.
-    points = points.astype(points.dtype.newbyteorder("="))
-    for data in point_data.values():
+    points = mesh.points.astype(mesh.points.dtype.newbyteorder("="))
+    for data in mesh.point_data.values():
         data = data.astype(data.dtype.newbyteorder("="))
-    for data in cell_data.values():
+    for data in mesh.cell_data.values():
         for dat in data.values():
             dat = dat.astype(dat.dtype.newbyteorder("="))
-    for data in field_data.values():
+    for data in mesh.field_data.values():
         data = data.astype(data.dtype.newbyteorder("="))
 
     def chunk_it(array, n):
@@ -371,7 +359,7 @@ def write(
 
     grid = ET.SubElement(vtk_file, "UnstructuredGrid")
 
-    total_num_cells = sum([len(c) for c in cells.values()])
+    total_num_cells = sum([len(c) for c in mesh.cells.values()])
     piece = ET.SubElement(
         grid,
         "Piece",
@@ -384,33 +372,37 @@ def write(
         pts = ET.SubElement(piece, "Points")
         numpy_to_xml_array(pts, "Points", "%.11e", points)
 
-    if cells is not None:
+    if mesh.cells is not None:
         cls = ET.SubElement(piece, "Cells")
 
         # create connectivity, offset, type arrays
-        connectivity = numpy.concatenate([numpy.concatenate(v) for v in cells.values()])
+        connectivity = numpy.concatenate(
+            [numpy.concatenate(v) for v in mesh.cells.values()]
+        )
         # offset (points to the first element of the next cell)
-        offsets = [v.shape[1] * numpy.arange(1, v.shape[0] + 1) for v in cells.values()]
+        offsets = [
+            v.shape[1] * numpy.arange(1, v.shape[0] + 1) for v in mesh.cells.values()
+        ]
         for k in range(1, len(offsets)):
             offsets[k] += offsets[k - 1][-1]
         offsets = numpy.concatenate(offsets)
         # types
         types = numpy.concatenate(
-            [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in cells.items()]
+            [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in mesh.cells.items()]
         )
 
         numpy_to_xml_array(cls, "connectivity", "%d", connectivity)
         numpy_to_xml_array(cls, "offsets", "%d", offsets)
         numpy_to_xml_array(cls, "types", "%d", types)
 
-    if point_data:
+    if mesh.point_data:
         pd = ET.SubElement(piece, "PointData")
-        for name, data in point_data.items():
+        for name, data in mesh.point_data.items():
             numpy_to_xml_array(pd, name, "%.11e", data)
 
-    if cell_data:
+    if mesh.cell_data:
         cd = ET.SubElement(piece, "CellData")
-        for name, data in raw_from_cell_data(cell_data).items():
+        for name, data in raw_from_cell_data(mesh.cell_data).items():
             numpy_to_xml_array(cd, name, "%.11e", data)
 
     write_xml(filename, vtk_file, pretty_xml)

@@ -9,6 +9,9 @@ I/O for MED/Salome, cf.
 """
 import numpy
 
+from .mesh import Mesh
+
+
 # https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {
     "vertex": "PO1",
@@ -68,7 +71,9 @@ def read(filename):
     except KeyError:
         point_data, cell_data, field_data = {}, {}, {}
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def _read_data(cha):
@@ -132,20 +137,8 @@ def _read_cell_data(cell_data, name, supp, data):
     return cell_data
 
 
-def write(
-    filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
-    field_data=None,
-    add_global_ids=True,
-):
+def write(filename, mesh, add_global_ids=True):
     import h5py
-
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
 
     f = h5py.File(filename, "w")
 
@@ -159,22 +152,22 @@ def write(
     # Meshes
     ens_maa = f.create_group("ENS_MAA")
     mesh_name = "mesh"
-    mesh = ens_maa.create_group(mesh_name)
-    mesh.attrs.create("DIM", points.shape[1])  # mesh dimension
-    mesh.attrs.create("ESP", points.shape[1])  # spatial dimension
-    mesh.attrs.create("REP", 0)  # cartesian coordinate system (repère in french)
-    mesh.attrs.create("UNT", b"")  # time unit
-    mesh.attrs.create("UNI", b"")  # spatial unit
-    mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
-    mesh.attrs.create(
-        "NOM", _comp_nom(points.shape[1]).encode("ascii")
+    med_mesh = ens_maa.create_group(mesh_name)
+    med_mesh.attrs.create("DIM", mesh.points.shape[1])  # mesh dimension
+    med_mesh.attrs.create("ESP", mesh.points.shape[1])  # spatial dimension
+    med_mesh.attrs.create("REP", 0)  # cartesian coordinate system (repère in french)
+    med_mesh.attrs.create("UNT", b"")  # time unit
+    med_mesh.attrs.create("UNI", b"")  # spatial unit
+    med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
+    med_mesh.attrs.create(
+        "NOM", _comp_nom(mesh.points.shape[1]).encode("ascii")
     )  # component names
-    mesh.attrs.create("DES", b"Mesh created with meshio")
-    mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
+    med_mesh.attrs.create("DES", b"Mesh created with meshio")
+    med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
 
     # Time-step
     step = "-0000000000000000001-0000000000000000001"  # NDT NOR
-    ts = mesh.create_group(step)
+    ts = med_mesh.create_group(step)
     ts.attrs.create("CGT", 1)
     ts.attrs.create("NDT", -1)  # no time step (-1)
     ts.attrs.create("NOR", -1)  # no iteration step (-1)
@@ -186,22 +179,22 @@ def write(
     noe_group.attrs.create("CGS", 1)
     pfl = "MED_NO_PROFILE_INTERNAL"
     noe_group.attrs.create("PFL", pfl.encode("ascii"))
-    coo = noe_group.create_dataset("COO", data=points.T.flatten())
+    coo = noe_group.create_dataset("COO", data=mesh.points.T.flatten())
     coo.attrs.create("CGT", 1)
-    coo.attrs.create("NBR", len(points))
+    coo.attrs.create("NBR", len(mesh.points))
 
     # Cells (mailles in french)
     mai_group = ts.create_group("MAI")
     mai_group.attrs.create("CGT", 1)
     for key, med_type in meshio_to_med_type.items():
-        if key in cells:
+        if key in mesh.cells:
             mai = mai_group.create_group(med_type)
             mai.attrs.create("CGT", 1)
             mai.attrs.create("CGS", 1)
             mai.attrs.create("PFL", pfl.encode("ascii"))
-            nod = mai.create_dataset("NOD", data=cells[key].T.flatten() + 1)
+            nod = mai.create_dataset("NOD", data=mesh.cells[key].T.flatten() + 1)
             nod.attrs.create("CGT", 1)
-            nod.attrs.create("NBR", len(cells[key]))
+            nod.attrs.create("NBR", len(mesh.cells[key]))
 
     # Subgroups (familles in french)
     fas = f.create_group("FAS")
@@ -210,18 +203,18 @@ def write(
     fz.attrs.create("NUM", 0)
 
     # Write nodal/cell data
-    if point_data or cell_data:
+    if mesh.point_data or mesh.cell_data:
         cha = f.create_group("CHA")
 
         # Nodal data
-        for name, data in point_data.items():
+        for name, data in mesh.point_data.items():
             supp = "NOEU"  # nodal data
             _write_data(cha, mesh_name, pfl, name, supp, data)
 
         # Cell data
         # Only support writing ELEM fields with only 1 Gauss point per cell
         # Or ELNO (DG) fields defined at every node per cell
-        for cell_type, d in cell_data.items():
+        for cell_type, d in mesh.cell_data.items():
             for name, data in d.items():
 
                 # Determine the nature of the cell data

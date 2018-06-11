@@ -12,6 +12,8 @@ import re
 
 import numpy
 
+from .mesh import Mesh
+
 
 def _read_mesh(filename):
     from lxml import etree as ET
@@ -106,10 +108,8 @@ def _read_cell_data(filename, cell_type):
 
 def read(filename):
     points, cells, cell_type = _read_mesh(filename)
-    point_data = {}
     cell_data = _read_cell_data(filename, cell_type)
-    field_data = {}
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(points, cells, cell_data=cell_data)
 
 
 def _write_mesh(filename, points, cell_type, cells):
@@ -204,24 +204,20 @@ def _write_cell_data(filename, dim, cell_data):
     return
 
 
-def write(filename, points, cells, point_data=None, cell_data=None, field_data=None):
+def write(filename, mesh):
     logging.warning("Dolfin's XML is a legacy format. Consider using XDMF instead.")
 
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
-
-    if "tetra" in cells:
+    if "tetra" in mesh.cells:
         cell_type = "tetra"
     else:
-        assert "triangle" in cells
+        assert "triangle" in mesh.cells
         cell_type = "triangle"
 
-    _write_mesh(filename, points, cell_type, cells)
+    _write_mesh(filename, mesh.points, cell_type, mesh.cells)
 
-    if cell_type in cell_data:
-        for key, data in cell_data[cell_type].items():
+    if cell_type in mesh.cell_data:
+        for key, data in mesh.cell_data[cell_type].items():
             cell_data_filename = "{}_{}.xml".format(os.path.splitext(filename)[0], key)
-            dim = 2 if all(points[:, 2] == 0) else 3
+            dim = 2 if all(mesh.points[:, 2] == 0) else 3
             _write_cell_data(cell_data_filename, dim, numpy.array(data))
     return

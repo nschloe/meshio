@@ -14,12 +14,14 @@ import re
 import logging
 import numpy
 
+from .mesh import Mesh
+
 
 def read(filename):
     with open(filename) as f:
         points, cells = read_buffer(f)
 
-    return points, cells, {}, {}, {}
+    return Mesh(points, cells)
 
 
 class _ItemReader:
@@ -106,25 +108,23 @@ def read_buffer(file):
     return points, cells
 
 
-def write(filename, points, cells, point_data=None, cell_data=None, field_data=None):
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
-
+def write(filename, mesh):
     with open(filename, "wb") as fh:
         fh.write(b"MeshVersionFormatted 1\n")
         fh.write(b"# Created by meshio\n")
 
+        n, d = mesh.points.shape
+
         # Dimension info
-        d = "\nDimension {}\n".format(points.shape[1])
-        fh.write(d.encode("utf-8"))
+        dim = "\nDimension {}\n".format(d)
+        fh.write(dim.encode("utf-8"))
 
         # vertices
         fh.write(b"\nVertices\n")
-        fh.write("{}\n".format(len(points)).encode("utf-8"))
-        labels = numpy.ones(len(points), dtype=int)
-        data = numpy.c_[points, labels]
-        fmt = " ".join(["%r"] * points.shape[1]) + " %d"
+        fh.write("{}\n".format(n).encode("utf-8"))
+        labels = numpy.ones(n, dtype=int)
+        data = numpy.c_[mesh.points, labels]
+        fmt = " ".join(["%r"] * d) + " %d"
         numpy.savetxt(fh, data, fmt)
 
         medit_from_meshio = {
@@ -135,7 +135,7 @@ def write(filename, points, cells, point_data=None, cell_data=None, field_data=N
             "hexahedra": ("Hexahedra", 8),
         }
 
-        for key, data in cells.items():
+        for key, data in mesh.cells.items():
             try:
                 medit_name, num = medit_from_meshio[key]
             except KeyError:

@@ -9,6 +9,7 @@ import numpy
 
 from .__about__ import __version__
 from .gmsh_io import num_nodes_per_cell
+from .mesh import Mesh
 
 
 abaqus_to_meshio_type = {
@@ -142,7 +143,9 @@ def read_buffer(f):
 
     points = numpy.reshape(points, (-1, 3))
     cells = _scan_cells(point_gid, cells)
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def _read_nodes(f, point_gid, points):
@@ -258,20 +261,16 @@ def read_set(f, params_map):
     return set_ids
 
 
-def write(filename, points, cells, point_data=None, cell_data=None, field_data=None):
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
-
+def write(filename, mesh):
     with open(filename, "wt") as f:
         f.write("*Heading\n")
         f.write(" Abaqus DataFile Version 6.14\n")
         f.write("written by meshio v{}\n".format(__version__))
         f.write("*Node\n")
-        for k, x in enumerate(points):
+        for k, x in enumerate(mesh.points):
             f.write("{}, {!r}, {!r}, {!r}\n".format(k + 1, x[0], x[1], x[2]))
         eid = 0
-        for cell_type, node_idcs in cells.items():
+        for cell_type, node_idcs in mesh.cells.items():
             f.write("*Element,type=" + meshio_to_abaqus_type[cell_type] + "\n")
             for row in node_idcs:
                 eid += 1
