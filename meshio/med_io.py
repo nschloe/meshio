@@ -137,11 +137,7 @@ def _read_cell_data(cell_data, name, supp, data):
     return cell_data
 
 
-def write(
-    filename,
-    mesh,
-    add_global_ids=True,
-):
+def write(filename, mesh, add_global_ids=True):
     import h5py
 
     f = h5py.File(filename, "w")

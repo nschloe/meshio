@@ -406,10 +406,7 @@ def translate_cells(data, types, cell_data_raw):
     return cells, cell_data
 
 
-def write(
-    filename, mesh,
-    write_binary=True,
-):
+def write(filename, mesh, write_binary=True):
     if not write_binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
 

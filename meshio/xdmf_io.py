@@ -295,8 +295,12 @@ class XdmfReader(object):
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
         return Mesh(
-            points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
-            )
+            points,
+            cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data,
+        )
 
     def read_xdmf3(self, root):
         domains = list(root)
@@ -383,13 +387,7 @@ class XdmfReader(object):
 
 
 class XdmfWriter(object):
-    def __init__(
-        self,
-        filename,
-        mesh,
-        pretty_xml=True,
-        data_format="HDF",
-    ):
+    def __init__(self, filename, mesh, pretty_xml=True, data_format="HDF"):
         from lxml import etree as ET
 
         assert data_format in ["XML", "Binary", "HDF"], (

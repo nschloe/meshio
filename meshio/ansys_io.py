@@ -381,9 +381,9 @@ def write(filename, mesh, write_binary=True):
         # total number of nodes
         first_node_index = 1
         fh.write(
-            ("(10 (0 {:x} {:x} 0))\n".format(first_node_index, len(mesh.points))).encode(
-                "utf8"
-            )
+            (
+                "(10 (0 {:x} {:x} 0))\n".format(first_node_index, len(mesh.points))
+            ).encode("utf8")
         )
 
         # total number of cells

@@ -108,10 +108,7 @@ def _read_binary(f):
     return Mesh(points, cells)
 
 
-def write(
-    filename, mesh,
-    write_binary=False,
-):
+def write(filename, mesh, write_binary=False):
     assert (
         len(mesh.cells.keys()) == 1 and list(mesh.cells.keys())[0] == "triangle"
     ), "STL can only write triangle cells."

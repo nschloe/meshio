@@ -601,10 +601,7 @@ def _write_data(fh, tag, name, data, write_binary):
     return
 
 
-def write(
-    filename, mesh,
-    write_binary=True,
-):
+def write(filename, mesh, write_binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """

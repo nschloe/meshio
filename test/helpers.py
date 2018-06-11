@@ -13,10 +13,9 @@ import meshio
 # Use values with an infinite decimal representation to test precision.
 
 tri_mesh = meshio.Mesh(
-    numpy.array(
-        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
-    ) / 3,
-    {"triangle": numpy.array([[0, 1, 2], [0, 2, 3]])}
+    numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
+    / 3,
+    {"triangle": numpy.array([[0, 1, 2], [0, 2, 3]])},
 )
 
 triangle6_mesh = meshio.Mesh(
@@ -72,9 +71,7 @@ quad8_mesh = meshio.Mesh(
         ]
     )
     / 3.0,
-    {
-        "quad8": numpy.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 8, 9, 2, 10, 11, 12, 5]])
-    },
+    {"quad8": numpy.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 8, 9, 2, 10, 11, 12, 5]])},
 )
 
 tri_quad_mesh = meshio.Mesh(
@@ -245,7 +242,9 @@ def write_read(writer, reader, input_mesh, atol):
 
     for cell_type, cell_type_data in input_mesh.cell_data.items():
         for key, data in cell_type_data.items():
-            assert numpy.allclose(data, mesh.cell_data[cell_type][key], atol=atol, rtol=0.0)
+            assert numpy.allclose(
+                data, mesh.cell_data[cell_type][key], atol=atol, rtol=0.0
+            )
 
     for name, data in input_mesh.field_data.items():
         assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)

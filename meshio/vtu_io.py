@@ -279,15 +279,11 @@ def read(filename):
         reader.cells,
         point_data=reader.point_data,
         cell_data=reader.cell_data,
-        field_data=reader.field_data
+        field_data=reader.field_data,
     )
 
 
-def write(
-    filename, mesh,
-    write_binary=True,
-    pretty_xml=True,
-):
+def write(filename, mesh, write_binary=True, pretty_xml=True):
     from lxml import etree as ET
 
     if not write_binary:
@@ -380,9 +376,13 @@ def write(
         cls = ET.SubElement(piece, "Cells")
 
         # create connectivity, offset, type arrays
-        connectivity = numpy.concatenate([numpy.concatenate(v) for v in mesh.cells.values()])
+        connectivity = numpy.concatenate(
+            [numpy.concatenate(v) for v in mesh.cells.values()]
+        )
         # offset (points to the first element of the next cell)
-        offsets = [v.shape[1] * numpy.arange(1, v.shape[0] + 1) for v in mesh.cells.values()]
+        offsets = [
+            v.shape[1] * numpy.arange(1, v.shape[0] + 1) for v in mesh.cells.values()
+        ]
         for k in range(1, len(offsets)):
             offsets[k] += offsets[k - 1][-1]
         offsets = numpy.concatenate(offsets)

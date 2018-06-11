@@ -20,8 +20,12 @@ class Mesh(object):
             string.append("        {}: {}".format(key, data.shape[0]))
 
         if self.point_data:
-            string.append("    point data: {}".format(", ".join(self.point_data.keys())))
+            string.append(
+                "    point data: {}".format(", ".join(self.point_data.keys()))
+            )
         if self.field_data:
-            string.append("    field data: {}".format(", ".join(self.field_data.keys())))
+            string.append(
+                "    field data: {}".format(", ".join(self.field_data.keys()))
+            )
         # TODO cell data
         return "\n".join(string)

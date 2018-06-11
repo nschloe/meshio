@@ -109,11 +109,7 @@ def read(filename):
     )
 
 
-def write(
-    filename,
-    mesh,
-    add_global_ids=True,
-):
+def write(filename, mesh, add_global_ids=True):
     """Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     """

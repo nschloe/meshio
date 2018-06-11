@@ -109,9 +109,7 @@ def _read_cell_data(filename, cell_type):
 def read(filename):
     points, cells, cell_type = _read_mesh(filename)
     cell_data = _read_cell_data(filename, cell_type)
-    return Mesh(
-        points, cells, cell_data=cell_data
-    )
+    return Mesh(points, cells, cell_data=cell_data)
 
 
 def _write_mesh(filename, points, cell_type, cells):
