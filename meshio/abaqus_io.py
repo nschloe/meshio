@@ -9,6 +9,7 @@ import numpy
 
 from .__about__ import __version__
 from .gmsh_io import num_nodes_per_cell
+from .mesh import Mesh
 
 
 abaqus_to_meshio_type = {
@@ -142,7 +143,9 @@ def read_buffer(f):
 
     points = numpy.reshape(points, (-1, 3))
     cells = _scan_cells(point_gid, cells)
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def _read_nodes(f, point_gid, points):

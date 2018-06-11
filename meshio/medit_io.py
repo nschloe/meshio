@@ -14,12 +14,14 @@ import re
 import logging
 import numpy
 
+from .mesh import Mesh
+
 
 def read(filename):
     with open(filename) as f:
         points, cells = read_buffer(f)
 
-    return points, cells, {}, {}, {}
+    return Mesh(points, cells)
 
 
 class _ItemReader:

@@ -11,6 +11,7 @@ import re
 import numpy
 
 from .__about__ import __version__, __website__
+from .mesh import Mesh
 
 
 def read(filename):
@@ -69,7 +70,7 @@ def read(filename):
         # are 0-based.
         cells[key] = numpy.array(cells[key], dtype=int) - 1
 
-    return points, cells, {}, {}, {}
+    return Mesh(points, cells)
 
 
 def write(filename, points, cells, point_data=None, cell_data=None, field_data=None):

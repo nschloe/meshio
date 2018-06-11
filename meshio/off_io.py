@@ -9,12 +9,13 @@ I/O for the OFF surface format, cf.
 from itertools import islice
 import numpy
 
+from .mesh import Mesh
+
 
 def read(filename):
     with open(filename) as f:
         points, cells = read_buffer(f)
-
-    return points, cells, {}, {}, {}
+    return Mesh(points, cells)
 
 
 def read_buffer(f):

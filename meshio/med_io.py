@@ -9,6 +9,9 @@ I/O for MED/Salome, cf.
 """
 import numpy
 
+from .mesh import Mesh
+
+
 # https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {
     "vertex": "PO1",
@@ -68,7 +71,9 @@ def read(filename):
     except KeyError:
         point_data, cell_data, field_data = {}, {}, {}
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def _read_data(cha):

@@ -3,6 +3,7 @@
 import numpy
 
 from meshio.vtk_io import vtk_to_meshio_type
+from meshio import Mesh
 
 
 def read(filetype, filename):
@@ -115,7 +116,9 @@ def read(filetype, filename):
         index += num_cells
     cell_data = cd
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def _read_exodusii_mesh(reader, timestep=None):

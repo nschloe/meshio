@@ -11,6 +11,7 @@ import struct
 
 import numpy
 
+from .mesh import Mesh
 from .vtk_io import raw_from_cell_data
 
 
@@ -435,7 +436,9 @@ def read_buffer(f):
             assert name not in cell_data[key]
             cell_data[key][name] = item_list
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def cell_data_from_raw(cells, cell_data_raw):

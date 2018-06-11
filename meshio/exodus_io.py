@@ -13,6 +13,7 @@ import datetime
 import numpy
 
 from .__about__ import __version__
+from .mesh import Mesh
 
 
 exodus_to_meshio_type = {
@@ -103,7 +104,7 @@ def read(filename):
     point_data = {name: dat for name, dat in zip(point_data_names, pd)}
 
     nc.close()
-    return points, cells, point_data, {}, {}
+    return Mesh(points, cells, point_data=point_data)
 
 
 numpy_to_exodus_dtype = {

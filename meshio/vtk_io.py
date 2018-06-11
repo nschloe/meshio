@@ -9,6 +9,7 @@ import logging
 import numpy
 
 from .__about__ import __version__
+from .mesh import Mesh
 
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
@@ -237,7 +238,9 @@ def read_buffer(f):
 
     cells, cell_data = translate_cells(c, ct, cell_data_raw)
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def _read_points(f, data_type, is_ascii, num_points):

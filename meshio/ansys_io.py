@@ -10,6 +10,7 @@ import re
 import numpy
 
 from .__about__ import __version__
+from .mesh import Mesh
 
 
 def _skip_to(f, char):
@@ -363,7 +364,9 @@ def read(filename):
     for key in cells:
         cells[key] -= first_point_index_overall
 
-    return points, cells, point_data, cell_data, field_data
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
 
 
 def write(

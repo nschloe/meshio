@@ -18,6 +18,7 @@ import zlib
 import numpy
 
 from .__about__ import __version__
+from .mesh import Mesh
 from .vtk_io import vtk_to_meshio_type, meshio_to_vtk_type, raw_from_cell_data
 from .gmsh_io import num_nodes_per_cell
 
@@ -273,12 +274,12 @@ class VtuReader(object):
 
 def read(filename):
     reader = VtuReader(filename)
-    return (
+    return Mesh(
         reader.points,
         reader.cells,
-        reader.point_data,
-        reader.cell_data,
-        reader.field_data,
+        point_data=reader.point_data,
+        cell_data=reader.cell_data,
+        field_data=reader.field_data
     )
 
 

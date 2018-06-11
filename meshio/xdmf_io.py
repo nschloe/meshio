@@ -15,6 +15,7 @@ except ImportError:
 
 import numpy
 
+from .mesh import Mesh
 from .gmsh_io import cell_data_from_raw
 from .vtk_io import raw_from_cell_data
 from .vtu_io import write_xml
@@ -293,7 +294,9 @@ class XdmfReader(object):
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
-        return points, cells, point_data, cell_data, field_data
+        return Mesh(
+            points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+            )
 
     def read_xdmf3(self, root):
         domains = list(root)
@@ -370,7 +373,13 @@ class XdmfReader(object):
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
-        return points, cells, point_data, cell_data, field_data
+        return Mesh(
+            points,
+            cells,
+            point_data=point_data,
+            cell_data=cell_data,
+            field_data=field_data,
+        )
 
 
 class XdmfWriter(object):
