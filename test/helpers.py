@@ -255,7 +255,7 @@ def write_read(writer, reader, input_mesh, atol):
 def generic_io(filename):
     with tempfile.TemporaryDirectory() as temp_dir:
         filepath = os.path.join(temp_dir, filename)
-        meshio.write(filepath, tri_mesh.points, tri_mesh.cells)
+        meshio.write_points_cells(filepath, tri_mesh.points, tri_mesh.cells)
         out_mesh = meshio.helpers.read(filepath)
         assert (abs(out_mesh.points - tri_mesh.points) < 1.0e-15).all()
         assert (tri_mesh.cells["triangle"] == out_mesh.cells["triangle"]).all()

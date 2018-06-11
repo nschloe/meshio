@@ -100,11 +100,8 @@ def read(filename, file_format=None):
 
     :param filenames: The files to read from.
     :type filenames: str
+
     :returns mesh{2,3}d: The mesh data.
-    :returns point_data: Point data read from file.
-    :type point_data: dict
-    :returns field_data: Field data read from file.
-    :type field_data: dict
     """
     # https://stackoverflow.com/q/4843173/353337
     assert isinstance(filename, str)
@@ -152,7 +149,7 @@ def read(filename, file_format=None):
     return format_to_reader[file_format].read(filename)
 
 
-def write(
+def write_points_cells(
     filename,
     points,
     cells,
@@ -161,6 +158,14 @@ def write(
     field_data=None,
     file_format=None,
 ):
+    mesh = Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
+    write(filename, mesh, file_format=file_format)
+    return
+
+
+def write(filename, mesh, file_format=None):
     """Writes mesh together with data to a file.
 
     :params filename: File to write to.
@@ -169,21 +174,13 @@ def write(
     :params point_data: Named additional point data to write to the file.
     :type point_data: dict
     """
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
-
     if not file_format:
         # deduce file format from extension
         file_format = _filetype_from_filename(filename)
 
-    mesh = Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
-    )
-
     # check cells for sanity
-    for key in cells:
-        assert cells[key].shape[1] == gmsh_io.num_nodes_per_cell[key]
+    for key, value in mesh.cells.items():
+        assert value.shape[1] == gmsh_io.num_nodes_per_cell[key]
 
     if file_format == "moab":
         h5m_io.write(filename, mesh)

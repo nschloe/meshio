@@ -14,9 +14,7 @@ def _main():
     args = _parse_options()
 
     # read mesh data
-    mesh = meshio.read(
-        args.infile, file_format=args.input_format
-    )
+    mesh = meshio.read(args.infile, file_format=args.input_format)
 
     print("Number of points: {}".format(len(mesh.points)))
     print("Elements:")
@@ -45,7 +43,9 @@ def _main():
         mesh.points = numpy.delete(mesh.points, orphaned_nodes, axis=0)
         # also adapt the point data
         for key in mesh.point_data:
-            mesh.point_data[key] = numpy.delete(mesh.point_data[key], orphaned_nodes, axis=0)
+            mesh.point_data[key] = numpy.delete(
+                mesh.point_data[key], orphaned_nodes, axis=0
+            )
 
         # reset GLOBAL_ID
         if "GLOBAL_ID" in mesh.point_data:
