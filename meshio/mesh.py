@@ -26,7 +26,7 @@ class Mesh(object):
         for cell_type in self.cell_data:
             cell_data_keys = cell_data_keys.union(self.cell_data[cell_type].keys())
         if cell_data_keys:
-            print("Cell data: {}".format(", ".join(cell_data_keys)))
+            lines.append("Cell data: {}".format(", ".join(cell_data_keys)))
 
         return "\n".join(lines)
 

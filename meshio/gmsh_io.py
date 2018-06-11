@@ -164,8 +164,8 @@ def read(filename):
     """Reads a Gmsh msh file.
     """
     with open(filename, "rb") as f:
-        out = read_buffer(f)
-    return out
+        mesh = read_buffer(f)
+    return mesh
 
 
 def _read_header(f, int_size):
@@ -261,9 +261,10 @@ def _read_cells(f, cells, int_size, is_ascii):
             # two tags (physical and elementary tags).
             # <<<
             num_tags = data[2]
-            if t not in cell_tags:
-                cell_tags[t] = []
-            cell_tags[t].append(data[3 : 3 + num_tags])
+            if num_tags > 0:
+                if t not in cell_tags:
+                    cell_tags[t] = []
+                cell_tags[t].append(data[3 : 3 + num_tags])
 
         # convert to numpy arrays
         for key in cells:
