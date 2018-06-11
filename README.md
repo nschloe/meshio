@@ -41,7 +41,7 @@ with any of the supported formats.
 In Python, simply call
 ```python
 mesh = meshio.read(args.infile)
-# mesh.points, mesh,cells, ...
+# mesh.points, mesh.cells, ...
 ```
 to read a mesh. To write, do
 ```python
@@ -55,8 +55,8 @@ cells = {
         [0, 1, 2]
         ])
     }
-meshio.write(
-    'foo.vtk',
+meshio.write_points_cells(
+    "foo.vtk",
     points,
     cells,
     # Optionally provide extra data on points, cells, etc.
@@ -64,6 +64,11 @@ meshio.write(
     # cell_data=cell_data,
     # field_data=field_data
     )
+```
+or explicitly create a mesh object for writing
+```python
+mesh = meshio.Mesh(points, cells)
+meshio.write("foo.vtk", mesh)
 ```
 For both input and output, you can optionally specify the exact `file_format`
 (in case you would like to enforce binary over ASCII VTK, for example).
