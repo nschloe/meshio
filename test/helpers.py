@@ -224,16 +224,7 @@ def write_read(writer, reader, input_mesh, atol):
     """
     with tempfile.TemporaryDirectory() as temp_dir:
         filepath = os.path.join(temp_dir, "test.dat")
-
-        writer(
-            filepath,
-            input_mesh.points,
-            input_mesh.cells,
-            point_data=input_mesh.point_data,
-            cell_data=input_mesh.cell_data,
-            field_data=input_mesh.field_data,
-        )
-
+        writer(filepath, input_mesh)
         mesh = reader(filepath)
 
     # Numpy's array_equal is too strict here, cf.

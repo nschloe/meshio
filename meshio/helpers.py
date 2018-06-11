@@ -2,6 +2,8 @@
 #
 import pathlib
 
+from .mesh import Mesh
+from . import abaqus_io
 from . import ansys_io
 from . import dolfin_io
 from . import exodus_io
@@ -15,7 +17,6 @@ from . import stl_io
 from . import vtk_io
 from . import vtu_io
 from . import xdmf_io
-from . import abaqus_io
 
 input_filetypes = [
     "abaqus",
@@ -176,128 +177,47 @@ def write(
         # deduce file format from extension
         file_format = _filetype_from_filename(filename)
 
+    mesh = Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
+
     # check cells for sanity
     for key in cells:
         assert cells[key].shape[1] == gmsh_io.num_nodes_per_cell[key]
 
     if file_format == "moab":
-        h5m_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-        )
+        h5m_io.write(filename, mesh)
     elif file_format in ["ansys-ascii", "ansys-binary"]:
-        ansys_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            write_binary=(file_format == "ansys-binary"),
-        )
+        ansys_io.write(filename, mesh, write_binary=(file_format == "ansys-binary"))
     elif file_format in ["gmsh-ascii", "gmsh-binary"]:
-        gmsh_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-            write_binary=(file_format == "gmsh-binary"),
-        )
+        gmsh_io.write(filename, mesh, write_binary=(file_format == "gmsh-binary"))
     elif file_format == "med":
-        med_io.write(
-            filename, points, cells, point_data=point_data, cell_data=cell_data
-        )
+        med_io.write(filename, mesh)
     elif file_format == "medit":
-        medit_io.write(filename, points, cells)
+        medit_io.write(filename, mesh)
     elif file_format == "dolfin-xml":
-        dolfin_io.write(filename, points, cells, cell_data=cell_data)
+        dolfin_io.write(filename, mesh)
     elif file_format == "off":
-        off_io.write(filename, points, cells)
+        off_io.write(filename, mesh)
     elif file_format == "permas":
-        permas_io.write(filename, points, cells)
+        permas_io.write(filename, mesh)
     elif file_format in ["stl-ascii", "stl-binary"]:
-        stl_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-            write_binary=(file_format != "stl-ascii"),
-        )
+        stl_io.write(filename, mesh, write_binary=(file_format != "stl-ascii"))
     elif file_format == "vtu-ascii":
-        vtu_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-            write_binary=False,
-        )
+        vtu_io.write(filename, mesh, write_binary=False)
     elif file_format in ["vtu", "vtu-binary"]:
-        vtu_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-            write_binary=True,
-        )
+        vtu_io.write(filename, mesh, write_binary=True)
     elif file_format == "vtk-ascii":
-        vtk_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-            write_binary=False,
-        )
+        vtk_io.write(filename, mesh, write_binary=False)
     elif file_format in ["vtk", "vtk-binary"]:
-        vtk_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-            write_binary=True,
-        )
+        vtk_io.write(filename, mesh, write_binary=True)
     elif file_format in ["xdmf", "xdmf3"]:  # XDMF
-        xdmf_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-        )
+        xdmf_io.write(filename, mesh)
     elif file_format == "abaqus":
-        abaqus_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-        )
+        abaqus_io.write(filename, mesh)
     else:
         assert file_format == "exodus", "Unknown file format '{}' of '{}'.".format(
             file_format, filename
         )
-        exodus_io.write(
-            filename,
-            points,
-            cells,
-            point_data=point_data,
-            cell_data=cell_data,
-            field_data=field_data,
-        )
+        exodus_io.write(filename, mesh)
     return

@@ -121,12 +121,8 @@ numpy_to_exodus_dtype = {
 }
 
 
-def write(filename, points, cells, point_data=None, cell_data=None, field_data=None):
+def write(filename, mesh):
     import netCDF4
-
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
 
     rootgrp = netCDF4.Dataset(filename, "w")
 
@@ -139,11 +135,11 @@ def write(filename, points, cells, point_data=None, cell_data=None, field_data=N
     rootgrp.floating_point_word_size = 8
 
     # set dimensions
-    total_num_elems = sum([v.shape[0] for v in cells.values()])
-    rootgrp.createDimension("num_nodes", len(points))
+    total_num_elems = sum([v.shape[0] for v in mesh.cells.values()])
+    rootgrp.createDimension("num_nodes", len(mesh.points))
     rootgrp.createDimension("num_dim", 3)
     rootgrp.createDimension("num_elem", total_num_elems)
-    rootgrp.createDimension("num_el_blk", len(cells))
+    rootgrp.createDimension("num_el_blk", len(mesh.cells))
     rootgrp.createDimension("len_string", 33)
     rootgrp.createDimension("len_line", 81)
     rootgrp.createDimension("four", 4)
@@ -160,17 +156,17 @@ def write(filename, points, cells, point_data=None, cell_data=None, field_data=N
     coor_names[1, 0] = "Y"
     coor_names[2, 0] = "Z"
     data = rootgrp.createVariable(
-        "coord", numpy_to_exodus_dtype[points.dtype.name], ("num_dim", "num_nodes")
+        "coord", numpy_to_exodus_dtype[mesh.points.dtype.name], ("num_dim", "num_nodes")
     )
-    data[:] = points.T
+    data[:] = mesh.points.T
 
     # cells
     # ParaView needs eb_prop1 -- some ID. The values don't seem to matter as
     # long as they are different for the for different blocks.
     data = rootgrp.createVariable("eb_prop1", "i4", "num_el_blk")
-    for k in range(len(cells)):
+    for k in range(len(mesh.cells)):
         data[k] = k
-    for k, (key, values) in enumerate(cells.items()):
+    for k, (key, values) in enumerate(mesh.cells.items()):
         dim1 = "num_el_in_blk{}".format(k + 1)
         dim2 = "num_nod_per_el{}".format(k + 1)
         rootgrp.createDimension(dim1, values.shape[0])
@@ -184,7 +180,7 @@ def write(filename, points, cells, point_data=None, cell_data=None, field_data=N
     # point data
     # The variable `name_nod_var` holds the names and indices of the node
     # variables, the variable `vals_nod_var` hold the actual data.
-    num_nod_var = len(point_data)
+    num_nod_var = len(mesh.point_data)
     if num_nod_var > 0:
         rootgrp.createDimension("num_nod_var", num_nod_var)
         # set names
@@ -192,18 +188,18 @@ def write(filename, points, cells, point_data=None, cell_data=None, field_data=N
             "name_nod_var", "S1", ("num_nod_var", "len_string")
         )
         point_data_names.set_auto_mask(False)
-        for k, name in enumerate(point_data.keys()):
+        for k, name in enumerate(mesh.point_data.keys()):
             for i, letter in enumerate(name):
                 point_data_names[k, i] = letter.encode("utf-8")
 
         # Set data.
         # Deliberately take the dtype from the first data block.
-        first_key = list(point_data.keys())[0]
-        dtype = numpy_to_exodus_dtype[point_data[first_key].dtype.name]
+        first_key = list(mesh.point_data.keys())[0]
+        dtype = numpy_to_exodus_dtype[mesh.point_data[first_key].dtype.name]
         node_data = rootgrp.createVariable(
             "vals_nod_var", dtype, ("time_step", "num_nod_var", "num_nodes")
         )
-        for k, (name, data) in enumerate(point_data.items()):
+        for k, (name, data) in enumerate(mesh.point_data.items()):
             node_data[0, k] = data
 
     rootgrp.close()

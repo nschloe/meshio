@@ -80,9 +80,7 @@ def _get_writer(filetype, filename):
     return writer
 
 
-def write(
-    filetype, filename, points, cells, point_data=None, cell_data=None, field_data=None
-):
+def write(filetype, filename, mesh):
     import vtk
 
     def _create_vtkarray(X, name):
@@ -90,24 +88,20 @@ def write(
         array.SetName(name)
         return array
 
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
-
     # assert data integrity
-    for key in point_data:
-        assert len(point_data[key]) == len(points), "Point data mismatch."
+    for val in mesh.point_data.values():
+        assert len(val) == len(mesh.points), "Point data mismatch."
 
-    for key in cell_data:
-        assert key in cells, "Cell data without cell"
-        for key2 in cell_data[key]:
-            assert len(cell_data[key][key2]) == len(cells[key]), "Cell data mismatch."
+    for key, value in mesh.cell_data.items():
+        assert key in mesh.cells, "Cell data without cell"
+        for key2 in value:
+            assert len(value[key2]) == len(mesh.cells[key]), "Cell data mismatch."
 
-    vtk_mesh = _generate_vtk_mesh(points, cells)
+    vtk_mesh = _generate_vtk_mesh(mesh.points, mesh.cells)
 
     # add point data
     pd = vtk_mesh.GetPointData()
-    for name, X in point_data.items():
+    for name, X in mesh.point_data.items():
         # There is a naming inconsistency in VTK when it comes to multivectors
         # in Exodus files:
         # If a vector 'v' has two components, they are called 'v_x', 'v_y'
@@ -133,14 +127,14 @@ def write(
     # mesh_types. This requires each key to be present for each mesh_type, of
     # course.
     all_keys = []
-    for cell_type in cell_data:
-        all_keys += cell_data[cell_type].keys()
+    for cell_type in mesh.cell_data:
+        all_keys += mesh.cell_data[cell_type].keys()
     # create unified cell data
     for key in all_keys:
-        for cell_type in cell_data:
-            assert key in cell_data[cell_type]
+        for cell_type in mesh.cell_data:
+            assert key in mesh.cell_data[cell_type]
     unified_cell_data = {
-        key: numpy.concatenate([cell_data[cell_type][key] for cell_type in cell_data])
+        key: numpy.concatenate([value[key] for value in mesh.cell_data.values()])
         for key in all_keys
     }
     # add the array data to the mesh
@@ -150,7 +144,7 @@ def write(
 
     # add field data
     fd = vtk_mesh.GetFieldData()
-    for key, value in field_data.items():
+    for key, value in mesh.field_data.items():
         fd.AddArray(_create_vtkarray(value, key))
 
     writer = _get_writer(filetype, filename)

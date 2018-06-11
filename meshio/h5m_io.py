@@ -111,21 +111,13 @@ def read(filename):
 
 def write(
     filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
-    field_data=None,
+    mesh,
     add_global_ids=True,
 ):
     """Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     """
     import h5py
-
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
 
     f = h5py.File(filename, "w")
 
@@ -136,9 +128,9 @@ def write(
 
     # add nodes
     nodes = tstt.create_group("nodes")
-    coords = nodes.create_dataset("coordinates", data=points)
+    coords = nodes.create_dataset("coordinates", data=mesh.points)
     coords.attrs.create("start_id", global_id)
-    global_id += len(points)
+    global_id += len(mesh.points)
 
     # Global tags
     tstt_tags = tstt.create_group("tags")
@@ -147,9 +139,9 @@ def write(
     # distributed across several processes. mbpart automatically adds them,
     # too.
     # Copy to pd to avoid changing point_data. The items are not deep-copied.
-    pd = point_data.copy()
+    pd = mesh.point_data.copy()
     if "GLOBAL_ID" not in pd and add_global_ids:
-        pd["GLOBAL_ID"] = numpy.arange(1, len(points) + 1)
+        pd["GLOBAL_ID"] = numpy.arange(1, len(mesh.points) + 1)
 
     # add point data
     if pd:
@@ -222,7 +214,7 @@ def write(
         "triangle": {"name": "Tri3", "type": 2},
         "tetra": {"name": "Tet4", "type": 5},
     }
-    for key, data in cells.items():
+    for key, data in mesh.cells.items():
         if key not in meshio_to_h5m_type:
             logging.warning("Unsupported H5M element type '%s'. Skipping.", key)
             continue
@@ -235,9 +227,9 @@ def write(
         global_id += len(data)
 
     # add cell data
-    if cell_data:
+    if mesh.cell_data:
         tags = elem_group.create_group("tags")
-        for key, value in cell_data.items():
+        for key, value in mesh.cell_data.items():
             tags.create_dataset(key, data=value)
 
     # add empty set -- MOAB wants this

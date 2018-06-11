@@ -386,11 +386,7 @@ class XdmfWriter(object):
     def __init__(
         self,
         filename,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
-        field_data=None,
+        mesh,
         pretty_xml=True,
         data_format="HDF",
     ):
@@ -400,10 +396,6 @@ class XdmfWriter(object):
             "Unknown XDMF data format "
             "'{}' (use 'XML', 'Binary', or 'HDF'.)".format(data_format)
         )
-
-        point_data = {} if point_data is None else point_data
-        cell_data = {} if cell_data is None else cell_data
-        field_data = {} if field_data is None else field_data
 
         self.filename = filename
         self.data_format = data_format
@@ -420,10 +412,10 @@ class XdmfWriter(object):
         domain = ET.SubElement(xdmf_file, "Domain")
         grid = ET.SubElement(domain, "Grid", Name="Grid")
 
-        self.points(grid, points)
-        self.cells(cells, grid)
-        self.point_data(point_data, grid)
-        self.cell_data(cell_data, grid)
+        self.points(grid, mesh.points)
+        self.cells(mesh.cells, grid)
+        self.point_data(mesh.point_data, grid)
+        self.cell_data(mesh.cell_data, grid)
 
         ET.register_namespace("xi", "https://www.w3.org/2001/XInclude/")
 

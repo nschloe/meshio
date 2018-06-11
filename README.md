@@ -40,8 +40,8 @@ with any of the supported formats.
 
 In Python, simply call
 ```python
-points, cells, point_data, cell_data, field_data = \
-    meshio.read(args.infile)
+mesh = meshio.read(args.infile)
+# mesh.points, mesh,cells, ...
 ```
 to read a mesh. To write, do
 ```python

@@ -407,20 +407,11 @@ def translate_cells(data, types, cell_data_raw):
 
 
 def write(
-    filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
-    field_data=None,
+    filename, mesh,
     write_binary=True,
 ):
     if not write_binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
-
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
 
     with open(filename, "wb") as f:
         f.write("# vtk DataFile Version 4.2\n".encode("utf-8"))
@@ -429,19 +420,19 @@ def write(
         f.write("DATASET UNSTRUCTURED_GRID\n".encode("utf-8"))
 
         # write points and cells
-        _write_points(f, points, write_binary)
-        _write_cells(f, cells, write_binary)
+        _write_points(f, mesh.points, write_binary)
+        _write_cells(f, mesh.cells, write_binary)
 
         # write point data
-        if point_data:
-            num_points = len(points)
+        if mesh.point_data:
+            num_points = mesh.points.shape[0]
             f.write("POINT_DATA {}\n".format(num_points).encode("utf-8"))
-            _write_field_data(f, point_data, write_binary)
+            _write_field_data(f, mesh.point_data, write_binary)
 
         # write cell data
-        if cell_data:
-            total_num_cells = sum([len(c) for c in cells.values()])
-            cell_data_raw = raw_from_cell_data(cell_data)
+        if mesh.cell_data:
+            total_num_cells = sum([len(c) for c in mesh.cells.values()])
+            cell_data_raw = raw_from_cell_data(mesh.cell_data)
             f.write("CELL_DATA {}\n".format(total_num_cells).encode("utf-8"))
             _write_field_data(f, cell_data_raw, write_binary)
 

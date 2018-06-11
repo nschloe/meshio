@@ -73,14 +73,10 @@ def read(filename):
     return Mesh(points, cells)
 
 
-def write(filename, points, cells, point_data=None, cell_data=None, field_data=None):
+def write(filename, mesh):
     """Writes PERMAS dat files, cf.
     http://www.intes.de # PERMAS-ASCII-file-format
     """
-    point_data = {} if point_data is None else point_data
-    cell_data = {} if cell_data is None else cell_data
-    field_data = {} if field_data is None else field_data
-
     opener = gzip.open if filename.endswith(".gz") else open
 
     with opener(filename, "wb") as fh:
@@ -103,7 +99,7 @@ def write(filename, points, cells, point_data=None, cell_data=None, field_data=N
 
         # Write nodes
         fh.write("        $COOR NSET = ALL_NODES\n".encode("utf-8"))
-        for k, x in enumerate(points):
+        for k, x in enumerate(mesh.points):
             fh.write(
                 "        {:8d} {:+.15f} {:+.15f} {:+.15f}\n".format(
                     k + 1, x[0], x[1], x[2]
@@ -126,7 +122,7 @@ def write(filename, points, cells, point_data=None, cell_data=None, field_data=N
         #
         num_ele = 0
 
-        for meshio_type, cell in cells.items():
+        for meshio_type, cell in mesh.cells.items():
             numcells, num_local_nodes = cell.shape
             permas_type = meshio_to_permas_type[meshio_type]
             fh.write("!\n".encode("utf-8"))
@@ -149,7 +145,7 @@ def write(filename, points, cells, point_data=None, cell_data=None, field_data=N
         fh.write("    $SYSTEM NAME = NSV\n".encode("utf-8"))
         fh.write("!\n".encode("utf-8"))
         fh.write("        $ELPROP\n".encode("utf-8"))
-        for meshio_type, cell in cells.items():
+        for meshio_type, cell in mesh.cells.items():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_3D:
                 fh.write(
@@ -170,7 +166,7 @@ def write(filename, points, cells, point_data=None, cell_data=None, field_data=N
                 assert permas_type[1] in elem_1D
         fh.write("!\n".encode("utf-8"))
         fh.write("        $GEODAT SHELL  CONT = THICK  NODES = ALL\n".encode("utf-8"))
-        for meshio_type, cell in cells.items():
+        for meshio_type, cell in mesh.cells.items():
             permas_type = meshio_to_permas_type[meshio_type]
             if permas_type[1] in elem_2D:
                 fh.write(

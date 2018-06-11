@@ -109,24 +109,17 @@ def _read_binary(f):
 
 
 def write(
-    filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
-    field_data=None,
+    filename, mesh,
     write_binary=False,
 ):
-    assert not point_data, "STL cannot write point data."
-    assert not field_data, "STL cannot write field data."
     assert (
-        len(cells.keys()) == 1 and list(cells.keys())[0] == "triangle"
+        len(mesh.cells.keys()) == 1 and list(mesh.cells.keys())[0] == "triangle"
     ), "STL can only write triangle cells."
 
     if write_binary:
-        _write_binary(filename, points, cells)
+        _write_binary(filename, mesh.points, mesh.cells)
     else:
-        _write_ascii(filename, points, cells)
+        _write_ascii(filename, mesh.points, mesh.cells)
 
     return
 
