@@ -20,7 +20,7 @@ def read(filename):
 
 
 def read_buffer(f):
-    data = numpy.fromstring(f.read(5), dtype=numpy.uint8)
+    data = numpy.frombuffer(f.read(5), dtype=numpy.uint8)
     if "".join([chr(item) for item in data]) == "solid":
         # read until the end of the line
         f.readline()
@@ -93,14 +93,14 @@ def data_from_facets(facets):
 
 def _read_binary(f):
     # read the first uint32 byte to get the number of triangles
-    data = numpy.fromstring(f.read(4), dtype=numpy.uint32)
+    data = numpy.frombuffer(f.read(4), dtype=numpy.uint32)
     num_triangles = data[0]
 
     facets = []
     for _ in range(num_triangles):
         # discard the normal
         f.read(12)
-        facets.append(numpy.fromstring(f.read(36), dtype=numpy.float32).reshape(-1, 3))
+        facets.append(numpy.frombuffer(f.read(36), dtype=numpy.float32).reshape(-1, 3))
         # discard the attribute byte count
         f.read(2)
 
