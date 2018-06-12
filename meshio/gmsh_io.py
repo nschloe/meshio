@@ -219,7 +219,7 @@ def _read_nodes(f, is_ascii, int_size, data_size):
         assert numpy.int32(0).nbytes == int_size
         assert numpy.float64(0.0).nbytes == data_size
         dtype = [("index", numpy.int32), ("x", numpy.float64, (3,))]
-        data = numpy.fromstring(f.read(num_bytes), dtype=dtype)
+        data = numpy.frombuffer(f.read(num_bytes), dtype=dtype)
         assert (data["index"] == range(1, num_nodes + 1)).all()
         points = numpy.ascontiguousarray(data["x"])
         line = f.readline().decode("utf-8")
@@ -287,7 +287,7 @@ def _read_cells(f, cells, int_size, is_ascii):
             num_bytes = 4 * (num_elems0 * (1 + num_tags + num_nodes_per_elem))
             shape = (num_elems0, 1 + num_tags + num_nodes_per_elem)
             b = f.read(num_bytes)
-            data = numpy.fromstring(b, dtype=numpy.int32).reshape(shape)
+            data = numpy.frombuffer(b, dtype=numpy.int32).reshape(shape)
 
             if t not in cells:
                 cells[t] = []
@@ -367,7 +367,7 @@ def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
         assert numpy.int32(0).nbytes == int_size
         assert numpy.float64(0.0).nbytes == data_size
         dtype = [("index", numpy.int32), ("values", numpy.float64, (num_components,))]
-        data = numpy.fromstring(f.read(num_bytes), dtype=dtype)
+        data = numpy.frombuffer(f.read(num_bytes), dtype=dtype)
         assert (data["index"] == range(1, num_items + 1)).all()
         data = numpy.ascontiguousarray(data["values"])
         line = f.readline().decode("utf-8")

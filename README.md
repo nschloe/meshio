@@ -40,7 +40,9 @@ with any of the supported formats.
 
 In Python, simply call
 ```python
-mesh = meshio.read(args.infile)
+import meshio
+
+mesh = meshio.read(filename)
 # mesh.points, mesh.cells, ...
 ```
 to read a mesh. To write, do
@@ -51,7 +53,7 @@ points = numpy.array([
     [0.0, 0.0, 1.0],
     ])
 cells = {
-    'triangle': numpy.array([
+    "triangle": numpy.array([
         [0, 1, 2]
         ])
     }
@@ -81,14 +83,6 @@ Index](https://pypi.org/project/meshio/), so simply type
 pip install -U meshio
 ```
 to install or upgrade.
-
-### Usage
-
-Just
-```
-import meshio
-```
-and make use of all the goodies the module provides.
 
 
 ### Testing
