@@ -211,12 +211,14 @@ def write(filename, mesh):
         )
         for k, (name, data) in enumerate(mesh.point_data.items()):
             node_data[0, k] = data
-            
-    #node sets
+
+    # node sets
     num_nsets = len(mesh.nsets)
-    if num_nsets>0:
-        data = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets") 
-        data_names = rootgrp.createVariable("ns_names", "S1", ("num_node_sets", "len_string"))
+    if num_nsets > 0:
+        data = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets")
+        data_names = rootgrp.createVariable(
+            "ns_names", "S1", ("num_node_sets", "len_string")
+        )
         for k, name in enumerate(mesh.nsets.keys()):
             data[k] = k
             for i, letter in enumerate(name):

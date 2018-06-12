@@ -4,7 +4,15 @@ import numpy
 
 
 class Mesh(object):
-    def __init__(self, points, cells, point_data=None, cell_data=None, field_data=None, nsets=None):
+    def __init__(
+        self,
+        points,
+        cells,
+        point_data=None,
+        cell_data=None,
+        field_data=None,
+        nsets=None,
+    ):
         self.points = points
         self.cells = cells
         self.point_data = point_data if point_data else {}
@@ -19,7 +27,7 @@ class Mesh(object):
         lines.append("Elements:")
         for tpe, elems in self.cells.items():
             lines.append("  Number of {}s: {}".format(tpe, len(elems)))
-            
+
         if self.nsets:
             lines.append("Node sets: {}".format(", ".join(self.nsets.keys())))
 
