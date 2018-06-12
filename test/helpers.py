@@ -218,7 +218,7 @@ def add_field_data(mesh, value, dtype):
 
 def add_node_sets(mesh):
     mesh2 = copy.deepcopy(mesh)
-    mesh2.node_sets = {"nset": numpy.array([1, 2])}
+    mesh2.node_sets = {"fixed": numpy.array([1, 2])}
     return mesh2
 
 
