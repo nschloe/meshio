@@ -83,7 +83,7 @@ _extension_to_filetype = {
 
 
 def _filetype_from_filename(filename):
-    suffixes = [".{}".format(ext) for ext in filename.split('.')[1:]]
+    suffixes = [".{}".format(ext) for ext in filename.split(".")[1:]]
     ext = ""
 
     out = None
@@ -92,8 +92,9 @@ def _filetype_from_filename(filename):
         if ext in _extension_to_filetype:
             out = _extension_to_filetype[ext]
 
-    assert out is not None, \
-        "Could not deduce file format from extension '{}'.".format(ext)
+    assert out is not None, "Could not deduce file format from extension '{}'.".format(
+        ext
+    )
 
     return out
 
