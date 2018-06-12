@@ -214,14 +214,14 @@ class VtuReader(object):
         num_bytes_per_item = numpy.dtype(dtype).itemsize
         num_chars = num_bytes_to_num_base64_chars(num_bytes_per_item)
         byte_string = base64.b64decode(data[:num_chars])[:num_bytes_per_item]
-        num_blocks = numpy.fromstring(byte_string, dtype)[0]
+        num_blocks = numpy.frombuffer(byte_string, dtype)[0]
 
         # read the entire header
         num_header_items = 3 + num_blocks
         num_header_bytes = num_bytes_per_item * num_header_items
         num_header_chars = num_bytes_to_num_base64_chars(num_header_bytes)
         byte_string = base64.b64decode(data[:num_header_chars])
-        header = numpy.fromstring(byte_string, dtype)
+        header = numpy.frombuffer(byte_string, dtype)
 
         # num_blocks = header[0]
         # max_uncompressed_block_size = header[1]
@@ -240,7 +240,7 @@ class VtuReader(object):
         # process the compressed data
         block_data = numpy.concatenate(
             [
-                numpy.fromstring(
+                numpy.frombuffer(
                     zlib.decompress(byte_array[byte_offsets[k] : byte_offsets[k + 1]]),
                     dtype=dtype,
                 )

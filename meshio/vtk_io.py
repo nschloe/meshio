@@ -254,7 +254,7 @@ def _read_points(f, data_type, is_ascii, num_points):
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
-        points = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
+        points = numpy.frombuffer(f.read(total_num_bytes), dtype=dtype)
         line = f.readline().decode("utf-8")
         assert line == "\n"
 
@@ -268,7 +268,7 @@ def _read_cells(f, is_ascii, num_items):
         # binary
         num_bytes = 4
         total_num_bytes = num_items * num_bytes
-        c = numpy.fromstring(f.read(total_num_bytes), dtype=">i4")
+        c = numpy.frombuffer(f.read(total_num_bytes), dtype=">i4")
         line = f.readline().decode("utf-8")
         assert line == "\n"
 
@@ -282,7 +282,7 @@ def _read_cell_types(f, is_ascii, num_items):
         # binary
         num_bytes = 4
         total_num_bytes = num_items * num_bytes
-        ct = numpy.fromstring(f.read(total_num_bytes), dtype=">i4")
+        ct = numpy.frombuffer(f.read(total_num_bytes), dtype=">i4")
         line = f.readline().decode("utf-8")
         # Sometimes, there's no newline at the end
         assert line.strip() == ""
@@ -346,7 +346,7 @@ def _read_fields(f, num_fields, is_ascii):
             # Binary data is big endian, see
             # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
             dtype = dtype.newbyteorder(">")
-            dat = numpy.fromstring(f.read(total_num_bytes), dtype=dtype)
+            dat = numpy.frombuffer(f.read(total_num_bytes), dtype=dtype)
             line = f.readline().decode("utf-8")
             assert line == "\n"
 
