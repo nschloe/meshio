@@ -213,8 +213,8 @@ def write(filename, mesh):
             node_data[0, k] = data
 
     # node sets
-    num_nsets = len(mesh.node_sets)
-    if num_nsets > 0:
+    num_node_sets = len(mesh.node_sets)
+    if num_node_sets > 0:
         data = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets")
         data_names = rootgrp.createVariable(
             "ns_names", "S1", ("num_node_sets", "len_string")
