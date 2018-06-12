@@ -11,14 +11,14 @@ class Mesh(object):
         point_data=None,
         cell_data=None,
         field_data=None,
-        nsets=None,
+        node_sets=None,
     ):
         self.points = points
         self.cells = cells
         self.point_data = point_data if point_data else {}
         self.cell_data = cell_data if cell_data else {}
         self.field_data = field_data if field_data else {}
-        self.nsets = nsets if nsets else {}
+        self.node_sets = node_sets if node_sets else {}
         return
 
     def __repr__(self):
@@ -28,8 +28,8 @@ class Mesh(object):
         for tpe, elems in self.cells.items():
             lines.append("  Number of {}s: {}".format(tpe, len(elems)))
 
-        if self.nsets:
-            lines.append("Node sets: {}".format(", ".join(self.nsets.keys())))
+        if self.node_sets:
+            lines.append("Node sets: {}".format(", ".join(self.node_sets.keys())))
 
         if self.point_data:
             lines.append("Point data: {}".format(", ".join(self.point_data.keys())))
