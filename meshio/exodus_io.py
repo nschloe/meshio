@@ -215,7 +215,7 @@ def write(filename, mesh):
     #node sets
     num_nsets = len(mesh.nsets)
     if num_nsets>0:
-        data = rootgrp.createVariable("ns_prop1", "i4", num_nsets)
+        data = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets") 
         data_names = rootgrp.createVariable("ns_names", "S1", ("num_node_sets", "len_string"))
         for k, name in enumerate(mesh.nsets.keys()):
             data[k] = k
