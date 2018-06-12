@@ -81,7 +81,7 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
             bytes_per_item = 8
         # read point data
         total_bytes = dim * bytes_per_item * num_points
-        pts = numpy.fromstring(f.read(total_bytes), dtype=dtype).reshape(
+        pts = numpy.frombuffer(f.read(total_bytes), dtype=dtype).reshape(
             (num_points, dim)
         )
 
@@ -152,7 +152,7 @@ def _read_cells(f, line):
             bytes_per_item = 8
             dtype = numpy.int64
         total_bytes = bytes_per_item * num_nodes_per_cell * num_cells
-        data = numpy.fromstring(
+        data = numpy.frombuffer(
             f.read(total_bytes), count=(num_nodes_per_cell * num_cells), dtype=dtype
         ).reshape((num_cells, num_nodes_per_cell))
 
@@ -260,7 +260,7 @@ def _read_faces(f, line):
         # where n* are the defining nodes (vertices) of the face,
         # and c* are the adjacent cells.
         total_bytes = num_cells * bytes_per_item * (num_nodes_per_cell + 2)
-        data = numpy.fromstring(f.read(total_bytes), dtype=dtype).reshape(
+        data = numpy.frombuffer(f.read(total_bytes), dtype=dtype).reshape(
             (num_cells, num_nodes_per_cell + 2)
         )
         # Cut off the adjacent cell data.
@@ -362,7 +362,7 @@ def read(filename):
 
     # Gauge the cells with the first point_index.
     for key in cells:
-        cells[key] -= first_point_index_overall
+        cells[key] = cells[key] - first_point_index_overall
 
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
