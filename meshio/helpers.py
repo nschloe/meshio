@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-import pathlib
-
 from .mesh import Mesh
 from . import abaqus_io
 from . import ansys_io
@@ -85,14 +83,20 @@ _extension_to_filetype = {
 
 
 def _filetype_from_filename(filename):
-    suffixes = pathlib.PurePath(filename).suffixes
+    suffixes = [".{}".format(ext) for ext in filename.split(".")[1:]]
     ext = ""
-    for i in reversed(range(len(suffixes))):
-        ext = suffixes[i] + ext
-        if ext in _extension_to_filetype:
-            return _extension_to_filetype[ext]
 
-    raise RuntimeError("Could not deduce file format from extension '{}'.".format(ext))
+    out = None
+    for suffix in reversed(suffixes):
+        ext = suffix + ext
+        if ext in _extension_to_filetype:
+            out = _extension_to_filetype[ext]
+
+    assert out is not None, "Could not deduce file format from extension '{}'.".format(
+        ext
+    )
+
+    return out
 
 
 def read(filename, file_format=None):
