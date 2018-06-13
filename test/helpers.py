@@ -216,6 +216,12 @@ def add_field_data(mesh, value, dtype):
     return mesh2
 
 
+def add_node_sets(mesh):
+    mesh2 = copy.deepcopy(mesh)
+    mesh2.node_sets = {"fixed": numpy.array([1, 2])}
+    return mesh2
+
+
 def write_read(writer, reader, input_mesh, atol):
     """Write and read a file, and make sure the data is the same as before.
     """
