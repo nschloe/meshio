@@ -1,10 +1,22 @@
 # -*- coding: utf-8 -*-
 #
+import copy
 import pytest
 
 import meshio
 
 import helpers
+
+
+def gmsh_periodic():
+    mesh = copy.deepcopy(helpers.quad_mesh)
+    trns = "Affine{}".format(" 0" * 16)  # just for io testing
+    mesh.gmsh_periodic = [
+        [0, (3, 1), None, [[2, 0]]],
+        [0, (4, 6), None, [[3, 5]]],
+        [1, (2, 1), trns, [[5, 0], [4, 1], [4, 2]]],
+    ]
+    return mesh
 
 
 @pytest.mark.parametrize(
@@ -28,6 +40,7 @@ import helpers
         helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
         helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
+        gmsh_periodic(),
     ],
 )
 @pytest.mark.parametrize("write_binary", [False, True])
