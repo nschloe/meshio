@@ -339,6 +339,32 @@ def _read_cells(f, cells, int_size, is_ascii):
     return has_additional_tag_data, output_cell_tags
 
 
+def _read_periodic(f):
+    periodic = []
+    num_periodic = int(f.readline().decode("utf-8"))
+    for _ in range(num_periodic):
+        line = f.readline().decode("utf-8")
+        edim, stag, mtag = [int(s) for s in line.split()]
+        line = f.readline().decode("utf-8").strip()
+        if line.startswith("Affine"):
+            transform = line
+            num_nodes = int(f.readline().decode("utf-8"))
+        else:
+            transform = None
+            num_nodes = int(line)
+        slave_master = []
+        for _ in range(num_nodes):
+            line = f.readline().decode("utf-8")
+            snode, mnode = [int(s) for s in line.split()]
+            slave_master.append([snode, mnode])
+        slave_master = numpy.array(slave_master, dtype=int).reshape(-1, 2)
+        slave_master -= 1  # Subtract one, Python is 0-based
+        periodic.append([edim, (stag, mtag), transform, slave_master])
+    line = f.readline().decode("utf-8")
+    assert line.strip() == "$EndPeriodic"
+    return periodic
+
+
 def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
     # Read string tags
     num_string_tags = int(f.readline().decode("utf-8"))
@@ -396,6 +422,7 @@ def read_buffer(f):
     cell_data_raw = {}
     cell_tags = {}
     point_data = {}
+    periodic = None
 
     is_ascii = None
     int_size = 4
@@ -418,6 +445,8 @@ def read_buffer(f):
             has_additional_tag_data, cell_tags = _read_cells(
                 f, cells, int_size, is_ascii
             )
+        elif environ == "Periodic":
+            periodic = _read_periodic(f)
         elif environ == "NodeData":
             _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
         else:
@@ -438,7 +467,12 @@ def read_buffer(f):
             cell_data[key][name] = item_list
 
     return Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        field_data=field_data,
+        gmsh_periodic=periodic,
     )
 
 
@@ -548,6 +582,21 @@ def _write_elements(fh, cells, tag_data, write_binary):
     return
 
 
+def _write_periodic(fh, periodic):
+    fh.write("$Periodic\n".encode("utf-8"))
+    fh.write("{}\n".format(len(periodic)).encode("utf-8"))
+    for dim, (stag, mtag), transform, slave_master in periodic:
+        fh.write("{} {} {}\n".format(dim, stag, mtag).encode("utf-8"))
+        if transform is not None:
+            fh.write("{}\n".format(transform).encode("utf-8"))
+        slave_master = numpy.array(slave_master, dtype=int).reshape(-1, 2)
+        slave_master = slave_master + 1  # Add one, Gmsh is 0-based
+        fh.write("{}\n".format(len(slave_master)).encode("utf-8"))
+        for snode, mnode in slave_master:
+            fh.write("{} {}\n".format(snode, mnode).encode("utf-8"))
+    fh.write("$EndPeriodic\n".encode("utf-8"))
+
+
 def _write_data(fh, tag, name, data, write_binary):
     fh.write("${}\n".format(tag).encode("utf-8"))
     # <http://gmsh.info/doc/texinfo/gmsh.html>:
@@ -646,6 +695,8 @@ def write(filename, mesh, write_binary=True):
 
         _write_nodes(fh, mesh.points, write_binary)
         _write_elements(fh, mesh.cells, tag_data, write_binary)
+        if mesh.gmsh_periodic is not None:
+            _write_periodic(fh, mesh.gmsh_periodic)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, write_binary)
         cell_data_raw = raw_from_cell_data(other_data)
