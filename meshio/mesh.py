@@ -12,6 +12,7 @@ class Mesh(object):
         cell_data=None,
         field_data=None,
         node_sets=None,
+        gmsh_periodic=None,
     ):
         self.points = points
         self.cells = cells
@@ -19,6 +20,7 @@ class Mesh(object):
         self.cell_data = cell_data if cell_data else {}
         self.field_data = field_data if field_data else {}
         self.node_sets = node_sets if node_sets else {}
+        self.gmsh_periodic = gmsh_periodic
         return
 
     def __repr__(self):
