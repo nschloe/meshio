@@ -186,39 +186,40 @@ def write(filename, mesh, file_format=None):
     for key, value in mesh.cells.items():
         assert value.shape[1] == gmsh_io.num_nodes_per_cell[key]
 
-    if file_format == "moab":
-        h5m_io.write(filename, mesh)
-    elif file_format in ["ansys-ascii", "ansys-binary"]:
-        ansys_io.write(filename, mesh, write_binary=(file_format == "ansys-binary"))
-    elif file_format in ["gmsh-ascii", "gmsh-binary"]:
-        gmsh_io.write(filename, mesh, write_binary=(file_format == "gmsh-binary"))
-    elif file_format == "med":
-        med_io.write(filename, mesh)
-    elif file_format == "medit":
-        medit_io.write(filename, mesh)
-    elif file_format == "dolfin-xml":
-        dolfin_io.write(filename, mesh)
-    elif file_format == "off":
-        off_io.write(filename, mesh)
-    elif file_format == "permas":
-        permas_io.write(filename, mesh)
-    elif file_format in ["stl-ascii", "stl-binary"]:
-        stl_io.write(filename, mesh, write_binary=(file_format != "stl-ascii"))
-    elif file_format == "vtu-ascii":
-        vtu_io.write(filename, mesh, write_binary=False)
-    elif file_format in ["vtu", "vtu-binary"]:
-        vtu_io.write(filename, mesh, write_binary=True)
-    elif file_format == "vtk-ascii":
-        vtk_io.write(filename, mesh, write_binary=False)
-    elif file_format in ["vtk", "vtk-binary"]:
-        vtk_io.write(filename, mesh, write_binary=True)
-    elif file_format in ["xdmf", "xdmf3"]:  # XDMF
-        xdmf_io.write(filename, mesh)
-    elif file_format == "abaqus":
-        abaqus_io.write(filename, mesh)
-    else:
-        assert file_format == "exodus", "Unknown file format '{}' of '{}'.".format(
-            file_format, filename
+    d = {
+        "moab": lambda: h5m_io.write(filename, mesh),
+        "ansys-ascii": lambda: ansys_io.write(filename, mesh, write_binary=False),
+        "ansys-binary": lambda: ansys_io.write(filename, mesh, write_binary=True),
+        "gmsh-ascii": lambda: gmsh_io.write(filename, mesh, write_binary=False),
+        "gmsh-binary": lambda: gmsh_io.write(filename, mesh, write_binary=True),
+        "med": lambda: med_io.write(filename, mesh),
+        "medit": lambda: medit_io.write(filename, mesh),
+        "dolfin-xml": lambda: dolfin_io.write(filename, mesh),
+        "off": lambda: off_io.write(filename, mesh),
+        "permas": lambda: permas_io.write(filename, mesh),
+        "stl-ascii": lambda: stl_io.write(filename, mesh, write_binary=False),
+        "stl-binary": lambda: stl_io.write(filename, mesh, write_binary=True),
+        "vtu-ascii": lambda: vtu_io.write(filename, mesh, write_binary=False),
+        "vtu": lambda: vtu_io.write(filename, mesh, write_binary=True),
+        "vtu-binary": lambda: vtu_io.write(filename, mesh, write_binary=True),
+        "vtk-ascii": lambda: vtk_io.write(filename, mesh, write_binary=False),
+        "vtk": lambda: vtk_io.write(filename, mesh, write_binary=True),
+        "vtk-binary": lambda: vtk_io.write(filename, mesh, write_binary=True),
+        "xdmf": lambda: xdmf_io.write(filename, mesh),
+        "xdmf3": lambda: xdmf_io.write(filename, mesh),
+        "abaqus": lambda: abaqus_io.write(filename, mesh),
+        "exodus": lambda: exodus_io.write(filename, mesh),
+    }
+
+    try:
+        writer = d[file_format]
+    except KeyError:
+        raise KeyError(
+            "Unknown format '{}'. Pick one of {}".format(
+                file_format, sorted(list(d.keys()))
+            )
         )
-        exodus_io.write(filename, mesh)
+
+    # Actually perform the write
+    writer()
     return
