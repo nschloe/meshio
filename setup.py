@@ -35,7 +35,6 @@ setup(
         "hdf5": ["h5py"],  # MED, MOAB, XDMF formats
         "xml": ["lxml"],  # Dolfin, VTU, XDMF
     },
-    scripts=["tools/meshio-convert"],
     classifiers=[
         about["__status__"],
         about["__license__"],
@@ -46,4 +45,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering",
     ],
+    entry_points={"console_scripts": ["meshio-convert = meshio.cli:main"]},
 )

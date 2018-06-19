@@ -1,4 +1,5 @@
-#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
 """
 Convert a mesh file to another.
 """
@@ -6,15 +7,17 @@ from __future__ import print_function
 
 import numpy
 
-import meshio
+from .__about__ import __version__
+from .helpers import read, write, input_filetypes, output_filetypes
 
 
-def _main():
+def main(argv=None):
     # Parse command line arguments.
-    args = _parse_options()
+    parser = _get_parser()
+    args = parser.parse_args(argv)
 
     # read mesh data
-    mesh = meshio.read(args.infile, file_format=args.input_format)
+    mesh = read(args.infile, file_format=args.input_format)
     print(mesh)
 
     if args.prune:
@@ -24,11 +27,11 @@ def _main():
     mesh.points = numpy.ascontiguousarray(mesh.points)
 
     # write it out
-    meshio.write(args.outfile, mesh, file_format=args.output_format)
+    write(args.outfile, mesh, file_format=args.output_format)
     return
 
 
-def _parse_options():
+def _get_parser():
     """Parse input options."""
     import argparse
 
@@ -40,7 +43,7 @@ def _parse_options():
         "--input-format",
         "-i",
         type=str,
-        choices=meshio.helpers.input_filetypes,
+        choices=input_filetypes,
         help="input file format",
         default=None,
     )
@@ -49,7 +52,7 @@ def _parse_options():
         "--output-format",
         "-o",
         type=str,
-        choices=meshio.helpers.output_filetypes,
+        choices=output_filetypes,
         help="output file format",
         default=None,
     )
@@ -67,11 +70,7 @@ def _parse_options():
         "--version",
         "-v",
         action="version",
-        version="%(prog)s " + ("(version %s)" % meshio.__version__),
+        version="%(prog)s " + ("(version {})".format(__version__)),
     )
 
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    _main()
+    return parser
