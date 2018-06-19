@@ -10,6 +10,7 @@ from .mesh import Mesh
 
 
 __all__ = [
+    "cli",
     "read",
     "write",
     "write_points_cells",
