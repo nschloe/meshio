@@ -237,78 +237,9 @@ def _read_cells(f, cells, int_size, is_ascii):
     has_additional_tag_data = False
     cell_tags = {}
     if is_ascii:
-        for _ in range(total_num_cells):
-            line = f.readline().decode("utf-8")
-            data = [int(k) for k in filter(None, line.split())]
-            t = _gmsh_to_meshio_type[data[1]]
-            num_nodes_per_elem = num_nodes_per_cell[t]
-
-            if t not in cells:
-                cells[t] = []
-            cells[t].append(data[-num_nodes_per_elem:])
-
-            # data[2] gives the number of tags. The gmsh manual
-            # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
-            # says:
-            # >>>
-            # By default, the first tag is the number of the physical entity to
-            # which the element belongs; the second is the number of the
-            # elementary geometrical entity to which the element belongs; the
-            # third is the number of mesh partitions to which the element
-            # belongs, followed by the partition ids (negative partition ids
-            # indicate ghost cells). A zero tag is equivalent to no tag. Gmsh
-            # and most codes using the MSH 2 format require at least the first
-            # two tags (physical and elementary tags).
-            # <<<
-            num_tags = data[2]
-            if num_tags > 0:
-                if t not in cell_tags:
-                    cell_tags[t] = []
-                cell_tags[t].append(data[3 : 3 + num_tags])
-
-        # convert to numpy arrays
-        for key in cells:
-            cells[key] = numpy.array(cells[key], dtype=int)
-        # Cannot convert cell_tags[key] to numpy array: There may be a
-        # different number of tags for each cell.
+        _read_cells_ascii(f, cells, cell_tags, total_num_cells)
     else:
-        # binary
-        num_elems = 0
-        while num_elems < total_num_cells:
-            # read element header
-            elem_type = struct.unpack("i", f.read(int_size))[0]
-            t = _gmsh_to_meshio_type[elem_type]
-            num_nodes_per_elem = num_nodes_per_cell[t]
-            num_elems0 = struct.unpack("i", f.read(int_size))[0]
-            num_tags = struct.unpack("i", f.read(int_size))[0]
-            # assert num_tags >= 2
-
-            # read element data
-            num_bytes = 4 * (num_elems0 * (1 + num_tags + num_nodes_per_elem))
-            shape = (num_elems0, 1 + num_tags + num_nodes_per_elem)
-            b = f.read(num_bytes)
-            data = numpy.frombuffer(b, dtype=numpy.int32).reshape(shape)
-
-            if t not in cells:
-                cells[t] = []
-            cells[t].append(data[:, -num_nodes_per_elem:])
-
-            if t not in cell_tags:
-                cell_tags[t] = []
-            cell_tags[t].append(data[:, 1 : num_tags + 1])
-
-            num_elems += num_elems0
-
-        # collect cells
-        for key in cells:
-            cells[key] = numpy.vstack(cells[key])
-
-        # collect cell tags
-        for key in cell_tags:
-            cell_tags[key] = numpy.vstack(cell_tags[key])
-
-        line = f.readline().decode("utf-8")
-        assert line == "\n"
+        _read_cells_binary(f, cells, cell_tags, total_num_cells, int_size)
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndElements"
@@ -336,7 +267,94 @@ def _read_cells(f, cells, int_size, is_ascii):
             output_cell_tags[key]["gmsh:geometrical"], dtype=int
         )
 
+    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
+    if "tetra10" in cells:
+        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
+    if "hexahedron20" in cells:
+        cells["hexahedron20"] = cells["hexahedron20"][
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16, 9, 17, 10, 18, 19, 12, 15, 13, 14]
+        ]
+
     return has_additional_tag_data, output_cell_tags
+
+
+def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
+    for _ in range(total_num_cells):
+        line = f.readline().decode("utf-8")
+        data = [int(k) for k in filter(None, line.split())]
+        t = _gmsh_to_meshio_type[data[1]]
+        num_nodes_per_elem = num_nodes_per_cell[t]
+
+        if t not in cells:
+            cells[t] = []
+        cells[t].append(data[-num_nodes_per_elem:])
+
+        # data[2] gives the number of tags. The gmsh manual
+        # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
+        # says:
+        # >>>
+        # By default, the first tag is the number of the physical entity to
+        # which the element belongs; the second is the number of the
+        # elementary geometrical entity to which the element belongs; the
+        # third is the number of mesh partitions to which the element
+        # belongs, followed by the partition ids (negative partition ids
+        # indicate ghost cells). A zero tag is equivalent to no tag. Gmsh
+        # and most codes using the MSH 2 format require at least the first
+        # two tags (physical and elementary tags).
+        # <<<
+        num_tags = data[2]
+        if num_tags > 0:
+            if t not in cell_tags:
+                cell_tags[t] = []
+            cell_tags[t].append(data[3 : 3 + num_tags])
+
+    # convert to numpy arrays
+    for key in cells:
+        cells[key] = numpy.array(cells[key], dtype=int)
+    # Cannot convert cell_tags[key] to numpy array: There may be a
+    # different number of tags for each cell.
+
+    return
+
+
+def _read_cells_binary(f, cells, cell_tags, total_num_cells, int_size):
+    num_elems = 0
+    while num_elems < total_num_cells:
+        # read element header
+        elem_type = struct.unpack("i", f.read(int_size))[0]
+        t = _gmsh_to_meshio_type[elem_type]
+        num_nodes_per_elem = num_nodes_per_cell[t]
+        num_elems0 = struct.unpack("i", f.read(int_size))[0]
+        num_tags = struct.unpack("i", f.read(int_size))[0]
+        # assert num_tags >= 2
+
+        # read element data
+        num_bytes = 4 * (num_elems0 * (1 + num_tags + num_nodes_per_elem))
+        shape = (num_elems0, 1 + num_tags + num_nodes_per_elem)
+        b = f.read(num_bytes)
+        data = numpy.frombuffer(b, dtype=numpy.int32).reshape(shape)
+
+        if t not in cells:
+            cells[t] = []
+        cells[t].append(data[:, -num_nodes_per_elem:])
+
+        if t not in cell_tags:
+            cell_tags[t] = []
+        cell_tags[t].append(data[:, 1 : num_tags + 1])
+
+        num_elems += num_elems0
+
+    # collect cells
+    for key in cells:
+        cells[key] = numpy.vstack(cells[key])
+
+    # collect cell tags
+    for key in cell_tags:
+        cell_tags[key] = numpy.vstack(cell_tags[key])
+
+    line = f.readline().decode("utf-8")
+    assert line == "\n"
+    return
 
 
 def _read_periodic(f):
@@ -664,6 +682,15 @@ def write(filename, mesh, write_binary=True):
                 )
                 mesh.cells[key] = numpy.array(value, dtype=numpy.int32)
 
+    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
+    cells = mesh.cells.copy()
+    if "tetra10" in cells:
+        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
+    if "hexahedron20" in cells:
+        cells["hexahedron20"] = cells["hexahedron20"][
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 14, 15]
+        ]
+
     with open(filename, "wb") as fh:
         mode_idx = 1 if write_binary else 0
         size_of_double = 8
@@ -694,7 +721,7 @@ def write(filename, mesh, write_binary=True):
                     other_data[cell_type][key] = data
 
         _write_nodes(fh, mesh.points, write_binary)
-        _write_elements(fh, mesh.cells, tag_data, write_binary)
+        _write_elements(fh, cells, tag_data, write_binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic)
         for name, dat in mesh.point_data.items():

@@ -26,9 +26,9 @@ class Mesh(object):
     def __repr__(self):
         lines = []
         lines.append("Number of points: {}".format(len(self.points)))
-        lines.append("Elements:")
+        lines.append("Number of elements:")
         for tpe, elems in self.cells.items():
-            lines.append("  Number of {}s: {}".format(tpe, len(elems)))
+            lines.append("  {}: {}".format(tpe, len(elems)))
 
         if self.node_sets:
             lines.append("Node sets: {}".format(", ".join(self.node_sets.keys())))
@@ -45,11 +45,27 @@ class Mesh(object):
         return "\n".join(lines)
 
     def prune(self):
+        prune_list = []
+
+        for cell_type in ["vertex", "line", "line3"]:
+            if cell_type in self.cells:
+                prune_list.append(cell_type)
+
         self.cells.pop("vertex", None)
         self.cells.pop("line", None)
-        if "tetra" in self.cells:
+        self.cells.pop("line3", None)
+        if "tetra" in self.cells or "tetra10" in self.cells:
             # remove_lower_order_cells
-            self.cells.pop("triangle", None)
+            for cell_type in ["triangle", "triangle6"]:
+                if cell_type in self.cells:
+                    prune_list.append(cell_type)
+
+        for cell_type in prune_list:
+            self.cells.pop(cell_type, None)
+            self.cell_data.pop(cell_type, None)
+
+        print("Pruned cell types: {}".format(", ".join(prune_list)))
+
         # remove_orphaned_nodes.
         # find which nodes are not mentioned in the cells and remove them
         all_cells_flat = numpy.concatenate(
