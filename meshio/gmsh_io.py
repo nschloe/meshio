@@ -336,6 +336,14 @@ def _read_cells(f, cells, int_size, is_ascii):
             output_cell_tags[key]["gmsh:geometrical"], dtype=int
         )
 
+    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
+    if "tetra10" in cells:
+        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
+    if "hexahedron20" in cells:
+        cells["hexahedron20"] = cells["hexahedron20"][
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16, 9, 17, 10, 18, 19, 12, 15, 13, 14]
+        ]
+
     return has_additional_tag_data, output_cell_tags
 
 
@@ -664,6 +672,15 @@ def write(filename, mesh, write_binary=True):
                 )
                 mesh.cells[key] = numpy.array(value, dtype=numpy.int32)
 
+    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
+    cells = mesh.cells.copy()
+    if "tetra10" in cells:
+        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
+    if "hexahedron20" in cells:
+        cells["hexahedron20"] = cells["hexahedron20"][
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 14, 15]
+        ]
+
     with open(filename, "wb") as fh:
         mode_idx = 1 if write_binary else 0
         size_of_double = 8
@@ -694,7 +711,7 @@ def write(filename, mesh, write_binary=True):
                     other_data[cell_type][key] = data
 
         _write_nodes(fh, mesh.points, write_binary)
-        _write_elements(fh, mesh.cells, tag_data, write_binary)
+        _write_elements(fh, cells, tag_data, write_binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic)
         for name, dat in mesh.point_data.items():
