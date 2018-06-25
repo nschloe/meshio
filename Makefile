@@ -24,5 +24,5 @@ clean:
 	@rm -rf *.egg-info/ build/ dist/
 
 lint:
-	flake8 setup.py meshio/ test/*.py
 	black --check setup.py meshio/ test/*.py
+	flake8 setup.py meshio/ test/*.py
