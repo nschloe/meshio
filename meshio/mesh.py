@@ -26,9 +26,9 @@ class Mesh(object):
     def __repr__(self):
         lines = []
         lines.append("Number of points: {}".format(len(self.points)))
-        lines.append("Elements:")
+        lines.append("Number of elements:")
         for tpe, elems in self.cells.items():
-            lines.append("  Number of {}s: {}".format(tpe, len(elems)))
+            lines.append("  {}: {}".format(tpe, len(elems)))
 
         if self.node_sets:
             lines.append("Node sets: {}".format(", ".join(self.node_sets.keys())))
