@@ -91,7 +91,7 @@ def write(filename, mesh):
                     "    $SITUATION NAME = REAL_MODES",
                     "        DFLT_COMP SYSTEM = NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1",
                     "    $END SITUATION" "!",
-                    "!", 
+                    "!",
                     "    $STRUCTURE",
                     "!" "\n",
                 ]
