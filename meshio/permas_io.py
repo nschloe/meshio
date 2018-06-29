@@ -87,12 +87,13 @@ def write(filename, mesh):
                     "! File written by meshio version {}".format(__version__),
                     "! Further information available at {}".format(__website__),
                     "!",
-                    "$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH" "!",
-                    "    $SITUATION NAME = REAL_MODES"
+                    "$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH",
+                    "    $SITUATION NAME = REAL_MODES",
                     "        DFLT_COMP SYSTEM = NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1",
                     "    $END SITUATION" "!",
-                    "    $STRUCTURE",
                     "!",
+                    "    $STRUCTURE",
+                    "!" "\n",
                 ]
             ).encode("utf-8")
         )
