@@ -230,6 +230,11 @@ def write_read(writer, reader, input_mesh, atol):
         writer(filepath, input_mesh)
         mesh = reader(filepath)
 
+    # Make sure the output is writeable
+    assert mesh.points.flags["WRITEABLE"]
+    for cell_type, data in input_mesh.cells.items():
+        assert mesh.cells[cell_type].flags["WRITEABLE"]
+
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
     # Use allclose.
