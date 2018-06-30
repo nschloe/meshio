@@ -329,10 +329,9 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells, int_size):
         # assert num_tags >= 2
 
         # read element data
-        num_bytes = 4 * (num_elems0 * (1 + num_tags + num_nodes_per_elem))
         shape = (num_elems0, 1 + num_tags + num_nodes_per_elem)
-        b = f.read(num_bytes)
-        data = numpy.frombuffer(b, dtype=numpy.int32).reshape(shape)
+        count = shape[0] * shape[1]
+        data = numpy.fromfile(f, count=count, dtype=numpy.int32).reshape(shape)
 
         if t not in cells:
             cells[t] = []
