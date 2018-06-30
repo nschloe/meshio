@@ -274,10 +274,7 @@ def _read_cell_types(f, is_ascii, num_items):
         ct = numpy.fromfile(f, count=int(num_items), sep=" ", dtype=int)
     else:
         # binary
-        num_bytes = 4
-        total_num_bytes = num_items * num_bytes
-        ct = numpy.frombuffer(f.read(total_num_bytes), dtype=">i4")
-        # ct = numpy.fromfile(f, num_items, dtype=">i4")
+        ct = numpy.fromfile(f, count=int(num_items), dtype=">i4")
         line = f.readline().decode("utf-8")
         # Sometimes, there's no newline at the end
         assert line.strip() == ""
