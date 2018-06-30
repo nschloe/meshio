@@ -254,6 +254,7 @@ def _read_points(f, data_type, is_ascii, num_points):
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
+        # points = numpy.fromfile(f, count=num_points * 3, dtype=dtype)
         points = numpy.frombuffer(f.read(total_num_bytes), dtype=dtype)
         line = f.readline().decode("utf-8")
         assert line == "\n"
@@ -407,6 +408,8 @@ def translate_cells(data, types, cell_data_raw):
 
 
 def write(filename, mesh, write_binary=True):
+    assert mesh.points.shape[1] == 3, "VTK point coordinates must be 3D"
+
     if not write_binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
 
