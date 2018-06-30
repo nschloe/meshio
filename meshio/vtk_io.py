@@ -248,14 +248,10 @@ def _read_points(f, data_type, is_ascii, num_points):
     if is_ascii:
         points = numpy.fromfile(f, count=num_points * 3, sep=" ", dtype=dtype)
     else:
-        # binary
-        num_bytes = numpy.dtype(dtype).itemsize
-        total_num_bytes = num_points * (3 * num_bytes)
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
-        # points = numpy.fromfile(f, count=num_points * 3, dtype=dtype)
-        points = numpy.frombuffer(f.read(total_num_bytes), dtype=dtype)
+        points = numpy.fromfile(f, count=num_points * 3, dtype=dtype)
         line = f.readline().decode("utf-8")
         assert line == "\n"
 
