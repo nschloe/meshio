@@ -74,14 +74,11 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
         # binary data
         if out.group(1) == "20":
             dtype = numpy.float32
-            bytes_per_item = 4
         else:
             assert out.group(1) == "30"
             dtype = numpy.float64
-            bytes_per_item = 8
         # read point data
-        total_bytes = dim * bytes_per_item * num_points
-        pts = numpy.frombuffer(f.read(total_bytes), dtype=dtype).reshape(
+        pts = numpy.fromfile(f, count=dim * num_points, dtype=dtype).reshape(
             (num_points, dim)
         )
 
@@ -145,16 +142,13 @@ def _read_cells(f, line):
     else:
         # binary cells
         if out.group(1) == "20":
-            bytes_per_item = 4
             dtype = numpy.int32
         else:
             assert out.group(1) == "30"
-            bytes_per_item = 8
             dtype = numpy.int64
-        total_bytes = bytes_per_item * num_nodes_per_cell * num_cells
-        data = numpy.frombuffer(
-            f.read(total_bytes), count=(num_nodes_per_cell * num_cells), dtype=dtype
-        ).reshape((num_cells, num_nodes_per_cell))
+        shape = (num_cells, num_nodes_per_cell)
+        count = shape[0] * shape[1]
+        data = numpy.fromfile(f, count=count, dtype=dtype).reshape(shape)
 
     # make sure that the data set is properly closed
     _skip_close(f, 2)
@@ -244,11 +238,9 @@ def _read_faces(f, line):
     else:
         # binary
         if out.group(1) == "20":
-            bytes_per_item = 4
             dtype = numpy.int32
         else:
             assert out.group(1) == "30"
-            bytes_per_item = 8
             dtype = numpy.int64
 
         assert key != "mixed"
@@ -259,10 +251,9 @@ def _read_faces(f, line):
         #   n0 n1 n2 cr cl
         # where n* are the defining nodes (vertices) of the face,
         # and c* are the adjacent cells.
-        total_bytes = num_cells * bytes_per_item * (num_nodes_per_cell + 2)
-        data = numpy.frombuffer(f.read(total_bytes), dtype=dtype).reshape(
-            (num_cells, num_nodes_per_cell + 2)
-        )
+        shape = (num_cells, num_nodes_per_cell + 2)
+        count = shape[0] * shape[1]
+        data = numpy.fromfile(f, count=count, dtype=dtype).reshape(shape)
         # Cut off the adjacent cell data.
         data = data[:, :num_nodes_per_cell]
         data = {key: data}
