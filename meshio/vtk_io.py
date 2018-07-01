@@ -248,13 +248,10 @@ def _read_points(f, data_type, is_ascii, num_points):
     if is_ascii:
         points = numpy.fromfile(f, count=num_points * 3, sep=" ", dtype=dtype)
     else:
-        # binary
-        num_bytes = numpy.dtype(dtype).itemsize
-        total_num_bytes = num_points * (3 * num_bytes)
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
-        points = numpy.frombuffer(f.read(total_num_bytes), dtype=dtype)
+        points = numpy.fromfile(f, count=num_points * 3, dtype=dtype)
         line = f.readline().decode("utf-8")
         assert line == "\n"
 
@@ -265,10 +262,7 @@ def _read_cells(f, is_ascii, num_items):
     if is_ascii:
         c = numpy.fromfile(f, count=num_items, sep=" ", dtype=int)
     else:
-        # binary
-        num_bytes = 4
-        total_num_bytes = num_items * num_bytes
-        c = numpy.frombuffer(f.read(total_num_bytes), dtype=">i4")
+        c = numpy.fromfile(f, count=num_items, dtype=">i4")
         line = f.readline().decode("utf-8")
         assert line == "\n"
 
@@ -280,9 +274,7 @@ def _read_cell_types(f, is_ascii, num_items):
         ct = numpy.fromfile(f, count=int(num_items), sep=" ", dtype=int)
     else:
         # binary
-        num_bytes = 4
-        total_num_bytes = num_items * num_bytes
-        ct = numpy.frombuffer(f.read(total_num_bytes), dtype=">i4")
+        ct = numpy.fromfile(f, count=int(num_items), dtype=">i4")
         line = f.readline().decode("utf-8")
         # Sometimes, there's no newline at the end
         assert line.strip() == ""
@@ -340,13 +332,10 @@ def _read_fields(f, num_fields, is_ascii):
         if is_ascii:
             dat = numpy.fromfile(f, count=shape0 * shape1, sep=" ", dtype=dtype)
         else:
-            # binary
-            num_bytes = numpy.dtype(dtype).itemsize
-            total_num_bytes = shape0 * shape1 * num_bytes
             # Binary data is big endian, see
             # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
             dtype = dtype.newbyteorder(">")
-            dat = numpy.frombuffer(f.read(total_num_bytes), dtype=dtype)
+            dat = numpy.fromfile(f, count=shape0 * shape1, dtype=dtype)
             line = f.readline().decode("utf-8")
             assert line == "\n"
 
@@ -407,6 +396,8 @@ def translate_cells(data, types, cell_data_raw):
 
 
 def write(filename, mesh, write_binary=True):
+    assert mesh.points.shape[1] == 3, "VTK point coordinates must be 3D"
+
     if not write_binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
 

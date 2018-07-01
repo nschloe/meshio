@@ -215,11 +215,10 @@ def _read_nodes(f, is_ascii, int_size, data_size):
         points = points[:, 1:]
     else:
         # binary
-        num_bytes = num_nodes * (int_size + 3 * data_size)
         assert numpy.int32(0).nbytes == int_size
         assert numpy.float64(0.0).nbytes == data_size
         dtype = [("index", numpy.int32), ("x", numpy.float64, (3,))]
-        data = numpy.frombuffer(f.read(num_bytes), dtype=dtype)
+        data = numpy.fromfile(f, count=num_nodes, dtype=dtype)
         assert (data["index"] == range(1, num_nodes + 1)).all()
         points = numpy.ascontiguousarray(data["x"])
         line = f.readline().decode("utf-8")
@@ -329,10 +328,9 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells, int_size):
         # assert num_tags >= 2
 
         # read element data
-        num_bytes = 4 * (num_elems0 * (1 + num_tags + num_nodes_per_elem))
         shape = (num_elems0, 1 + num_tags + num_nodes_per_elem)
-        b = f.read(num_bytes)
-        data = numpy.frombuffer(b, dtype=numpy.int32).reshape(shape)
+        count = shape[0] * shape[1]
+        data = numpy.fromfile(f, count=count, dtype=numpy.int32).reshape(shape)
 
         if t not in cells:
             cells[t] = []
@@ -407,11 +405,10 @@ def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
         data = data[:, 1:]
     else:
         # binary
-        num_bytes = num_items * (int_size + num_components * data_size)
         assert numpy.int32(0).nbytes == int_size
         assert numpy.float64(0.0).nbytes == data_size
         dtype = [("index", numpy.int32), ("values", numpy.float64, (num_components,))]
-        data = numpy.frombuffer(f.read(num_bytes), dtype=dtype)
+        data = numpy.fromfile(f, count=num_items, dtype=dtype)
         assert (data["index"] == range(1, num_items + 1)).all()
         data = numpy.ascontiguousarray(data["values"])
         line = f.readline().decode("utf-8")
