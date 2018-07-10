@@ -121,7 +121,8 @@ def read_buffer(f):
             elif word.startswith("NODE"):
                 points, point_gid = _read_nodes(f)
             elif word.startswith("ELEMENT"):
-                cells = _read_cells(f, word, cells)
+                key, idx = _read_cells(f, word)
+                cells[key] = idx
             elif word.startswith("NSET"):
                 params_map = get_param_map(word, required_keys=["NSET"])
                 setids = read_set(f, params_map)
@@ -161,34 +162,26 @@ def _read_nodes(f):
     return numpy.array(points, dtype=float), numpy.array(point_gid, dtype=int)
 
 
-def _read_cells(f, line0, cells):
+def _read_cells(f, line0):
     sline = line0.split(",")[1:]
     etype_sline = sline[0]
     assert "TYPE" in etype_sline, etype_sline
     etype = etype_sline.split("=")[1].strip()
-    if etype not in abaqus_to_meshio_type:
-        msg = "Element type not available: " + etype
-        raise RuntimeError(msg)
-    t = abaqus_to_meshio_type[etype]
-    num_nodes_per_elem = num_nodes_per_cell[t]
-    if t not in cells:
-        cells[t] = []
+    assert etype in abaqus_to_meshio_type, \
+        "Element type not available: {}".format(etype)
+    cell_type = abaqus_to_meshio_type[etype]
+
+    cells = []
     while True:
         last_pos = f.tell()
         line = f.readline()
         if line.startswith("*"):
             break
-        data = [int(k) for k in filter(None, line.split(","))]
-        cells[t].append(data[-num_nodes_per_elem:])
-
-    # convert to numpy arrays
-    # Subtract one to account for the fact that python indices are
-    # 0-based.
-    for key in cells:
-        cells[key] = numpy.array(cells[key], dtype=int)
+        gid, *idx = [int(k) for k in filter(None, line.split(","))]
+        cells.append(idx)
 
     f.seek(last_pos)
-    return cells
+    return cell_type, numpy.array(cells)
 
 
 def _scan_cells(point_gid, cells):
