@@ -3,8 +3,6 @@
 """
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
-
-.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
 import logging
 import struct

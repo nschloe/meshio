@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 """
-I/O for PERMAS dat format, cf.
-
-.. moduleauthor:: Nils Wagner
+I/O for PERMAS dat format
 """
 import gzip
 import re

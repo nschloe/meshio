@@ -3,8 +3,6 @@
 """
 I/O for DOLFIN's XML format, cf.
 <https://people.sc.fsu.edu/~jburkardt/data/dolfin_xml/dolfin_xml.html>.
-
-.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
 import logging
 import os

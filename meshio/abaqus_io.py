@@ -2,8 +2,6 @@
 #
 """
 I/O for Abaqus inp files.
-
-.. moduleauthor:: Xi YUAN <hill_yuan@hotmail.com>
 """
 import numpy
 

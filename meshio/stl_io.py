@@ -3,8 +3,6 @@
 """
 I/O for the STL format, cf.
 <https://en.wikipedia.org/wiki/STL_(file_format)>.
-
-.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
 import numpy
 

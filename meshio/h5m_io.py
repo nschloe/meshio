@@ -2,8 +2,6 @@
 #
 """
 I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
-
-.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
 from datetime import datetime
 import logging
