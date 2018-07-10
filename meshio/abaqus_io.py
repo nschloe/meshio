@@ -175,7 +175,7 @@ def _read_cells(f, line0):
         line = f.readline()
         if line.startswith("*"):
             break
-        gid, *idx = [int(k) for k in filter(None, line.split(","))]
+        _, *idx = [int(k) for k in filter(None, line.split(","))]
         cells.append(idx)
 
     f.seek(last_pos)
