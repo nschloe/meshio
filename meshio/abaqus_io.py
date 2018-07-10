@@ -166,8 +166,9 @@ def _read_cells(f, line0):
     etype_sline = sline[0]
     assert "TYPE" in etype_sline, etype_sline
     etype = etype_sline.split("=")[1].strip()
-    assert etype in abaqus_to_meshio_type, \
-        "Element type not available: {}".format(etype)
+    assert etype in abaqus_to_meshio_type, "Element type not available: {}".format(
+        etype
+    )
     cell_type = abaqus_to_meshio_type[etype]
 
     cells = []
