@@ -235,7 +235,6 @@ def read_set(f, params_map):
         line = f.readline()
         if line.startswith("*"):
             break
-        print(line)
         set_ids += [int(k) for k in line.strip().strip(",").split(",")]
     f.seek(last_pos)
 
