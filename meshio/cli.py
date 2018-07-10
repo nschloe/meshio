@@ -5,6 +5,8 @@ Convert a mesh file to another.
 """
 from __future__ import print_function
 
+import sys
+
 import numpy
 
 from .__about__ import __version__
@@ -70,7 +72,8 @@ def _get_parser():
         "--version",
         "-v",
         action="version",
-        version="%(prog)s " + ("(version {})".format(__version__)),
+        version="%(prog)s {}, Python {}".format(__version__, sys.version),
+        help="display version information",
     )
 
     return parser
