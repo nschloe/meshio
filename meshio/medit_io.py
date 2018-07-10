@@ -7,8 +7,6 @@ Check out
 <https://hal.inria.fr/inria-00069921/fr/>
 <https://www.ljll.math.upmc.fr/frey/publications/RT-0253.pdf>
 for something like a specification.
-
-.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
 import re
 import logging

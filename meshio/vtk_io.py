@@ -2,8 +2,6 @@
 #
 """
 I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
-
-.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
 import logging
 import numpy

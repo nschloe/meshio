@@ -2,13 +2,10 @@
 #
 """
 I/O for Abaqus inp files.
-
-.. moduleauthor:: Xi YUAN <hill_yuan@hotmail.com>
 """
 import numpy
 
 from .__about__ import __version__
-from .gmsh_io import num_nodes_per_cell
 from .mesh import Mesh
 
 
@@ -99,14 +96,12 @@ def read(filename):
 
 def read_buffer(f):
     # Initialize the optional data fields
-    points = []
     cells = {}
     nsets = {}
     elsets = {}
     field_data = {}
     cell_data = {}
     point_data = {}
-    point_gid = numpy.array([], dtype=int)
 
     while True:
         line = f.readline()
@@ -121,9 +116,10 @@ def read_buffer(f):
             elif word.startswith("PREPRINT"):
                 pass
             elif word.startswith("NODE"):
-                points, point_gid = _read_nodes(f, point_gid, points)
+                points, point_gid = _read_nodes(f)
             elif word.startswith("ELEMENT"):
-                cells = _read_cells(f, word, cells)
+                key, idx = _read_cells(f, word)
+                cells[key] = idx
             elif word.startswith("NSET"):
                 params_map = get_param_map(word, required_keys=["NSET"])
                 setids = read_set(f, params_map)
@@ -141,55 +137,49 @@ def read_buffer(f):
             else:
                 pass
 
-    points = numpy.reshape(points, (-1, 3))
     cells = _scan_cells(point_gid, cells)
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
 
 
-def _read_nodes(f, point_gid, points):
+def _read_nodes(f):
+    points = []
+    point_gid = []
     while True:
         last_pos = f.tell()
         line = f.readline()
         if line.startswith("*"):
             break
-        data = [float(k) for k in filter(None, line.strip().split(","))]
-        point_gid = numpy.append(point_gid, int(data[0]))
-        points = numpy.append(points, data[-3:])
+        gid, *x = line.strip().split(",")
+        point_gid.append(int(gid))
+        points.append([float(xx) for xx in x])
 
     f.seek(last_pos)
-    return points, point_gid
+    return numpy.array(points, dtype=float), numpy.array(point_gid, dtype=int)
 
 
-def _read_cells(f, line0, cells):
+def _read_cells(f, line0):
     sline = line0.split(",")[1:]
     etype_sline = sline[0]
     assert "TYPE" in etype_sline, etype_sline
     etype = etype_sline.split("=")[1].strip()
-    if etype not in abaqus_to_meshio_type:
-        msg = "Element type not available: " + etype
-        raise RuntimeError(msg)
-    t = abaqus_to_meshio_type[etype]
-    num_nodes_per_elem = num_nodes_per_cell[t]
-    if t not in cells:
-        cells[t] = []
+    assert etype in abaqus_to_meshio_type, "Element type not available: {}".format(
+        etype
+    )
+    cell_type = abaqus_to_meshio_type[etype]
+
+    cells = []
     while True:
         last_pos = f.tell()
         line = f.readline()
         if line.startswith("*"):
             break
-        data = [int(k) for k in filter(None, line.split(","))]
-        cells[t].append(data[-num_nodes_per_elem:])
-
-    # convert to numpy arrays
-    # Subtract one to account for the fact that python indices are
-    # 0-based.
-    for key in cells:
-        cells[key] = numpy.array(cells[key], dtype=int)
+        _, *idx = [int(k) for k in filter(None, line.split(","))]
+        cells.append(idx)
 
     f.seek(last_pos)
-    return cells
+    return cell_type, numpy.array(cells)
 
 
 def _scan_cells(point_gid, cells):
@@ -239,25 +229,24 @@ def get_param_map(word, required_keys=None):
 
 
 def read_set(f, params_map):
-    """reads a set"""
     set_ids = []
     while True:
         last_pos = f.tell()
         line = f.readline()
         if line.startswith("*"):
             break
-        set_ids += line.strip(", ").split(",")
+        set_ids += [int(k) for k in line.strip().strip(",").split(",")]
+    f.seek(last_pos)
 
     if "generate" in params_map:
         assert len(set_ids) == 3, set_ids
-        set_ids = numpy.arange(int(set_ids[0]), int(set_ids[1]), int(set_ids[2]))
+        set_ids = numpy.arange(set_ids[0], set_ids[1], set_ids[2])
     else:
         try:
             set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
         except ValueError:
             print(set_ids)
             raise
-    f.seek(last_pos)
     return set_ids
 
 

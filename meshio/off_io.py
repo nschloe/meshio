@@ -3,8 +3,6 @@
 """
 I/O for the OFF surface format, cf.
 <https://en.wikipedia.org/wiki/OFF_(file_format)>.
-
-.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
 from itertools import islice
 import numpy

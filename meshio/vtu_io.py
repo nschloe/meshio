@@ -2,8 +2,6 @@
 #
 """
 I/O for VTU.
-
-.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
 import base64
 import logging
