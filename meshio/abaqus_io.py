@@ -8,7 +8,6 @@ I/O for Abaqus inp files.
 import numpy
 
 from .__about__ import __version__
-from .gmsh_io import num_nodes_per_cell
 from .mesh import Mesh
 
 
@@ -231,25 +230,25 @@ def get_param_map(word, required_keys=None):
 
 
 def read_set(f, params_map):
-    """reads a set"""
     set_ids = []
     while True:
         last_pos = f.tell()
         line = f.readline()
         if line.startswith("*"):
             break
-        set_ids += line.strip(", ").split(",")
+        print(line)
+        set_ids += [int(k) for k in line.strip().strip(",").split(",")]
+    f.seek(last_pos)
 
     if "generate" in params_map:
         assert len(set_ids) == 3, set_ids
-        set_ids = numpy.arange(int(set_ids[0]), int(set_ids[1]), int(set_ids[2]))
+        set_ids = numpy.arange(set_ids[0], set_ids[1], set_ids[2])
     else:
         try:
             set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
         except ValueError:
             print(set_ids)
             raise
-    f.seek(last_pos)
     return set_ids
 
 
