@@ -9,6 +9,7 @@ import legacy_reader
 import legacy_writer
 
 vtk = pytest.importorskip("vtk")
+lxml = pytest.importorskip("lxml")
 
 test_set = [
     helpers.tri_mesh,
