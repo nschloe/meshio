@@ -7,6 +7,8 @@ import meshio
 
 import helpers
 
+lxml = pytest.importorskip("lxml")
+
 
 @pytest.mark.parametrize(
     "mesh",

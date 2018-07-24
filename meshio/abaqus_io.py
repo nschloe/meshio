@@ -116,7 +116,7 @@ def read_buffer(f):
             elif word.startswith("PREPRINT"):
                 pass
             elif word.startswith("NODE"):
-                points, point_gid = _read_nodes(f)
+                points, point_gids = _read_nodes(f)
             elif word.startswith("ELEMENT"):
                 key, idx = _read_cells(f, word)
                 cells[key] = idx
@@ -137,7 +137,8 @@ def read_buffer(f):
             else:
                 pass
 
-    cells = _scan_cells(point_gid, cells)
+    cells = _scan_cells(point_gids, cells)
+
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
@@ -145,18 +146,18 @@ def read_buffer(f):
 
 def _read_nodes(f):
     points = []
-    point_gid = []
+    point_gids = []
     while True:
         last_pos = f.tell()
         line = f.readline()
         if line.startswith("*"):
             break
         gid, *x = line.strip().split(",")
-        point_gid.append(int(gid))
+        point_gids.append(int(gid))
         points.append([float(xx) for xx in x])
 
     f.seek(last_pos)
-    return numpy.array(points, dtype=float), numpy.array(point_gid, dtype=int)
+    return numpy.array(points, dtype=float), numpy.array(point_gids, dtype=int)
 
 
 def _read_cells(f, line0):
@@ -182,10 +183,10 @@ def _read_cells(f, line0):
     return cell_type, numpy.array(cells)
 
 
-def _scan_cells(point_gid, cells):
+def _scan_cells(point_gids, cells):
     for arr in cells.values():
         for value in numpy.nditer(arr, op_flags=["readwrite"]):
-            value[...] = numpy.flatnonzero(point_gid == value)[0]
+            value[...] = numpy.flatnonzero(point_gids == value)[0]
     return cells
 
 
