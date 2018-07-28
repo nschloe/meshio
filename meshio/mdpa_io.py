@@ -101,7 +101,7 @@ def read(filename):
         mesh = read_buffer(f)
     return mesh
 
-def _read_nodes(f, is_ascii, int_size, data_size):
+def _read_nodes(f, is_ascii, data_size):
     # The first line is the number of nodes
     pos = f.tell()
     lines = f.readlines()
@@ -121,7 +121,7 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     assert line.strip() == "End Nodes"
     return points
 
-def _read_cells(f, cells, int_size, is_ascii, environ = None):
+def _read_cells(f, cells, is_ascii, environ = None):
     # First we try to identity the entity
     t = None
     if (environ is not None):
@@ -218,7 +218,7 @@ def _read_cells(f, cells, int_size, is_ascii, environ = None):
 
     return has_additional_tag_data, output_cell_tags
 
-def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
+def _read_data(f, tag, data_dict, data_size, is_ascii, environ = None):
     # Read string tags
     num_string_tags = int(f.readline().decode("utf-8"))
     string_tags = [
@@ -244,7 +244,7 @@ def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
         raise NameError('Only ASCII mdpa supported')
 
     line = f.readline().decode("utf-8")
-    assert line.strip() == "End{}".format(tag)
+    assert line.strip() == "End {}".format(tag)
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.
@@ -269,7 +269,6 @@ def read_buffer(f):
     point_data = {}
 
     is_ascii = True
-    int_size = 4
     data_size = None
     while True:
         line = f.readline().decode("utf-8")
@@ -279,21 +278,23 @@ def read_buffer(f):
         environ = line.strip()
 
         if "Begin Nodes" in environ:
-            points = _read_nodes(f, is_ascii, int_size, data_size)
+            points = _read_nodes(f, is_ascii, data_size)
         elif "Begin Elements" in environ or "Begin Conditions" in environ :
             has_additional_tag_data, cell_tags = _read_cells(
-                f, cells, int_size, is_ascii, environ)
-        #elif environ == "NodeData":
-            #_read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
-        #elif "Begin ElementalData" in environ or "Begin ConditionalData" in environ:
-            #_read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
+                f, cells, is_ascii, environ)
+        #elif "NodalData" in environ:
+            #_read_data(f, "NodalData", point_data, data_size, is_ascii)
+        #elif "Begin ElementalData" in environ:
+            #_read_data(f, "ElementalData", cell_data_raw, data_size, is_ascii)
+        #elif "Begin ConditionalData" in environ:
+            #_read_data(f, "ConditionalData", cell_data_raw, data_size, is_ascii)
 
     if has_additional_tag_data:
         logging.warning("The file contains tag data that couldn't be processed.")
 
     #cell_data = cell_data_from_raw(cells, cell_data_raw)
 
-    ## merge cell_tags into cell_data
+    ## Merge cell_tags into cell_data
     #for key, tag_dict in cell_tags.items():
         #if key not in cell_data:
             #cell_data[key] = {}
@@ -401,10 +402,7 @@ def _write_data(fh, tag, name, data, write_binary):
     if len(data.shape) > 1 and data.shape[1] == 1:
         data = data[:, 0]
 
-    fh.write("{}\n".format(num_components).encode("utf-8"))
-    # num data items
-    fh.write("{}\n".format(data.shape[0]).encode("utf-8"))
-    # actually write the data
+    # Actually write the data
     if write_binary:
         raise NameError('Only ASCII mdpa supported')
     else:
@@ -419,7 +417,6 @@ def _write_data(fh, tag, name, data, write_binary):
 
     fh.write("End "+ tag + " " + name +"\n\n".encode("utf-8"))
     return
-
 
 def write(filename, mesh, write_binary=False):
     """Writes mdpa files, cf.
