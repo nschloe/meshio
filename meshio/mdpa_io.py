@@ -27,22 +27,69 @@ from .gmsh_io import num_nodes_per_cell
 # https://github.com/KratosMultiphysics/Kratos/wiki/Mesh-node-ordering
 _mdpa_to_meshio_type = {
     "Line2D2"         : "line",
+    "Line3D2"         : "line",
     "Triangle2D3"     : "triangle",
+    "Triangle3D3"     : "triangle",
     "Quadrilateral2D4": "quad",
+    "Quadrilateral3D4": "quad",
     "Tetrahedra3D4"   : "tetra",
     "Hexahedra3D8"    : "hexahedron",
     "Prism3D6"        : "wedge",
     "Line2D3"         : "line3",
     "Triangle2D6"     : "triangle6",
+    "Triangle3D6"     : "triangle6",
     "Quadrilateral2D9": "quad9",
+    "Quadrilateral3D9": "quad9",
     "Tetrahedra3D10"  : "tetra10",
     "Hexahedra3D27"   : "hexahedron27",
+    "Point2D"         : "vertex",
     "Point3D"         : "vertex",
     "Quadrilateral2D8": "quad8",
+    "Quadrilateral3D8": "quad8",
     "Hexahedra3D20"   : "hexahedron20"
 }
-_meshio_to_mdpa_type = {v: k for k, v in _mdpa_to_meshio_type.items()}
+
+_meshio_to_mdpa_type = {
+    "line"        : "Line2D2",
+    "triangle"    : "Triangle2D3",
+    "quad"        : "Quadrilateral2D4",
+    "tetra"       : "Tetrahedra3D4",
+    "hexahedron"  : "Hexahedra3D8",
+    "wedge"       : "Prism3D6",
+    "line3"       : "Line2D3",
+    "triangle6"   : "Triangle2D6",
+    "quad9"       : "Quadrilateral2D9",
+    "tetra10"     : "Tetrahedra3D10",
+    "hexahedron27": "Hexahedra3D27",
+    "vertex"      : "Point2D",
+    "quad8"       : "Quadrilateral2D8",
+    "hexahedron20": "Hexahedra3D20"
+}
 inverse_num_nodes_per_cell = {v: k for k, v in num_nodes_per_cell.items()}
+
+local_dimension_types = {
+    "Line2D2"         : 1,
+    "Line3D2"         : 1,
+    "Triangle2D3"     : 2,
+    "Triangle3D3"     : 2,
+    "Quadrilateral2D4": 2,
+    "Quadrilateral3D4": 2,
+    "Tetrahedra3D4"   : 3,
+    "Hexahedra3D8"    : 3,
+    "Prism3D6"        : 3,
+    "Line2D3"         : 1,
+    "Triangle2D6"     : 2,
+    "Triangle3D6"     : 2,
+    "Quadrilateral2D9": 2,
+    "Quadrilateral3D9": 2,
+    "Tetrahedra3D10"  : 3,
+    "Hexahedra3D27"   : 3,
+    "Point2D"         : 0,
+    "Point3D"         : 0,
+    "Quadrilateral2D8": 2,
+    "Quadrilateral3D8": 2,
+    "Hexahedra3D20"   : 3
+}
 
 def read(filename):
     """Reads a KratosMultiphysics mdpa file.
@@ -273,35 +320,40 @@ def cell_data_from_raw(cells, cell_data_raw):
 
     return cell_data
 
-def _write_nodes(fh, points, write_binary):
+def _write_nodes(fh, points, write_binary = False):
     fh.write("Begin Nodes\n".encode("utf-8"))
     if write_binary:
-        dtype = [("index", numpy.int32), ("x", numpy.float64, (3,))]
-        tmp = numpy.empty(len(points), dtype=dtype)
-        tmp["index"] = 1 + numpy.arange(len(points))
-        tmp["x"] = points
-        fh.write(tmp.tostring())
-        fh.write("\n".encode("utf-8"))
+        raise NameError('Only ASCII mdpa supported')
     else:
         for k, x in enumerate(points):
             fh.write(
-                "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
+                "\t{}\t{:.8E}\t{:.8E}\t{:.8E}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
             )
     fh.write("End Nodes\n\n".encode("utf-8"))
     return
 
 
-def _write_elements(fh, cells, tag_data, write_binary):
+def _write_elements_and_conditions(fh, cells, tag_data, write_binary = False, dimension = 2):
     # write elements
+    entity = "Elements"
+    dimension_name = str(dimension) + "D"
+    if (dimension == 2):
+        wrong_dimension_name = "3D"
+    else:
+        wrong_dimension_name = "2D"
     consecutive_index = 0
     aux_cell_type = None
     for cell_type, node_idcs in cells.items():
+        #local_dimension = local_dimension_types[cell_type] # NOTE: The names of the dummy conditions are not regular, require extra work
+        #if (local_dimension < dimension):
+            #entity = "Conditions"
+
         if (aux_cell_type == None):
             aux_cell_type = cell_type
-            fh.write(("Begin Elements " + _meshio_to_mdpa_type[cell_type] + "\n").encode("utf-8"))
+            fh.write(("Begin " + entity + " " + _meshio_to_mdpa_type[cell_type].replace(wrong_dimension_name, dimension_name) + "\n").encode("utf-8"))
         elif (aux_cell_type != cell_type):
-            fh.write("End Elements\n\n".encode("utf-8"))
-            fh.write(("Begin Elements " + _meshio_to_mdpa_type[cell_type] + "\n").encode("utf-8"))
+            fh.write(("End " + entity + "\n\n").encode("utf-8"))
+            fh.write(("Begin " + entity + " " + _meshio_to_mdpa_type[cell_type].replace(wrong_dimension_name, dimension_name) + "\n").encode("utf-8"))
         tags = []
         for key in ["mdpa:physical", "mdpa:geometrical"]:
             try:
@@ -324,9 +376,9 @@ def _write_elements(fh, cells, tag_data, write_binary):
             for k, c in enumerate(node_idcs):
                 fh.write(
                     form.format(
-                        consecutive_index + k + 1,
-                        " ".join([str(val) for val in fcd[k]]),
-                        " ".join([str(cc + 1) for cc in c]),
+                        "\t"+str(consecutive_index + k + 1),
+                        "\t".join([str(val) for val in fcd[k]]),
+                        "\t".join([str(cc + 1) for cc in c]),
                     ).encode("utf-8")
                 )
 
@@ -396,6 +448,13 @@ def write(filename, mesh, write_binary=False):
         ]
 
     with open(filename, "wb") as fh:
+        # Write some additional info
+        fh.write(("Begin ModelPartData\n").encode("utf-8"))
+        fh.write(("//  VARIABLE_NAME value\n").encode("utf-8"))
+        fh.write(("End ModelPartData\n\n").encode("utf-8"))
+        fh.write(("Begin Properties 0\n").encode("utf-8"))
+        fh.write(("End Properties\n\n").encode("utf-8"))
+
         # Split the cell data: mdpa:physical and mdpa:geometrical are tags, the
         # rest is actual cell data.
         tag_data = {}
@@ -409,8 +468,17 @@ def write(filename, mesh, write_binary=False):
                 else:
                     other_data[cell_type][key] = data
 
+        # We identity which dimension are we
+        dimension = 2
+        for cell_type in cells.keys():
+            name_elem = _meshio_to_mdpa_type[cell_type]
+            if (local_dimension_types[name_elem] == 3):
+                dimension = 3
+                break
+
+        # We identify the entities
         _write_nodes(fh, mesh.points, write_binary)
-        _write_elements(fh, cells, tag_data, write_binary)
+        _write_elements_and_conditions(fh, cells, tag_data, write_binary, dimension)
         #for name, dat in mesh.point_data.items():
             #_write_data(fh, "NodalData", name, dat, write_binary)
         #cell_data_raw = raw_from_cell_data(other_data)
