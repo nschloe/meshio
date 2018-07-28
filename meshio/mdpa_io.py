@@ -8,6 +8,7 @@ import logging
 import struct
 
 import numpy
+import copy
 
 from .mesh import Mesh
 from .vtk_io import raw_from_cell_data
@@ -41,6 +42,7 @@ _mdpa_to_meshio_type = {
     "Hexahedra3D20"   : "hexahedron20"
 }
 _meshio_to_mdpa_type = {v: k for k, v in _mdpa_to_meshio_type.items()}
+inverse_num_nodes_per_cell = {v: k for k, v in num_nodes_per_cell.items()}
 
 def read(filename):
     """Reads a KratosMultiphysics mdpa file.
@@ -54,15 +56,15 @@ def read(filename):
 
 def _read_nodes(f, is_ascii, int_size, data_size):
     # The first line is the number of nodes
-    aux_f = f.copy()
+    pos = f.tell()
+    lines = f.readlines()
     num_nodes = 0
-    known_number_of_nodes = False
-    while (known_number_of_nodes == False):
-        line = aux_f.readline().decode("utf-8")
-        if ("End Nodes" in line):
-            known_number_of_nodes = True
+    for line in lines:
+        str_line = str(line)
+        if ("End Nodes" in str_line):
+            break
         num_nodes += 1
-    del(aux_f)
+    f.seek(pos)
 
     points = numpy.fromfile(f, count=num_nodes * 4, sep=" ").reshape((num_nodes, 4))
     # The first number is the index
@@ -74,15 +76,16 @@ def _read_nodes(f, is_ascii, int_size, data_size):
 
 def _read_cells(f, cells, int_size, is_ascii):
     # FIrst we compute the number of entities
-    aux_f = f.copy()
+    pos = f.tell()
+    lines = f.readlines()
     total_num_cells = 0
-    known_number_of_cells = False
-    while (known_number_of_cells == False):
-        line = aux_f.readline().decode("utf-8")
-        if ("End Elements" in line or "End Conditions" in line):
-            known_number_of_cells = True
+    for line in lines:
+        str_line = str(line)
+        if ("End Elements" in str_line or "End Conditions" in str_line):
+            break
         total_num_cells += 1
-    del(aux_f)
+    f.seek(pos)
+
     has_additional_tag_data = False
     cell_tags = {}
     if is_ascii:
@@ -92,8 +95,8 @@ def _read_cells(f, cells, int_size, is_ascii):
             # data[1] gives the property id
             # The rest are the ids of the nodes
             data = [int(k) for k in filter(None, line.split())]
-            t = _mdpa_to_meshio_type[len(data) - 2]
-            num_nodes_per_elem = num_nodes_per_cell[t]
+            num_nodes_per_elem = len(data) - 2
+            t = inverse_num_nodes_per_cell[num_nodes_per_elem]
 
             if t not in cells:
                 cells[t] = []
@@ -102,7 +105,7 @@ def _read_cells(f, cells, int_size, is_ascii):
             # Using the property id as tag
             if t not in cell_tags:
                 cell_tags[t] = []
-            cell_tags[t].append(data[1])
+            cell_tags[t].append([data[1]])
 
         # convert to numpy arrays
         for key in cells:
@@ -113,8 +116,7 @@ def _read_cells(f, cells, int_size, is_ascii):
         raise NameError('Only ASCII mdpa supported')
 
     line = f.readline().decode("utf-8")
-    assert line.strip() == "End Elements"
-    assert line.strip() == "End Conditions"
+    assert (line.strip() == "End Elements" or line.strip() == "End Conditions")
 
     # Subtract one to account for the fact that python indices are
     # 0-based.
@@ -199,9 +201,8 @@ def read_buffer(f):
     cell_data_raw = {}
     cell_tags = {}
     point_data = {}
-    periodic = None
 
-    is_ascii = None
+    is_ascii = True
     int_size = 4
     data_size = None
     while True:
