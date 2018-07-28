@@ -392,15 +392,7 @@ def _write_elements_and_conditions(fh, cells, tag_data, write_binary = False, di
     return
 
 def _write_data(fh, tag, name, data, write_binary):
-    fh.write("${}\n".format(tag).encode("utf-8"))
-    fh.write("{}\n".format(1).encode("utf-8"))
-    fh.write('"{}"\n'.format(name).encode("utf-8"))
-    fh.write("{}\n".format(1).encode("utf-8"))
-    fh.write("{}\n".format(0.0).encode("utf-8"))
-    # three integer tags:
-    fh.write("{}\n".format(3).encode("utf-8"))
-    # time step
-    fh.write("{}\n".format(0).encode("utf-8"))
+    fh.write("Begin "+ tag + " " + name +"\n\n".encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
 
@@ -425,7 +417,7 @@ def _write_data(fh, tag, name, data, write_binary):
             for k, x in enumerate(data):
                 fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
-    fh.write("End{}\n".format(tag).encode("utf-8"))
+    fh.write("End "+ tag + " " + name +"\n\n".encode("utf-8"))
     return
 
 
@@ -482,10 +474,10 @@ def write(filename, mesh, write_binary=False):
         # We identify the entities
         _write_nodes(fh, mesh.points, write_binary)
         _write_elements_and_conditions(fh, cells, tag_data, write_binary, dimension)
-        #for name, dat in mesh.point_data.items():
-            #_write_data(fh, "NodalData", name, dat, write_binary)
-        #cell_data_raw = raw_from_cell_data(other_data)
-        #for name, dat in cell_data_raw.items(): # We will assume always when writing that the components are elements
-            #_write_data(fh, "ElementalData", name, dat, write_binary)
+        for name, dat in mesh.point_data.items():
+            _write_data(fh, "NodalData", name, dat, write_binary)
+        cell_data_raw = raw_from_cell_data(other_data)
+        for name, dat in cell_data_raw.items(): # NOTE: We will assume always when writing that the components are elements (for now)
+            _write_data(fh, "ElementalData", name, dat, write_binary)
 
     return
