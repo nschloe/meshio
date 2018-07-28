@@ -25,37 +25,22 @@ except ImportError:
 # http://www-opale.inrialpes.fr/Aerochina/info/en/html-version/gid_11.html
 # https://github.com/KratosMultiphysics/Kratos/wiki/Mesh-node-ordering
 _mdpa_to_meshio_type = {
-    1 : "line",
-    2 : "triangle",
-    3 : "quad",
-    4 : "tetra",
-    5 : "hexahedron",
-    6 : "wedge",
-    8 : "line3",
-    9 : "triangle6",
-    10: "quad9",
-    11: "tetra10",
-    12: "hexahedron27",
-    15: "vertex",
-    16: "quad8",
-    17: "hexahedron20"
+    "Line2D2"         : "line",
+    "Triangle2D3"     : "triangle",
+    "Quadrilateral2D4": "quad",
+    "Tetrahedra3D4"   : "tetra",
+    "Hexahedra3D8"    : "hexahedron",
+    "Prism3D6"        : "wedge",
+    "Line2D3"         : "line3",
+    "Triangle2D6"     : "triangle6",
+    "Quadrilateral2D9": "quad9",
+    "Tetrahedra3D10"  : "tetra10",
+    "Hexahedra3D27"   : "hexahedron27",
+    "Point3D"         : "vertex",
+    "Quadrilateral2D8": "quad8",
+    "Hexahedra3D20"   : "hexahedron20"
 }
-_meshio_to_mdpa_type = {
-    "line"        : "Line2D2",
-    "triangle"    : "Triangle2D3",
-    "quad"        : "Quadrilateral2D4",
-    "tetra"       : "Tetrahedra3D4",
-    "hexahedron"  : "Hexahedra3D8",
-    "wedge"       : "Prism3D6",
-    "line3"       : "Line2D3",
-    "triangle6"   : "Triangle2D6",
-    "quad9"       : "Quadrilateral2D9",
-    "tetra10"     : "Tetrahedra3D10",
-    "hexahedron27": "Hexahedra3D27",
-    "vertex"      : "Point3D",
-    "quad8"       : "Quadrilateral2D8",
-    "hexahedron20": "Hexahedra3D20"
-}
+_meshio_to_mdpa_type = {v: k for k, v in _mdpa_to_meshio_type.items()}
 
 def read(filename):
     """Reads a KratosMultiphysics mdpa file.
