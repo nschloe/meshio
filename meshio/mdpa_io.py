@@ -191,19 +191,19 @@ def _read_cells(f, cells, int_size, is_ascii, environ = None):
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {}
     for key in cell_tags:
-        output_cell_tags[key] = {"mdpa:physical": [], "mdpa:geometrical": []}
+        output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
         for item in cell_tags[key]:
             if len(item) > 0:
-                output_cell_tags[key]["mdpa:physical"].append(item[0])
+                output_cell_tags[key]["gmsh:physical"].append(item[0])
             if len(item) > 1:
-                output_cell_tags[key]["mdpa:geometrical"].append(item[1])
+                output_cell_tags[key]["gmsh:geometrical"].append(item[1])
             if len(item) > 2:
                 has_additional_tag_data = True
-        output_cell_tags[key]["mdpa:physical"] = numpy.array(
-            output_cell_tags[key]["mdpa:physical"], dtype=int
+        output_cell_tags[key]["gmsh:physical"] = numpy.array(
+            output_cell_tags[key]["gmsh:physical"], dtype=int
         )
-        output_cell_tags[key]["mdpa:geometrical"] = numpy.array(
-            output_cell_tags[key]["mdpa:geometrical"], dtype=int
+        output_cell_tags[key]["gmsh:geometrical"] = numpy.array(
+            output_cell_tags[key]["gmsh:geometrical"], dtype=int
         )
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
@@ -354,16 +354,19 @@ def _write_elements_and_conditions(fh, cells, tag_data, write_binary = False, di
         elif (aux_cell_type != cell_type):
             fh.write(("End " + entity + "\n\n").encode("utf-8"))
             fh.write(("Begin " + entity + " " + _meshio_to_mdpa_type[cell_type].replace(wrong_dimension_name, dimension_name) + "\n").encode("utf-8"))
-        tags = []
-        for key in ["mdpa:physical", "mdpa:geometrical"]:
-            try:
-                tags.append(tag_data[cell_type][key])
-            except KeyError:
-                pass
-        fcd = numpy.concatenate([tags]).T
 
-        if len(fcd) == 0:
-            fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
+        #tags = [] # NOTE: Right now not supported
+        #for key in ["gmsh:physical", "gmsh:geometrical"]:
+            #try:
+                #tags.append(tag_data[cell_type][key])
+            #except KeyError:
+                #pass
+        #fcd = numpy.concatenate([tags]).T
+
+        #if len(fcd) == 0:
+            #fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
+
+        fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
 
         if write_binary:
             raise NameError('Only ASCII mdpa supported')
@@ -455,7 +458,7 @@ def write(filename, mesh, write_binary=False):
         fh.write(("Begin Properties 0\n").encode("utf-8"))
         fh.write(("End Properties\n\n").encode("utf-8"))
 
-        # Split the cell data: mdpa:physical and mdpa:geometrical are tags, the
+        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the
         # rest is actual cell data.
         tag_data = {}
         other_data = {}
@@ -463,7 +466,7 @@ def write(filename, mesh, write_binary=False):
             tag_data[cell_type] = {}
             other_data[cell_type] = {}
             for key, data in a.items():
-                if key in ["mdpa:physical", "mdpa:geometrical"]:
+                if key in ["gmsh:physical", "gmsh:geometrical"]:
                     tag_data[cell_type][key] = data.astype(numpy.int32)
                 else:
                     other_data[cell_type][key] = data
