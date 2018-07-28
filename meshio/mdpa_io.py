@@ -40,7 +40,7 @@ _mdpa_to_meshio_type = {
     16: "quad8",
     17: "hexahedron20"
 }
-_meshio_to_mdpa_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
+_meshio_to_mdpa_type = {v: k for k, v in _mdpa_to_meshio_type.items()}
 #_meshio_to_mdpa_type = {
     #1: "Line2D2",
     #2: "Triangle2D3",
