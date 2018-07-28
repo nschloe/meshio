@@ -40,22 +40,23 @@ _mdpa_to_meshio_type = {
     16: "quad8",
     17: "hexahedron20"
 }
-_meshio_to_mdpa_type = {
-    1: "Line2D2",
-    2: "Triangle2D3",
-    3: "Quadrilateral2D4",
-    4: "Tetrahedra3D4",
-    5: "hexahedron",
-    6: "Prism3D6",
-    8: "Line2D3",
-    9: "Triangle2D6",
-    10: "Quadrilateral2D9",
-    11: "Tetrahedra3D10",
-    12: "Hexahedra3D27",
-    15: "Point3D",
-    16: "Quadrilateral2D8",
-    17: "Hexahedra3D20"
-}
+_meshio_to_mdpa_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
+#_meshio_to_mdpa_type = {
+    #1: "Line2D2",
+    #2: "Triangle2D3",
+    #3: "Quadrilateral2D4",
+    #4: "Tetrahedra3D4",
+    #5: "hexahedron",
+    #6: "Prism3D6",
+    #8: "Line2D3",
+    #9: "Triangle2D6",
+    #10: "Quadrilateral2D9",
+    #11: "Tetrahedra3D10",
+    #12: "Hexahedra3D27",
+    #15: "Point3D",
+    #16: "Quadrilateral2D8",
+    #17: "Hexahedra3D20"
+#}
 
 def read(filename):
     """Reads a KratosMultiphysics mdpa file.
@@ -292,7 +293,6 @@ def cell_data_from_raw(cells, cell_data_raw):
 
 def _write_nodes(fh, points, write_binary):
     fh.write("Begin Nodes\n".encode("utf-8"))
-    fh.write("{}\n".format(len(points)).encode("utf-8"))
     if write_binary:
         dtype = [("index", numpy.int32), ("x", numpy.float64, (3,))]
         tmp = numpy.empty(len(points), dtype=dtype)
