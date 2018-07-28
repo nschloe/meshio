@@ -49,32 +49,6 @@ def read(filename):
         mesh = read_buffer(f)
     return mesh
 
-def _convert_string_to_list_float(line, space = " ", endline = ""):
-    """This function converts a string into a list of floats
-    """
-    list_values = []
-    string_values = (line.replace(endline,"")).split(space)
-    for string in string_values:
-        list_values.append(float(string))
-
-    return list_values
-
-def _convert_string_to_list_int_float(line, space = " ", endline = ""):
-    """This function converts a string into a id and list of floats
-    """
-    id = 0
-    list_values = []
-    string_values = (line.replace(endline,"")).split(space)
-    count = 0
-    for string in string_values:
-        if (count == 0):
-            id = int(string)
-        else:
-            list_values.append(float(string))
-        count += 1
-
-    return id, list_values
-
 def _read_nodes(f, is_ascii, int_size, data_size):
     # The first line is the number of nodes
     aux_f = f.copy()
