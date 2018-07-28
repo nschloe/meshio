@@ -13,12 +13,12 @@ from .mesh import Mesh
 from .vtk_io import raw_from_cell_data
 from .gmsh_io import num_nodes_per_cell
 
-# We check if we can read/write the mesh natively from Kratos
-try:
-    import KratosMultiphysics
-    have_kratos = True
-except ImportError:
-    have_kratos = False
+## We check if we can read/write the mesh natively from Kratos
+#try:
+    #import KratosMultiphysics
+    #have_kratos = True
+#except ImportError:
+    #have_kratos = False
 
 # Translate meshio types to KratosMultiphysics codes
 # Kratos uses the same node numbering of GiD pre and post processor
