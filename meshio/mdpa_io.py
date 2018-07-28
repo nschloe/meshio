@@ -216,6 +216,7 @@ def read_buffer(f):
     points = []
     cells = {}
     field_data = {}
+    cell_data = {}
     cell_data_raw = {}
     cell_tags = {}
     point_data = {}
@@ -243,15 +244,15 @@ def read_buffer(f):
     if has_additional_tag_data:
         logging.warning("The file contains tag data that couldn't be processed.")
 
-    cell_data = cell_data_from_raw(cells, cell_data_raw)
+    #cell_data = cell_data_from_raw(cells, cell_data_raw)
 
-    # merge cell_tags into cell_data
-    for key, tag_dict in cell_tags.items():
-        if key not in cell_data:
-            cell_data[key] = {}
-        for name, item_list in tag_dict.items():
-            assert name not in cell_data[key]
-            cell_data[key][name] = item_list
+    ## merge cell_tags into cell_data
+    #for key, tag_dict in cell_tags.items():
+        #if key not in cell_data:
+            #cell_data[key] = {}
+        #for name, item_list in tag_dict.items():
+            #assert name not in cell_data[key]
+            #cell_data[key][name] = item_list
 
     return Mesh(
         points,
