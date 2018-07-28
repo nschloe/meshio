@@ -13,7 +13,7 @@ from .mesh import Mesh
 from .vtk_io import raw_from_cell_data
 from .gmsh_io import num_nodes_per_cell
 
-# We check if we can read/write the mesh natively from Kratos # TODO: Implement natively
+# We check if we can read/write the mesh natively from Kratos
 try:
     import KratosMultiphysics
     have_kratos = True
@@ -45,6 +45,9 @@ _meshio_to_mdpa_type = {v: k for k, v in _mdpa_to_meshio_type.items()}
 def read(filename):
     """Reads a KratosMultiphysics mdpa file.
     """
+    #if (have_kratos is True): # TODO: Implement natively
+        #pass
+    #else:
     with open(filename, "rb") as f:
         mesh = read_buffer(f)
     return mesh
@@ -137,12 +140,13 @@ def _read_cells(f, cells, int_size, is_ascii):
         )
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
-    # TODO ORDER THIS!!!!!!
-    if "tetra10" in cells:
-        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
     if "hexahedron20" in cells:
         cells["hexahedron20"] = cells["hexahedron20"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16, 9, 17, 10, 18, 19, 12, 15, 13, 14]
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 19, 18, 17, 12, 13, 14, 15]
+        ]
+    if "hexahedron27" in cells:
+        cells["hexahedron27"] = cells["hexahedron27"][
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 19, 18, 17, 12, 13, 14, 15, 22, 24, 21, 23, 20, 25, 26]
         ]
 
     return has_additional_tag_data, output_cell_tags
@@ -355,17 +359,21 @@ def write(filename, mesh, write_binary=False):
     """Writes mdpa files, cf.
     <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
     """
+    #if (have_kratos is True): # TODO: Implement natively
+        #pass
+    #else:
     if write_binary:
         raise NameError('Only ASCII mdpa supported')
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
-    # TODO ORDER THIS!!!!!!
     cells = mesh.cells.copy()
-    if "tetra10" in cells:
-        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
     if "hexahedron20" in cells:
         cells["hexahedron20"] = cells["hexahedron20"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 14, 15]
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 19, 18, 17, 12, 13, 14, 15]
+        ]
+    if "hexahedron27" in cells:
+        cells["hexahedron27"] = cells["hexahedron27"][
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 19, 18, 17, 12, 13, 14, 15, 22, 24, 21, 23, 20, 25, 26]
         ]
 
     with open(filename, "wb") as fh:
