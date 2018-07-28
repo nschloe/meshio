@@ -74,8 +74,23 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     assert line.strip() == "End Nodes"
     return points
 
-def _read_cells(f, cells, int_size, is_ascii):
-    # FIrst we compute the number of entities
+def _read_cells(f, cells, int_size, is_ascii, environ = None):
+    # First we try to identity the entity
+    t = None
+    if (environ is not None):
+        if ("Begin Elements" in environ):
+            entity_name = environ.replace("Begin Elements","")
+            for key in _mdpa_to_meshio_type:
+                if (key in entity_name):
+                    t = _mdpa_to_meshio_type[key]
+                    break
+        elif ("Begin Conditions" in environ):
+            entity_name = environ.replace("Begin Conditions","")
+            for key in _mdpa_to_meshio_type:
+                if (key in entity_name):
+                    t = _mdpa_to_meshio_type[key]
+                    break
+    # Now we compute the number of entities
     pos = f.tell()
     lines = f.readlines()
     total_num_cells = 0
@@ -96,7 +111,10 @@ def _read_cells(f, cells, int_size, is_ascii):
             # The rest are the ids of the nodes
             data = [int(k) for k in filter(None, line.split())]
             num_nodes_per_elem = len(data) - 2
-            t = inverse_num_nodes_per_cell[num_nodes_per_elem]
+
+            # We use this in case not alternative
+            if (t is None):
+                t = inverse_num_nodes_per_cell[num_nodes_per_elem]
 
             if t not in cells:
                 cells[t] = []
@@ -216,8 +234,7 @@ def read_buffer(f):
             points = _read_nodes(f, is_ascii, int_size, data_size)
         elif "Begin Elements" in environ or "Begin Conditions" in environ :
             has_additional_tag_data, cell_tags = _read_cells(
-                f, cells, int_size, is_ascii
-            )
+                f, cells, int_size, is_ascii, environ)
         #elif environ == "NodeData":
             #_read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
         #elif "Begin ElementalData" in environ or "Begin ConditionalData" in environ:
