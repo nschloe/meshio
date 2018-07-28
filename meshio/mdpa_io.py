@@ -25,14 +25,14 @@ except ImportError:
 # http://www-opale.inrialpes.fr/Aerochina/info/en/html-version/gid_11.html
 # https://github.com/KratosMultiphysics/Kratos/wiki/Mesh-node-ordering
 _mdpa_to_meshio_type = {
-    1: "line",
-    2: "triangle",
-    3: "quad",
-    4: "tetra",
-    5: "hexahedron",
-    6: "wedge",
-    8: "line3",
-    9: "triangle6",
+    1 : "line",
+    2 : "triangle",
+    3 : "quad",
+    4 : "tetra",
+    5 : "hexahedron",
+    6 : "wedge",
+    8 : "line3",
+    9 : "triangle6",
     10: "quad9",
     11: "tetra10",
     12: "hexahedron27",
@@ -40,23 +40,22 @@ _mdpa_to_meshio_type = {
     16: "quad8",
     17: "hexahedron20"
 }
-_meshio_to_mdpa_type = {v: k for k, v in _mdpa_to_meshio_type.items()}
-#_meshio_to_mdpa_type = {
-    #1: "Line2D2",
-    #2: "Triangle2D3",
-    #3: "Quadrilateral2D4",
-    #4: "Tetrahedra3D4",
-    #5: "hexahedron",
-    #6: "Prism3D6",
-    #8: "Line2D3",
-    #9: "Triangle2D6",
-    #10: "Quadrilateral2D9",
-    #11: "Tetrahedra3D10",
-    #12: "Hexahedra3D27",
-    #15: "Point3D",
-    #16: "Quadrilateral2D8",
-    #17: "Hexahedra3D20"
-#}
+_meshio_to_mdpa_type = {
+    "line"        : "Line2D2",
+    "triangle"    : "Triangle2D3",
+    "quad"        : "Quadrilateral2D4",
+    "tetra"       : "Tetrahedra3D4",
+    "hexahedron"  : "Hexahedra3D8",
+    "wedge"       : "Prism3D6",
+    "line3"       : "Line2D3",
+    "triangle6"   : "Triangle2D6",
+    "quad9"       : "Quadrilateral2D9",
+    "tetra10"     : "Tetrahedra3D10",
+    "hexahedron27": "Hexahedra3D27",
+    "vertex"      : "Point3D",
+    "quad8"       : "Quadrilateral2D8",
+    "hexahedron20": "Hexahedra3D20"
+}
 
 def read(filename):
     """Reads a KratosMultiphysics mdpa file.
@@ -179,6 +178,7 @@ def _read_cells(f, cells, int_size, is_ascii):
         )
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
+    # TODO ORDER THIS!!!!!!
     if "tetra10" in cells:
         cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
     if "hexahedron20" in cells:
@@ -305,19 +305,21 @@ def _write_nodes(fh, points, write_binary):
             fh.write(
                 "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
             )
-    fh.write("End Nodes\n".encode("utf-8"))
+    fh.write("End Nodes\n\n".encode("utf-8"))
     return
 
 
 def _write_elements(fh, cells, tag_data, write_binary):
     # write elements
-    fh.write("Begin Elements\n".encode("utf-8"))
-    # count all cells
-    total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-    fh.write("{}\n".format(total_num_cells).encode("utf-8"))
-
     consecutive_index = 0
+    aux_cell_type = None
     for cell_type, node_idcs in cells.items():
+        if (aux_cell_type == None):
+            aux_cell_type = cell_type
+            fh.write(("Begin Elements " + _meshio_to_mdpa_type[cell_type] + "\n").encode("utf-8"))
+        elif (aux_cell_type != cell_type):
+            fh.write("End Elements\n\n".encode("utf-8"))
+            fh.write(("Begin Elements " + _meshio_to_mdpa_type[cell_type] + "\n").encode("utf-8"))
         tags = []
         for key in ["mdpa:physical", "mdpa:geometrical"]:
             try:
@@ -334,8 +336,6 @@ def _write_elements(fh, cells, tag_data, write_binary):
         else:
             form = (
                 "{} "
-                + str(_meshio_to_mdpa_type[cell_type])
-                + " "
                 + str(fcd.shape[1])
                 + " {} {}\n"
             )
@@ -350,8 +350,8 @@ def _write_elements(fh, cells, tag_data, write_binary):
 
         consecutive_index += len(node_idcs)
     if write_binary:
-        fh.write("\n".encode("utf-8"))
-    fh.write("End Elements\n".encode("utf-8"))
+        raise NameError('Only ASCII mdpa supported')
+    fh.write("End Elements\n\n".encode("utf-8"))
     return
 
 def _write_data(fh, tag, name, data, write_binary):
@@ -400,6 +400,7 @@ def write(filename, mesh, write_binary=False):
         raise NameError('Only ASCII mdpa supported')
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
+    # TODO ORDER THIS!!!!!!
     cells = mesh.cells.copy()
     if "tetra10" in cells:
         cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
