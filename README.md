@@ -30,6 +30,7 @@ e.g.,
  * [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format)
+ * [Kratos/MDPA](https://github.com/KratosMultiphysics/Kratos/wiki/Input-data)
 
 meshio can read and write all of these formats and smoothly converts between
 them. Simply call
