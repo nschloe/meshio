@@ -121,7 +121,7 @@ def _read_nodes(f, is_ascii, data_size):
     assert line.strip() == "End Nodes"
     return points
 
-def _read_cells(f, cells, is_ascii, environ = None):
+def _read_cells(f, cells, is_ascii, cell_tags, environ = None):
     # First we try to identity the entity
     t = None
     if (environ is not None):
@@ -148,8 +148,6 @@ def _read_cells(f, cells, is_ascii, environ = None):
         total_num_cells += 1
     f.seek(pos)
 
-    has_additional_tag_data = False
-    cell_tags = {}
     if is_ascii:
         for _ in range(total_num_cells):
             line = f.readline().decode("utf-8")
@@ -182,6 +180,13 @@ def _read_cells(f, cells, is_ascii, environ = None):
 
     line = f.readline().decode("utf-8")
     assert (line.strip() == "End Elements" or line.strip() == "End Conditions")
+
+    return
+
+def _prepare_cells(cells, cell_tags):
+
+    # Declaring has additional data tag
+    has_additional_tag_data = False
 
     # Subtract one to account for the fact that python indices are
     # 0-based.
@@ -216,7 +221,9 @@ def _read_cells(f, cells, is_ascii, environ = None):
             :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 19, 18, 17, 12, 13, 14, 15, 22, 24, 21, 23, 20, 25, 26]
         ]
 
-    return has_additional_tag_data, output_cell_tags
+    cell_tags = output_cell_tags
+
+    return has_additional_tag_data
 
 def _read_data(f, tag, data_dict, data_size, is_ascii, environ = None):
     # Read string tags
@@ -270,6 +277,13 @@ def read_buffer(f):
 
     is_ascii = True
     data_size = None
+
+    # Definition of cell tags
+    cell_tags = {}
+
+    # Saving position
+    pos = f.tell()
+    # Read mesh
     while True:
         line = f.readline().decode("utf-8")
         if not line:
@@ -280,9 +294,20 @@ def read_buffer(f):
         if "Begin Nodes" in environ:
             points = _read_nodes(f, is_ascii, data_size)
         elif "Begin Elements" in environ or "Begin Conditions" in environ :
-            has_additional_tag_data, cell_tags = _read_cells(
-                f, cells, is_ascii, environ)
-        #elif "NodalData" in environ:
+            _read_cells(f, cells, is_ascii, cell_tags, environ)
+
+    # We finally prepare the cells
+    has_additional_tag_data = _prepare_cells(cells, cell_tags)
+
+    # Reverting to the original position
+    f.seek(pos)
+    # Read data
+    while False: # TODO: To implement
+        line = f.readline().decode("utf-8")
+        if not line:
+            # EOF
+            break
+        #elif "NodalData" in environ and cells_prepared:
             #_read_data(f, "NodalData", point_data, data_size, is_ascii)
         #elif "Begin ElementalData" in environ:
             #_read_data(f, "ElementalData", cell_data_raw, data_size, is_ascii)
