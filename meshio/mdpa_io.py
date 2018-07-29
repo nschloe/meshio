@@ -376,7 +376,7 @@ def _write_nodes(fh, points, write_binary=False):
 
     for k, x in enumerate(points):
         fh.write(
-            "\t{}\t{:.16E}\t{:.16E}\t{:.16E}\n".format(k + 1, x[0], x[1], x[2]).encode(
+            " {} {:.16E} {:.16E} {:.16E}\n".format(k + 1, x[0], x[1], x[2]).encode(
                 "utf-8"
             )
         )
@@ -433,9 +433,9 @@ def _write_elements_and_conditions(
         for k, c in enumerate(node_idcs):
             fh.write(
                 form.format(
-                    "\t" + str(consecutive_index + k + 1),
-                    "\t".join([str(val) for val in fcd[k]]),
-                    "\t".join([str(cc + 1) for cc in c]),
+                    " " + str(consecutive_index + k + 1),
+                    " ".join([str(val) for val in fcd[k]]),
+                    " ".join([str(cc + 1) for cc in c]),
                 ).encode("utf-8")
             )
 
