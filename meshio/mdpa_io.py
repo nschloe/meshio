@@ -13,11 +13,7 @@ from .vtk_io import raw_from_cell_data
 from .gmsh_io import num_nodes_per_cell
 
 ## We check if we can read/write the mesh natively from Kratos
-# try:
-# import KratosMultiphysics
-# have_kratos = True
-# except ImportError:
-# have_kratos = False
+# TODO: Implement native reading
 
 # Translate meshio types to KratosMultiphysics codes
 # Kratos uses the same node numbering of GiD pre and post processor
@@ -123,7 +119,8 @@ def _read_nodes(f, is_ascii, data_size):
 
 
 def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
-    # First we try to identity the entity
+    assert is_ascii
+    # First we try to identify the entity
     t = None
     if environ is not None:
         if "Begin Elements" in environ:
@@ -149,35 +146,32 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
         total_num_cells += 1
     f.seek(pos)
 
-    if is_ascii:
-        for _ in range(total_num_cells):
-            line = f.readline().decode("utf-8")
-            # data[0] gives the entity id
-            # data[1] gives the property id
-            # The rest are the ids of the nodes
-            data = [int(k) for k in filter(None, line.split())]
-            num_nodes_per_elem = len(data) - 2
+    for _ in range(total_num_cells):
+        line = f.readline().decode("utf-8")
+        # data[0] gives the entity id
+        # data[1] gives the property id
+        # The rest are the ids of the nodes
+        data = [int(k) for k in filter(None, line.split())]
+        num_nodes_per_elem = len(data) - 2
 
-            # We use this in case not alternative
-            if t is None:
-                t = inverse_num_nodes_per_cell[num_nodes_per_elem]
+        # We use this in case not alternative
+        if t is None:
+            t = inverse_num_nodes_per_cell[num_nodes_per_elem]
 
-            if t not in cells:
-                cells[t] = []
-            cells[t].append(data[-num_nodes_per_elem:])
+        if t not in cells:
+            cells[t] = []
+        cells[t].append(data[-num_nodes_per_elem:])
 
-            # Using the property id as tag
-            if t not in cell_tags:
-                cell_tags[t] = []
-            cell_tags[t].append([data[1]])
+        # Using the property id as tag
+        if t not in cell_tags:
+            cell_tags[t] = []
+        cell_tags[t].append([data[1]])
 
-        # convert to numpy arrays
-        for key in cells:
-            cells[key] = numpy.array(cells[key], dtype=int)
-        # Cannot convert cell_tags[key] to numpy array: There may be a
-        # different number of tags for each cell.
-    else:
-        raise NameError("Only ASCII mdpa supported")
+    # convert to numpy arrays
+    for key in cells:
+        cells[key] = numpy.array(cells[key], dtype=int)
+    # Cannot convert cell_tags[key] to numpy array: There may be a
+    # different number of tags for each cell.
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "End Elements" or line.strip() == "End Conditions"
@@ -258,6 +252,7 @@ def _prepare_cells(cells, cell_tags):
 
 
 def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
+    assert is_ascii
     # Read string tags
     num_string_tags = int(f.readline().decode("utf-8"))
     string_tags = [
@@ -273,14 +268,13 @@ def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
     integer_tags = [int(f.readline().decode("utf-8")) for _ in range(num_integer_tags)]
     num_components = integer_tags[1]
     num_items = integer_tags[2]
-    if is_ascii:
-        data = numpy.fromfile(
-            f, count=num_items * (1 + num_components), sep=" "
-        ).reshape((num_items, 1 + num_components))
-        # The first number is the index
-        data = data[:, 1:]
-    else:
-        raise NameError("Only ASCII mdpa supported")
+
+    # Creating data
+    data = numpy.fromfile(f, count=num_items * (1 + num_components), sep=" ").reshape(
+        (num_items, 1 + num_components)
+    )
+    # The first number is the index
+    data = data[:, 1:]
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "End {}".format(tag)
@@ -378,15 +372,14 @@ def cell_data_from_raw(cells, cell_data_raw):
 
 def _write_nodes(fh, points, write_binary=False):
     fh.write("Begin Nodes\n".encode("utf-8"))
-    if write_binary:
-        raise NameError("Only ASCII mdpa supported")
-    else:
-        for k, x in enumerate(points):
-            fh.write(
-                "\t{}\t{:.16E}\t{:.16E}\t{:.16E}\n".format(
-                    k + 1, x[0], x[1], x[2]
-                ).encode("utf-8")
+    assert not write_binary
+
+    for k, x in enumerate(points):
+        fh.write(
+            "\t{}\t{:.16E}\t{:.16E}\t{:.16E}\n".format(k + 1, x[0], x[1], x[2]).encode(
+                "utf-8"
             )
+        )
     fh.write("End Nodes\n\n".encode("utf-8"))
     return
 
@@ -394,13 +387,11 @@ def _write_nodes(fh, points, write_binary=False):
 def _write_elements_and_conditions(
     fh, cells, tag_data, write_binary=False, dimension=2
 ):
+    assert not write_binary
     # write elements
     entity = "Elements"
     dimension_name = str(dimension) + "D"
-    if dimension == 2:
-        wrong_dimension_name = "3D"
-    else:
-        wrong_dimension_name = "2D"
+    wrong_dimension_name = "3D" if dimension == 2 else "2D"
     consecutive_index = 0
     aux_cell_type = None
     for cell_type, node_idcs in cells.items():
@@ -435,40 +426,27 @@ def _write_elements_and_conditions(
                 ).encode("utf-8")
             )
 
-        # tags = [] # NOTE: Right now not supported
-        # for key in ["gmsh:physical", "gmsh:geometrical"]:
-        # try:
-        # tags.append(tag_data[cell_type][key])
-        # except KeyError:
-        # pass
-        # fcd = numpy.concatenate([tags]).T
-
-        # if len(fcd) == 0:
-        # fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
-
+        # TODO: Add proper tag recognition in the future
         fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
 
-        if write_binary:
-            raise NameError("Only ASCII mdpa supported")
-        else:
-            form = "{} " + str(fcd.shape[1]) + " {} {}\n"
-            for k, c in enumerate(node_idcs):
-                fh.write(
-                    form.format(
-                        "\t" + str(consecutive_index + k + 1),
-                        "\t".join([str(val) for val in fcd[k]]),
-                        "\t".join([str(cc + 1) for cc in c]),
-                    ).encode("utf-8")
-                )
+        form = "{} " + str(fcd.shape[1]) + " {} {}\n"
+        for k, c in enumerate(node_idcs):
+            fh.write(
+                form.format(
+                    "\t" + str(consecutive_index + k + 1),
+                    "\t".join([str(val) for val in fcd[k]]),
+                    "\t".join([str(cc + 1) for cc in c]),
+                ).encode("utf-8")
+            )
 
         consecutive_index += len(node_idcs)
-    if write_binary:
-        raise NameError("Only ASCII mdpa supported")
+
     fh.write("End Elements\n\n".encode("utf-8"))
     return
 
 
 def _write_data(fh, tag, name, data, write_binary):
+    assert not write_binary
     fh.write("Begin " + tag + " " + name + "\n\n".encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
@@ -479,17 +457,14 @@ def _write_data(fh, tag, name, data, write_binary):
         data = data[:, 0]
 
     # Actually write the data
-    if write_binary:
-        raise NameError("Only ASCII mdpa supported")
+    fmt = " ".join(["{}"] + ["{!r}"] * num_components) + "\n"
+    # TODO unify
+    if num_components == 1:
+        for k, x in enumerate(data):
+            fh.write(fmt.format(k + 1, x).encode("utf-8"))
     else:
-        fmt = " ".join(["{}"] + ["{!r}"] * num_components) + "\n"
-        # TODO unify
-        if num_components == 1:
-            for k, x in enumerate(data):
-                fh.write(fmt.format(k + 1, x).encode("utf-8"))
-        else:
-            for k, x in enumerate(data):
-                fh.write(fmt.format(k + 1, *x).encode("utf-8"))
+        for k, x in enumerate(data):
+            fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
     fh.write("End " + tag + " " + name + "\n\n".encode("utf-8"))
     return
@@ -499,11 +474,7 @@ def write(filename, mesh, write_binary=False):
     """Writes mdpa files, cf.
     <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
     """
-    # if (have_kratos is True): # TODO: Implement natively
-    # pass
-    # else:
-    if write_binary:
-        raise NameError("Only ASCII mdpa supported")
+    assert not write_binary
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
