@@ -14,7 +14,7 @@ import helpers
         helpers.triangle6_mesh,
         helpers.quad_mesh,
         helpers.quad8_mesh,
-        #helpers.tri_quad_mesh,
+        helpers.tri_quad_mesh,
         helpers.tet_mesh,
         helpers.tet10_mesh,
         helpers.hex_mesh,
