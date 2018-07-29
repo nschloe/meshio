@@ -328,7 +328,7 @@ def _write_nodes(fh, points, write_binary = False):
     else:
         for k, x in enumerate(points):
             fh.write(
-                "\t{}\t{:.8E}\t{:.8E}\t{:.8E}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
+                "\t{}\t{:.16E}\t{:.16E}\t{:.16E}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
             )
     fh.write("End Nodes\n\n".encode("utf-8"))
     return
