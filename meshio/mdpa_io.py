@@ -455,11 +455,11 @@ def write(filename, mesh, write_binary=False):
     cells = mesh.cells.copy()
     if "hexahedron20" in cells:
         cells["hexahedron20"] = cells["hexahedron20"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 19, 18, 17, 12, 13, 14, 15]
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 17, 18, 19, 12, 15, 14, 13]
         ]
     if "hexahedron27" in cells:
         cells["hexahedron27"] = cells["hexahedron27"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 19, 18, 17, 12, 13, 14, 15, 22, 24, 21, 23, 20, 25, 26]
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 17, 18, 19, 12, 15, 14, 13, 22, 24, 21, 23, 20, 25, 26]
         ]
 
     with open(filename, "wb") as fh:
