@@ -13,91 +13,93 @@ from .vtk_io import raw_from_cell_data
 from .gmsh_io import num_nodes_per_cell
 
 ## We check if we can read/write the mesh natively from Kratos
-#try:
-    #import KratosMultiphysics
-    #have_kratos = True
-#except ImportError:
-    #have_kratos = False
+# try:
+# import KratosMultiphysics
+# have_kratos = True
+# except ImportError:
+# have_kratos = False
 
 # Translate meshio types to KratosMultiphysics codes
 # Kratos uses the same node numbering of GiD pre and post processor
 # http://www-opale.inrialpes.fr/Aerochina/info/en/html-version/gid_11.html
 # https://github.com/KratosMultiphysics/Kratos/wiki/Mesh-node-ordering
 _mdpa_to_meshio_type = {
-    "Line2D2"         : "line",
-    "Line3D2"         : "line",
-    "Triangle2D3"     : "triangle",
-    "Triangle3D3"     : "triangle",
+    "Line2D2": "line",
+    "Line3D2": "line",
+    "Triangle2D3": "triangle",
+    "Triangle3D3": "triangle",
     "Quadrilateral2D4": "quad",
     "Quadrilateral3D4": "quad",
-    "Tetrahedra3D4"   : "tetra",
-    "Hexahedra3D8"    : "hexahedron",
-    "Prism3D6"        : "wedge",
-    "Line2D3"         : "line3",
-    "Triangle2D6"     : "triangle6",
-    "Triangle3D6"     : "triangle6",
+    "Tetrahedra3D4": "tetra",
+    "Hexahedra3D8": "hexahedron",
+    "Prism3D6": "wedge",
+    "Line2D3": "line3",
+    "Triangle2D6": "triangle6",
+    "Triangle3D6": "triangle6",
     "Quadrilateral2D9": "quad9",
     "Quadrilateral3D9": "quad9",
-    "Tetrahedra3D10"  : "tetra10",
-    "Hexahedra3D27"   : "hexahedron27",
-    "Point2D"         : "vertex",
-    "Point3D"         : "vertex",
+    "Tetrahedra3D10": "tetra10",
+    "Hexahedra3D27": "hexahedron27",
+    "Point2D": "vertex",
+    "Point3D": "vertex",
     "Quadrilateral2D8": "quad8",
     "Quadrilateral3D8": "quad8",
-    "Hexahedra3D20"   : "hexahedron20"
+    "Hexahedra3D20": "hexahedron20",
 }
 
 _meshio_to_mdpa_type = {
-    "line"        : "Line2D2",
-    "triangle"    : "Triangle2D3",
-    "quad"        : "Quadrilateral2D4",
-    "tetra"       : "Tetrahedra3D4",
-    "hexahedron"  : "Hexahedra3D8",
-    "wedge"       : "Prism3D6",
-    "line3"       : "Line2D3",
-    "triangle6"   : "Triangle2D6",
-    "quad9"       : "Quadrilateral2D9",
-    "tetra10"     : "Tetrahedra3D10",
+    "line": "Line2D2",
+    "triangle": "Triangle2D3",
+    "quad": "Quadrilateral2D4",
+    "tetra": "Tetrahedra3D4",
+    "hexahedron": "Hexahedra3D8",
+    "wedge": "Prism3D6",
+    "line3": "Line2D3",
+    "triangle6": "Triangle2D6",
+    "quad9": "Quadrilateral2D9",
+    "tetra10": "Tetrahedra3D10",
     "hexahedron27": "Hexahedra3D27",
-    "vertex"      : "Point2D",
-    "quad8"       : "Quadrilateral2D8",
-    "hexahedron20": "Hexahedra3D20"
+    "vertex": "Point2D",
+    "quad8": "Quadrilateral2D8",
+    "hexahedron20": "Hexahedra3D20",
 }
 inverse_num_nodes_per_cell = {v: k for k, v in num_nodes_per_cell.items()}
 
 local_dimension_types = {
-    "Line2D2"         : 1,
-    "Line3D2"         : 1,
-    "Triangle2D3"     : 2,
-    "Triangle3D3"     : 2,
+    "Line2D2": 1,
+    "Line3D2": 1,
+    "Triangle2D3": 2,
+    "Triangle3D3": 2,
     "Quadrilateral2D4": 2,
     "Quadrilateral3D4": 2,
-    "Tetrahedra3D4"   : 3,
-    "Hexahedra3D8"    : 3,
-    "Prism3D6"        : 3,
-    "Line2D3"         : 1,
-    "Triangle2D6"     : 2,
-    "Triangle3D6"     : 2,
+    "Tetrahedra3D4": 3,
+    "Hexahedra3D8": 3,
+    "Prism3D6": 3,
+    "Line2D3": 1,
+    "Triangle2D6": 2,
+    "Triangle3D6": 2,
     "Quadrilateral2D9": 2,
     "Quadrilateral3D9": 2,
-    "Tetrahedra3D10"  : 3,
-    "Hexahedra3D27"   : 3,
-    "Point2D"         : 0,
-    "Point3D"         : 0,
+    "Tetrahedra3D10": 3,
+    "Hexahedra3D27": 3,
+    "Point2D": 0,
+    "Point3D": 0,
     "Quadrilateral2D8": 2,
     "Quadrilateral3D8": 2,
-    "Hexahedra3D20"   : 3
+    "Hexahedra3D20": 3,
 }
+
 
 def read(filename):
     """Reads a KratosMultiphysics mdpa file.
     """
-    #if (have_kratos is True): # TODO: Implement natively
-        #pass
-    #else:
+    # if (have_kratos is True): # TODO: Implement natively
+    # pass
+    # else:
     with open(filename, "rb") as f:
         mesh = read_buffer(f)
     return mesh
+
 
 def _read_nodes(f, is_ascii, data_size):
     # The first line is the number of nodes
@@ -106,7 +108,7 @@ def _read_nodes(f, is_ascii, data_size):
     num_nodes = 0
     for line in lines:
         str_line = str(line)
-        if ("End Nodes" in str_line):
+        if "End Nodes" in str_line:
             break
         num_nodes += 1
     f.seek(pos)
@@ -119,20 +121,21 @@ def _read_nodes(f, is_ascii, data_size):
     assert line.strip() == "End Nodes"
     return points
 
-def _read_cells(f, cells, is_ascii, cell_tags, environ = None):
+
+def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
     # First we try to identity the entity
     t = None
-    if (environ is not None):
-        if ("Begin Elements" in environ):
-            entity_name = environ.replace("Begin Elements","")
+    if environ is not None:
+        if "Begin Elements" in environ:
+            entity_name = environ.replace("Begin Elements", "")
             for key in _mdpa_to_meshio_type:
-                if (key in entity_name):
+                if key in entity_name:
                     t = _mdpa_to_meshio_type[key]
                     break
-        elif ("Begin Conditions" in environ):
-            entity_name = environ.replace("Begin Conditions","")
+        elif "Begin Conditions" in environ:
+            entity_name = environ.replace("Begin Conditions", "")
             for key in _mdpa_to_meshio_type:
-                if (key in entity_name):
+                if key in entity_name:
                     t = _mdpa_to_meshio_type[key]
                     break
     # Now we compute the number of entities
@@ -141,7 +144,7 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ = None):
     total_num_cells = 0
     for line in lines:
         str_line = str(line)
-        if ("End Elements" in str_line or "End Conditions" in str_line):
+        if "End Elements" in str_line or "End Conditions" in str_line:
             break
         total_num_cells += 1
     f.seek(pos)
@@ -156,7 +159,7 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ = None):
             num_nodes_per_elem = len(data) - 2
 
             # We use this in case not alternative
-            if (t is None):
+            if t is None:
                 t = inverse_num_nodes_per_cell[num_nodes_per_elem]
 
             if t not in cells:
@@ -174,12 +177,13 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ = None):
         # Cannot convert cell_tags[key] to numpy array: There may be a
         # different number of tags for each cell.
     else:
-        raise NameError('Only ASCII mdpa supported')
+        raise NameError("Only ASCII mdpa supported")
 
     line = f.readline().decode("utf-8")
-    assert (line.strip() == "End Elements" or line.strip() == "End Conditions")
+    assert line.strip() == "End Elements" or line.strip() == "End Conditions"
 
     return
+
 
 def _prepare_cells(cells, cell_tags):
 
@@ -216,14 +220,44 @@ def _prepare_cells(cells, cell_tags):
         ]
     if "hexahedron27" in cells:
         cells["hexahedron27"] = cells["hexahedron27"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 19, 18, 17, 12, 13, 14, 15, 22, 24, 21, 23, 20, 25, 26]
+            :,
+            [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                11,
+                10,
+                9,
+                16,
+                19,
+                18,
+                17,
+                12,
+                13,
+                14,
+                15,
+                22,
+                24,
+                21,
+                23,
+                20,
+                25,
+                26,
+            ],
         ]
 
     cell_tags = output_cell_tags
 
     return has_additional_tag_data
 
-def _read_data(f, tag, data_dict, data_size, is_ascii, environ = None):
+
+def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
     # Read string tags
     num_string_tags = int(f.readline().decode("utf-8"))
     string_tags = [
@@ -246,7 +280,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii, environ = None):
         # The first number is the index
         data = data[:, 1:]
     else:
-        raise NameError('Only ASCII mdpa supported')
+        raise NameError("Only ASCII mdpa supported")
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "End {}".format(tag)
@@ -269,7 +303,7 @@ def read_buffer(f):
     cells = {}
     field_data = {}
     cell_data = {}
-    #cell_data_raw = {}
+    # cell_data_raw = {}
     cell_tags = {}
     point_data = {}
 
@@ -291,7 +325,7 @@ def read_buffer(f):
 
         if "Begin Nodes" in environ:
             points = _read_nodes(f, is_ascii, data_size)
-        elif "Begin Elements" in environ or "Begin Conditions" in environ :
+        elif "Begin Elements" in environ or "Begin Conditions" in environ:
             _read_cells(f, cells, is_ascii, cell_tags, environ)
 
     # We finally prepare the cells
@@ -300,38 +334,35 @@ def read_buffer(f):
     # Reverting to the original position
     f.seek(pos)
     # Read data
-    while False: # TODO: To implement
+    while False:  # TODO: To implement
         line = f.readline().decode("utf-8")
         if not line:
             # EOF
             break
-        #elif "NodalData" in environ and cells_prepared:
-            #_read_data(f, "NodalData", point_data, data_size, is_ascii)
-        #elif "Begin ElementalData" in environ:
-            #_read_data(f, "ElementalData", cell_data_raw, data_size, is_ascii)
-        #elif "Begin ConditionalData" in environ:
-            #_read_data(f, "ConditionalData", cell_data_raw, data_size, is_ascii)
+        # elif "NodalData" in environ and cells_prepared:
+        # _read_data(f, "NodalData", point_data, data_size, is_ascii)
+        # elif "Begin ElementalData" in environ:
+        # _read_data(f, "ElementalData", cell_data_raw, data_size, is_ascii)
+        # elif "Begin ConditionalData" in environ:
+        # _read_data(f, "ConditionalData", cell_data_raw, data_size, is_ascii)
 
     if has_additional_tag_data:
         logging.warning("The file contains tag data that couldn't be processed.")
 
-    #cell_data = cell_data_from_raw(cells, cell_data_raw)
+    # cell_data = cell_data_from_raw(cells, cell_data_raw)
 
     ## Merge cell_tags into cell_data
-    #for key, tag_dict in cell_tags.items():
-        #if key not in cell_data:
-            #cell_data[key] = {}
-        #for name, item_list in tag_dict.items():
-            #assert name not in cell_data[key]
-            #cell_data[key][name] = item_list
+    # for key, tag_dict in cell_tags.items():
+    # if key not in cell_data:
+    # cell_data[key] = {}
+    # for name, item_list in tag_dict.items():
+    # assert name not in cell_data[key]
+    # cell_data[key][name] = item_list
 
     return Mesh(
-        points,
-        cells,
-        point_data=point_data,
-        cell_data=cell_data,
-        field_data=field_data
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
+
 
 def cell_data_from_raw(cells, cell_data_raw):
     cell_data = {k: {} for k in cells}
@@ -344,66 +375,87 @@ def cell_data_from_raw(cells, cell_data_raw):
 
     return cell_data
 
-def _write_nodes(fh, points, write_binary = False):
+
+def _write_nodes(fh, points, write_binary=False):
     fh.write("Begin Nodes\n".encode("utf-8"))
     if write_binary:
-        raise NameError('Only ASCII mdpa supported')
+        raise NameError("Only ASCII mdpa supported")
     else:
         for k, x in enumerate(points):
             fh.write(
-                "\t{}\t{:.16E}\t{:.16E}\t{:.16E}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
+                "\t{}\t{:.16E}\t{:.16E}\t{:.16E}\n".format(
+                    k + 1, x[0], x[1], x[2]
+                ).encode("utf-8")
             )
     fh.write("End Nodes\n\n".encode("utf-8"))
     return
 
 
-def _write_elements_and_conditions(fh, cells, tag_data, write_binary = False, dimension = 2):
+def _write_elements_and_conditions(
+    fh, cells, tag_data, write_binary=False, dimension=2
+):
     # write elements
     entity = "Elements"
     dimension_name = str(dimension) + "D"
-    if (dimension == 2):
+    if dimension == 2:
         wrong_dimension_name = "3D"
     else:
         wrong_dimension_name = "2D"
     consecutive_index = 0
     aux_cell_type = None
     for cell_type, node_idcs in cells.items():
-        #local_dimension = local_dimension_types[cell_type] # NOTE: The names of the dummy conditions are not regular, require extra work
-        #if (local_dimension < dimension):
-            #entity = "Conditions"
+        # local_dimension = local_dimension_types[cell_type] # NOTE: The names of the dummy conditions are not regular, require extra work
+        # if (local_dimension < dimension):
+        # entity = "Conditions"
 
-        if (aux_cell_type == None):
+        if aux_cell_type == None:
             aux_cell_type = cell_type
-            fh.write(("Begin " + entity + " " + _meshio_to_mdpa_type[cell_type].replace(wrong_dimension_name, dimension_name) + "\n").encode("utf-8"))
-        elif (aux_cell_type != cell_type):
+            fh.write(
+                (
+                    "Begin "
+                    + entity
+                    + " "
+                    + _meshio_to_mdpa_type[cell_type].replace(
+                        wrong_dimension_name, dimension_name
+                    )
+                    + "\n"
+                ).encode("utf-8")
+            )
+        elif aux_cell_type != cell_type:
             fh.write(("End " + entity + "\n\n").encode("utf-8"))
-            fh.write(("Begin " + entity + " " + _meshio_to_mdpa_type[cell_type].replace(wrong_dimension_name, dimension_name) + "\n").encode("utf-8"))
+            fh.write(
+                (
+                    "Begin "
+                    + entity
+                    + " "
+                    + _meshio_to_mdpa_type[cell_type].replace(
+                        wrong_dimension_name, dimension_name
+                    )
+                    + "\n"
+                ).encode("utf-8")
+            )
 
-        #tags = [] # NOTE: Right now not supported
-        #for key in ["gmsh:physical", "gmsh:geometrical"]:
-            #try:
-                #tags.append(tag_data[cell_type][key])
-            #except KeyError:
-                #pass
-        #fcd = numpy.concatenate([tags]).T
+        # tags = [] # NOTE: Right now not supported
+        # for key in ["gmsh:physical", "gmsh:geometrical"]:
+        # try:
+        # tags.append(tag_data[cell_type][key])
+        # except KeyError:
+        # pass
+        # fcd = numpy.concatenate([tags]).T
 
-        #if len(fcd) == 0:
-            #fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
+        # if len(fcd) == 0:
+        # fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
 
         fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
 
         if write_binary:
-            raise NameError('Only ASCII mdpa supported')
+            raise NameError("Only ASCII mdpa supported")
         else:
-            form = (
-                "{} "
-                + str(fcd.shape[1])
-                + " {} {}\n"
-            )
+            form = "{} " + str(fcd.shape[1]) + " {} {}\n"
             for k, c in enumerate(node_idcs):
                 fh.write(
                     form.format(
-                        "\t"+str(consecutive_index + k + 1),
+                        "\t" + str(consecutive_index + k + 1),
                         "\t".join([str(val) for val in fcd[k]]),
                         "\t".join([str(cc + 1) for cc in c]),
                     ).encode("utf-8")
@@ -411,12 +463,13 @@ def _write_elements_and_conditions(fh, cells, tag_data, write_binary = False, di
 
         consecutive_index += len(node_idcs)
     if write_binary:
-        raise NameError('Only ASCII mdpa supported')
+        raise NameError("Only ASCII mdpa supported")
     fh.write("End Elements\n\n".encode("utf-8"))
     return
 
+
 def _write_data(fh, tag, name, data, write_binary):
-    fh.write("Begin "+ tag + " " + name +"\n\n".encode("utf-8"))
+    fh.write("Begin " + tag + " " + name + "\n\n".encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
 
@@ -427,7 +480,7 @@ def _write_data(fh, tag, name, data, write_binary):
 
     # Actually write the data
     if write_binary:
-        raise NameError('Only ASCII mdpa supported')
+        raise NameError("Only ASCII mdpa supported")
     else:
         fmt = " ".join(["{}"] + ["{!r}"] * num_components) + "\n"
         # TODO unify
@@ -438,18 +491,19 @@ def _write_data(fh, tag, name, data, write_binary):
             for k, x in enumerate(data):
                 fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
-    fh.write("End "+ tag + " " + name +"\n\n".encode("utf-8"))
+    fh.write("End " + tag + " " + name + "\n\n".encode("utf-8"))
     return
+
 
 def write(filename, mesh, write_binary=False):
     """Writes mdpa files, cf.
     <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
     """
-    #if (have_kratos is True): # TODO: Implement natively
-        #pass
-    #else:
+    # if (have_kratos is True): # TODO: Implement natively
+    # pass
+    # else:
     if write_binary:
-        raise NameError('Only ASCII mdpa supported')
+        raise NameError("Only ASCII mdpa supported")
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -459,7 +513,36 @@ def write(filename, mesh, write_binary=False):
         ]
     if "hexahedron27" in cells:
         cells["hexahedron27"] = cells["hexahedron27"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 16, 17, 18, 19, 12, 15, 14, 13, 22, 24, 21, 23, 20, 25, 26]
+            :,
+            [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                11,
+                10,
+                9,
+                16,
+                17,
+                18,
+                19,
+                12,
+                15,
+                14,
+                13,
+                22,
+                24,
+                21,
+                23,
+                20,
+                25,
+                26,
+            ],
         ]
 
     with open(filename, "wb") as fh:
@@ -487,7 +570,7 @@ def write(filename, mesh, write_binary=False):
         dimension = 2
         for cell_type in cells.keys():
             name_elem = _meshio_to_mdpa_type[cell_type]
-            if (local_dimension_types[name_elem] == 3):
+            if local_dimension_types[name_elem] == 3:
                 dimension = 3
                 break
 
@@ -497,7 +580,12 @@ def write(filename, mesh, write_binary=False):
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodalData", name, dat, write_binary)
         cell_data_raw = raw_from_cell_data(other_data)
-        for name, dat in cell_data_raw.items(): # NOTE: We will assume always when writing that the components are elements (for now)
+        for (
+            name,
+            dat,
+        ) in (
+            cell_data_raw.items()
+        ):  # NOTE: We will assume always when writing that the components are elements (for now)
             _write_data(fh, "ElementalData", name, dat, write_binary)
 
     return
