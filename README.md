@@ -21,6 +21,7 @@ e.g.,
  * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
  * [H5M](https://www.mcs.anl.gov/~fathom/moab-docs/h5mmain.html)
+ * [Kratos/MDPA](https://github.com/KratosMultiphysics/Kratos/wiki/Input-data)
  * [Medit](https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html)
  * [MED/Salome](http://docs.salome-platform.org/latest/dev/MEDCoupling/med-file.html)
  * [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats)

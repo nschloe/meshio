@@ -15,6 +15,7 @@ from . import stl_io
 from . import vtk_io
 from . import vtu_io
 from . import xdmf_io
+from . import mdpa_io
 
 input_filetypes = [
     "abaqus",
@@ -35,6 +36,7 @@ input_filetypes = [
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
+    "mdpa",
 ]
 
 output_filetypes = [
@@ -57,6 +59,7 @@ output_filetypes = [
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
+    "mdpa",
 ]
 
 _extension_to_filetype = {
@@ -79,6 +82,7 @@ _extension_to_filetype = {
     ".xdmf": "xdmf",
     ".xmf": "xdmf",
     ".inp": "abaqus",
+    ".mdpa": "mdpa",
 }
 
 
@@ -144,6 +148,8 @@ def read(filename, file_format=None):
         "exodus": exodus_io,
         #
         "abaqus": abaqus_io,
+        #
+        "mdpa": mdpa_io,
     }
 
     assert file_format in format_to_reader, "Unknown file format '{}' of '{}'.".format(
@@ -209,6 +215,7 @@ def write(filename, mesh, file_format=None):
         "xdmf3": lambda: xdmf_io.write(filename, mesh),
         "abaqus": lambda: abaqus_io.write(filename, mesh),
         "exodus": lambda: exodus_io.write(filename, mesh),
+        "mdpa": lambda: mdpa_io.write(filename, mesh),
     }
 
     try:
