@@ -408,7 +408,7 @@ def _write_elements_and_conditions(
         # if (local_dimension < dimension):
         # entity = "Conditions"
 
-        if aux_cell_type == None:
+        if aux_cell_type is None:
             aux_cell_type = cell_type
             fh.write(
                 (
