@@ -5,10 +5,8 @@ I/O for KratosMultiphysics's mdpa format, cf.
 <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
 """
 import logging
-import struct
 
 import numpy
-import copy
 
 from .mesh import Mesh
 from .vtk_io import raw_from_cell_data
@@ -271,7 +269,7 @@ def read_buffer(f):
     cells = {}
     field_data = {}
     cell_data = {}
-    cell_data_raw = {}
+    #cell_data_raw = {}
     cell_tags = {}
     point_data = {}
 
