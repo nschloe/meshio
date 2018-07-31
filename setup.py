@@ -33,7 +33,7 @@ setup(
         "all": ["netCDF4", "h5py", "lxml"],
         "exodus": ["netCDF4"],
         "hdf5": ["h5py"],  # MED, MOAB, XDMF formats
-        "xml": ["lxml"],  # Dolfin, VTU, XDMF
+        "xml": ["lxml"],  # Dolfin, VTU, XDMF, SVG
     },
     classifiers=[
         about["__status__"],

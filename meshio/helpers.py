@@ -6,28 +6,30 @@ from . import ansys_io
 from . import dolfin_io
 from . import exodus_io
 from . import h5m_io
+from . import mdpa_io
 from . import med_io
 from . import medit_io
 from . import gmsh_io
 from . import off_io
 from . import permas_io
 from . import stl_io
+from . import svg_io
 from . import vtk_io
 from . import vtu_io
 from . import xdmf_io
-from . import mdpa_io
 
 input_filetypes = [
     "abaqus",
     "ansys",
+    "dolfin-xml",
     "exodus",
     "gmsh-ascii",
     "gmsh-binary",
-    "dolfin-xml",
+    "mdpa",
     "med",
     "medit",
-    "permas",
     "moab",
+    "permas",
     "off",
     "stl-ascii",
     "stl-binary",
@@ -36,30 +38,30 @@ input_filetypes = [
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
-    "mdpa",
 ]
 
 output_filetypes = [
     "abaqus",
     "ansys-ascii",
     "ansys-binary",
+    "dolfin-xml",
     "exodus",
     "gmsh-ascii",
     "gmsh-binary",
-    "dolfin-xml",
+    "mdpa",
     "med",
     "medit",
-    "permas",
     "moab",
     "off",
+    "permas",
     "stl-ascii",
     "stl-binary",
+    "svg",
     "vtk-ascii",
     "vtk-binary",
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
-    "mdpa",
 ]
 
 _extension_to_filetype = {
@@ -83,6 +85,7 @@ _extension_to_filetype = {
     ".xmf": "xdmf",
     ".inp": "abaqus",
     ".mdpa": "mdpa",
+    ".svg": "svg",
 }
 
 
@@ -216,6 +219,7 @@ def write(filename, mesh, file_format=None):
         "abaqus": lambda: abaqus_io.write(filename, mesh),
         "exodus": lambda: exodus_io.write(filename, mesh),
         "mdpa": lambda: mdpa_io.write(filename, mesh),
+        "svg": lambda: svg_io.write(filename, mesh),
     }
 
     try:
