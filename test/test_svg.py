@@ -12,10 +12,7 @@ import helpers
 vtk = pytest.importorskip("lxml")
 
 
-test_set = [
-    helpers.tri_mesh,
-    helpers.quad_mesh,
-]
+test_set = [helpers.tri_mesh, helpers.quad_mesh]
 
 
 @pytest.mark.parametrize("mesh", test_set)
