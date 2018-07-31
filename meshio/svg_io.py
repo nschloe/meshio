@@ -37,6 +37,8 @@ def write(filename, mesh):
     style.text = "polygon {fill: none; stroke: black;}"
 
     for cell_type in ["line", "triangle", "quad"]:
+        if cell_type not in mesh.cells:
+            continue
         for cell in mesh.cells[cell_type]:
             ET.SubElement(
                 svg,
