@@ -2,7 +2,6 @@
 
 [![CircleCI](https://img.shields.io/circleci/project/github/nschloe/meshio/master.svg)](https://circleci.com/gh/nschloe/meshio)
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/meshio.svg)](https://codecov.io/gh/nschloe/meshio)
-[![Codacy grade](https://img.shields.io/codacy/grade/dc23fe7f7d4540b0a405110b3ae97dc6.svg)](https://app.codacy.com/app/nschloe/meshio/dashboard)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.org/project/meshio)
 [![Debian CI](https://badges.debian.net/badges/debian/testing/python3-meshio/version.svg)](https://tracker.debian.org/pkg/python-meshio)
@@ -10,7 +9,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?logo=github&label=Stars)](https://github.com/nschloe/meshio)
 
 <p align="center">
-  <img src="https://nschloe.github.io/meshio/meshio_logo.png" width="20%">
+  <img src="https://nschloe.github.io/meshio/meshio_logo.svg" width="20%">
 </p>
 
 There are various mesh formats available for representing unstructured meshes,
@@ -28,6 +27,7 @@ e.g.,
  * [OFF](http://segeval.cs.princeton.edu/public/off_format.html)
  * [PERMAS](http://www.intes.de)
  * [STL](https://en.wikipedia.org/wiki/STL_(file_format))
+ * [SVG](https://www.w3.org/TR/SVG/) (2D only, output only)
  * [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format)
