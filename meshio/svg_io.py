@@ -12,29 +12,24 @@ def write(filename, mesh):
         ), "SVG can only handle flat 2D meshes (shape: {})".format(
             mesh.points.shape
         )
-        mesh.points = mesh.points[:, :2]
 
-    assert mesh.points.shape[1] == 2
+    pts = mesh.points[:, :2].copy()
+    pts[:, 1] = numpy.max(pts[:, 1]) - pts[:, 1]
 
-    # flip y, move corner point to (0, 0)
-    pts = mesh.points.copy()
-    pts[:, 1] *= -1
-    pts[:, 0] -= numpy.min(pts[:, 0])
-    pts[:, 1] -= numpy.min(pts[:, 1])
-
-    width = numpy.max(pts[:, 0])
-    height = numpy.max(pts[:, 1])
+    min_x = numpy.min(pts[:, 0])
+    min_y = numpy.min(pts[:, 1])
+    width = numpy.max(pts[:, 0]) - min_x
+    height = numpy.max(pts[:, 1]) - min_y
 
     svg = ET.Element(
         "svg",
         xmlns="http://www.w3.org/2000/svg",
         version="1.1",
-        height=str(height),
-        width=str(width),
+        viewBox="{:.3f} {:.3f} {:.3f} {:.3f}".format(min_x, min_y, width, height),
     )
 
     style = ET.SubElement(svg, "style")
-    style.text = "polygon {fill: none; stroke: black;}"
+    style.text = "polygon {fill: none; stroke: black; stroke-width: 2%;}"
 
     for cell_type in ["line", "triangle", "quad"]:
         if cell_type not in mesh.cells:
@@ -44,7 +39,7 @@ def write(filename, mesh):
                 svg,
                 "polygon",
                 points=" ".join(
-                    ["{:.1f},{:.1f}".format(pts[c, 0], pts[c, 1]) for c in cell]
+                    ["{:.3f},{:.3f}".format(pts[c, 0], pts[c, 1]) for c in cell]
                 ),
             )
 
