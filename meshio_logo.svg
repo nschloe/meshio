@@ -1,5 +1,5 @@
 <svg version="1.1" viewBox="0.000 0.000 10.000 10.000" xmlns="http://www.w3.org/2000/svg">
-  <style>polygon {fill: none; stroke: black; stroke-width: 2%;}</style>
+  <style>polygon {fill: none; stroke: black; stroke-width: 0.04;}</style>
   <polygon points="7.499,8.421 7.462,8.845 7.042,8.603"/>
   <polygon points="1.433,3.243 1.562,2.775 1.130,2.929"/>
   <polygon points="7.499,8.421 7.462,8.845 7.903,8.661"/>
