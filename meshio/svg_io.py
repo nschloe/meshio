@@ -7,11 +7,9 @@ def write(filename, mesh):
     from lxml import etree as ET
 
     if mesh.points.shape[1] == 3:
-        assert (
-            numpy.all(mesh.points[:, 2]) < 1.0e-14
-        ), "SVG can only handle flat 2D meshes (shape: {})".format(
-            mesh.points.shape
-        )
+        assert numpy.allclose(
+            mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
+        ), "SVG can only handle flat 2D meshes (shape: {})".format(mesh.points.shape)
 
     pts = mesh.points[:, :2].copy()
     pts[:, 1] = numpy.max(pts[:, 1]) - pts[:, 1]
