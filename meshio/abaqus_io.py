@@ -152,7 +152,8 @@ def _read_nodes(f):
         line = f.readline()
         if line.startswith("*"):
             break
-        gid, *x = line.strip().split(",")
+        entries = line.strip().split(",")
+        gid, x = entries[0], entries[1:]
         point_gids.append(int(gid))
         points.append([float(xx) for xx in x])
 
@@ -176,7 +177,8 @@ def _read_cells(f, line0):
         line = f.readline()
         if line.startswith("*"):
             break
-        _, *idx = [int(k) for k in filter(None, line.split(","))]
+        entries = [int(k) for k in filter(None, line.split(","))]
+        idx = entries[1:]
         cells.append(idx)
 
     f.seek(last_pos)
