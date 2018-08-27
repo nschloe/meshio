@@ -12,7 +12,7 @@ import helpers
 def test_cli():
     input_mesh = helpers.tri_mesh
     infile = tempfile.NamedTemporaryFile().name
-    meshio.write(infile, input_mesh, file_format="gmsh-ascii")
+    meshio.write(infile, input_mesh, file_format="gmsh4-ascii")
 
     outfile = tempfile.NamedTemporaryFile().name
 

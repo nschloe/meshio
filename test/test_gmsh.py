@@ -44,11 +44,14 @@ def gmsh_periodic():
     ],
 )
 @pytest.mark.parametrize("write_binary", [False, True])
-def test_gmsh(mesh, write_binary):
+@pytest.mark.parametrize("fmt_version", ["2", "4"])
+def test_gmsh(mesh, write_binary, fmt_version):
     def writer(*args, **kwargs):
-        return meshio.gmsh_io.write(*args, write_binary=write_binary, **kwargs)
+        return meshio.msh_io.write(
+            *args, fmt_version, write_binary=write_binary, **kwargs
+        )
 
-    helpers.write_read(writer, meshio.gmsh_io.read, mesh, 1.0e-15)
+    helpers.write_read(writer, meshio.msh_io.read, mesh, 1.0e-15)
     return
 
 

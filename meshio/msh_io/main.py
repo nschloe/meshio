@@ -50,3 +50,12 @@ def _read_header(f, int_size):
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndMeshFormat"
     return format_version, data_size, is_ascii
+
+
+def write(filename, mesh, fmt_version, write_binary=True):
+    if fmt_version == "2":
+        msh2.write(filename, mesh, write_binary=write_binary)
+    else:
+        assert fmt_version == "4"
+        msh4.write(filename, mesh, write_binary=write_binary)
+    return
