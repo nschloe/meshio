@@ -10,7 +10,7 @@ import numpy
 
 from .mesh import Mesh
 from .vtk_io import raw_from_cell_data
-from .gmsh_io import num_nodes_per_cell
+from .common import num_nodes_per_cell
 
 ## We check if we can read/write the mesh natively from Kratos
 # TODO: Implement native reading

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 from .mesh import Mesh
+from .common import num_nodes_per_cell
 from . import abaqus_io
 from . import ansys_io
 from . import dolfin_io
@@ -9,7 +10,7 @@ from . import h5m_io
 from . import mdpa_io
 from . import med_io
 from . import medit_io
-from . import gmsh_io
+from . import msh_io
 from . import off_io
 from . import permas_io
 from . import stl_io
@@ -46,8 +47,10 @@ output_filetypes = [
     "ansys-binary",
     "dolfin-xml",
     "exodus",
-    "gmsh-ascii",
-    "gmsh-binary",
+    "gmsh2-ascii",
+    "gmsh2-binary",
+    "gmsh4-ascii",
+    "gmsh4-binary",
     "mdpa",
     "med",
     "medit",
@@ -70,7 +73,7 @@ _extension_to_filetype = {
     ".exo": "exodus",
     ".med": "med",
     ".mesh": "medit",
-    ".msh": "gmsh-binary",
+    ".msh": "gmsh4-binary",
     ".xml": "dolfin-xml",
     ".post": "permas",
     ".post.gz": "permas",
@@ -126,9 +129,15 @@ def read(filename, file_format=None):
         "ansys-ascii": ansys_io,
         "ansys-binary": ansys_io,
         #
-        "gmsh": gmsh_io,
-        "gmsh-ascii": gmsh_io,
-        "gmsh-binary": gmsh_io,
+        "gmsh": msh_io,
+        "gmsh-ascii": msh_io,
+        "gmsh-binary": msh_io,
+        "gmsh2": msh_io,
+        "gmsh2-ascii": msh_io,
+        "gmsh2-binary": msh_io,
+        "gmsh4": msh_io,
+        "gmsh4-ascii": msh_io,
+        "gmsh4-binary": msh_io,
         #
         "med": med_io,
         "medit": medit_io,
@@ -193,14 +202,16 @@ def write(filename, mesh, file_format=None):
 
     # check cells for sanity
     for key, value in mesh.cells.items():
-        assert value.shape[1] == gmsh_io.num_nodes_per_cell[key]
+        assert value.shape[1] == num_nodes_per_cell[key]
 
     d = {
         "moab": lambda: h5m_io.write(filename, mesh),
         "ansys-ascii": lambda: ansys_io.write(filename, mesh, write_binary=False),
         "ansys-binary": lambda: ansys_io.write(filename, mesh, write_binary=True),
-        "gmsh-ascii": lambda: gmsh_io.write(filename, mesh, write_binary=False),
-        "gmsh-binary": lambda: gmsh_io.write(filename, mesh, write_binary=True),
+        "gmsh2-ascii": lambda: msh_io.write(filename, mesh, "2", write_binary=False),
+        "gmsh2-binary": lambda: msh_io.write(filename, mesh, "2", write_binary=True),
+        "gmsh4-ascii": lambda: msh_io.write(filename, mesh, "4", write_binary=False),
+        "gmsh4-binary": lambda: msh_io.write(filename, mesh, "4", write_binary=True),
         "med": lambda: med_io.write(filename, mesh),
         "medit": lambda: medit_io.write(filename, mesh),
         "dolfin-xml": lambda: dolfin_io.write(filename, mesh),

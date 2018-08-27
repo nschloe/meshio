@@ -6,7 +6,7 @@
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.org/project/meshio)
 [![Debian CI](https://badges.debian.net/badges/debian/testing/python3-meshio/version.svg)](https://tracker.debian.org/pkg/python-meshio)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1173115.svg)](https://doi.org/10.5281/zenodo.1173115)
-[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?logo=github&label=Stars)](https://github.com/nschloe/meshio)
+[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshio)
 
 <p align="center">
   <img src="https://nschloe.github.io/meshio/meshio_logo.svg" width="20%">
@@ -23,7 +23,7 @@ e.g.,
  * [Kratos/MDPA](https://github.com/KratosMultiphysics/Kratos/wiki/Input-data)
  * [Medit](https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html)
  * [MED/Salome](http://docs.salome-platform.org/latest/dev/MEDCoupling/med-file.html)
- * [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats)
+ * [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats) (versions 2 and 4)
  * [OFF](http://segeval.cs.princeton.edu/public/off_format.html)
  * [PERMAS](http://www.intes.de)
  * [STL](https://en.wikipedia.org/wiki/STL_(file_format))
