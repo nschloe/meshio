@@ -14,6 +14,8 @@ from .common import (
     _read_periodic,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
+    _write_physical_names,
+    _write_periodic,
 )
 from ..mesh import Mesh
 from ..common import raw_from_cell_data, num_nodes_per_cell, cell_data_from_raw
@@ -233,7 +235,7 @@ def write(filename, mesh, write_binary=True):
         mode_idx = 1 if write_binary else 0
         size_of_double = 8
         fh.write(
-            ("$MeshFormat\n2.2 {} {}\n".format(mode_idx, size_of_double)).encode(
+            ("$MeshFormat\n4 {} {}\n".format(mode_idx, size_of_double)).encode(
                 "utf-8"
             )
         )
@@ -268,26 +270,6 @@ def write(filename, mesh, write_binary=True):
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, write_binary)
 
-    return
-
-
-def _write_physical_names(fh, field_data):
-    # Write physical names
-    entries = []
-    for phys_name in field_data:
-        try:
-            phys_num, phys_dim = field_data[phys_name]
-            phys_num, phys_dim = int(phys_num), int(phys_dim)
-            entries.append((phys_dim, phys_num, phys_name))
-        except (ValueError, TypeError):
-            logging.warning("Field data contains entry that cannot be processed.")
-    entries.sort()
-    if entries:
-        fh.write("$PhysicalNames\n".encode("utf-8"))
-        fh.write("{}\n".format(len(entries)).encode("utf-8"))
-        for entry in entries:
-            fh.write('{} {} "{}"\n'.format(*entry).encode("utf-8"))
-        fh.write("$EndPhysicalNames\n".encode("utf-8"))
     return
 
 
@@ -363,21 +345,6 @@ def _write_elements(fh, cells, tag_data, write_binary):
         fh.write("\n".encode("utf-8"))
     fh.write("$EndElements\n".encode("utf-8"))
     return
-
-
-def _write_periodic(fh, periodic):
-    fh.write("$Periodic\n".encode("utf-8"))
-    fh.write("{}\n".format(len(periodic)).encode("utf-8"))
-    for dim, (stag, mtag), transform, slave_master in periodic:
-        fh.write("{} {} {}\n".format(dim, stag, mtag).encode("utf-8"))
-        if transform is not None:
-            fh.write("{}\n".format(transform).encode("utf-8"))
-        slave_master = numpy.array(slave_master, dtype=int).reshape(-1, 2)
-        slave_master = slave_master + 1  # Add one, Gmsh is 0-based
-        fh.write("{}\n".format(len(slave_master)).encode("utf-8"))
-        for snode, mnode in slave_master:
-            fh.write("{} {}\n".format(snode, mnode).encode("utf-8"))
-    fh.write("$EndPeriodic\n".encode("utf-8"))
 
 
 def _write_data(fh, tag, name, data, write_binary):
