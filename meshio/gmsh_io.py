@@ -5,6 +5,7 @@ I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
 import logging
+import shlex
 import struct
 
 import numpy
@@ -192,11 +193,9 @@ def _read_physical_names(f, field_data):
     line = f.readline().decode("utf-8")
     num_phys_names = int(line)
     for _ in range(num_phys_names):
-        line = f.readline().decode("utf-8")
-        key = line.split(" ")[2].replace('"', "").replace("\n", "")
-        phys_group = int(line.split(" ")[1])
-        phys_dim = int(line.split(" ")[0])
-        value = numpy.array([phys_group, phys_dim], dtype=int)
+        line = shlex.split(f.readline().decode("utf-8"))
+        key = line[2]
+        value = numpy.array(line[1::-1], dtype=int)
         field_data[key] = value
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndPhysicalNames"
