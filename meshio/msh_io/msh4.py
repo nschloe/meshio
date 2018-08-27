@@ -18,7 +18,7 @@ from .common import (
     _write_periodic,
 )
 from ..mesh import Mesh
-from ..common import raw_from_cell_data, num_nodes_per_cell, cell_data_from_raw
+from ..common import num_nodes_per_cell, cell_data_from_raw
 
 
 def read_buffer(f, is_ascii, int_size, data_size):
@@ -213,6 +213,9 @@ def write(filename, mesh, write_binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
+    # TODO respect binary writes
+    write_binary = False
+
     if write_binary:
         for key, value in mesh.cells.items():
             if value.dtype != numpy.int32:
@@ -235,9 +238,7 @@ def write(filename, mesh, write_binary=True):
         mode_idx = 1 if write_binary else 0
         size_of_double = 8
         fh.write(
-            ("$MeshFormat\n4 {} {}\n".format(mode_idx, size_of_double)).encode(
-                "utf-8"
-            )
+            ("$MeshFormat\n4 {} {}\n".format(mode_idx, size_of_double)).encode("utf-8")
         )
         if write_binary:
             fh.write(struct.pack("i", 1))
@@ -247,155 +248,129 @@ def write(filename, mesh, write_binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the
-        # rest is actual cell data.
-        tag_data = {}
-        other_data = {}
-        for cell_type, a in mesh.cell_data.items():
-            tag_data[cell_type] = {}
-            other_data[cell_type] = {}
-            for key, data in a.items():
-                if key in ["gmsh:physical", "gmsh:geometrical"]:
-                    tag_data[cell_type][key] = data.astype(numpy.int32)
-                else:
-                    other_data[cell_type][key] = data
-
         _write_nodes(fh, mesh.points, write_binary)
-        _write_elements(fh, cells, tag_data, write_binary)
+        _write_elements(fh, cells, write_binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic)
-        for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodeData", name, dat, write_binary)
-        cell_data_raw = raw_from_cell_data(other_data)
-        for name, dat in cell_data_raw.items():
-            _write_data(fh, "ElementData", name, dat, write_binary)
 
     return
 
 
 def _write_nodes(fh, points, write_binary):
+    # TODO respect write_binary
     fh.write("$Nodes\n".encode("utf-8"))
-    fh.write("{}\n".format(len(points)).encode("utf-8"))
-    if write_binary:
-        dtype = [("index", numpy.int32), ("x", numpy.float64, (3,))]
-        tmp = numpy.empty(len(points), dtype=dtype)
-        tmp["index"] = 1 + numpy.arange(len(points))
-        tmp["x"] = points
-        fh.write(tmp.tostring())
-        fh.write("\n".encode("utf-8"))
-    else:
-        for k, x in enumerate(points):
-            fh.write(
-                "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
-            )
+    # write all points as one big block
+
+    # numEntityBlocks(unsigned long) numNodes(unsigned long)
+    fh.write("{} {}\n".format(1, len(points)).encode("utf-8"))
+
+    # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
+    # TODO not sure what dimEntity is supposed to say
+    fh.write("{} {} {} {}\n".format(1, 0, 0, len(points)).encode("utf-8"))
+
+    for k, x in enumerate(points):
+        # tag(int) x(double) y(double) z(double)
+        fh.write("{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
+
     fh.write("$EndNodes\n".encode("utf-8"))
     return
 
 
-def _write_elements(fh, cells, tag_data, write_binary):
+def _write_elements(fh, cells, write_binary):
+    # TODO respect write_binary
     # write elements
     fh.write("$Elements\n".encode("utf-8"))
     # count all cells
     total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-    fh.write("{}\n".format(total_num_cells).encode("utf-8"))
+    fh.write("{} {}\n".format(len(cells), total_num_cells).encode("utf-8"))
 
     consecutive_index = 0
     for cell_type, node_idcs in cells.items():
-        tags = []
-        for key in ["gmsh:physical", "gmsh:geometrical"]:
-            try:
-                tags.append(tag_data[cell_type][key])
-            except KeyError:
-                pass
-        fcd = numpy.concatenate([tags]).T
+        # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+        fh.write(
+            "{} {} {} {}\n".format(
+                1,  # tag
+                _geometric_dimension[cell_type],
+                _meshio_to_gmsh_type[cell_type],
+                node_idcs.shape[0],
+            ).encode("utf-8")
+        )
+        form = " ".join(["{}"] * (num_nodes_per_cell[cell_type] + 1)) + "\n"
 
-        if len(fcd) == 0:
-            fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
+        # increment indices by one to conform with gmsh standard
+        idcs = node_idcs + 1
 
-        if write_binary:
-            # header
-            fh.write(struct.pack("i", _meshio_to_gmsh_type[cell_type]))
-            fh.write(struct.pack("i", node_idcs.shape[0]))
-            fh.write(struct.pack("i", fcd.shape[1]))
-            # actual data
-            a = numpy.arange(len(node_idcs), dtype=numpy.int32)[:, numpy.newaxis]
-            a += 1 + consecutive_index
-            array = numpy.hstack([a, fcd, node_idcs + 1])
-            assert array.dtype == numpy.int32
-            fh.write(array.tostring())
-        else:
-            form = (
-                "{} "
-                + str(_meshio_to_gmsh_type[cell_type])
-                + " "
-                + str(fcd.shape[1])
-                + " {} {}\n"
-            )
-            for k, c in enumerate(node_idcs):
-                fh.write(
-                    form.format(
-                        consecutive_index + k + 1,
-                        " ".join([str(val) for val in fcd[k]]),
-                        " ".join([str(cc + 1) for cc in c]),
-                    ).encode("utf-8")
-                )
-
+        for idx in idcs:
+            fh.write(form.format(consecutive_index, *idx).encode("utf-8"))
+            consecutive_index += 1
         consecutive_index += len(node_idcs)
-    if write_binary:
-        fh.write("\n".encode("utf-8"))
+
     fh.write("$EndElements\n".encode("utf-8"))
     return
 
 
-def _write_data(fh, tag, name, data, write_binary):
-    fh.write("${}\n".format(tag).encode("utf-8"))
-    # <http://gmsh.info/doc/texinfo/gmsh.html>:
-    # > Number of string tags.
-    # > gives the number of string tags that follow. By default the first
-    # > string-tag is interpreted as the name of the post-processing view and
-    # > the second as the name of the interpolation scheme. The interpolation
-    # > scheme is provided in the $InterpolationScheme section (see below).
-    fh.write("{}\n".format(1).encode("utf-8"))
-    fh.write('"{}"\n'.format(name).encode("utf-8"))
-    fh.write("{}\n".format(1).encode("utf-8"))
-    fh.write("{}\n".format(0.0).encode("utf-8"))
-    # three integer tags:
-    fh.write("{}\n".format(3).encode("utf-8"))
-    # time step
-    fh.write("{}\n".format(0).encode("utf-8"))
-    # number of components
-    num_components = data.shape[1] if len(data.shape) > 1 else 1
-    assert num_components in [
-        1,
-        3,
-        9,
-    ], "Gmsh only permits 1, 3, or 9 components per data field."
-
-    # Cut off the last dimension in case it's 1. This avoids problems with
-    # writing the data.
-    if len(data.shape) > 1 and data.shape[1] == 1:
-        data = data[:, 0]
-
-    fh.write("{}\n".format(num_components).encode("utf-8"))
-    # num data items
-    fh.write("{}\n".format(data.shape[0]).encode("utf-8"))
-    # actually write the data
-    if write_binary:
-        dtype = [("index", numpy.int32), ("data", numpy.float64, num_components)]
-        tmp = numpy.empty(len(data), dtype=dtype)
-        tmp["index"] = 1 + numpy.arange(len(data))
-        tmp["data"] = data
-        fh.write(tmp.tostring())
-        fh.write("\n".encode("utf-8"))
-    else:
-        fmt = " ".join(["{}"] + ["{!r}"] * num_components) + "\n"
-        # TODO unify
-        if num_components == 1:
-            for k, x in enumerate(data):
-                fh.write(fmt.format(k + 1, x).encode("utf-8"))
-        else:
-            for k, x in enumerate(data):
-                fh.write(fmt.format(k + 1, *x).encode("utf-8"))
-
-    fh.write("$End{}\n".format(tag).encode("utf-8"))
-    return
+_geometric_dimension = {
+    "line": 1,
+    "triangle": 2,
+    "quad": 2,
+    "tetra": 3,
+    "hexahedron": 3,
+    "wedge": 3,
+    "pyramid": 3,
+    "line3": 1,
+    "triangle6": 2,
+    "quad9": 2,
+    "tetra10": 3,
+    "hexahedron27": 3,
+    "wedge18": 3,
+    "pyramid14": 3,
+    "vertex": 0,
+    "quad8": 2,
+    "hexahedron20": 3,
+    "triangle10": 2,
+    "triangle15": 2,
+    "triangle21": 2,
+    "line4": 1,
+    "line5": 1,
+    "line6": 1,
+    "tetra20": 3,
+    "tetra35": 3,
+    "tetra56": 3,
+    "quad16": 2,
+    "quad25": 2,
+    "quad36": 2,
+    "triangle28": 2,
+    "triangle36": 2,
+    "triangle45": 2,
+    "triangle55": 2,
+    "triangle66": 2,
+    "quad49": 2,
+    "quad64": 2,
+    "quad81": 2,
+    "quad100": 2,
+    "quad121": 2,
+    "line7": 1,
+    "line8": 1,
+    "line9": 1,
+    "line10": 1,
+    "line11": 1,
+    "tetra84": 3,
+    "tetra120": 3,
+    "tetra165": 3,
+    "tetra220": 3,
+    "tetra286": 3,
+    "wedge40": 3,
+    "wedge75": 3,
+    "hexahedron64": 3,
+    "hexahedron125": 3,
+    "hexahedron216": 3,
+    "hexahedron343": 3,
+    "hexahedron512": 3,
+    "hexahedron729": 3,
+    "hexahedron1000": 3,
+    "wedge126": 3,
+    "wedge196": 3,
+    "wedge288": 3,
+    "wedge405": 3,
+    "wedge550": 3,
+}
