@@ -9,79 +9,73 @@ import struct
 
 import numpy
 
-from .common import _read_physical_names
+from .common import (
+    _read_physical_names,
+    _read_periodic,
+    _gmsh_to_meshio_type,
+    _meshio_to_gmsh_type,
+)
 from ..mesh import Mesh
 from ..common import raw_from_cell_data, num_nodes_per_cell, cell_data_from_raw
 
 
-# Translate meshio types to gmsh codes
-# http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-version-2
-_gmsh_to_meshio_type = {
-    1: "line",
-    2: "triangle",
-    3: "quad",
-    4: "tetra",
-    5: "hexahedron",
-    6: "wedge",
-    7: "pyramid",
-    8: "line3",
-    9: "triangle6",
-    10: "quad9",
-    11: "tetra10",
-    12: "hexahedron27",
-    13: "wedge18",
-    14: "pyramid14",
-    15: "vertex",
-    16: "quad8",
-    17: "hexahedron20",
-    21: "triangle10",
-    23: "triangle15",
-    25: "triangle21",
-    26: "line4",
-    27: "line5",
-    28: "line6",
-    29: "tetra20",
-    30: "tetra35",
-    31: "tetra56",
-    36: "quad16",
-    37: "quad25",
-    38: "quad36",
-    42: "triangle28",
-    43: "triangle36",
-    44: "triangle45",
-    45: "triangle55",
-    46: "triangle66",
-    47: "quad49",
-    48: "quad64",
-    49: "quad81",
-    50: "quad100",
-    51: "quad121",
-    62: "line7",
-    63: "line8",
-    64: "line9",
-    65: "line10",
-    66: "line11",
-    71: "tetra84",
-    72: "tetra120",
-    73: "tetra165",
-    74: "tetra220",
-    75: "tetra286",
-    90: "wedge40",
-    91: "wedge75",
-    92: "hexahedron64",
-    93: "hexahedron125",
-    94: "hexahedron216",
-    95: "hexahedron343",
-    96: "hexahedron512",
-    97: "hexahedron729",
-    98: "hexahedron1000",
-    106: "wedge126",
-    107: "wedge196",
-    108: "wedge288",
-    109: "wedge405",
-    110: "wedge550",
-}
-_meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
+def read_buffer(f, is_ascii, int_size, data_size):
+    # The format is specified at
+    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
+
+    # Initialize the optional data fields
+    points = []
+    cells = {}
+    field_data = {}
+    cell_data_raw = {}
+    cell_tags = {}
+    point_data = {}
+    periodic = None
+    while True:
+        line = f.readline().decode("utf-8")
+        if not line:
+            # EOF
+            break
+        assert line[0] == "$"
+        environ = line[1:].strip()
+
+        if environ == "PhysicalNames":
+            _read_physical_names(f, field_data)
+        elif environ == "Nodes":
+            points = _read_nodes(f, is_ascii, int_size, data_size)
+        elif environ == "Elements":
+            has_additional_tag_data, cell_tags = _read_cells(
+                f, cells, int_size, is_ascii
+            )
+        elif environ == "Periodic":
+            periodic = _read_periodic(f)
+        elif environ == "NodeData":
+            _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
+        else:
+            assert environ == "ElementData", "Unknown environment '{}'.".format(environ)
+            _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
+
+    if has_additional_tag_data:
+        logging.warning("The file contains tag data that couldn't be processed.")
+
+    cell_data = cell_data_from_raw(cells, cell_data_raw)
+
+    # merge cell_tags into cell_data
+    for key, tag_dict in cell_tags.items():
+        if key not in cell_data:
+            cell_data[key] = {}
+        for name, item_list in tag_dict.items():
+            assert name not in cell_data[key]
+            cell_data[key][name] = item_list
+
+    return Mesh(
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        field_data=field_data,
+        gmsh_periodic=periodic,
+    )
 
 
 def _read_nodes(f, is_ascii, int_size, data_size):
@@ -234,32 +228,6 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells, int_size):
     return
 
 
-def _read_periodic(f):
-    periodic = []
-    num_periodic = int(f.readline().decode("utf-8"))
-    for _ in range(num_periodic):
-        line = f.readline().decode("utf-8")
-        edim, stag, mtag = [int(s) for s in line.split()]
-        line = f.readline().decode("utf-8").strip()
-        if line.startswith("Affine"):
-            transform = line
-            num_nodes = int(f.readline().decode("utf-8"))
-        else:
-            transform = None
-            num_nodes = int(line)
-        slave_master = []
-        for _ in range(num_nodes):
-            line = f.readline().decode("utf-8")
-            snode, mnode = [int(s) for s in line.split()]
-            slave_master.append([snode, mnode])
-        slave_master = numpy.array(slave_master, dtype=int).reshape(-1, 2)
-        slave_master -= 1  # Subtract one, Python is 0-based
-        periodic.append([edim, (stag, mtag), transform, slave_master])
-    line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndPeriodic"
-    return periodic
-
-
 def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
     # Read string tags
     num_string_tags = int(f.readline().decode("utf-8"))
@@ -303,65 +271,6 @@ def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
 
     data_dict[string_tags[0]] = data
     return
-
-
-def read_buffer(f, is_ascii, int_size, data_size):
-    # The format is specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
-
-    # Initialize the optional data fields
-    points = []
-    cells = {}
-    field_data = {}
-    cell_data_raw = {}
-    cell_tags = {}
-    point_data = {}
-    periodic = None
-    while True:
-        line = f.readline().decode("utf-8")
-        if not line:
-            # EOF
-            break
-        assert line[0] == "$"
-        environ = line[1:].strip()
-
-        if environ == "PhysicalNames":
-            _read_physical_names(f, field_data)
-        elif environ == "Nodes":
-            points = _read_nodes(f, is_ascii, int_size, data_size)
-        elif environ == "Elements":
-            has_additional_tag_data, cell_tags = _read_cells(
-                f, cells, int_size, is_ascii
-            )
-        elif environ == "Periodic":
-            periodic = _read_periodic(f)
-        elif environ == "NodeData":
-            _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
-        else:
-            assert environ == "ElementData", "Unknown environment '{}'.".format(environ)
-            _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
-
-    if has_additional_tag_data:
-        logging.warning("The file contains tag data that couldn't be processed.")
-
-    cell_data = cell_data_from_raw(cells, cell_data_raw)
-
-    # merge cell_tags into cell_data
-    for key, tag_dict in cell_tags.items():
-        if key not in cell_data:
-            cell_data[key] = {}
-        for name, item_list in tag_dict.items():
-            assert name not in cell_data[key]
-            cell_data[key][name] = item_list
-
-    return Mesh(
-        points,
-        cells,
-        point_data=point_data,
-        cell_data=cell_data,
-        field_data=field_data,
-        gmsh_periodic=periodic,
-    )
 
 
 def _write_physical_names(fh, field_data):

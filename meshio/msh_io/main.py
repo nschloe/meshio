@@ -21,8 +21,9 @@ def read_buffer(f):
     int_size = 4
     format_version, data_size, is_ascii = _read_header(f, int_size)
 
-    assert format_version in ["2", "4"], \
-        "Need mesh format 2 or 4 (got {})".format(format_version)
+    assert format_version in ["2", "4"], "Need mesh format 2 or 4 (got {})".format(
+        format_version
+    )
 
     reader = {"2": msh2, "4": msh4}[format_version]
 
