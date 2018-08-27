@@ -273,6 +273,70 @@ def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
     return
 
 
+def write(filename, mesh, write_binary=True):
+    """Writes msh files, cf.
+    <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
+    """
+    if write_binary:
+        for key, value in mesh.cells.items():
+            if value.dtype != numpy.int32:
+                logging.warning(
+                    "Binary Gmsh needs 32-bit integers (got %s). Converting.",
+                    value.dtype,
+                )
+                mesh.cells[key] = numpy.array(value, dtype=numpy.int32)
+
+    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
+    cells = mesh.cells.copy()
+    if "tetra10" in cells:
+        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
+    if "hexahedron20" in cells:
+        cells["hexahedron20"] = cells["hexahedron20"][
+            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 14, 15]
+        ]
+
+    with open(filename, "wb") as fh:
+        mode_idx = 1 if write_binary else 0
+        size_of_double = 8
+        fh.write(
+            ("$MeshFormat\n2.2 {} {}\n".format(mode_idx, size_of_double)).encode(
+                "utf-8"
+            )
+        )
+        if write_binary:
+            fh.write(struct.pack("i", 1))
+            fh.write("\n".encode("utf-8"))
+        fh.write("$EndMeshFormat\n".encode("utf-8"))
+
+        if mesh.field_data:
+            _write_physical_names(fh, mesh.field_data)
+
+        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the
+        # rest is actual cell data.
+        tag_data = {}
+        other_data = {}
+        for cell_type, a in mesh.cell_data.items():
+            tag_data[cell_type] = {}
+            other_data[cell_type] = {}
+            for key, data in a.items():
+                if key in ["gmsh:physical", "gmsh:geometrical"]:
+                    tag_data[cell_type][key] = data.astype(numpy.int32)
+                else:
+                    other_data[cell_type][key] = data
+
+        _write_nodes(fh, mesh.points, write_binary)
+        _write_elements(fh, cells, tag_data, write_binary)
+        if mesh.gmsh_periodic is not None:
+            _write_periodic(fh, mesh.gmsh_periodic)
+        for name, dat in mesh.point_data.items():
+            _write_data(fh, "NodeData", name, dat, write_binary)
+        cell_data_raw = raw_from_cell_data(other_data)
+        for name, dat in cell_data_raw.items():
+            _write_data(fh, "ElementData", name, dat, write_binary)
+
+    return
+
+
 def _write_physical_names(fh, field_data):
     # Write physical names
     entries = []
@@ -433,68 +497,4 @@ def _write_data(fh, tag, name, data, write_binary):
                 fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
     fh.write("$End{}\n".format(tag).encode("utf-8"))
-    return
-
-
-def write(filename, mesh, write_binary=True):
-    """Writes msh files, cf.
-    <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
-    """
-    if write_binary:
-        for key, value in mesh.cells.items():
-            if value.dtype != numpy.int32:
-                logging.warning(
-                    "Binary Gmsh needs 32-bit integers (got %s). Converting.",
-                    value.dtype,
-                )
-                mesh.cells[key] = numpy.array(value, dtype=numpy.int32)
-
-    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
-    cells = mesh.cells.copy()
-    if "tetra10" in cells:
-        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
-    if "hexahedron20" in cells:
-        cells["hexahedron20"] = cells["hexahedron20"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 14, 15]
-        ]
-
-    with open(filename, "wb") as fh:
-        mode_idx = 1 if write_binary else 0
-        size_of_double = 8
-        fh.write(
-            ("$MeshFormat\n2.2 {} {}\n".format(mode_idx, size_of_double)).encode(
-                "utf-8"
-            )
-        )
-        if write_binary:
-            fh.write(struct.pack("i", 1))
-            fh.write("\n".encode("utf-8"))
-        fh.write("$EndMeshFormat\n".encode("utf-8"))
-
-        if mesh.field_data:
-            _write_physical_names(fh, mesh.field_data)
-
-        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the
-        # rest is actual cell data.
-        tag_data = {}
-        other_data = {}
-        for cell_type, a in mesh.cell_data.items():
-            tag_data[cell_type] = {}
-            other_data[cell_type] = {}
-            for key, data in a.items():
-                if key in ["gmsh:physical", "gmsh:geometrical"]:
-                    tag_data[cell_type][key] = data.astype(numpy.int32)
-                else:
-                    other_data[cell_type][key] = data
-
-        _write_nodes(fh, mesh.points, write_binary)
-        _write_elements(fh, cells, tag_data, write_binary)
-        if mesh.gmsh_periodic is not None:
-            _write_periodic(fh, mesh.gmsh_periodic)
-        for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodeData", name, dat, write_binary)
-        cell_data_raw = raw_from_cell_data(other_data)
-        for name, dat in cell_data_raw.items():
-            _write_data(fh, "ElementData", name, dat, write_binary)
-
     return
