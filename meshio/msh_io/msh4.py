@@ -10,87 +10,12 @@ import struct
 
 import numpy
 
-from .mesh import Mesh
-from .vtk_io import raw_from_cell_data
+from ..mesh import Mesh
+from ..common import raw_from_cell_data, num_nodes_per_cell, cell_data_from_raw
 
-
-num_nodes_per_cell = {
-    "vertex": 1,
-    "line": 2,
-    "triangle": 3,
-    "quad": 4,
-    "quad8": 8,
-    "tetra": 4,
-    "hexahedron": 8,
-    "hexahedron20": 20,
-    "wedge": 6,
-    "pyramid": 5,
-    #
-    "line3": 3,
-    "triangle6": 6,
-    "quad9": 9,
-    "tetra10": 10,
-    "hexahedron27": 27,
-    "wedge18": 18,
-    "pyramid14": 14,
-    #
-    "line4": 4,
-    "triangle10": 10,
-    "quad16": 16,
-    "tetra20": 20,
-    "wedge40": 40,
-    "hexahedron64": 64,
-    #
-    "line5": 5,
-    "triangle15": 15,
-    "quad25": 25,
-    "tetra35": 35,
-    "wedge75": 75,
-    "hexahedron125": 125,
-    #
-    "line6": 6,
-    "triangle21": 21,
-    "quad36": 36,
-    "tetra56": 56,
-    "wedge126": 126,
-    "hexahedron216": 216,
-    #
-    "line7": 7,
-    "triangle28": 28,
-    "quad49": 49,
-    "tetra84": 84,
-    "wedge196": 196,
-    "hexahedron343": 343,
-    #
-    "line8": 8,
-    "triangle36": 36,
-    "quad64": 64,
-    "tetra120": 120,
-    "wedge288": 288,
-    "hexahedron512": 512,
-    #
-    "line9": 9,
-    "triangle45": 45,
-    "quad81": 81,
-    "tetra165": 165,
-    "wedge405": 405,
-    "hexahedron729": 729,
-    #
-    "line10": 10,
-    "triangle55": 55,
-    "quad100": 100,
-    "tetra220": 220,
-    "wedge550": 550,
-    "hexahedron1000": 1000,
-    #
-    "line11": 11,
-    "triangle66": 66,
-    "quad121": 121,
-    "tetra286": 286,
-}
 
 # Translate meshio types to gmsh codes
-# http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format
+# http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-version-2
 _gmsh_to_meshio_type = {
     1: "line",
     2: "triangle",
@@ -159,36 +84,6 @@ _gmsh_to_meshio_type = {
 _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
 
 
-def read(filename):
-    """Reads a Gmsh msh file.
-    """
-    with open(filename, "rb") as f:
-        mesh = read_buffer(f)
-    return mesh
-
-
-def _read_header(f, int_size):
-    line = f.readline().decode("utf-8")
-    # Split the line
-    # 2.2 0 8
-    # into its components.
-    str_list = list(filter(None, line.split()))
-    assert str_list[0][0] == "2", "Need mesh format 2"
-    assert str_list[1] in ["0", "1"]
-    is_ascii = str_list[1] == "0"
-    data_size = int(str_list[2])
-    if not is_ascii:
-        # The next line is the integer 1 in bytes. Useful for checking
-        # endianness. Just assert that we get 1 here.
-        one = f.read(int_size)
-        assert struct.unpack("i", one)[0] == 1
-        line = f.readline().decode("utf-8")
-        assert line == "\n"
-    line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndMeshFormat"
-    return data_size, is_ascii
-
-
 def _read_physical_names(f, field_data):
     line = f.readline().decode("utf-8")
     num_phys_names = int(line)
@@ -203,39 +98,62 @@ def _read_physical_names(f, field_data):
 
 
 def _read_nodes(f, is_ascii, int_size, data_size):
-    # The first line is the number of nodes
+    # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
     line = f.readline().decode("utf-8")
-    num_nodes = int(line)
-    if is_ascii:
-        points = numpy.fromfile(f, count=num_nodes * 4, sep=" ").reshape((num_nodes, 4))
-        # The first number is the index
-        points = points[:, 1:]
-    else:
-        # binary
-        assert numpy.int32(0).nbytes == int_size
-        assert numpy.float64(0.0).nbytes == data_size
-        dtype = [("index", numpy.int32), ("x", numpy.float64, (3,))]
-        data = numpy.fromfile(f, count=num_nodes, dtype=dtype)
-        assert (data["index"] == range(1, num_nodes + 1)).all()
-        points = numpy.ascontiguousarray(data["x"])
+    num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
+
+    points = numpy.empty((total_num_nodes, 3), dtype=float)
+
+    idx = 0
+    for k in range(num_entity_blocks):
+        # first line in the entity block:
+        # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        tag_entity, dim_entity, type_node, num_nodes = [int(k) for k in line.split()]
+        for i in range(num_nodes):
+            # tag(int) x(double) y(double) z(double)
+            line = f.readline().decode("utf-8")
+            tag, x, y, z = line.split()
+            points[idx] = [float(x), float(y), float(z)]
+            idx += 1
+
+    assert idx == total_num_nodes
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndNodes"
     return points
 
 
-def _read_cells(f, cells, int_size, is_ascii):
-    # The first line is the number of elements
+def _read_cells(f, int_size, is_ascii):
+    # numEntityBlocks(unsigned long) numElements(unsigned long)
     line = f.readline().decode("utf-8")
-    total_num_cells = int(line)
-    has_additional_tag_data = False
-    cell_tags = {}
-    if is_ascii:
-        _read_cells_ascii(f, cells, cell_tags, total_num_cells)
-    else:
-        _read_cells_binary(f, cells, cell_tags, total_num_cells, int_size)
+    num_entity_blocks, total_num_elements = [int(k) for k in line.split()]
+
+    data = []
+    for k in range(num_entity_blocks):
+        line = f.readline().decode("utf-8")
+        # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+        tag_entity, dim_entity, type_ele, num_elements = [int(k) for k in line.split()]
+        tpe = _gmsh_to_meshio_type[type_ele]
+        num_nodes_per_ele = num_nodes_per_cell[tpe]
+        d = numpy.empty((num_elements, num_nodes_per_ele), dtype=int)
+        idx = 0
+        for i in range(num_elements):
+            # tag(int) numVert[...](int)
+            line = f.readline().decode("utf-8")
+            items = line.split()
+            assert len(items) == num_nodes_per_ele + 1
+            d[idx] = [int(item) for item in items[1:]]
+            idx += 1
+        data.append((tpe, d))
+
+    cells = {}
+    for item in data:
+        key, values = item
+        if key in cells:
+            cells[key] = numpy.concatenate([cells[key], values])
+        else:
+            cells[key] = values
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndElements"
@@ -245,24 +163,6 @@ def _read_cells(f, cells, int_size, is_ascii):
     for key in cells:
         cells[key] -= 1
 
-    # restrict to the standard two data items (physical, geometrical)
-    output_cell_tags = {}
-    for key in cell_tags:
-        output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
-        for item in cell_tags[key]:
-            if len(item) > 0:
-                output_cell_tags[key]["gmsh:physical"].append(item[0])
-            if len(item) > 1:
-                output_cell_tags[key]["gmsh:geometrical"].append(item[1])
-            if len(item) > 2:
-                has_additional_tag_data = True
-        output_cell_tags[key]["gmsh:physical"] = numpy.array(
-            output_cell_tags[key]["gmsh:physical"], dtype=int
-        )
-        output_cell_tags[key]["gmsh:geometrical"] = numpy.array(
-            output_cell_tags[key]["gmsh:geometrical"], dtype=int
-        )
-
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     if "tetra10" in cells:
         cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
@@ -271,7 +171,7 @@ def _read_cells(f, cells, int_size, is_ascii):
             :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16, 9, 17, 10, 18, 19, 12, 15, 13, 14]
         ]
 
-    return has_additional_tag_data, output_cell_tags
+    return cells
 
 
 def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
@@ -423,7 +323,7 @@ def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
     return
 
 
-def read_buffer(f):
+def read_buffer(f, is_ascii, int_size, data_size):
     # The format is specified at
     # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
 
@@ -435,10 +335,6 @@ def read_buffer(f):
     cell_tags = {}
     point_data = {}
     periodic = None
-
-    is_ascii = None
-    int_size = 4
-    data_size = None
     while True:
         line = f.readline().decode("utf-8")
         if not line:
@@ -447,26 +343,29 @@ def read_buffer(f):
         assert line[0] == "$"
         environ = line[1:].strip()
 
-        if environ == "MeshFormat":
-            data_size, is_ascii = _read_header(f, int_size)
-        elif environ == "PhysicalNames":
+        if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Nodes":
             points = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == "Elements":
-            has_additional_tag_data, cell_tags = _read_cells(
-                f, cells, int_size, is_ascii
-            )
+            cells = _read_cells(f, int_size, is_ascii)
         elif environ == "Periodic":
             periodic = _read_periodic(f)
         elif environ == "NodeData":
             _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
-        else:
-            assert environ == "ElementData", "Unknown environment '{}'.".format(environ)
+        elif environ == "ElementData":
             _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
-
-    if has_additional_tag_data:
-        logging.warning("The file contains tag data that couldn't be processed.")
+        else:
+            # From
+            # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>:
+            # ```
+            # Any section with an unrecognized header is simply ignored: you can thus
+            # add comments in a .msh file by putting them e.g. inside a
+            # $Comments/$EndComments section.
+            # ```
+            # skip environment
+            while line != "$End" + environ:
+                line = f.readline().decode("utf-8").strip()
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -486,18 +385,6 @@ def read_buffer(f):
         field_data=field_data,
         gmsh_periodic=periodic,
     )
-
-
-def cell_data_from_raw(cells, cell_data_raw):
-    cell_data = {k: {} for k in cells}
-    for key in cell_data_raw:
-        d = cell_data_raw[key]
-        r = 0
-        for k in cells:
-            cell_data[k][key] = d[r : r + len(cells[k])]
-            r += len(cells[k])
-
-    return cell_data
 
 
 def _write_physical_names(fh, field_data):

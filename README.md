@@ -6,7 +6,7 @@
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.org/project/meshio)
 [![Debian CI](https://badges.debian.net/badges/debian/testing/python3-meshio/version.svg)](https://tracker.debian.org/pkg/python-meshio)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1173115.svg)](https://doi.org/10.5281/zenodo.1173115)
-[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?logo=github&label=Stars)](https://github.com/nschloe/meshio)
+[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshio)
 
 <p align="center">
   <img src="https://nschloe.github.io/meshio/meshio_logo.svg" width="20%">

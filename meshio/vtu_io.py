@@ -18,7 +18,7 @@ import numpy
 from .__about__ import __version__
 from .mesh import Mesh
 from .vtk_io import vtk_to_meshio_type, meshio_to_vtk_type, raw_from_cell_data
-from .gmsh_io import num_nodes_per_cell
+from .common import num_nodes_per_cell
 
 
 def num_bytes_to_num_base64_chars(num_bytes):

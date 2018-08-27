@@ -8,6 +8,7 @@ import numpy
 
 from .__about__ import __version__
 from .mesh import Mesh
+from .common import raw_from_cell_data
 
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
@@ -343,21 +344,6 @@ def _read_fields(f, num_fields, is_ascii):
         data[name] = dat
 
     return data
-
-
-def raw_from_cell_data(cell_data):
-    # merge cell data
-    cell_data_raw = {}
-    for d in cell_data.values():
-        for name, values in d.items():
-            if name in cell_data_raw:
-                cell_data_raw[name].append(values)
-            else:
-                cell_data_raw[name] = [values]
-    for name in cell_data_raw:
-        cell_data_raw[name] = numpy.concatenate(cell_data_raw[name])
-
-    return cell_data_raw
 
 
 def translate_cells(data, types, cell_data_raw):

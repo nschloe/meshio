@@ -14,7 +14,7 @@ except ImportError:
 import numpy
 
 from .mesh import Mesh
-from .gmsh_io import cell_data_from_raw
+from .common import cell_data_from_raw
 from .vtk_io import raw_from_cell_data
 from .vtu_io import write_xml
 
