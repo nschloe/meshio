@@ -5,11 +5,11 @@ I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
 import logging
-import shlex
 import struct
 
 import numpy
 
+from .common import _read_physical_names
 from ..mesh import Mesh
 from ..common import raw_from_cell_data, num_nodes_per_cell, cell_data_from_raw
 
@@ -82,19 +82,6 @@ _gmsh_to_meshio_type = {
     110: "wedge550",
 }
 _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
-
-
-def _read_physical_names(f, field_data):
-    line = f.readline().decode("utf-8")
-    num_phys_names = int(line)
-    for _ in range(num_phys_names):
-        line = shlex.split(f.readline().decode("utf-8"))
-        key = line[2]
-        value = numpy.array(line[1::-1], dtype=int)
-        field_data[key] = value
-    line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndPhysicalNames"
-    return
 
 
 def _read_nodes(f, is_ascii, int_size, data_size):
