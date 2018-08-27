@@ -195,9 +195,7 @@ def _read_physical_names(f, field_data):
     for _ in range(num_phys_names):
         line = shlex.split(f.readline().decode("utf-8"))
         key = line[2]
-        phys_group = int(line[1])
-        phys_dim = int(line[0])
-        value = numpy.array([phys_group, phys_dim], dtype=int)
+        value = numpy.array(line[1::-1], dtype=int)
         field_data[key] = value
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndPhysicalNames"
