@@ -44,11 +44,45 @@ def gmsh_periodic():
     ],
 )
 @pytest.mark.parametrize("write_binary", [False, True])
-@pytest.mark.parametrize("fmt_version", ["2", "4"])
-def test_gmsh(mesh, write_binary, fmt_version):
+def test_gmsh2(mesh, write_binary):
     def writer(*args, **kwargs):
         return meshio.msh_io.write(
-            *args, fmt_version, write_binary=write_binary, **kwargs
+            *args, "2", write_binary=write_binary, **kwargs
+        )
+
+    helpers.write_read(writer, meshio.msh_io.read, mesh, 1.0e-15)
+    return
+
+
+@pytest.mark.parametrize(
+    "mesh",
+    [
+        helpers.tri_mesh,
+        helpers.triangle6_mesh,
+        helpers.quad_mesh,
+        helpers.quad8_mesh,
+        helpers.tri_quad_mesh,
+        helpers.tet_mesh,
+        helpers.tet10_mesh,
+        helpers.hex_mesh,
+        helpers.hex20_mesh,
+        # helpers.add_point_data(helpers.tri_mesh, 1),
+        # helpers.add_point_data(helpers.tri_mesh, 3),
+        # helpers.add_point_data(helpers.tri_mesh, 9),
+        # helpers.add_cell_data(helpers.tri_mesh, 1),
+        # helpers.add_cell_data(helpers.tri_mesh, 3),
+        # helpers.add_cell_data(helpers.tri_mesh, 9),
+        # helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
+        # helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
+        # helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
+        gmsh_periodic(),
+    ],
+)
+@pytest.mark.parametrize("write_binary", [False, True])
+def test_gmsh4(mesh, write_binary):
+    def writer(*args, **kwargs):
+        return meshio.msh_io.write(
+            *args, "4", write_binary=write_binary, **kwargs
         )
 
     helpers.write_read(writer, meshio.msh_io.read, mesh, 1.0e-15)
