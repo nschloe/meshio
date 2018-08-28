@@ -4,6 +4,7 @@
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
+from ctypes import c_int, c_double
 import logging
 import struct
 
@@ -90,9 +91,7 @@ def _read_nodes(f, is_ascii, int_size, data_size):
         points = points[:, 1:]
     else:
         # binary
-        assert numpy.int32(0).nbytes == int_size
-        assert numpy.float64(0.0).nbytes == data_size
-        dtype = [("index", numpy.int32), ("x", numpy.float64, (3,))]
+        dtype = [("index", c_int), ("x", c_double, (3,))]
         data = numpy.fromfile(f, count=num_nodes, dtype=dtype)
         assert (data["index"] == range(1, num_nodes + 1)).all()
         points = numpy.ascontiguousarray(data["x"])
@@ -205,7 +204,7 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells, int_size):
         # read element data
         shape = (num_elems0, 1 + num_tags + num_nodes_per_elem)
         count = shape[0] * shape[1]
-        data = numpy.fromfile(f, count=count, dtype=numpy.int32).reshape(shape)
+        data = numpy.fromfile(f, count=count, dtype=c_int).reshape(shape)
 
         if t not in cells:
             cells[t] = []
@@ -254,9 +253,7 @@ def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
         data = data[:, 1:]
     else:
         # binary
-        assert numpy.int32(0).nbytes == int_size
-        assert numpy.float64(0.0).nbytes == data_size
-        dtype = [("index", numpy.int32), ("values", numpy.float64, (num_components,))]
+        dtype = [("index", c_int), ("values", c_double, (num_components,))]
         data = numpy.fromfile(f, count=num_items, dtype=dtype)
         assert (data["index"] == range(1, num_items + 1)).all()
         data = numpy.ascontiguousarray(data["values"])
@@ -281,12 +278,12 @@ def write(filename, mesh, write_binary=True):
     """
     if write_binary:
         for key, value in mesh.cells.items():
-            if value.dtype != numpy.int32:
+            if value.dtype != c_int:
                 logging.warning(
                     "Binary Gmsh needs 32-bit integers (got %s). Converting.",
                     value.dtype,
                 )
-                mesh.cells[key] = numpy.array(value, dtype=numpy.int32)
+                mesh.cells[key] = numpy.array(value, dtype=c_int)
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -322,7 +319,7 @@ def write(filename, mesh, write_binary=True):
             other_data[cell_type] = {}
             for key, data in a.items():
                 if key in ["gmsh:physical", "gmsh:geometrical"]:
-                    tag_data[cell_type][key] = data.astype(numpy.int32)
+                    tag_data[cell_type][key] = data.astype(c_int)
                 else:
                     other_data[cell_type][key] = data
 
@@ -343,7 +340,7 @@ def _write_nodes(fh, points, write_binary):
     fh.write("$Nodes\n".encode("utf-8"))
     fh.write("{}\n".format(len(points)).encode("utf-8"))
     if write_binary:
-        dtype = [("index", numpy.int32), ("x", numpy.float64, (3,))]
+        dtype = [("index", c_int), ("x", c_double, (3,))]
         tmp = numpy.empty(len(points), dtype=dtype)
         tmp["index"] = 1 + numpy.arange(len(points))
         tmp["x"] = points
@@ -376,7 +373,7 @@ def _write_elements(fh, cells, tag_data, write_binary):
         fcd = numpy.concatenate([tags]).T
 
         if len(fcd) == 0:
-            fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
+            fcd = numpy.empty((len(node_idcs), 0), dtype=c_int)
 
         if write_binary:
             # header
@@ -384,10 +381,10 @@ def _write_elements(fh, cells, tag_data, write_binary):
             fh.write(struct.pack("i", node_idcs.shape[0]))
             fh.write(struct.pack("i", fcd.shape[1]))
             # actual data
-            a = numpy.arange(len(node_idcs), dtype=numpy.int32)[:, numpy.newaxis]
+            a = numpy.arange(len(node_idcs), dtype=c_int)[:, numpy.newaxis]
             a += 1 + consecutive_index
             array = numpy.hstack([a, fcd, node_idcs + 1])
-            assert array.dtype == numpy.int32
+            assert array.dtype == c_int
             fh.write(array.tostring())
         else:
             form = (
@@ -447,7 +444,7 @@ def _write_data(fh, tag, name, data, write_binary):
     fh.write("{}\n".format(data.shape[0]).encode("utf-8"))
     # actually write the data
     if write_binary:
-        dtype = [("index", numpy.int32), ("data", numpy.float64, num_components)]
+        dtype = [("index", c_int), ("data", c_double, num_components)]
         tmp = numpy.empty(len(data), dtype=dtype)
         tmp["index"] = 1 + numpy.arange(len(data))
         tmp["data"] = data
