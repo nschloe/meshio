@@ -4,6 +4,7 @@
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
+from ctypes import c_long, sizeof
 import logging
 import struct
 
@@ -92,8 +93,12 @@ def read_buffer(f, is_ascii, int_size, data_size):
 
 def _read_nodes(f, is_ascii, int_size, data_size):
     # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
-    line = f.readline().decode("utf-8")
-    num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
+    if is_ascii:
+        line = f.readline().decode("utf-8")
+        num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
+    else:
+        line = f.read(2 * sizeof(c_long))
+        num_entity_blocks, total_num_nodes = struct.unpack("ll", line)
 
     points = numpy.empty((total_num_nodes, 3), dtype=float)
     tags = numpy.empty(total_num_nodes, dtype=int)
