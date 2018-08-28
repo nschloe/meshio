@@ -4,7 +4,7 @@
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
-from ctypes import c_long, sizeof
+from ctypes import c_int, c_ulong, sizeof
 import logging
 import struct
 
@@ -97,8 +97,8 @@ def _read_nodes(f, is_ascii, int_size, data_size):
         line = f.readline().decode("utf-8")
         num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
     else:
-        line = f.read(2 * sizeof(c_long))
-        num_entity_blocks, total_num_nodes = struct.unpack("ll", line)
+        line = f.read(2 * sizeof(c_ulong))
+        num_entity_blocks, total_num_nodes = struct.unpack("LL", line)
 
     points = numpy.empty((total_num_nodes, 3), dtype=float)
     tags = numpy.empty(total_num_nodes, dtype=int)
@@ -107,8 +107,13 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     for k in range(num_entity_blocks):
         # first line in the entity block:
         # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-        line = f.readline().decode("utf-8")
-        tag_entity, dim_entity, type_node, num_nodes = map(int, line.split())
+        # as per the spec but the last actually seems to be int
+        if is_ascii:
+            line = f.readline().decode("utf-8")
+            tag_entity, dim_entity, type_node, num_nodes = map(int, line.split())
+        else:
+            line = f.read(4 * sizeof(c_int))
+            tag_entity, dim_entity, type_node, num_nodes = struct.unpack("iiii", line)
         for i in range(num_nodes):
             # tag(int) x(double) y(double) z(double)
             line = f.readline().decode("utf-8")
