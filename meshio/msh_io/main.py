@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from shlex import split
 import struct
 from . import msh2, msh4
 
@@ -13,8 +14,8 @@ def read(filename):
 
 
 def read_buffer(f):
-    # The format is specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
+    # The various versions of the MSH format are specified at
+    # <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$MeshFormat"
@@ -33,9 +34,9 @@ def read_buffer(f):
 def _read_header(f, int_size):
     line = f.readline().decode("utf-8")
     # Split the line
-    # 2.2 0 8
+    # version(double) binary(int) size(unsigned long)
     # into its components.
-    str_list = list(filter(None, line.split()))
+    str_list = split(line)
     format_version = str_list[0][0]
     assert str_list[1] in ["0", "1"]
     is_ascii = str_list[1] == "0"
