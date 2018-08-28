@@ -333,26 +333,43 @@ def write(filename, mesh, write_binary=True):
 def _write_nodes(fh, points, write_binary):
     fh.write("$Nodes\n".encode("utf-8"))
 
+    # TODO not sure what dimEntity is supposed to say
+    dim_entity = 0
+    type_node = 0
+
     if write_binary:
         # write all points as one big block
         # numEntityBlocks(unsigned long) numNodes(unsigned long)
         # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
         # tag(int) x(double) y(double) z(double)
-        exit(1)
+        fh.write(numpy.array([1, points.shape[0]], dtype=c_ulong).tostring())
+        fh.write(numpy.array([1, dim_entity, type_node], dtype=c_int).tostring())
+        fh.write(numpy.array([points.shape[0]], dtype=c_ulong).tostring())
+        dtype = [("index", c_int), ("x", c_double, (3,))]
+        tmp = numpy.empty(len(points), dtype=dtype)
+        tmp["index"] = 1 + numpy.arange(len(points))
+        tmp["x"] = points
+        fh.write(tmp.tostring())
+        fh.write("\n".encode("utf-8"))
     else:
         # write all points as one big block
         # numEntityBlocks(unsigned long) numNodes(unsigned long)
         fh.write("{} {}\n".format(1, len(points)).encode("utf-8"))
 
         # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-        # TODO not sure what dimEntity is supposed to say
-        fh.write("{} {} {} {}\n".format(1, 0, 0, len(points)).encode("utf-8"))
+        fh.write(
+            "{} {} {} {}\n".format(1, dim_entity, type_node, len(points)).encode(
+                "utf-8"
+            )
+        )
 
         for k, x in enumerate(points):
             # tag(int) x(double) y(double) z(double)
-            fh.write("{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
+            fh.write(
+                "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
+            )
 
-        fh.write("$EndNodes\n".encode("utf-8"))
+    fh.write("$EndNodes\n".encode("utf-8"))
     return
 
 
@@ -360,30 +377,65 @@ def _write_elements(fh, cells, write_binary):
     # TODO respect write_binary
     # write elements
     fh.write("$Elements\n".encode("utf-8"))
-    # count all cells
-    total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-    fh.write("{} {}\n".format(len(cells), total_num_cells).encode("utf-8"))
 
-    consecutive_index = 0
-    for cell_type, node_idcs in cells.items():
-        # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
-        fh.write(
-            "{} {} {} {}\n".format(
-                1,  # tag
-                _geometric_dimension[cell_type],
-                _meshio_to_gmsh_type[cell_type],
-                node_idcs.shape[0],
-            ).encode("utf-8")
-        )
-        form = " ".join(["{}"] * (num_nodes_per_cell[cell_type] + 1)) + "\n"
+    if write_binary:
+        total_num_cells = sum([data.shape[0] for _, data in cells.items()])
+        fh.write(numpy.array([len(cells), total_num_cells], dtype=c_ulong).tostring())
 
-        # increment indices by one to conform with gmsh standard
-        idcs = node_idcs + 1
+        consecutive_index = 0
+        for cell_type, node_idcs in cells.items():
+            # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+            fh.write(
+                numpy.array(
+                    [
+                        1,
+                        _geometric_dimension[cell_type],
+                        _meshio_to_gmsh_type[cell_type],
+                    ],
+                    dtype=c_int,
+                ).tostring()
+            )
+            fh.write(numpy.array([node_idcs.shape[0]], dtype=c_ulong).tostring())
 
-        for idx in idcs:
-            fh.write(form.format(consecutive_index, *idx).encode("utf-8"))
-            consecutive_index += 1
-        consecutive_index += len(node_idcs)
+            assert node_idcs.dtype == c_int
+            data = numpy.column_stack(
+                [
+                    numpy.arange(
+                        consecutive_index,
+                        consecutive_index + len(node_idcs),
+                        dtype=c_int,
+                    ),
+                    # increment indices by one to conform with gmsh standard
+                    node_idcs + 1,
+                ]
+            )
+            fh.write(data.tostring())
+            consecutive_index += len(node_idcs)
+
+        fh.write("\n".encode("utf-8"))
+    else:
+        # count all cells
+        total_num_cells = sum([data.shape[0] for _, data in cells.items()])
+        fh.write("{} {}\n".format(len(cells), total_num_cells).encode("utf-8"))
+
+        consecutive_index = 0
+        for cell_type, node_idcs in cells.items():
+            # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+            fh.write(
+                "{} {} {} {}\n".format(
+                    1,  # tag
+                    _geometric_dimension[cell_type],
+                    _meshio_to_gmsh_type[cell_type],
+                    node_idcs.shape[0],
+                ).encode("utf-8")
+            )
+            # increment indices by one to conform with gmsh standard
+            idcs = node_idcs + 1
+
+            fmt = " ".join(["{}"] * (num_nodes_per_cell[cell_type] + 1)) + "\n"
+            for idx in idcs:
+                fh.write(fmt.format(consecutive_index, *idx).encode("utf-8"))
+                consecutive_index += 1
 
     fh.write("$EndElements\n".encode("utf-8"))
     return
