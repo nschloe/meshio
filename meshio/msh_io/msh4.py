@@ -99,8 +99,9 @@ def _read_entities(f, is_ascii, int_size, data_size):
         assert numpy.uint64(0).nbytes == sizeof(c_ulong)
         assert numpy.float64(0.0).nbytes == sizeof(c_double)
 
-        num_points, num_curves, num_surfaces, num_volumes = \
-            numpy.fromfile(f, count=4, dtype=numpy.uint64)
+        num_points, num_curves, num_surfaces, num_volumes = numpy.fromfile(
+            f, count=4, dtype=numpy.uint64
+        )
 
         for _ in range(num_points):
             # tag
@@ -162,29 +163,57 @@ def _read_entities(f, is_ascii, int_size, data_size):
 
 
 def _read_nodes(f, is_ascii, int_size, data_size):
-    # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
-    line = f.readline().decode("utf-8")
-    num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
-
-    points = numpy.empty((total_num_nodes, 3), dtype=float)
-    tags = numpy.empty(total_num_nodes, dtype=int)
-
-    idx = 0
-    for k in range(num_entity_blocks):
-        # first line in the entity block:
-        # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
+    if is_ascii:
+        # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
         line = f.readline().decode("utf-8")
-        tag_entity, dim_entity, type_node, num_nodes = map(int, line.split())
-        for i in range(num_nodes):
-            # tag(int) x(double) y(double) z(double)
-            line = f.readline().decode("utf-8")
-            tag, x, y, z = line.split()
-            points[idx] = [float(x), float(y), float(z)]
-            tags[idx] = tag
-            idx += 1
+        num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
 
-    line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndNodes"
+        points = numpy.empty((total_num_nodes, 3), dtype=float)
+        tags = numpy.empty(total_num_nodes, dtype=int)
+
+        idx = 0
+        for k in range(num_entity_blocks):
+            # first line in the entity block:
+            # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
+            line = f.readline().decode("utf-8")
+            tag_entity, dim_entity, type_node, num_nodes = map(int, line.split())
+            for i in range(num_nodes):
+                # tag(int) x(double) y(double) z(double)
+                line = f.readline().decode("utf-8")
+                tag, x, y, z = line.split()
+                points[idx] = [float(x), float(y), float(z)]
+                tags[idx] = tag
+                idx += 1
+
+        line = f.readline().decode("utf-8")
+        assert line.strip() == "$EndNodes"
+    else:
+        assert numpy.int32(0).nbytes == sizeof(c_int)
+        assert numpy.uint64(0).nbytes == sizeof(c_ulong)
+        assert numpy.float64(0.0).nbytes == sizeof(c_double)
+
+        # numEntityBlocks(unsigned long) numNodes(unsigned long)
+        num_entity_blocks, _ = numpy.fromfile(f, count=2, dtype=numpy.uint64)
+
+        points = []
+        tags = []
+        for _ in range(num_entity_blocks):
+            # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
+            numpy.fromfile(f, count=3, dtype=numpy.int32)
+            num_nodes = numpy.fromfile(f, count=1, dtype=numpy.uint64)
+            dtype = [("tag", numpy.int32), ("x", numpy.float64, (3,))]
+            data = numpy.fromfile(f, count=int(num_nodes), dtype=dtype)
+            tags.append(data["tag"])
+            points.append(data["x"])
+
+        tags = numpy.concatenate(tags)
+        points = numpy.concatenate(points)
+
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
+        line = f.readline().decode("utf-8")
+        assert line.strip() == "$EndNodes"
+
     return points, tags
 
 
