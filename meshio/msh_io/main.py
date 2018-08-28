@@ -13,8 +13,8 @@ def read(filename):
 
 
 def read_buffer(f):
-    # The format is specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
+    # The various versions of the MSH format are specified at
+    # <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$MeshFormat"
