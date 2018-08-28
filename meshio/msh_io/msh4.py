@@ -62,8 +62,13 @@ def read_buffer(f, is_ascii, int_size, data_size):
             # $Comments/$EndComments section.
             # ```
             # skip environment
-            while line != "$End" + environ:
-                line = f.readline().decode("utf-8").strip()
+            while True:
+                line = f.readline()
+                try:
+                    if line.decode("utf-8").strip() == "$End" + environ:
+                        break
+                except UnicodeDecodeError:
+                    pass
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
 
