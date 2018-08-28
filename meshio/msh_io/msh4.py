@@ -4,7 +4,7 @@
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
-from ctypes import sizeof, c_ulong, c_double, c_int
+from ctypes import c_ulong, c_double, c_int
 import logging
 import struct
 
@@ -50,10 +50,6 @@ def read_buffer(f, is_ascii, int_size, data_size):
             cells = _read_cells(f, point_tags, int_size, is_ascii)
         elif environ == "Periodic":
             periodic = _read_periodic(f)
-        elif environ == "NodeData":
-            _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
-        elif environ == "ElementData":
-            _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
         elif environ == "Entities":
             _read_entities(f, is_ascii, int_size, data_size)
         else:
@@ -289,66 +285,19 @@ def _read_cells(f, point_tags, int_size, is_ascii):
     return cells
 
 
-def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
-    # Read string tags
-    num_string_tags = int(f.readline().decode("utf-8"))
-    string_tags = [
-        f.readline().decode("utf-8").strip().replace('"', "")
-        for _ in range(num_string_tags)
-    ]
-    # The real tags typically only contain one value, the time.
-    # Discard it.
-    num_real_tags = int(f.readline().decode("utf-8"))
-    for _ in range(num_real_tags):
-        f.readline()
-    num_integer_tags = int(f.readline().decode("utf-8"))
-    integer_tags = [int(f.readline().decode("utf-8")) for _ in range(num_integer_tags)]
-    num_components = integer_tags[1]
-    num_items = integer_tags[2]
-    if is_ascii:
-        data = numpy.fromfile(
-            f, count=num_items * (1 + num_components), sep=" "
-        ).reshape((num_items, 1 + num_components))
-        # The first number is the index
-        data = data[:, 1:]
-    else:
-        # binary
-        assert numpy.int32(0).nbytes == int_size
-        assert numpy.float64(0.0).nbytes == data_size
-        dtype = [("index", numpy.int32), ("values", numpy.float64, (num_components,))]
-        data = numpy.fromfile(f, count=num_items, dtype=dtype)
-        assert (data["index"] == range(1, num_items + 1)).all()
-        data = numpy.ascontiguousarray(data["values"])
-        line = f.readline().decode("utf-8")
-        assert line == "\n"
-
-    line = f.readline().decode("utf-8")
-    assert line.strip() == "$End{}".format(tag)
-
-    # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
-    # If shape[1] == 1, cut it off.
-    if data.shape[1] == 1:
-        data = data[:, 0]
-
-    data_dict[string_tags[0]] = data
-    return
-
-
 def write(filename, mesh, write_binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
-    # TODO respect binary writes
-    write_binary = False
-
     if write_binary:
         for key, value in mesh.cells.items():
-            if value.dtype != numpy.int32:
+            if value.dtype != c_int:
                 logging.warning(
-                    "Binary Gmsh needs 32-bit integers (got %s). Converting.",
+                    "Binary Gmsh needs c_int (typically numpy.int32) integers "
+                    "(got %s). Converting.",
                     value.dtype,
                 )
-                mesh.cells[key] = numpy.array(value, dtype=numpy.int32)
+                mesh.cells[key] = numpy.array(value, dtype=c_int)
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -382,22 +331,28 @@ def write(filename, mesh, write_binary=True):
 
 
 def _write_nodes(fh, points, write_binary):
-    # TODO respect write_binary
     fh.write("$Nodes\n".encode("utf-8"))
-    # write all points as one big block
 
-    # numEntityBlocks(unsigned long) numNodes(unsigned long)
-    fh.write("{} {}\n".format(1, len(points)).encode("utf-8"))
-
-    # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-    # TODO not sure what dimEntity is supposed to say
-    fh.write("{} {} {} {}\n".format(1, 0, 0, len(points)).encode("utf-8"))
-
-    for k, x in enumerate(points):
+    if write_binary:
+        # write all points as one big block
+        # numEntityBlocks(unsigned long) numNodes(unsigned long)
+        # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
         # tag(int) x(double) y(double) z(double)
-        fh.write("{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
+        exit(1)
+    else:
+        # write all points as one big block
+        # numEntityBlocks(unsigned long) numNodes(unsigned long)
+        fh.write("{} {}\n".format(1, len(points)).encode("utf-8"))
 
-    fh.write("$EndNodes\n".encode("utf-8"))
+        # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
+        # TODO not sure what dimEntity is supposed to say
+        fh.write("{} {} {} {}\n".format(1, 0, 0, len(points)).encode("utf-8"))
+
+        for k, x in enumerate(points):
+            # tag(int) x(double) y(double) z(double)
+            fh.write("{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
+
+        fh.write("$EndNodes\n".encode("utf-8"))
     return
 
 
