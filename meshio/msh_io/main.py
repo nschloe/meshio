@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from ctypes import c_int, sizeof
 import struct
 from . import msh2, msh4
 
@@ -18,7 +19,7 @@ def read_buffer(f):
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$MeshFormat"
-    int_size = 4
+    int_size = sizeof(c_int)
     format_version, data_size, is_ascii = _read_header(f, int_size)
 
     assert format_version in ["2", "4"], "Need mesh format 2 or 4 (got {})".format(
