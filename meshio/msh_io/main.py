@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from shlex import split
 import struct
 from . import msh2, msh4
 
@@ -35,7 +36,7 @@ def _read_header(f, int_size):
     # Split the line
     # version(double) binary(int) size(unsigned long)
     # into its components.
-    str_list = list(filter(None, line.split()))
+    str_list = split(line)
     format_version = str_list[0][0]
     assert str_list[1] in ["0", "1"]
     is_ascii = str_list[1] == "0"
