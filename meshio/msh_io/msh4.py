@@ -4,6 +4,7 @@
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
+from ctypes import sizeof, c_ulong, c_double, c_int
 import logging
 import struct
 
@@ -53,6 +54,8 @@ def read_buffer(f, is_ascii, int_size, data_size):
             _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
         elif environ == "ElementData":
             _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
+        elif environ == "Entities":
+            _read_entities(f, is_ascii, int_size, data_size)
         else:
             # From
             # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>:
@@ -83,6 +86,79 @@ def read_buffer(f, is_ascii, int_size, data_size):
         field_data=field_data,
         gmsh_periodic=periodic,
     )
+
+
+def _read_entities(f, is_ascii, int_size, data_size):
+    # More or less skip over them for now
+    if is_ascii:
+        line = f.readline().decode("utf-8").strip()
+        while line != "$EndEntities":
+            line = f.readline().decode("utf-8").strip()
+    else:
+        assert numpy.int32(0).nbytes == sizeof(c_int)
+        assert numpy.uint64(0).nbytes == sizeof(c_ulong)
+        assert numpy.float64(0.0).nbytes == sizeof(c_double)
+
+        num_points, num_curves, num_surfaces, num_volumes = \
+            numpy.fromfile(f, count=4, dtype=numpy.uint64)
+
+        for _ in range(num_points):
+            # tag
+            numpy.fromfile(f, count=1, dtype=numpy.int32)
+            # box
+            numpy.fromfile(f, count=6, dtype=numpy.float64)
+            # num_physicals
+            num_physicals = numpy.fromfile(f, count=1, dtype=numpy.uint64)
+            # physical_tags
+            numpy.fromfile(f, count=int(num_physicals), dtype=numpy.int32)
+
+        for _ in range(num_curves):
+            # tag
+            numpy.fromfile(f, count=1, dtype=numpy.int32)
+            # box
+            numpy.fromfile(f, count=6, dtype=numpy.float64)
+            # num_physicals
+            num_physicals = numpy.fromfile(f, count=1, dtype=numpy.uint64)
+            # physical_tags
+            numpy.fromfile(f, count=int(num_physicals), dtype=numpy.int32)
+            # num_brep_vert
+            num_brep_vert = numpy.fromfile(f, count=1, dtype=numpy.uint64)
+            # tag_brep_vert
+            numpy.fromfile(f, count=int(num_brep_vert), dtype=numpy.int32)
+
+        for _ in range(num_surfaces):
+            # tag
+            numpy.fromfile(f, count=1, dtype=numpy.int32)
+            # box
+            numpy.fromfile(f, count=6, dtype=numpy.float64)
+            # num_physicals
+            num_physicals = numpy.fromfile(f, count=1, dtype=numpy.uint64)
+            # physical_tags
+            numpy.fromfile(f, count=int(num_physicals), dtype=numpy.int32)
+            # num_brep_curve
+            num_brep_curve = numpy.fromfile(f, count=1, dtype=numpy.uint64)
+            # tag_brep_curve
+            numpy.fromfile(f, count=int(num_brep_curve), dtype=numpy.int32)
+
+        for _ in range(num_volumes):
+            # tag
+            numpy.fromfile(f, count=1, dtype=numpy.int32)
+            # box
+            numpy.fromfile(f, count=6, dtype=numpy.float64)
+            # num_physicals
+            num_physicals = numpy.fromfile(f, count=1, dtype=numpy.uint64)
+            # physical_tags
+            numpy.fromfile(f, count=int(num_physicals), dtype=numpy.int32)
+            # num_brep_surfaces
+            num_brep_surfaces = numpy.fromfile(f, count=1, dtype=numpy.uint64)
+            # tag_brep_surfaces
+            numpy.fromfile(f, count=int(num_brep_surfaces), dtype=numpy.int32)
+
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
+        line = f.readline().decode("utf-8").strip()
+        assert line == "$EndEntities"
+    return
 
 
 def _read_nodes(f, is_ascii, int_size, data_size):
