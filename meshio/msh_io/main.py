@@ -33,7 +33,7 @@ def read_buffer(f):
 def _read_header(f, int_size):
     line = f.readline().decode("utf-8")
     # Split the line
-    # 2.2 0 8
+    # version(double) binary(int) size(unsigned long)
     # into its components.
     str_list = list(filter(None, line.split()))
     format_version = str_list[0][0]
