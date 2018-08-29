@@ -17,9 +17,11 @@ from .common import (
     _meshio_to_gmsh_type,
     _write_physical_names,
     _write_periodic,
+    _read_data,
+    _write_data,
 )
 from ..mesh import Mesh
-from ..common import num_nodes_per_cell, cell_data_from_raw
+from ..common import num_nodes_per_cell, cell_data_from_raw, raw_from_cell_data
 
 
 def read_buffer(f, is_ascii, int_size, data_size):
@@ -52,6 +54,10 @@ def read_buffer(f, is_ascii, int_size, data_size):
             periodic = _read_periodic(f)
         elif environ == "Entities":
             _read_entities(f, is_ascii, int_size, data_size)
+        elif environ == "NodeData":
+            _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
+        elif environ == "ElementData":
+            _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
         else:
             # From
             # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>:
@@ -326,6 +332,11 @@ def write(filename, mesh, write_binary=True):
         _write_elements(fh, cells, write_binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic)
+        for name, dat in mesh.point_data.items():
+            _write_data(fh, "NodeData", name, dat, write_binary)
+        cell_data_raw = raw_from_cell_data(mesh.cell_data)
+        for name, dat in cell_data_raw.items():
+            _write_data(fh, "ElementData", name, dat, write_binary)
 
     return
 

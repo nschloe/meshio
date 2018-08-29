@@ -12,8 +12,8 @@
   <img src="https://nschloe.github.io/meshio/meshio_logo.svg" width="20%">
 </p>
 
-There are various mesh formats available for representing unstructured meshes,
-e.g.,
+There are various mesh formats available for representing unstructured meshes.
+meshio can read and write all of the following and smoothly converts between them:
 
  * [Abaqus](http://abaqus.software.polimi.it/v6.14/index.html)
  * [ANSYS msh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
@@ -32,8 +32,7 @@ e.g.,
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format)
 
-meshio can read and write all of these formats and smoothly converts between
-them. Simply call
+Simply call
 ```
 meshio-convert input.msh output.vtu
 ```

@@ -489,6 +489,15 @@ def _write_field_data(f, data, write_binary):
             ), "Only one and two-dimensional field data supported."
             num_tuples = values.shape[0]
             num_components = values.shape[1]
+
+        if " " in name:
+            logging.warning(
+                "VTK doesn't support spaces in field names. " 'Renaming "%s" to "%s".',
+                name,
+                name.replace(" ", "_"),
+            )
+            name = name.replace(" ", "_")
+
         f.write(
             (
                 "{} {} {} {}\n".format(
