@@ -492,9 +492,9 @@ def _write_field_data(f, data, write_binary):
 
         if " " in name:
             logging.warning(
-                "VTK doesn't support spaces in field names. "
-                "Renaming \"%s\" to \"%s\".",
-                name, name.replace(" ", "_")
+                "VTK doesn't support spaces in field names. " 'Renaming "%s" to "%s".',
+                name,
+                name.replace(" ", "_"),
             )
             name = name.replace(" ", "_")
 

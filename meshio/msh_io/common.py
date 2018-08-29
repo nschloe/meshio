@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from ctypes import c_int, c_double
 import logging
 import shlex
 
@@ -43,6 +44,49 @@ def _read_periodic(f):
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndPeriodic"
     return periodic
+
+
+def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
+    # Read string tags
+    num_string_tags = int(f.readline().decode("utf-8"))
+    string_tags = [
+        f.readline().decode("utf-8").strip().replace('"', "")
+        for _ in range(num_string_tags)
+    ]
+    # The real tags typically only contain one value, the time.
+    # Discard it.
+    num_real_tags = int(f.readline().decode("utf-8"))
+    for _ in range(num_real_tags):
+        f.readline()
+    num_integer_tags = int(f.readline().decode("utf-8"))
+    integer_tags = [int(f.readline().decode("utf-8")) for _ in range(num_integer_tags)]
+    num_components = integer_tags[1]
+    num_items = integer_tags[2]
+    if is_ascii:
+        data = numpy.fromfile(
+            f, count=num_items * (1 + num_components), sep=" "
+        ).reshape((num_items, 1 + num_components))
+        # The first entry is the node number
+        data = data[:, 1:]
+    else:
+        # binary
+        dtype = [("index", c_int), ("values", c_double, (num_components,))]
+        data = numpy.fromfile(f, count=num_items, dtype=dtype)
+        assert (data["index"] == range(1, num_items + 1)).all()
+        data = numpy.ascontiguousarray(data["values"])
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
+
+    line = f.readline().decode("utf-8")
+    assert line.strip() == "$End{}".format(tag)
+
+    # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
+    # If shape[1] == 1, cut it off.
+    if data.shape[1] == 1:
+        data = data[:, 0]
+
+    data_dict[string_tags[0]] = data
+    return
 
 
 # Translate meshio types to gmsh codes
@@ -148,3 +192,57 @@ def _write_periodic(fh, periodic):
         for snode, mnode in slave_master:
             fh.write("{} {}\n".format(snode, mnode).encode("utf-8"))
     fh.write("$EndPeriodic\n".encode("utf-8"))
+
+
+def _write_data(fh, tag, name, data, write_binary):
+    fh.write("${}\n".format(tag).encode("utf-8"))
+    # <http://gmsh.info/doc/texinfo/gmsh.html>:
+    # > Number of string tags.
+    # > gives the number of string tags that follow. By default the first
+    # > string-tag is interpreted as the name of the post-processing view and
+    # > the second as the name of the interpolation scheme. The interpolation
+    # > scheme is provided in the $InterpolationScheme section (see below).
+    fh.write("{}\n".format(1).encode("utf-8"))
+    fh.write('"{}"\n'.format(name).encode("utf-8"))
+    fh.write("{}\n".format(1).encode("utf-8"))
+    fh.write("{}\n".format(0.0).encode("utf-8"))
+    # three integer tags:
+    fh.write("{}\n".format(3).encode("utf-8"))
+    # time step
+    fh.write("{}\n".format(0).encode("utf-8"))
+    # number of components
+    num_components = data.shape[1] if len(data.shape) > 1 else 1
+    assert num_components in [
+        1,
+        3,
+        9,
+    ], "Gmsh only permits 1, 3, or 9 components per data field."
+
+    # Cut off the last dimension in case it's 1. This avoids problems with
+    # writing the data.
+    if len(data.shape) > 1 and data.shape[1] == 1:
+        data = data[:, 0]
+
+    fh.write("{}\n".format(num_components).encode("utf-8"))
+    # num data items
+    fh.write("{}\n".format(data.shape[0]).encode("utf-8"))
+    # actually write the data
+    if write_binary:
+        dtype = [("index", c_int), ("data", c_double, num_components)]
+        tmp = numpy.empty(len(data), dtype=dtype)
+        tmp["index"] = 1 + numpy.arange(len(data))
+        tmp["data"] = data
+        fh.write(tmp.tostring())
+        fh.write("\n".encode("utf-8"))
+    else:
+        fmt = " ".join(["{}"] + ["{!r}"] * num_components) + "\n"
+        # TODO unify
+        if num_components == 1:
+            for k, x in enumerate(data):
+                fh.write(fmt.format(k + 1, x).encode("utf-8"))
+        else:
+            for k, x in enumerate(data):
+                fh.write(fmt.format(k + 1, *x).encode("utf-8"))
+
+    fh.write("$End{}\n".format(tag).encode("utf-8"))
+    return
