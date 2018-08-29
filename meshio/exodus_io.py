@@ -76,7 +76,7 @@ def read(filename):
 
     points = numpy.zeros((len(nc.dimensions["num_nodes"]), 3))
     point_data_names = []
-    pd = []
+    pd = {}
     cells = {}
     ns_names = []
     ns = []
@@ -99,19 +99,95 @@ def read(filename):
         elif key == "name_nod_var":
             value.set_auto_mask(False)
             point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-        elif key == "vals_nod_var":
-            pd = value[0, :]
+        elif key[:12] == "vals_nod_var":
+            idx = int(key[12:]) - 1
+            pd[idx] = numpy.ma.getdata(value[0, :])
         elif key == "ns_names":
             value.set_auto_mask(False)
             ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
         elif key == "node_ns":
             ns = value
 
-    point_data = {name: dat for name, dat in zip(point_data_names, pd)}
+    # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
+    # triplets in the point data. If yes, they belong together.
+    single, double, triple = categorize(point_data_names)
+
+    point_data = {}
+    for name, idx in single:
+        point_data[name] = pd[idx]
+    for name, idx0, idx1 in double:
+        point_data[name] = numpy.column_stack([pd[idx0], pd[idx1]])
+    for name, idx0, idx1, idx2 in triple:
+        point_data[name] = numpy.column_stack([pd[idx0], pd[idx1], pd[idx2]])
+
     node_sets = {name: dat for name, dat in zip(ns_names, ns)}
 
     nc.close()
     return Mesh(points, cells, point_data=point_data, node_sets=node_sets)
+
+
+def categorize(names):
+    # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
+    # triplets in the point data. If yes, they belong together.
+    single = []
+    double = []
+    triple = []
+    is_accounted_for = [False] * len(names)
+    k = 0
+    while True:
+        if k == len(names):
+            break
+        if is_accounted_for[k]:
+            k += 1
+            continue
+        name = names[k]
+        if name[-1] == "X":
+            ix = k
+            found_y = False
+            try:
+                iy = names.index(name[:-1] + "Y")
+            except ValueError:
+                pass
+            else:
+                found_y = True
+            try:
+                iz = names.index(name[:-1] + "Z")
+            except ValueError:
+                pass
+            else:
+                found_z = True
+            if found_y and found_z:
+                triple.append((name[:-1], ix, iy, iz))
+                is_accounted_for[ix] = True
+                is_accounted_for[iy] = True
+                is_accounted_for[iz] = True
+            else:
+                single.append((name, ix))
+                is_accounted_for[ix] = True
+        elif name[-1] == "R":
+            ir = k
+            found_z = False
+            try:
+                iz = names.index(name[:-1] + "Z")
+            except ValueError:
+                pass
+            else:
+                found_z = True
+            if found_z:
+                double.append((name[:-1], ir, iz))
+                is_accounted_for[ir] = True
+                is_accounted_for[iz] = True
+            else:
+                single.append((name, ir))
+                is_accounted_for[ir] = True
+        else:
+            single.append((name, k))
+            is_accounted_for[k] = True
+
+        k += 1
+
+    assert all(is_accounted_for)
+    return single, double, triple
 
 
 numpy_to_exodus_dtype = {
@@ -187,7 +263,7 @@ def write(filename, mesh):
 
     # point data
     # The variable `name_nod_var` holds the names and indices of the node
-    # variables, the variable `vals_nod_var` hold the actual data.
+    # variables, the variable `vals_nod_var` holds the actual data.
     num_nod_var = len(mesh.point_data)
     if num_nod_var > 0:
         rootgrp.createDimension("num_nod_var", num_nod_var)
