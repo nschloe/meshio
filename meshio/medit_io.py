@@ -77,7 +77,7 @@ def read_buffer(file):
         }
 
         if keyword == "MeshVersionFormatted":
-            assert reader.next_item() == "1"
+            assert reader.next_item() in ["1", "2"]
         elif keyword == "Dimension":
             dim = int(reader.next_item())
         elif keyword == "Vertices":
