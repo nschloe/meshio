@@ -8,6 +8,7 @@ Check out
 <https://www.ljll.math.upmc.fr/frey/publications/RT-0253.pdf>
 for something like a specification.
 """
+from ctypes import c_float, c_double
 import re
 import logging
 import numpy
@@ -77,17 +78,18 @@ def read_buffer(file):
         }
 
         if keyword == "MeshVersionFormatted":
-            assert reader.next_item() in ["1", "2"]
+            version = reader.next_item()
+            dtype = {"1": c_float, "2": c_double}[version]
         elif keyword == "Dimension":
             dim = int(reader.next_item())
         elif keyword == "Vertices":
             assert dim > 0
             # The first value is the number of nodes
             num_verts = int(reader.next_item())
-            points = numpy.empty((num_verts, dim), dtype=float)
+            points = numpy.empty((num_verts, dim), dtype=dtype)
             for k in range(num_verts):
                 # Throw away the label immediately
-                points[k] = numpy.array(reader.next_items(dim + 1), dtype=float)[:-1]
+                points[k] = numpy.array(reader.next_items(dim + 1), dtype=dtype)[:-1]
         elif keyword in meshio_from_medit:
             meshio_name, num = meshio_from_medit[keyword]
             # The first value is the number of elements
