@@ -98,8 +98,9 @@ def read_buffer(file):
             meshio_name, num = meshio_from_medit[keyword]
             # The first value is the number of elements
             num_cells = int(reader.next_item())
-            cell_data[meshio_name] = {"gmsh:physical":
-                                      numpy.empty(num_cells, dtype=int)}
+            cell_data[meshio_name] = {
+                "gmsh:physical": numpy.empty(num_cells, dtype=int)
+            }
             cells1 = numpy.empty((num_cells, num), dtype=int)
             for k in range(num_cells):
                 data = numpy.array(reader.next_items(num + 1), dtype=int)
@@ -111,11 +112,7 @@ def read_buffer(file):
         else:
             assert keyword == "End", "Unknown keyword '{}'.".format(keyword)
 
-    return Mesh(points,
-                cells,
-                point_data=point_data,
-                cell_data=cell_data,
-    )
+    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
 def write(filename, mesh):
