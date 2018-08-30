@@ -122,8 +122,9 @@ def write(filename, mesh):
         elif mesh.points.dtype == c_double:
             fh.write(b"MeshVersionFormatted 2\n")
         else:
-            raise NotImplementedError("Unknown points.dtype '{}'.".format(
-                mesh.points.dtype))
+            raise NotImplementedError(
+                "Unknown points.dtype '{}'.".format(mesh.points.dtype)
+            )
         fh.write(b"# Created by meshio\n")
 
         n, d = mesh.points.shape
