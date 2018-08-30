@@ -92,7 +92,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
 
 def _read_entities(f, is_ascii, int_size, data_size):
     # More or less skip over them for now
-    physical_tags = [[], [], [], []]  # dims 0, 1, 2, 3
+    physical_tags = ([], [], [], [])  # dims 0, 1, 2, 3
     if is_ascii:
         line = f.readline().decode("utf-8").strip()
         while line != "$EndEntities":
