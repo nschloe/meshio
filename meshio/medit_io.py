@@ -6,6 +6,7 @@ I/O for Medit's format, cf.
 Check out
 <https://hal.inria.fr/inria-00069921/fr/>
 <https://www.ljll.math.upmc.fr/frey/publications/RT-0253.pdf>
+<https://www.math.u-bordeaux.fr/~dobrzyns/logiciels/RT-422/node58.html>
 for something like a specification.
 """
 from ctypes import c_float, c_double
