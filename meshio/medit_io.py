@@ -118,13 +118,11 @@ def read_buffer(file):
 def write(filename, mesh):
     with open(filename, "wb") as fh:
         if mesh.points.dtype == c_float:
-            fh.write(b"MeshVersionFormatted 1\n")
-        elif mesh.points.dtype == c_double:
-            fh.write(b"MeshVersionFormatted 2\n")
+            version = 1
         else:
-            raise NotImplementedError(
-                "Unknown points.dtype '{}'.".format(mesh.points.dtype)
-            )
+            assert mesh.points.dtype == c_double
+            version = 2
+        fh.write(b"MeshVersionFormatted %d\n" % version)
         fh.write(b"# Created by meshio\n")
 
         n, d = mesh.points.shape
