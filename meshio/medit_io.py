@@ -96,14 +96,14 @@ def read_buffer(file):
             meshio_name, num = meshio_from_medit[keyword]
             # The first value is the number of elements
             num_cells = int(reader.next_item())
-            cell_data = numpy.empty((num_cells, num), dtype=int)
+            cells1 = numpy.empty((num_cells, num), dtype=int)
             for k in range(num_cells):
                 data = numpy.array(reader.next_items(num + 1), dtype=int)
                 # Throw away the label
-                cell_data[k] = data[:-1]
+                cells1[k] = data[:-1]
 
             # adapt 0-base
-            cells[meshio_name] = cell_data - 1
+            cells[meshio_name] = cells1 - 1
         else:
             assert keyword == "End", "Unknown keyword '{}'.".format(keyword)
 
