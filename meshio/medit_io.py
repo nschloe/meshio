@@ -111,7 +111,7 @@ def read_buffer(file):
 
 def write(filename, mesh):
     with open(filename, "wb") as fh:
-        fh.write(b"MeshVersionFormatted 1\n")
+        fh.write(b"MeshVersionFormatted 2\n")
         fh.write(b"# Created by meshio\n")
 
         n, d = mesh.points.shape
