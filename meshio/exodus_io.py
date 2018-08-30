@@ -100,8 +100,12 @@ def read(filename):
             value.set_auto_mask(False)
             point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
         elif key[:12] == "vals_nod_var":
-            idx = int(key[12:]) - 1
-            pd[idx] = numpy.ma.getdata(value[0, :])
+            if len(key) == 12:
+                idx = 0
+            else:
+                idx = int(key[12:]) - 1
+            value.set_auto_mask(False)
+            pd[idx] = value[0]
         elif key == "ns_names":
             value.set_auto_mask(False)
             ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
@@ -164,17 +168,17 @@ def categorize(names):
             else:
                 single.append((name, ix))
                 is_accounted_for[ix] = True
-        elif name[-1] == "R":
+        elif name[-2:] == "_R":
             ir = k
             found_z = False
             try:
-                iz = names.index(name[:-1] + "Z")
+                iz = names.index(name[:-2] + "_Z")
             except ValueError:
                 pass
             else:
                 found_z = True
             if found_z:
-                double.append((name[:-1], ir, iz))
+                double.append((name[:-2], ir, iz))
                 is_accounted_for[ir] = True
                 is_accounted_for[iz] = True
             else:
@@ -262,8 +266,8 @@ def write(filename, mesh):
         data[:] = values + 1
 
     # point data
-    # The variable `name_nod_var` holds the names and indices of the node
-    # variables, the variable `vals_nod_var` holds the actual data.
+    # The variable `name_nod_var` holds the names and indices of the node variables, the
+    # variables `vals_nod_var{1,2,...}` hold the actual data.
     num_nod_var = len(mesh.point_data)
     if num_nod_var > 0:
         rootgrp.createDimension("num_nod_var", num_nod_var)
@@ -276,15 +280,22 @@ def write(filename, mesh):
             for i, letter in enumerate(name):
                 point_data_names[k, i] = letter.encode("utf-8")
 
-        # Set data.
-        # Deliberately take the dtype from the first data block.
-        first_key = list(mesh.point_data.keys())[0]
-        dtype = numpy_to_exodus_dtype[mesh.point_data[first_key].dtype.name]
-        node_data = rootgrp.createVariable(
-            "vals_nod_var", dtype, ("time_step", "num_nod_var", "num_nodes")
-        )
+        # Set data. ParaView might have some problems here, see
+        # <https://gitlab.kitware.com/paraview/paraview/issues/18403>.
         for k, (name, data) in enumerate(mesh.point_data.items()):
-            node_data[0, k] = data
+            print(data.shape)
+            for i, s in enumerate(data.shape):
+                rootgrp.createDimension("dim_nod_var{}{}".format(k, i), s)
+            dims = ["time_step"] + [
+                "dim_nod_var{}{}".format(k, i) for i in range(len(data.shape))
+            ]
+            node_data = rootgrp.createVariable(
+                "vals_nod_var{}".format(k + 1),
+                numpy_to_exodus_dtype[data.dtype.name],
+                tuple(dims),
+                fill_value=False,
+            )
+            node_data[0] = data
 
     # node sets
     num_node_sets = len(mesh.node_sets)
