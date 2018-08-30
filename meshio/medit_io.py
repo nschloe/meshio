@@ -89,8 +89,9 @@ def read_buffer(file):
             num_verts = int(reader.next_item())
             points = numpy.empty((num_verts, dim), dtype=dtype)
             for k in range(num_verts):
+                points[k] = numpy.array(reader.next_items(dim), dtype=dtype)
                 # Throw away the label immediately
-                points[k] = numpy.array(reader.next_items(dim + 1), dtype=dtype)[:-1]
+                _ = reader.next_items(1)
         elif keyword in meshio_from_medit:
             meshio_name, num = meshio_from_medit[keyword]
             # The first value is the number of elements
