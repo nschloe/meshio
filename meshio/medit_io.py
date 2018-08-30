@@ -60,6 +60,14 @@ def read_buffer(file):
     dim = 0
     cells = {}
 
+    meshio_from_medit = {
+        "Edges": ("line", 2),
+        "Triangles": ("triangle", 3),
+        "Quadrilaterals": ("quad", 4),
+        "Tetrahedra": ("tetra", 4),
+        "Hexahedra": ("hexahedra", 8),
+    }
+
     reader = _ItemReader(file)
 
     while True:
@@ -69,14 +77,6 @@ def read_buffer(file):
             break
 
         assert keyword.isalpha()
-
-        meshio_from_medit = {
-            "Edges": ("line", 2),
-            "Triangles": ("triangle", 3),
-            "Quadrilaterals": ("quad", 4),
-            "Tetrahedra": ("tetra", 4),
-            "Hexahedra": ("hexahedra", 8),
-        }
 
         if keyword == "MeshVersionFormatted":
             version = reader.next_item()
