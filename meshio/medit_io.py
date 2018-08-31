@@ -122,14 +122,12 @@ def write(filename, mesh):
         else:
             assert mesh.points.dtype == c_double
             version = 2
+        # N. B.: PEP 461 Adding % formatting to bytes and bytearray
         fh.write(b"MeshVersionFormatted %d\n" % version)
-        fh.write(b"# Created by meshio\n")
 
         n, d = mesh.points.shape
 
-        # Dimension info
-        dim = "\nDimension {}\n".format(d)
-        fh.write(dim.encode("utf-8"))
+        fh.write(b"Dimension %d\n" % d)
 
         # vertices
         fh.write(b"\nVertices\n")
