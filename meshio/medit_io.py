@@ -67,7 +67,7 @@ def read_buffer(file):
         "Triangles": ("triangle", 3),
         "Quadrilaterals": ("quad", 4),
         "Tetrahedra": ("tetra", 4),
-        "Hexahedra": ("hexahedra", 8),
+        "Hexahedra": ("hexahedron", 8),
     }
 
     reader = _ItemReader(file)
@@ -138,7 +138,7 @@ def write(filename, mesh):
             "triangle": ("Triangles", 3),
             "quad": ("Quadrilaterals", 4),
             "tetra": ("Tetrahedra", 4),
-            "hexahedra": ("Hexahedra", 8),
+            "hexahedron": ("Hexahedra", 8),
         }
 
         for key, data in mesh.cells.items():
