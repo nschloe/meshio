@@ -112,11 +112,8 @@ def read_buffer(file):
 
 def write(filename, mesh):
     with open(filename, "wb") as fh:
-        if mesh.points.dtype == c_float:
-            version = 1
-        else:
-            assert mesh.points.dtype == c_double
-            version = 2
+        version = {numpy.dtype(c_float): 1,
+                   numpy.dtype(c_double): 2}[mesh.points.dtype]
         # N. B.: PEP 461 Adding % formatting to bytes and bytearray
         fh.write(b"MeshVersionFormatted %d\n" % version)
 
