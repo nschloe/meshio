@@ -385,9 +385,9 @@ class XdmfReader(object):
 
 
 class XdmfWriter(object):
-    def __init__(self, filename, mesh,
-                 pretty_xml=True, data_format="HDF",
-                 save_as_planar_mesh=False):
+    def __init__(
+        self, filename, mesh, pretty_xml=True, data_format="HDF", save_as_planar=False
+    ):
         from lxml import etree as ET
 
         assert data_format in ["XML", "Binary", "HDF"], (
@@ -410,7 +410,7 @@ class XdmfWriter(object):
         domain = ET.SubElement(xdmf_file, "Domain")
         grid = ET.SubElement(domain, "Grid", Name="Grid")
 
-        self.points(grid, mesh.points, save_as_planar_mesh)
+        self.points(grid, mesh.points, save_as_planar)
         self.cells(mesh.cells, grid)
         self.point_data(mesh.point_data, grid)
         self.cell_data(mesh.cell_data, grid)
@@ -442,15 +442,15 @@ class XdmfWriter(object):
         self.h5_file.create_dataset(name, data=data)
         return self.h5_filename + ":/" + name
 
-    def points(self, grid, points, save_as_planar_mesh):
+    def points(self, grid, points, save_as_planar):
         from lxml import etree as ET
 
-        geo_type = "XYZ" # default GeometryType (all meshes are 3D)
-        if save_as_planar_mesh:
+        geo_type = "XYZ"  # default GeometryType (all meshes are 3D)
+        if save_as_planar:
             # Trim Z-coordinate
-            geo_type = geo_type[:-1]
-            assert (numpy.zeros(len(points)) == points[:, -1]).all(), \
-              "Mesh can be saved as planar only if it is defined at `Z = 0`"
+            geo_type = "XY"
+            # assert (numpy.zeros(len(points)) == points[:, -1]).all(), \
+            #  "Mesh can be saved as planar only if it is defined at `Z = 0`"
             points = points[:, :-1]
         geo = ET.SubElement(grid, "Geometry", GeometryType=geo_type)
         dt, prec = numpy_to_xdmf_dtype[points.dtype.name]
