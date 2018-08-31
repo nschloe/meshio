@@ -19,9 +19,9 @@ from .mesh import Mesh
 
 def read(filename):
     with open(filename) as f:
-        mesh = read_buffer(f)
+        points, cells = read_buffer(f)
 
-    return mesh
+    return Mesh(points, cells)
 
 
 class _ItemReader:
@@ -59,8 +59,6 @@ class _ItemReader:
 def read_buffer(file):
     dim = 0
     cells = {}
-    point_data = {}
-    cell_data = {}
 
     meshio_from_medit = {
         "Edges": ("line", 2),
@@ -90,29 +88,26 @@ def read_buffer(file):
             # The first value is the number of nodes
             num_verts = int(reader.next_item())
             points = numpy.empty((num_verts, dim), dtype=dtype)
-            point_data["medit:ref"] = numpy.empty(num_verts, dtype=int)
             for k in range(num_verts):
                 points[k] = numpy.array(reader.next_items(dim), dtype=dtype)
-                point_data["medit:ref"][k] = reader.next_item()
+                # Throw away the label immediately
+                _ = reader.next_items(1)
         elif keyword in meshio_from_medit:
             meshio_name, num = meshio_from_medit[keyword]
             # The first value is the number of elements
             num_cells = int(reader.next_item())
-            cell_data[meshio_name] = {
-                "gmsh:physical": numpy.empty(num_cells, dtype=int)
-            }
             cells1 = numpy.empty((num_cells, num), dtype=int)
             for k in range(num_cells):
                 data = numpy.array(reader.next_items(num + 1), dtype=int)
+                # Throw away the label
                 cells1[k] = data[:-1]
-                cell_data[meshio_name]["gmsh:physical"][k] = data[-1]
 
             # adapt 0-base
             cells[meshio_name] = cells1 - 1
         else:
             assert keyword == "End", "Unknown keyword '{}'.".format(keyword)
 
-    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
+    return points, cells
 
 
 def write(filename, mesh):
