@@ -6,8 +6,10 @@ I/O for Medit's format, cf.
 Check out
 <https://hal.inria.fr/inria-00069921/fr/>
 <https://www.ljll.math.upmc.fr/frey/publications/RT-0253.pdf>
+<https://www.math.u-bordeaux.fr/~dobrzyns/logiciels/RT-422/node58.html>
 for something like a specification.
 """
+from ctypes import c_float, c_double
 import re
 import logging
 import numpy
@@ -58,6 +60,14 @@ def read_buffer(file):
     dim = 0
     cells = {}
 
+    meshio_from_medit = {
+        "Edges": ("line", 2),
+        "Triangles": ("triangle", 3),
+        "Quadrilaterals": ("quad", 4),
+        "Tetrahedra": ("tetra", 4),
+        "Hexahedra": ("hexahedra", 8),
+    }
+
     reader = _ItemReader(file)
 
     while True:
@@ -68,38 +78,32 @@ def read_buffer(file):
 
         assert keyword.isalpha()
 
-        meshio_from_medit = {
-            "Edges": ("line", 2),
-            "Triangles": ("triangle", 3),
-            "Quadrilaterals": ("quad", 4),
-            "Tetrahedra": ("tetra", 4),
-            "Hexahedra": ("hexahedra", 8),
-        }
-
         if keyword == "MeshVersionFormatted":
-            assert reader.next_item() == "1"
+            version = reader.next_item()
+            dtype = {"1": c_float, "2": c_double}[version]
         elif keyword == "Dimension":
             dim = int(reader.next_item())
         elif keyword == "Vertices":
             assert dim > 0
             # The first value is the number of nodes
             num_verts = int(reader.next_item())
-            points = numpy.empty((num_verts, dim), dtype=float)
+            points = numpy.empty((num_verts, dim), dtype=dtype)
             for k in range(num_verts):
+                points[k] = numpy.array(reader.next_items(dim), dtype=dtype)
                 # Throw away the label immediately
-                points[k] = numpy.array(reader.next_items(dim + 1), dtype=float)[:-1]
+                reader.next_items(1)
         elif keyword in meshio_from_medit:
             meshio_name, num = meshio_from_medit[keyword]
             # The first value is the number of elements
             num_cells = int(reader.next_item())
-            cell_data = numpy.empty((num_cells, num), dtype=int)
+            cells1 = numpy.empty((num_cells, num), dtype=int)
             for k in range(num_cells):
                 data = numpy.array(reader.next_items(num + 1), dtype=int)
                 # Throw away the label
-                cell_data[k] = data[:-1]
+                cells1[k] = data[:-1]
 
             # adapt 0-base
-            cells[meshio_name] = cell_data - 1
+            cells[meshio_name] = cells1 - 1
         else:
             assert keyword == "End", "Unknown keyword '{}'.".format(keyword)
 
@@ -108,14 +112,13 @@ def read_buffer(file):
 
 def write(filename, mesh):
     with open(filename, "wb") as fh:
-        fh.write(b"MeshVersionFormatted 1\n")
-        fh.write(b"# Created by meshio\n")
+        version = {numpy.dtype(c_float): 1, numpy.dtype(c_double): 2}[mesh.points.dtype]
+        # N. B.: PEP 461 Adding % formatting to bytes and bytearray
+        fh.write(b"MeshVersionFormatted %d\n" % version)
 
         n, d = mesh.points.shape
 
-        # Dimension info
-        dim = "\nDimension {}\n".format(d)
-        fh.write(dim.encode("utf-8"))
+        fh.write(b"Dimension %d\n" % d)
 
         # vertices
         fh.write(b"\nVertices\n")
