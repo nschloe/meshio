@@ -67,7 +67,8 @@ def read_buffer(file):
         "Triangles": ("triangle", 3),
         "Quadrilaterals": ("quad", 4),
         "Tetrahedra": ("tetra", 4),
-        "Hexahedra": ("hexahedron", 8),
+        "Hexahedra": ("hexahedron", 8),  # Frey
+        "Hexaedra": ("hexahedron", 8),   # Dobrzynski
     }
 
     reader = _ItemReader(file)
