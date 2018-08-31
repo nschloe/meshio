@@ -76,7 +76,7 @@ def read(filename):
 
     points = numpy.zeros((len(nc.dimensions["num_nodes"]), 3))
     point_data_names = []
-    pd = []
+    pd = {}
     cells = {}
     ns_names = []
     ns = []
@@ -99,19 +99,99 @@ def read(filename):
         elif key == "name_nod_var":
             value.set_auto_mask(False)
             point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-        elif key == "vals_nod_var":
-            pd = value[0, :]
+        elif key[:12] == "vals_nod_var":
+            if len(key) == 12:
+                idx = 0
+            else:
+                idx = int(key[12:]) - 1
+            value.set_auto_mask(False)
+            pd[idx] = value[0]
         elif key == "ns_names":
             value.set_auto_mask(False)
             ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
         elif key == "node_ns":
             ns = value
 
-    point_data = {name: dat for name, dat in zip(point_data_names, pd)}
+    # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
+    # triplets in the point data. If yes, they belong together.
+    single, double, triple = categorize(point_data_names)
+
+    point_data = {}
+    for name, idx in single:
+        point_data[name] = pd[idx]
+    for name, idx0, idx1 in double:
+        point_data[name] = numpy.column_stack([pd[idx0], pd[idx1]])
+    for name, idx0, idx1, idx2 in triple:
+        point_data[name] = numpy.column_stack([pd[idx0], pd[idx1], pd[idx2]])
+
     node_sets = {name: dat for name, dat in zip(ns_names, ns)}
 
     nc.close()
     return Mesh(points, cells, point_data=point_data, node_sets=node_sets)
+
+
+def categorize(names):
+    # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
+    # triplets in the point data. If yes, they belong together.
+    single = []
+    double = []
+    triple = []
+    is_accounted_for = [False] * len(names)
+    k = 0
+    while True:
+        if k == len(names):
+            break
+        if is_accounted_for[k]:
+            k += 1
+            continue
+        name = names[k]
+        if name[-1] == "X":
+            ix = k
+            found_y = False
+            try:
+                iy = names.index(name[:-1] + "Y")
+            except ValueError:
+                pass
+            else:
+                found_y = True
+            try:
+                iz = names.index(name[:-1] + "Z")
+            except ValueError:
+                pass
+            else:
+                found_z = True
+            if found_y and found_z:
+                triple.append((name[:-1], ix, iy, iz))
+                is_accounted_for[ix] = True
+                is_accounted_for[iy] = True
+                is_accounted_for[iz] = True
+            else:
+                single.append((name, ix))
+                is_accounted_for[ix] = True
+        elif name[-2:] == "_R":
+            ir = k
+            found_z = False
+            try:
+                iz = names.index(name[:-2] + "_Z")
+            except ValueError:
+                pass
+            else:
+                found_z = True
+            if found_z:
+                double.append((name[:-2], ir, iz))
+                is_accounted_for[ir] = True
+                is_accounted_for[iz] = True
+            else:
+                single.append((name, ir))
+                is_accounted_for[ir] = True
+        else:
+            single.append((name, k))
+            is_accounted_for[k] = True
+
+        k += 1
+
+    assert all(is_accounted_for)
+    return single, double, triple
 
 
 numpy_to_exodus_dtype = {
@@ -186,8 +266,8 @@ def write(filename, mesh):
         data[:] = values + 1
 
     # point data
-    # The variable `name_nod_var` holds the names and indices of the node
-    # variables, the variable `vals_nod_var` hold the actual data.
+    # The variable `name_nod_var` holds the names and indices of the node variables, the
+    # variables `vals_nod_var{1,2,...}` hold the actual data.
     num_nod_var = len(mesh.point_data)
     if num_nod_var > 0:
         rootgrp.createDimension("num_nod_var", num_nod_var)
@@ -200,15 +280,22 @@ def write(filename, mesh):
             for i, letter in enumerate(name):
                 point_data_names[k, i] = letter.encode("utf-8")
 
-        # Set data.
-        # Deliberately take the dtype from the first data block.
-        first_key = list(mesh.point_data.keys())[0]
-        dtype = numpy_to_exodus_dtype[mesh.point_data[first_key].dtype.name]
-        node_data = rootgrp.createVariable(
-            "vals_nod_var", dtype, ("time_step", "num_nod_var", "num_nodes")
-        )
+        # Set data. ParaView might have some problems here, see
+        # <https://gitlab.kitware.com/paraview/paraview/issues/18403>.
         for k, (name, data) in enumerate(mesh.point_data.items()):
-            node_data[0, k] = data
+            print(data.shape)
+            for i, s in enumerate(data.shape):
+                rootgrp.createDimension("dim_nod_var{}{}".format(k, i), s)
+            dims = ["time_step"] + [
+                "dim_nod_var{}{}".format(k, i) for i in range(len(data.shape))
+            ]
+            node_data = rootgrp.createVariable(
+                "vals_nod_var{}".format(k + 1),
+                numpy_to_exodus_dtype[data.dtype.name],
+                tuple(dims),
+                fill_value=False,
+            )
+            node_data[0] = data
 
     # node sets
     num_node_sets = len(mesh.node_sets)
