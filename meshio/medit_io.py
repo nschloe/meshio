@@ -100,13 +100,13 @@ def read_buffer(file):
             # The first value is the number of elements
             num_cells = int(reader.next_item())
             cell_data[meshio_name] = {
-                "gmsh:physical": numpy.empty(num_cells, dtype=int)
+                "medit:ref": numpy.empty(num_cells, dtype=int)
             }
             cells1 = numpy.empty((num_cells, num), dtype=int)
             for k in range(num_cells):
                 data = numpy.array(reader.next_items(num + 1), dtype=int)
                 cells1[k] = data[:-1]
-                cell_data[meshio_name]["gmsh:physical"][k] = data[-1]
+                cell_data[meshio_name]["medit:ref"][k] = data[-1]
 
             # adapt 0-base
             cells[meshio_name] = cells1 - 1
