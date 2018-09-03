@@ -129,7 +129,10 @@ def write(filename, mesh):
         # vertices
         fh.write(b"\nVertices\n")
         fh.write("{}\n".format(n).encode("utf-8"))
-        labels = numpy.ones(n, dtype=int)
+        try:
+            labels = mesh.point_data["medit:ref"]
+        except KeyError:
+            labels = numpy.ones(n, dtype=int)
         data = numpy.c_[mesh.points, labels]
         fmt = " ".join(["%r"] * d) + " %d"
         numpy.savetxt(fh, data, fmt)
@@ -154,7 +157,10 @@ def write(filename, mesh):
             fh.write(b"\n")
             fh.write("{}\n".format(medit_name).encode("utf-8"))
             fh.write("{}\n".format(len(data)).encode("utf-8"))
-            labels = numpy.ones(len(data), dtype=int)
+            try:
+                labels = mesh.cell_data[key]["medit:ref"]
+            except:
+                labels = numpy.ones(len(data), dtype=int)
             # adapt 1-base
             data_with_label = numpy.c_[data + 1, labels]
             fmt = " ".join(["%d"] * (num + 1))
