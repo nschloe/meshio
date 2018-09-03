@@ -157,7 +157,7 @@ def write(filename, mesh):
             fh.write("{}\n".format(len(data)).encode("utf-8"))
             try:
                 labels = mesh.cell_data[key]["medit:ref"]
-            except:
+            except KeyError:
                 labels = numpy.ones(len(data), dtype=int)
             # adapt 1-base
             data_with_label = numpy.c_[data + 1, labels]
