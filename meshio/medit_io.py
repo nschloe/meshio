@@ -19,9 +19,9 @@ from .mesh import Mesh
 
 def read(filename):
     with open(filename) as f:
-        points, cells = read_buffer(f)
+        mesh = read_buffer(f)
 
-    return Mesh(points, cells)
+    return mesh
 
 
 class _ItemReader:
@@ -59,13 +59,16 @@ class _ItemReader:
 def read_buffer(file):
     dim = 0
     cells = {}
+    point_data = {}
+    cell_data = {}
 
     meshio_from_medit = {
         "Edges": ("line", 2),
         "Triangles": ("triangle", 3),
         "Quadrilaterals": ("quad", 4),
         "Tetrahedra": ("tetra", 4),
-        "Hexahedra": ("hexahedra", 8),
+        "Hexahedra": ("hexahedron", 8),  # Frey
+        "Hexaedra": ("hexahedron", 8),  # Dobrzynski
     }
 
     reader = _ItemReader(file)
@@ -88,26 +91,27 @@ def read_buffer(file):
             # The first value is the number of nodes
             num_verts = int(reader.next_item())
             points = numpy.empty((num_verts, dim), dtype=dtype)
+            point_data["medit:ref"] = numpy.empty(num_verts, dtype=int)
             for k in range(num_verts):
                 points[k] = numpy.array(reader.next_items(dim), dtype=dtype)
-                # Throw away the label immediately
-                reader.next_items(1)
+                point_data["medit:ref"][k] = reader.next_item()
         elif keyword in meshio_from_medit:
             meshio_name, num = meshio_from_medit[keyword]
             # The first value is the number of elements
             num_cells = int(reader.next_item())
+            cell_data[meshio_name] = {"medit:ref": numpy.empty(num_cells, dtype=int)}
             cells1 = numpy.empty((num_cells, num), dtype=int)
             for k in range(num_cells):
                 data = numpy.array(reader.next_items(num + 1), dtype=int)
-                # Throw away the label
                 cells1[k] = data[:-1]
+                cell_data[meshio_name]["medit:ref"][k] = data[-1]
 
             # adapt 0-base
             cells[meshio_name] = cells1 - 1
         else:
             assert keyword == "End", "Unknown keyword '{}'.".format(keyword)
 
-    return points, cells
+    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
 def write(filename, mesh):
@@ -123,7 +127,10 @@ def write(filename, mesh):
         # vertices
         fh.write(b"\nVertices\n")
         fh.write("{}\n".format(n).encode("utf-8"))
-        labels = numpy.ones(n, dtype=int)
+        try:
+            labels = mesh.point_data["medit:ref"]
+        except KeyError:
+            labels = numpy.ones(n, dtype=int)
         data = numpy.c_[mesh.points, labels]
         fmt = " ".join(["%r"] * d) + " %d"
         numpy.savetxt(fh, data, fmt)
@@ -133,7 +140,7 @@ def write(filename, mesh):
             "triangle": ("Triangles", 3),
             "quad": ("Quadrilaterals", 4),
             "tetra": ("Tetrahedra", 4),
-            "hexahedra": ("Hexahedra", 8),
+            "hexahedron": ("Hexahedra", 8),
         }
 
         for key, data in mesh.cells.items():
@@ -148,7 +155,10 @@ def write(filename, mesh):
             fh.write(b"\n")
             fh.write("{}\n".format(medit_name).encode("utf-8"))
             fh.write("{}\n".format(len(data)).encode("utf-8"))
-            labels = numpy.ones(len(data), dtype=int)
+            try:
+                labels = mesh.cell_data[key]["medit:ref"]
+            except KeyError:
+                labels = numpy.ones(len(data), dtype=int)
             # adapt 1-base
             data_with_label = numpy.c_[data + 1, labels]
             fmt = " ".join(["%d"] * (num + 1))
