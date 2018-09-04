@@ -224,7 +224,7 @@ def write(filename, mesh):
     # set dimensions
     total_num_elems = sum([v.shape[0] for v in mesh.cells.values()])
     rootgrp.createDimension("num_nodes", len(mesh.points))
-    rootgrp.createDimension("num_dim", 3)
+    rootgrp.createDimension("num_dim", mesh.points.shape[1])
     rootgrp.createDimension("num_elem", total_num_elems)
     rootgrp.createDimension("num_el_blk", len(mesh.cells))
     rootgrp.createDimension("num_node_sets", len(mesh.node_sets))
@@ -242,7 +242,8 @@ def write(filename, mesh):
     coor_names.set_auto_mask(False)
     coor_names[0, 0] = "X"
     coor_names[1, 0] = "Y"
-    coor_names[2, 0] = "Z"
+    if mesh.points.shape[1] == 3:
+        coor_names[2, 0] = "Z"
     data = rootgrp.createVariable(
         "coord", numpy_to_exodus_dtype[mesh.points.dtype.name], ("num_dim", "num_nodes")
     )

@@ -380,9 +380,14 @@ def translate_cells(data, types, cell_data_raw):
 
 
 def write(filename, mesh, write_binary=True):
-    assert (
-        mesh.points.shape[1] == 3
-    ), "VTK point coordinates must be 3D (shape: {})".format(mesh.points.shape)
+    if mesh.points.shape[1] == 2:
+        logging.warning(
+            "VTK requires 3D points, but 2D points given. "
+            "Appending 0 third component."
+        )
+        mesh.points = numpy.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        )
 
     if not write_binary:
         logging.warning("VTK ASCII files are only meant for debugging.")

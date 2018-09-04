@@ -12,6 +12,7 @@ vtk = pytest.importorskip("vtk")
 
 test_set = [
     helpers.tri_mesh,
+    helpers.tri_mesh_2d,
     helpers.triangle6_mesh,
     helpers.quad_mesh,
     helpers.quad8_mesh,

@@ -343,15 +343,14 @@ class XdmfReader(object):
                 try:
                     geometry_type = c.attrib["GeometryType"]
                 except KeyError:
-                    geometry_type = "XYZ"
+                    pass
+                else:
+                    assert geometry_type in ["XY", "XYZ"]
 
                 data_items = list(c)
                 assert len(data_items) == 1
                 data_item = data_items[0]
                 points = self.read_data_item(data_item)
-
-                if geometry_type == "XY":
-                    points = numpy.column_stack([points, numpy.zeros(len(points))])
 
             else:
                 assert c.tag == "Attribute", "Unknown section '{}'.".format(c.tag)
@@ -443,7 +442,13 @@ class XdmfWriter(object):
     def points(self, grid, points):
         from lxml import etree as ET
 
-        geo = ET.SubElement(grid, "Geometry", GeometryType="XYZ")
+        if points.shape[1] == 2:
+            geometry_type = "XY"
+        else:
+            assert points.shape[1] == 3
+            geometry_type = "XYZ"
+
+        geo = ET.SubElement(grid, "Geometry", GeometryType=geometry_type)
         dt, prec = numpy_to_xdmf_dtype[points.dtype.name]
         dim = "{} {}".format(*points.shape)
         data_item = ET.SubElement(

@@ -4,6 +4,8 @@
 I/O for the STL format, cf.
 <https://en.wikipedia.org/wiki/STL_(file_format)>.
 """
+import logging
+
 import numpy
 
 from .mesh import Mesh
@@ -110,6 +112,15 @@ def write(filename, mesh, write_binary=False):
     assert (
         len(mesh.cells.keys()) == 1 and list(mesh.cells.keys())[0] == "triangle"
     ), "STL can only write triangle cells."
+
+    if mesh.points.shape[1] == 2:
+        logging.warning(
+            "STL requires 3D points, but 2D points given. "
+            "Appending 0 third component."
+        )
+        mesh.points = numpy.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        )
 
     if write_binary:
         _write_binary(filename, mesh.points, mesh.cells)

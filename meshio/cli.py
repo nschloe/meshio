@@ -25,6 +25,13 @@ def main(argv=None):
     if args.prune:
         mesh.prune()
 
+    if (
+        args.prune_z_0
+        and mesh.points.shape[1] == 3
+        and numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-13)
+    ):
+        mesh.points = mesh.points[:, :2]
+
     # Some converters (like VTK) require `points` to be contiguous.
     mesh.points = numpy.ascontiguousarray(mesh.points)
 
@@ -66,6 +73,13 @@ def _get_parser():
         "-p",
         action="store_true",
         help="remove lower order cells, remove orphaned nodes",
+    )
+
+    parser.add_argument(
+        "--prune-z-0",
+        "-z",
+        action="store_true",
+        help="remove third (z) dimension if all points are 0",
     )
 
     parser.add_argument(

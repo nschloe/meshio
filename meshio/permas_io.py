@@ -4,6 +4,7 @@
 I/O for PERMAS dat format
 """
 import gzip
+import logging
 import re
 
 import numpy
@@ -75,6 +76,15 @@ def write(filename, mesh):
     """Writes PERMAS dat files, cf.
     http://www.intes.de # PERMAS-ASCII-file-format
     """
+    if mesh.points.shape[1] == 2:
+        logging.warning(
+            "PERMAS requires 3D points, but 2D points given. "
+            "Appending 0 third component."
+        )
+        mesh.points = numpy.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        )
+
     opener = gzip.open if filename.endswith(".gz") else open
 
     with opener(filename, "wb") as fh:

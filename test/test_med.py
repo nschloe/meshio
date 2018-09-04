@@ -13,6 +13,7 @@ h5py = pytest.importorskip("h5py")
     "mesh",
     [
         helpers.tri_mesh,
+        helpers.tri_mesh_2d,
         helpers.quad_mesh,
         helpers.tet_mesh,
         helpers.hex_mesh,

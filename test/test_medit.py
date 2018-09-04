@@ -11,6 +11,7 @@ import helpers
     "mesh",
     [
         helpers.tri_mesh,
+        helpers.tri_mesh_2d,
         helpers.quad_mesh,
         helpers.tri_quad_mesh,
         helpers.tet_mesh,

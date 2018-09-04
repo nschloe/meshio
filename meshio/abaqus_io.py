@@ -3,6 +3,8 @@
 """
 I/O for Abaqus inp files.
 """
+import logging
+
 import numpy
 
 from .__about__ import __version__
@@ -254,6 +256,15 @@ def read_set(f, params_map):
 
 
 def write(filename, mesh):
+    if mesh.points.shape[1] == 2:
+        logging.warning(
+            "Abaqus requires 3D points, but 2D points given. "
+            "Appending 0 third component."
+        )
+        mesh.points = numpy.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        )
+
     with open(filename, "wt") as f:
         f.write("*Heading\n")
         f.write(" Abaqus DataFile Version 6.14\n")

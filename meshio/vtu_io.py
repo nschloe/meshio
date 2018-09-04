@@ -281,11 +281,29 @@ def read(filename):
     )
 
 
+def _chunk_it(array, n):
+    out = []
+    k = 0
+    while k * n < len(array):
+        out.append(array[k * n : (k + 1) * n])
+        k += 1
+    return out
+
+
 def write(filename, mesh, write_binary=True, pretty_xml=True):
     from lxml import etree as ET
 
     if not write_binary:
         logging.warning("VTU ASCII files are only meant for debugging.")
+
+    if mesh.points.shape[1] == 2:
+        logging.warning(
+            "VTU requires 3D points, but 2D points given. "
+            "Appending 0 third component."
+        )
+        mesh.points = numpy.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        )
 
     header_type = "UInt32"
 
@@ -312,14 +330,6 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
     for data in mesh.field_data.values():
         data = data.astype(data.dtype.newbyteorder("="))
 
-    def chunk_it(array, n):
-        out = []
-        k = 0
-        while k * n < len(array):
-            out.append(array[k * n : (k + 1) * n])
-            k += 1
-        return out
-
     def numpy_to_xml_array(parent, name, fmt, data):
         da = ET.SubElement(
             parent, "DataArray", type=numpy_to_vtu_type[data.dtype], Name=name
@@ -330,7 +340,7 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
             da.set("format", "binary")
             max_block_size = 32768
             data_bytes = data.tostring()
-            blocks = chunk_it(data_bytes, max_block_size)
+            blocks = _chunk_it(data_bytes, max_block_size)
             num_blocks = len(blocks)
             last_block_size = len(blocks[-1])
 
