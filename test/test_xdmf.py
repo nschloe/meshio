@@ -13,6 +13,7 @@ lxml = pytest.importorskip("lxml")
 
 test_set_full = [
     helpers.tri_mesh,
+    helpers.tri_mesh_2d,
     helpers.triangle6_mesh,
     helpers.quad_mesh,
     helpers.quad8_mesh,
@@ -27,6 +28,7 @@ test_set_full = [
 
 test_set_reduced = [
     helpers.tri_mesh,
+    helpers.tri_mesh_2d,
     helpers.quad_mesh,
     helpers.tri_quad_mesh,
     helpers.tet_mesh,
