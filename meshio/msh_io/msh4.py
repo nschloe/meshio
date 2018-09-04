@@ -306,7 +306,14 @@ def write(filename, mesh, write_binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
-    assert mesh.points.shape[1] == 3, "msh2 requires 3D points"
+    if mesh.points.shape[1] == 2:
+        logging.warning(
+            "msh4 requires 3D points, but 2D points given. "
+            "Appending 0 third component."
+        )
+        mesh.points = numpy.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        )
 
     if write_binary:
         for key, value in mesh.cells.items():

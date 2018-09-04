@@ -284,10 +284,17 @@ def read(filename):
 def write(filename, mesh, write_binary=True, pretty_xml=True):
     from lxml import etree as ET
 
-    assert mesh.points.shape[1] == 3, "VTU requires 3D points"
-
     if not write_binary:
         logging.warning("VTU ASCII files are only meant for debugging.")
+
+    if mesh.points.shape[1] == 2:
+        logging.warning(
+            "VTU requires 3D points, but 2D points given. "
+            "Appending 0 third component."
+        )
+        mesh.points = numpy.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        )
 
     header_type = "UInt32"
 

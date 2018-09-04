@@ -5,6 +5,8 @@ I/O for the OFF surface format, cf.
 <https://en.wikipedia.org/wiki/OFF_(file_format)>.
 """
 from itertools import islice
+import logging
+
 import numpy
 
 from .mesh import Mesh
@@ -91,7 +93,14 @@ def read_buffer(f):
 
 
 def write(filename, mesh):
-    assert mesh.points.shape[1] == 3, "off requires 3D points"
+    if mesh.points.shape[1] == 2:
+        logging.warning(
+            "OFF requires 3D points, but 2D points given. "
+            "Appending 0 third component."
+        )
+        mesh.points = numpy.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        )
 
     for key in mesh.cells:
         assert key in ["triangle"], "Can only deal with triangular faces"
