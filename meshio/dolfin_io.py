@@ -139,12 +139,7 @@ def _write_mesh(filename, points, cell_type, cells):
     for k, point in enumerate(points):
         print(point)
         coords = {xyz: repr(p) for xyz, p in zip(coord_names, point)}
-        ET.SubElement(
-            vertices,
-            "vertex",
-            index=str(k),
-            **coords,
-        )
+        ET.SubElement(vertices, "vertex", index=str(k), **coords)
 
     num_cells = 0
     for cls in stripped_cells.values():

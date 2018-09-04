@@ -13,8 +13,7 @@ import meshio
 # Use values with an infinite decimal representation to test precision.
 
 tri_mesh_2d = meshio.Mesh(
-    numpy.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
-    / 3,
+    numpy.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]) / 3,
     {"triangle": numpy.array([[0, 1, 2], [0, 2, 3]])},
 )
 
