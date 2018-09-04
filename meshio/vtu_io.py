@@ -281,6 +281,15 @@ def read(filename):
     )
 
 
+def _chunk_it(array, n):
+    out = []
+    k = 0
+    while k * n < len(array):
+        out.append(array[k * n : (k + 1) * n])
+        k += 1
+    return out
+
+
 def write(filename, mesh, write_binary=True, pretty_xml=True):
     from lxml import etree as ET
 
@@ -321,14 +330,6 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
     for data in mesh.field_data.values():
         data = data.astype(data.dtype.newbyteorder("="))
 
-    def chunk_it(array, n):
-        out = []
-        k = 0
-        while k * n < len(array):
-            out.append(array[k * n : (k + 1) * n])
-            k += 1
-        return out
-
     def numpy_to_xml_array(parent, name, fmt, data):
         da = ET.SubElement(
             parent, "DataArray", type=numpy_to_vtu_type[data.dtype], Name=name
@@ -339,7 +340,7 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
             da.set("format", "binary")
             max_block_size = 32768
             data_bytes = data.tostring()
-            blocks = chunk_it(data_bytes, max_block_size)
+            blocks = _chunk_it(data_bytes, max_block_size)
             num_blocks = len(blocks)
             last_block_size = len(blocks[-1])
 
