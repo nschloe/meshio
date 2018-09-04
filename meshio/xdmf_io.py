@@ -437,7 +437,7 @@ class XdmfWriter(object):
         name = "data{}".format(self.data_counter)
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
-        return self.h5_filename + ":/" + name
+        return os.path.basename(self.h5_filename) + ":/" + name
 
     def points(self, grid, points):
         from lxml import etree as ET
