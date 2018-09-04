@@ -26,8 +26,9 @@ def create_logo():
 
 if __name__ == "__main__":
     import meshio
+
     X, cells = create_logo()
-    meshio.write_points_cells('logo.svg', X, {"triangle": cells})
+    meshio.write_points_cells("logo.svg", X, {"triangle": cells})
     # import numpy
     # X = numpy.column_stack([X[:, 0], X[:, 1], numpy.zeros(X.shape[0])])
     # meshio.write_points_cells('logo.vtk', X, {"triangle": cells})

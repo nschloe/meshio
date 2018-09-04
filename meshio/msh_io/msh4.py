@@ -53,7 +53,9 @@ def read_buffer(f, is_ascii, int_size, data_size):
         elif environ == "Periodic":
             periodic = _read_periodic(f)
         elif environ == "Entities":
-            _read_entities(f, is_ascii, int_size, data_size)
+            physical_tags = _read_entities(  # noqa F841
+                f, is_ascii, int_size, data_size
+            )
         elif environ == "NodeData":
             _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
         elif environ == "ElementData":
@@ -91,8 +93,9 @@ def read_buffer(f, is_ascii, int_size, data_size):
 
 
 def _read_entities(f, is_ascii, int_size, data_size):
-    # More or less skip over them for now
+    physical_tags = ([], [], [], [])  # dims 0, 1, 2, 3
     if is_ascii:
+        # More or less skip over them for now
         line = f.readline().decode("utf-8").strip()
         while line != "$EndEntities":
             line = f.readline().decode("utf-8").strip()
@@ -109,7 +112,9 @@ def _read_entities(f, is_ascii, int_size, data_size):
             # num_physicals
             num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
             # physical_tags
-            numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
+            physical_tags[0].append(
+                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
+            )
 
         for _ in range(num_curves):
             # tag
@@ -119,7 +124,9 @@ def _read_entities(f, is_ascii, int_size, data_size):
             # num_physicals
             num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
             # physical_tags
-            numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
+            physical_tags[1].append(
+                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
+            )
             # num_brep_vert
             num_brep_vert = numpy.fromfile(f, count=1, dtype=c_ulong)
             # tag_brep_vert
@@ -133,7 +140,9 @@ def _read_entities(f, is_ascii, int_size, data_size):
             # num_physicals
             num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
             # physical_tags
-            numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
+            physical_tags[2].append(
+                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
+            )
             # num_brep_curve
             num_brep_curve = numpy.fromfile(f, count=1, dtype=c_ulong)
             # tag_brep_curve
@@ -147,7 +156,9 @@ def _read_entities(f, is_ascii, int_size, data_size):
             # num_physicals
             num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
             # physical_tags
-            numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
+            physical_tags[3].append(
+                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
+            )
             # num_brep_surfaces
             num_brep_surfaces = numpy.fromfile(f, count=1, dtype=c_ulong)
             # tag_brep_surfaces
@@ -157,7 +168,7 @@ def _read_entities(f, is_ascii, int_size, data_size):
         assert line == "\n"
         line = f.readline().decode("utf-8").strip()
         assert line == "$EndEntities"
-    return
+    return physical_tags
 
 
 def _read_nodes(f, is_ascii, int_size, data_size):
