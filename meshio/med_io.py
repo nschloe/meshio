@@ -50,8 +50,6 @@ def read(filename):
     pts_dataset = mesh["NOE"]["COO"]
     number = pts_dataset.attrs["NBR"]
     points = pts_dataset[()].reshape(-1, number).T
-    if points.shape[1] == 2:
-        points = numpy.column_stack([points, numpy.zeros(len(points))])
 
     # Cells
     cells = {}

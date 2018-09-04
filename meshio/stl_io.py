@@ -111,6 +111,8 @@ def write(filename, mesh, write_binary=False):
         len(mesh.cells.keys()) == 1 and list(mesh.cells.keys())[0] == "triangle"
     ), "STL can only write triangle cells."
 
+    assert mesh.points.shape[1] == 3, "STL requires 3D points"
+
     if write_binary:
         _write_binary(filename, mesh.points, mesh.cells)
     else:

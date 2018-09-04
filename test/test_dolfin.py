@@ -14,6 +14,7 @@ lxml = pytest.importorskip("lxml")
     "mesh",
     [
         helpers.tri_mesh,
+        helpers.tri_mesh_2d,
         helpers.tet_mesh,
         helpers.add_cell_data(helpers.tri_mesh, 1, dtype=float),
         helpers.add_cell_data(helpers.tri_mesh, 1, dtype=numpy.int32),

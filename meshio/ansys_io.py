@@ -366,7 +366,8 @@ def write(filename, mesh, write_binary=True):
         fh.write(('(1 "meshio {}")\n'.format(__version__)).encode("utf8"))
 
         # dimension
-        dim = 2 if all(mesh.points[:, 2] == 0.0) else 3
+        dim = mesh.points.shape[1]
+        assert dim in [2, 3]
         fh.write(("(2 {})\n".format(dim)).encode("utf8"))
 
         # total number of nodes

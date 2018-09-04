@@ -91,6 +91,8 @@ def read_buffer(f):
 
 
 def write(filename, mesh):
+    assert mesh.points.shape[1] == 3, "off requires 3D points"
+
     for key in mesh.cells:
         assert key in ["triangle"], "Can only deal with triangular faces"
 

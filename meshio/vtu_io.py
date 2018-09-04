@@ -284,6 +284,8 @@ def read(filename):
 def write(filename, mesh, write_binary=True, pretty_xml=True):
     from lxml import etree as ET
 
+    assert mesh.points.shape[1] == 3, "VTU requires 3D points"
+
     if not write_binary:
         logging.warning("VTU ASCII files are only meant for debugging.")
 

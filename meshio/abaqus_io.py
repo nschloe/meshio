@@ -254,6 +254,8 @@ def read_set(f, params_map):
 
 
 def write(filename, mesh):
+    assert mesh.points.shape[1] == 3, "Abaqus needs 3D points"
+
     with open(filename, "wt") as f:
         f.write("*Heading\n")
         f.write(" Abaqus DataFile Version 6.14\n")

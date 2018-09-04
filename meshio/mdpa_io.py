@@ -475,6 +475,7 @@ def write(filename, mesh, write_binary=False):
     <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
     """
     assert not write_binary
+    assert mesh.points.shape[1] == 3, "mdpa requires 3D points"
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()

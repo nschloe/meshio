@@ -75,6 +75,8 @@ def write(filename, mesh):
     """Writes PERMAS dat files, cf.
     http://www.intes.de # PERMAS-ASCII-file-format
     """
+    assert mesh.points.shape[1] == 3, "PERMAS requires 3D points"
+
     opener = gzip.open if filename.endswith(".gz") else open
 
     with opener(filename, "wb") as fh:
