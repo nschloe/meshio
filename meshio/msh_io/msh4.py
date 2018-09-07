@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 #
 """
-I/O for Gmsh's msh format, cf.
-<http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
+I/O for Gmsh's msh format (version 4), cf.
+<http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
 from ctypes import c_ulong, c_double, c_int
+from functools import partial
 import logging
 import struct
 
@@ -26,7 +27,7 @@ from ..common import num_nodes_per_cell, cell_data_from_raw, raw_from_cell_data
 
 def read_buffer(f, is_ascii, int_size, data_size):
     # The format is specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
+    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 
     # Initialize the optional data fields
     points = []
@@ -35,6 +36,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
     cell_data_raw = {}
     cell_tags = {}
     point_data = {}
+    physical_tags = None
     periodic = None
     while True:
         line = f.readline().decode("utf-8")
@@ -46,16 +48,16 @@ def read_buffer(f, is_ascii, int_size, data_size):
 
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
+        elif environ == "Entities":
+            physical_tags = _read_entities(f, is_ascii, int_size, data_size)
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == "Elements":
-            cells = _read_cells(f, point_tags, int_size, is_ascii)
+            cells, cell_tags = _read_cells(
+                f, point_tags, int_size, is_ascii, physical_tags
+            )
         elif environ == "Periodic":
             periodic = _read_periodic(f)
-        elif environ == "Entities":
-            physical_tags = _read_entities(  # noqa F841
-                f, is_ascii, int_size, data_size
-            )
         elif environ == "NodeData":
             _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
         elif environ == "ElementData":
@@ -73,14 +75,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
                 line = f.readline().decode("utf-8").strip()
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
-
-    # merge cell_tags into cell_data
-    for key, tag_dict in cell_tags.items():
-        if key not in cell_data:
-            cell_data[key] = {}
-        for name, item_list in tag_dict.items():
-            assert name not in cell_data[key]
-            cell_data[key][name] = item_list
+    cell_data.update(cell_tags)
 
     return Mesh(
         points,
@@ -93,81 +88,25 @@ def read_buffer(f, is_ascii, int_size, data_size):
 
 
 def _read_entities(f, is_ascii, int_size, data_size):
-    physical_tags = ([], [], [], [])  # dims 0, 1, 2, 3
-    if is_ascii:
-        # More or less skip over them for now
+    physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
+    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    number = fromfile(f, numpy.dtype(c_ulong), 4)  # dims 0, 1, 2, 3
+
+    for d, n in enumerate(number):
+        for _ in range(n):
+            tag, = fromfile(f, c_int, 1)
+            fromfile(f, c_double, 6)  # discard boxMinX…boxMaxZ
+            num_physicals, = fromfile(f, c_ulong, 1)
+            physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
+            if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
+                num_BREP_, = fromfile(f, c_ulong, 1)
+                fromfile(f, c_int, num_BREP_)
+
+    if not is_ascii:
         line = f.readline().decode("utf-8").strip()
-        while line != "$EndEntities":
-            line = f.readline().decode("utf-8").strip()
-    else:
-        num_points, num_curves, num_surfaces, num_volumes = numpy.fromfile(
-            f, count=4, dtype=c_ulong
-        )
-
-        for _ in range(num_points):
-            # tag
-            numpy.fromfile(f, count=1, dtype=c_int)
-            # box
-            numpy.fromfile(f, count=6, dtype=c_double)
-            # num_physicals
-            num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # physical_tags
-            physical_tags[0].append(
-                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
-            )
-
-        for _ in range(num_curves):
-            # tag
-            numpy.fromfile(f, count=1, dtype=c_int)
-            # box
-            numpy.fromfile(f, count=6, dtype=c_double)
-            # num_physicals
-            num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # physical_tags
-            physical_tags[1].append(
-                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
-            )
-            # num_brep_vert
-            num_brep_vert = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # tag_brep_vert
-            numpy.fromfile(f, count=int(num_brep_vert), dtype=c_int)
-
-        for _ in range(num_surfaces):
-            # tag
-            numpy.fromfile(f, count=1, dtype=c_int)
-            # box
-            numpy.fromfile(f, count=6, dtype=c_double)
-            # num_physicals
-            num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # physical_tags
-            physical_tags[2].append(
-                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
-            )
-            # num_brep_curve
-            num_brep_curve = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # tag_brep_curve
-            numpy.fromfile(f, count=int(num_brep_curve), dtype=c_int)
-
-        for _ in range(num_volumes):
-            # tag
-            numpy.fromfile(f, count=1, dtype=c_int)
-            # box
-            numpy.fromfile(f, count=6, dtype=c_double)
-            # num_physicals
-            num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # physical_tags
-            physical_tags[3].append(
-                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
-            )
-            # num_brep_surfaces
-            num_brep_surfaces = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # tag_brep_surfaces
-            numpy.fromfile(f, count=int(num_brep_surfaces), dtype=c_int)
-
-        line = f.readline().decode("utf-8")
-        assert line == "\n"
-        line = f.readline().decode("utf-8").strip()
-        assert line == "$EndEntities"
+        assert line == ""
+    line = f.readline().decode("utf-8").strip()
+    assert line == "$EndEntities"
     return physical_tags
 
 
@@ -220,76 +159,66 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     return points, tags
 
 
-def _read_cells(f, point_tags, int_size, is_ascii):
-    if is_ascii:
-        # numEntityBlocks(unsigned long) numElements(unsigned long)
-        line = f.readline().decode("utf-8")
-        num_entity_blocks, total_num_elements = [int(k) for k in line.split()]
+def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
+    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
-        data = []
-        for k in range(num_entity_blocks):
-            line = f.readline().decode("utf-8")
-            # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
-            tag_entity, dim_entity, type_ele, num_elements = [
-                int(k) for k in line.split()
-            ]
-            tpe = _gmsh_to_meshio_type[type_ele]
-            num_nodes_per_ele = num_nodes_per_cell[tpe]
-            d = numpy.empty((num_elements, num_nodes_per_ele + 1), dtype=int)
-            idx = 0
-            for i in range(num_elements):
-                # tag(int) numVert(int)[...]
-                line = f.readline().decode("utf-8")
-                items = line.split()
-                d[idx] = [int(item) for item in items]
-                idx += 1
-            assert idx == num_elements
-            data.append((tpe, d))
+    # numEntityBlocks(unsigned long) numElements(unsigned long)
+    num_entity_blocks, total_num_elements = fromfile(f, c_ulong, 2)
 
-        line = f.readline().decode("utf-8")
-        assert line.strip() == "$EndElements"
-    else:
-        # numEntityBlocks(unsigned long) numElements(unsigned long)
-        num_entity_blocks, _ = numpy.fromfile(f, count=2, dtype=c_ulong)
+    data = []
+    cell_data = {}
 
-        data = []
-        for k in range(num_entity_blocks):
-            # tagEntity(int) dimEntity(int) typeEle(int) numEle(unsigned long)
-            _, _, type_ele = numpy.fromfile(f, count=3, dtype=c_int)
+    for k in range(num_entity_blocks):
+        # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+        tag_entity, dim_entity, type_ele = fromfile(f, c_int, 3)
+        num_ele, = fromfile(f, c_ulong, 1)
+        tpe = _gmsh_to_meshio_type[type_ele]
+        num_nodes_per_ele = num_nodes_per_cell[tpe]
+        d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape(
+            (num_ele, -1)
+        )
+        if physical_tags is None:
+            data.append((None, tpe, d))
+        else:
+            data.append((physical_tags[dim_entity][tag_entity], tpe, d))
 
-            tpe = _gmsh_to_meshio_type[type_ele]
-            num_nodes_per_ele = num_nodes_per_cell[tpe]
-
-            num_ele = numpy.fromfile(f, count=1, dtype=c_ulong)
-
-            d = numpy.fromfile(
-                f, count=int(num_ele * (num_nodes_per_ele + 1)), dtype=c_int
-            ).reshape(int(num_ele), -1)
-
-            data.append((tpe, d))
-
+    if not is_ascii:
         line = f.readline().decode("utf-8")
         assert line == "\n"
-        line = f.readline().decode("utf-8")
-        assert line.strip() == "$EndElements"
+    line = f.readline().decode("utf-8")
+    assert line.strip() == "$EndElements"
 
     # The msh4 elements array refers to the nodes by their tag, not the index. All other
     # mesh formats use the index, which is far more efficient, too. Hence,
     # unfortunately, we have to do a fairly expensive conversion here.
     m = numpy.max(point_tags + 1)
     itags = -numpy.ones(m, dtype=int)
-    for k, tag in enumerate(point_tags):
-        itags[tag] = k
+    itags[point_tags] = numpy.arange(len(point_tags))
+
     # Note that the first column in the data array is the element tag; discard it.
-    data = [(tpe, itags[d[:, 1:]]) for tpe, d in data]
+    data = [(physical_tag, tpe, itags[d[:, 1:]]) for physical_tag, tpe, d in data]
 
     cells = {}
-    for item in data:
-        key, values = item
+    for physical_tag, key, values in data:
         if key in cells:
             cells[key] = numpy.concatenate([cells[key], values])
+            if physical_tag:
+                if key not in cell_data:
+                    cell_data[key] = {}
+                cell_data[key]["gmsh:physical"] = numpy.concatenate(
+                    [
+                        cell_data[key]["gmsh:physical"],
+                        physical_tag[0] * numpy.ones(len(values), int),
+                    ]
+                )
         else:
             cells[key] = values
+            if physical_tag:
+                if key not in cell_data:
+                    cell_data[key] = {}
+                cell_data[key]["gmsh:physical"] = physical_tag[0] * numpy.ones(
+                    len(values), int
+                )
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     if "tetra10" in cells:
@@ -299,7 +228,7 @@ def _read_cells(f, point_tags, int_size, is_ascii):
             :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16, 9, 17, 10, 18, 19, 12, 15, 13, 14]
         ]
 
-    return cells
+    return cells, cell_data
 
 
 def write(filename, mesh, write_binary=True):
