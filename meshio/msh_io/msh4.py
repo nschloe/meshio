@@ -105,11 +105,15 @@ def _read_entities(f, is_ascii, int_size, data_size):
             num_physicals, = fromfile(f, c_ulong, 1)
             physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
-                num_BREP_vert, = fromfile(f, c_ulong, 1)
-                fromfile(f, c_int, num_BREP_vert)
+                num_BREP_, = fromfile(f, c_ulong, 1)
+                fromfile(f, c_int, num_BREP_)
 
+    if not is_ascii:
+        line = f.readline().decode("utf-8").strip()
+        assert line == ""
     line = f.readline().decode("utf-8").strip()
     assert line == "$EndEntities"
+    print('Physical tags:', physical_tags)
     return physical_tags
 
 
