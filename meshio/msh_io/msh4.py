@@ -36,6 +36,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
     cell_data_raw = {}
     cell_tags = {}
     point_data = {}
+    physical_tags = None
     periodic = None
     while True:
         line = f.readline().decode("utf-8")
@@ -48,13 +49,11 @@ def read_buffer(f, is_ascii, int_size, data_size):
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Entities":
-            physical_tags = _read_entities(  # noqa F841
-                f, is_ascii, int_size, data_size
-            )
+            physical_tags = _read_entities(f, is_ascii, int_size, data_size)
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == "Elements":
-            cells = _read_cells(f, point_tags, int_size, is_ascii)
+            cells = _read_cells(f, point_tags, int_size, is_ascii, physical_tags)
         elif environ == "Periodic":
             periodic = _read_periodic(f)
         elif environ == "NodeData":
@@ -165,7 +164,7 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     return points, tags
 
 
-def _read_cells(f, point_tags, int_size, is_ascii):
+def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
     # numEntityBlocks(unsigned long) numElements(unsigned long)
@@ -182,8 +181,11 @@ def _read_cells(f, point_tags, int_size, is_ascii):
         d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape(
             (num_ele, -1)
         )
-        data.append((tpe, d))
-
+        if physical_tags is None:
+            data.append((None, tpe, d))
+        else:
+            data.append((physical_tags[dim_entity][tag_entity], tpe, d))
+            
     if not is_ascii:
         line = f.readline().decode("utf-8")
         assert line == "\n"
@@ -243,11 +245,11 @@ def _read_cells(f, point_tags, int_size, is_ascii):
     itags[point_tags] = numpy.arange(len(point_tags))
 
     # Note that the first column in the data array is the element tag; discard it.
-    data = [(tpe, itags[d[:, 1:]]) for tpe, d in data]
+    data = [(physical_tag, tpe, itags[d[:, 1:]]) for physical_tag, tpe, d in data]
 
     cells = {}
     for item in data:
-        key, values = item
+        physical_tag, key, values = item
         if key in cells:
             cells[key] = numpy.concatenate([cells[key], values])
         else:
