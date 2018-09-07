@@ -179,7 +179,9 @@ def _read_cells(f, point_tags, int_size, is_ascii):
         num_ele, = fromfile(f, c_ulong, 1)
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
-        d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape((num_ele, -1))
+        d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape(
+            (num_ele, -1)
+        )
         data.append((tpe, d))
 
     if not is_ascii:
@@ -239,6 +241,7 @@ def _read_cells(f, point_tags, int_size, is_ascii):
     m = numpy.max(point_tags + 1)
     itags = -numpy.ones(m, dtype=int)
     itags[point_tags] = numpy.arange(len(point_tags))
+
     # Note that the first column in the data array is the element tag; discard it.
     data = [(tpe, itags[d[:, 1:]]) for tpe, d in data]
 
