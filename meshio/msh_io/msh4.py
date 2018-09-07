@@ -238,8 +238,7 @@ def _read_cells(f, point_tags, int_size, is_ascii):
     # unfortunately, we have to do a fairly expensive conversion here.
     m = numpy.max(point_tags + 1)
     itags = -numpy.ones(m, dtype=int)
-    for k, tag in enumerate(point_tags):
-        itags[tag] = k
+    itags[point_tags] = numpy.arange(len(point_tags))
     # Note that the first column in the data array is the element tag; discard it.
     data = [(tpe, itags[d[:, 1:]]) for tpe, d in data]
 
