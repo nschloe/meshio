@@ -53,7 +53,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == "Elements":
-            cells = _read_cells(f, point_tags, int_size, is_ascii, physical_tags)
+            cells, cell_physical_tags = _read_cells(f, point_tags, int_size, is_ascii, physical_tags)
         elif environ == "Periodic":
             periodic = _read_periodic(f)
         elif environ == "NodeData":
@@ -171,6 +171,7 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     num_entity_blocks, total_num_elements = fromfile(f, c_ulong, 2)
 
     data = []
+    cell_data = {}
 
     for k in range(num_entity_blocks):
         # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
@@ -206,8 +207,23 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     for physical_tag, key, values in data:
         if key in cells:
             cells[key] = numpy.concatenate([cells[key], values])
+            if physical_tag:
+                if key not in cell_data:
+                    cell_data[key] = {}
+                cell_data[key]["gmsh:physical"] = numpy.concatenate(
+                    [
+                        cell_data[key]["gmsh:physical"],
+                        physical_tag[0] * numpy.ones(len(values), int),
+                    ]
+                )
         else:
             cells[key] = values
+            if physical_tag:
+                if key not in cell_data:
+                    cell_data[key] = {}
+                cell_data[key]["gmsh:physical"] = physical_tag[0] * numpy.ones(
+                    len(values), int
+                )
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     if "tetra10" in cells:
@@ -217,7 +233,7 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
             :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16, 9, 17, 10, 18, 19, 12, 15, 13, 14]
         ]
 
-    return cells
+    return cells, cell_data
 
 
 def write(filename, mesh, write_binary=True):
