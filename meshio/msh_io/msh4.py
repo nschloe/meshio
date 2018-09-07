@@ -49,7 +49,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
             _read_physical_names(f, field_data)
         elif environ == "Entities":
             physical_tags = _read_entities(  # noqa F841
-                f, physical_tags, is_ascii, int_size, data_size
+                f, is_ascii, int_size, data_size
             )
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
