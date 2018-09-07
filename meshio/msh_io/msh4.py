@@ -5,6 +5,7 @@ I/O for Gmsh's msh format (version 4), cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
 from ctypes import c_ulong, c_double, c_int
+from functools import partial
 import logging
 import struct
 
@@ -93,81 +94,22 @@ def read_buffer(f, is_ascii, int_size, data_size):
 
 
 def _read_entities(f, is_ascii, int_size, data_size):
-    physical_tags = ([], [], [], [])  # dims 0, 1, 2, 3
-    if is_ascii:
-        # More or less skip over them for now
-        line = f.readline().decode("utf-8").strip()
-        while line != "$EndEntities":
-            line = f.readline().decode("utf-8").strip()
-    else:
-        num_points, num_curves, num_surfaces, num_volumes = numpy.fromfile(
-            f, count=4, dtype=c_ulong
-        )
+    physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
+    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    number = fromfile(f, numpy.dtype(c_ulong), 4)  # dims 0, 1, 2, 3
 
-        for _ in range(num_points):
-            # tag
-            numpy.fromfile(f, count=1, dtype=c_int)
-            # box
-            numpy.fromfile(f, count=6, dtype=c_double)
-            # num_physicals
-            num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # physical_tags
-            physical_tags[0].append(
-                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
-            )
+    for d, n in enumerate(number):
+        for _ in range(n):
+            tag, = fromfile(f, c_int, 1)
+            fromfile(f, c_double, 6)  # discard boxMinX…boxMaxZ
+            num_physicals, = fromfile(f, c_ulong, 1)
+            physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
+            if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
+                num_BREP_vert, = fromfile(f, c_ulong, 1)
+                fromfile(f, c_int, num_BREP_vert)
 
-        for _ in range(num_curves):
-            # tag
-            numpy.fromfile(f, count=1, dtype=c_int)
-            # box
-            numpy.fromfile(f, count=6, dtype=c_double)
-            # num_physicals
-            num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # physical_tags
-            physical_tags[1].append(
-                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
-            )
-            # num_brep_vert
-            num_brep_vert = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # tag_brep_vert
-            numpy.fromfile(f, count=int(num_brep_vert), dtype=c_int)
-
-        for _ in range(num_surfaces):
-            # tag
-            numpy.fromfile(f, count=1, dtype=c_int)
-            # box
-            numpy.fromfile(f, count=6, dtype=c_double)
-            # num_physicals
-            num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # physical_tags
-            physical_tags[2].append(
-                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
-            )
-            # num_brep_curve
-            num_brep_curve = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # tag_brep_curve
-            numpy.fromfile(f, count=int(num_brep_curve), dtype=c_int)
-
-        for _ in range(num_volumes):
-            # tag
-            numpy.fromfile(f, count=1, dtype=c_int)
-            # box
-            numpy.fromfile(f, count=6, dtype=c_double)
-            # num_physicals
-            num_physicals = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # physical_tags
-            physical_tags[3].append(
-                numpy.fromfile(f, count=int(num_physicals), dtype=c_int)
-            )
-            # num_brep_surfaces
-            num_brep_surfaces = numpy.fromfile(f, count=1, dtype=c_ulong)
-            # tag_brep_surfaces
-            numpy.fromfile(f, count=int(num_brep_surfaces), dtype=c_int)
-
-        line = f.readline().decode("utf-8")
-        assert line == "\n"
-        line = f.readline().decode("utf-8").strip()
-        assert line == "$EndEntities"
+    line = f.readline().decode("utf-8").strip()
+    assert line == "$EndEntities"
     return physical_tags
 
 
