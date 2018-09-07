@@ -192,51 +192,6 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndElements"
 
-    # if is_ascii:
-
-    #     for k in range(num_entity_blocks):
-    #         line = f.readline().decode("utf-8")
-    #         # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
-    #         tag_entity, dim_entity, type_ele, num_elements = [
-    #             int(k) for k in line.split()
-    #         ]
-    #         tpe = _gmsh_to_meshio_type[type_ele]
-    #         num_nodes_per_ele = num_nodes_per_cell[tpe]
-    #         d = numpy.empty((num_elements, num_nodes_per_ele + 1), dtype=int)
-    #         idx = 0
-    #         for i in range(num_elements):
-    #             # tag(int) numVert(int)[...]
-    #             line = f.readline().decode("utf-8")
-    #             items = line.split()
-    #             d[idx] = [int(item) for item in items]
-    #             idx += 1
-    #         assert idx == num_elements
-    #         data.append((tpe, d))
-
-    #     line = f.readline().decode("utf-8")
-    #     assert line.strip() == "$EndElements"
-    # else:
-
-    #     for k in range(num_entity_blocks):
-    #         # tagEntity(int) dimEntity(int) typeEle(int) numEle(unsigned long)
-    #         _, _, type_ele = numpy.fromfile(f, count=3, dtype=c_int)
-
-    #         tpe = _gmsh_to_meshio_type[type_ele]
-    #         num_nodes_per_ele = num_nodes_per_cell[tpe]
-
-    #         num_ele = numpy.fromfile(f, count=1, dtype=c_ulong)
-
-    #         d = numpy.fromfile(
-    #             f, count=int(num_ele * (num_nodes_per_ele + 1)), dtype=c_int
-    #         ).reshape(int(num_ele), -1)
-
-    #         data.append((tpe, d))
-
-    #     line = f.readline().decode("utf-8")
-    #     assert line == "\n"
-    #     line = f.readline().decode("utf-8")
-    #     assert line.strip() == "$EndElements"
-
     # The msh4 elements array refers to the nodes by their tag, not the index. All other
     # mesh formats use the index, which is far more efficient, too. Hence,
     # unfortunately, we have to do a fairly expensive conversion here.
