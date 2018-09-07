@@ -53,7 +53,9 @@ def read_buffer(f, is_ascii, int_size, data_size):
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == "Elements":
-            cells, cell_tags = _read_cells(f, point_tags, int_size, is_ascii, physical_tags)
+            cells, cell_tags = _read_cells(
+                f, point_tags, int_size, is_ascii, physical_tags
+            )
         elif environ == "Periodic":
             periodic = _read_periodic(f)
         elif environ == "NodeData":
