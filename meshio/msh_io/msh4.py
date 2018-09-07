@@ -53,7 +53,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == "Elements":
-            cells, cell_physical_tags = _read_cells(f, point_tags, int_size, is_ascii, physical_tags)
+            cells, cell_tags = _read_cells(f, point_tags, int_size, is_ascii, physical_tags)
         elif environ == "Periodic":
             periodic = _read_periodic(f)
         elif environ == "NodeData":
@@ -73,14 +73,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
                 line = f.readline().decode("utf-8").strip()
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
-
-    # merge cell_tags into cell_data
-    for key, tag_dict in cell_tags.items():
-        if key not in cell_data:
-            cell_data[key] = {}
-        for name, item_list in tag_dict.items():
-            assert name not in cell_data[key]
-            cell_data[key][name] = item_list
+    cell_data.update(cell_tags)
 
     return Mesh(
         points,
