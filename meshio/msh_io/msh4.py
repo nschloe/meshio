@@ -185,7 +185,7 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
             data.append((None, tpe, d))
         else:
             data.append((physical_tags[dim_entity][tag_entity], tpe, d))
-            
+
     if not is_ascii:
         line = f.readline().decode("utf-8")
         assert line == "\n"
