@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 """
-I/O for Gmsh's msh format, cf.
-<http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
+I/O for Gmsh's msh format (version 4), cf.
+<http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
 from ctypes import c_ulong, c_double, c_int
 import logging
@@ -26,7 +26,7 @@ from ..common import num_nodes_per_cell, cell_data_from_raw, raw_from_cell_data
 
 def read_buffer(f, is_ascii, int_size, data_size):
     # The format is specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
+    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 
     # Initialize the optional data fields
     points = []
