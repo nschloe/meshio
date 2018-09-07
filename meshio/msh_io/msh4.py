@@ -47,16 +47,16 @@ def read_buffer(f, is_ascii, int_size, data_size):
 
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
+        elif environ == "Entities":
+            physical_tags = _read_entities(  # noqa F841
+                f, physical_tags, is_ascii, int_size, data_size
+            )
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == "Elements":
             cells = _read_cells(f, point_tags, int_size, is_ascii)
         elif environ == "Periodic":
             periodic = _read_periodic(f)
-        elif environ == "Entities":
-            physical_tags = _read_entities(  # noqa F841
-                f, is_ascii, int_size, data_size
-            )
         elif environ == "NodeData":
             _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
         elif environ == "ElementData":
