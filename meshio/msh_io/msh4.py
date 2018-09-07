@@ -113,7 +113,6 @@ def _read_entities(f, is_ascii, int_size, data_size):
         assert line == ""
     line = f.readline().decode("utf-8").strip()
     assert line == "$EndEntities"
-    print('Physical tags:', physical_tags)
     return physical_tags
 
 
@@ -167,57 +166,72 @@ def _read_nodes(f, is_ascii, int_size, data_size):
 
 
 def _read_cells(f, point_tags, int_size, is_ascii):
-    if is_ascii:
-        # numEntityBlocks(unsigned long) numElements(unsigned long)
-        line = f.readline().decode("utf-8")
-        num_entity_blocks, total_num_elements = [int(k) for k in line.split()]
+    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
-        data = []
-        for k in range(num_entity_blocks):
-            line = f.readline().decode("utf-8")
-            # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
-            tag_entity, dim_entity, type_ele, num_elements = [
-                int(k) for k in line.split()
-            ]
-            tpe = _gmsh_to_meshio_type[type_ele]
-            num_nodes_per_ele = num_nodes_per_cell[tpe]
-            d = numpy.empty((num_elements, num_nodes_per_ele + 1), dtype=int)
-            idx = 0
-            for i in range(num_elements):
-                # tag(int) numVert(int)[...]
-                line = f.readline().decode("utf-8")
-                items = line.split()
-                d[idx] = [int(item) for item in items]
-                idx += 1
-            assert idx == num_elements
-            data.append((tpe, d))
+    # numEntityBlocks(unsigned long) numElements(unsigned long)
+    num_entity_blocks, total_num_elements = fromfile(f, c_ulong, 2)
 
-        line = f.readline().decode("utf-8")
-        assert line.strip() == "$EndElements"
-    else:
-        # numEntityBlocks(unsigned long) numElements(unsigned long)
-        num_entity_blocks, _ = numpy.fromfile(f, count=2, dtype=c_ulong)
+    data = []
 
-        data = []
-        for k in range(num_entity_blocks):
-            # tagEntity(int) dimEntity(int) typeEle(int) numEle(unsigned long)
-            _, _, type_ele = numpy.fromfile(f, count=3, dtype=c_int)
+    for k in range(num_entity_blocks):
+        # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+        tag_entity, dim_entity, type_ele = fromfile(f, c_int, 3)
+        num_ele, = fromfile(f, c_ulong, 1)
+        tpe = _gmsh_to_meshio_type[type_ele]
+        num_nodes_per_ele = num_nodes_per_cell[tpe]
+        d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape((num_ele, -1))
+        data.append((tpe, d))
 
-            tpe = _gmsh_to_meshio_type[type_ele]
-            num_nodes_per_ele = num_nodes_per_cell[tpe]
-
-            num_ele = numpy.fromfile(f, count=1, dtype=c_ulong)
-
-            d = numpy.fromfile(
-                f, count=int(num_ele * (num_nodes_per_ele + 1)), dtype=c_int
-            ).reshape(int(num_ele), -1)
-
-            data.append((tpe, d))
-
+    if not is_ascii:
         line = f.readline().decode("utf-8")
         assert line == "\n"
-        line = f.readline().decode("utf-8")
-        assert line.strip() == "$EndElements"
+    line = f.readline().decode("utf-8")
+    assert line.strip() == "$EndElements"
+
+    # if is_ascii:
+
+    #     for k in range(num_entity_blocks):
+    #         line = f.readline().decode("utf-8")
+    #         # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+    #         tag_entity, dim_entity, type_ele, num_elements = [
+    #             int(k) for k in line.split()
+    #         ]
+    #         tpe = _gmsh_to_meshio_type[type_ele]
+    #         num_nodes_per_ele = num_nodes_per_cell[tpe]
+    #         d = numpy.empty((num_elements, num_nodes_per_ele + 1), dtype=int)
+    #         idx = 0
+    #         for i in range(num_elements):
+    #             # tag(int) numVert(int)[...]
+    #             line = f.readline().decode("utf-8")
+    #             items = line.split()
+    #             d[idx] = [int(item) for item in items]
+    #             idx += 1
+    #         assert idx == num_elements
+    #         data.append((tpe, d))
+
+    #     line = f.readline().decode("utf-8")
+    #     assert line.strip() == "$EndElements"
+    # else:
+
+    #     for k in range(num_entity_blocks):
+    #         # tagEntity(int) dimEntity(int) typeEle(int) numEle(unsigned long)
+    #         _, _, type_ele = numpy.fromfile(f, count=3, dtype=c_int)
+
+    #         tpe = _gmsh_to_meshio_type[type_ele]
+    #         num_nodes_per_ele = num_nodes_per_cell[tpe]
+
+    #         num_ele = numpy.fromfile(f, count=1, dtype=c_ulong)
+
+    #         d = numpy.fromfile(
+    #             f, count=int(num_ele * (num_nodes_per_ele + 1)), dtype=c_int
+    #         ).reshape(int(num_ele), -1)
+
+    #         data.append((tpe, d))
+
+    #     line = f.readline().decode("utf-8")
+    #     assert line == "\n"
+    #     line = f.readline().decode("utf-8")
+    #     assert line.strip() == "$EndElements"
 
     # The msh4 elements array refers to the nodes by their tag, not the index. All other
     # mesh formats use the index, which is far more efficient, too. Hence,
