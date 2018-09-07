@@ -203,8 +203,7 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     data = [(physical_tag, tpe, itags[d[:, 1:]]) for physical_tag, tpe, d in data]
 
     cells = {}
-    for item in data:
-        physical_tag, key, values = item
+    for physical_tag, key, values in data:
         if key in cells:
             cells[key] = numpy.concatenate([cells[key], values])
         else:
