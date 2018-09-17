@@ -611,7 +611,7 @@ class XdmfTimeSeriesWriter(object):
         self.mesh_name = None
         return
 
-    def write_mesh(self, mesh):
+    def write_points_cells(self, points, cells):
         # <Grid Name="mesh" GridType="Uniform">
         #   <Topology NumberOfElements="16757" TopologyType="Triangle" NodesPerElement="3">
         #     <DataItem Dimensions="16757 3" NumberType="UInt" Format="HDF">maxwell.h5:/Mesh/0/mesh/topology</DataItem>
@@ -626,8 +626,8 @@ class XdmfTimeSeriesWriter(object):
         grid = ET.SubElement(
             self.domain, "Grid", Name=self.mesh_name, GridType="Uniform"
         )
-        self.points(grid, mesh.points)
-        self.cells(mesh.cells, grid)
+        self.points(grid, points)
+        self.cells(cells, grid)
         self.has_mesh = True
 
         write_xml(self.filename, self.xdmf_file, self.pretty_xml)

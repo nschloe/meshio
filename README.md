@@ -75,6 +75,17 @@ meshio.write("foo.vtk", mesh)
 For both input and output, you can optionally specify the exact `file_format`
 (in case you would like to enforce binary over ASCII VTK, for example).
 
+#### Time series
+
+The [XDMF format](http://www.xdmf.org/index.php/XDMF_Model_and_Format) supports time
+series with a shared mesh. You can make use of that if meshio with
+```python
+writer = meshio.XdmfTimeSeriesWriter(filename)
+writer.write_points_cells(points, cells)
+for t in [0.0, 0.1, 0.21]:
+    writer.write_point_data({"phi": data}, t)
+```
+
 ### Installation
 
 meshio is [available from the Python Package
