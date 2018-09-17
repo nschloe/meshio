@@ -14,7 +14,6 @@ except ImportError:
 import numpy
 
 from .common import (
-    xdmf_idx_to_meshio_type,
     xdmf_to_numpy_type,
     xdmf_to_meshio_type,
     numpy_to_xdmf_dtype,

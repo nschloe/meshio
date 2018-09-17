@@ -117,11 +117,7 @@ def test_time_series():
     times = numpy.linspace(0.0, 1.0, 5)
     point_data = [{"phi": numpy.full(n, t)} for t in times]
     for t, pd in zip(times, point_data):
-        writer.write_data(
-            t,
-            point_data=pd,
-            cell_data={"triangle": {"a": [3.0, 4.2]}},
-        )
+        writer.write_data(t, point_data=pd, cell_data={"triangle": {"a": [3.0, 4.2]}})
 
     # read it back in
     reader = meshio.XdmfTimeSeriesReader(filename)

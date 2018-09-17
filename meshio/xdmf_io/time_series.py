@@ -25,6 +25,7 @@ from ..vtk_io import raw_from_cell_data
 class XdmfTimeSeriesReader(object):
     def __init__(self, filename):
         from lxml import etree as ET
+
         self.filename = filename
 
         parser = ET.XMLParser(remove_comments=True, huge_tree=True)
@@ -268,8 +269,10 @@ class XdmfTimeSeriesWriter(object):
         ET.SubElement(grid, "{http://www.w3.org/2003/XInclude}include", xpointer=ptr)
         ET.SubElement(grid, "Time", Value="{}".format(t))
 
-        self.point_data(point_data, grid)
-        self.cell_data(cell_data, grid)
+        if point_data:
+            self.point_data(point_data, grid)
+        if cell_data:
+            self.cell_data(cell_data, grid)
 
         write_xml(self.filename, self.xdmf_file, self.pretty_xml)
         return
