@@ -111,11 +111,20 @@ def test_time_series():
     filename = "out.xdmf"
 
     writer = meshio.XdmfTimeSeriesWriter(filename)
-    # writer.write_mesh(helpers.tri_mesh_2d)
     writer.write_points_cells(helpers.tri_mesh_2d.points, helpers.tri_mesh_2d.cells)
     n = helpers.tri_mesh_2d.points.shape[0]
     for t in numpy.linspace(0.0, 1.0, 5):
-        writer.write_point_data({"phi": numpy.full(n, t)}, t)
+        writer.write_data(
+            t,
+            point_data={"phi": numpy.full(n, t)},
+            cell_data={"triangle": {"a": [3.0, 4.2]}},
+        )
+
+    # read it back in
+    reader = meshio.XdmfTimeSeriesReader(filename)
+    points, cells = reader.read_points_cells()
+    for k in range(reader.num_steps):
+        t, point_data, cell_data = reader.read_data(k)
 
     return
 
