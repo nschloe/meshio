@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import numpy
 import pytest
 
 import meshio
@@ -105,5 +106,31 @@ def test_generic_io():
     return
 
 
+def test_time_series():
+    # write the data
+    filename = "out.xdmf"
+
+    writer = meshio.XdmfTimeSeriesWriter(filename)
+    writer.write_points_cells(helpers.tri_mesh_2d.points, helpers.tri_mesh_2d.cells)
+    n = helpers.tri_mesh_2d.points.shape[0]
+
+    times = numpy.linspace(0.0, 1.0, 5)
+    point_data = [{"phi": numpy.full(n, t)} for t in times]
+    for t, pd in zip(times, point_data):
+        writer.write_data(t, point_data=pd, cell_data={"triangle": {"a": [3.0, 4.2]}})
+
+    # read it back in
+    reader = meshio.XdmfTimeSeriesReader(filename)
+    points, cells = reader.read_points_cells()
+    for k in range(reader.num_steps):
+        t, pd, cd = reader.read_data(k)
+        assert numpy.abs(times[k] - t) < 1.0e-12
+        for key, value in pd.items():
+            assert numpy.all(numpy.abs(value - point_data[k][key]) < 1.0e-12)
+
+    return
+
+
 if __name__ == "__main__":
-    test_xdmf3_legacy_writer(helpers.tri_mesh)
+    # test_xdmf3_legacy_writer(helpers.tri_mesh)
+    test_time_series()

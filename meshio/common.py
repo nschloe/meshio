@@ -103,3 +103,11 @@ def raw_from_cell_data(cell_data):
         cell_data_raw[name] = numpy.concatenate(cell_data_raw[name])
 
     return cell_data_raw
+
+
+def write_xml(filename, root, pretty_print=False):
+    from lxml import etree as ET
+
+    tree = ET.ElementTree(root)
+    tree.write(filename, pretty_print=pretty_print)
+    return
