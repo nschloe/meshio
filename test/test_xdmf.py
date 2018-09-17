@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import numpy
 import pytest
 
 import meshio
@@ -105,5 +106,25 @@ def test_generic_io():
     return
 
 
+def test_time_series():
+    # write the data
+    filename = "out.xdmf"
+
+    # TODO with ... as writer:
+    writer = meshio.XdmfTimeSeriesWriter(filename)
+    writer.write_mesh(helpers.tri_mesh_2d)
+    n = helpers.tri_mesh_2d.points.shape[0]
+    for t in numpy.linspace(0.0, 1.0, 5):
+        writer.write_point_data({"phi": numpy.full(n, t)}, t)
+
+    # # and read it again
+    # data = meshio.read_xdmf_time_series(filename)
+    # print(data.grids)
+    # grids[0]["mesh"] == 0
+    # exit(1)
+    return
+
+
 if __name__ == "__main__":
-    test_xdmf3_legacy_writer(helpers.tri_mesh)
+    # test_xdmf3_legacy_writer(helpers.tri_mesh)
+    test_time_series()

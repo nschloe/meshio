@@ -18,7 +18,7 @@ import numpy
 from .__about__ import __version__
 from .mesh import Mesh
 from .vtk_io import vtk_to_meshio_type, meshio_to_vtk_type, raw_from_cell_data
-from .common import num_nodes_per_cell
+from .common import num_nodes_per_cell, write_xml
 
 
 def num_bytes_to_num_base64_chars(num_bytes):
@@ -414,12 +414,4 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
             numpy_to_xml_array(cd, name, "%.11e", data)
 
     write_xml(filename, vtk_file, pretty_xml)
-    return
-
-
-def write_xml(filename, root, pretty_print=False):
-    from lxml import etree as ET
-
-    tree = ET.ElementTree(root)
-    tree.write(filename, pretty_print=pretty_print)
     return

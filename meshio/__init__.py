@@ -7,6 +7,7 @@ from .__about__ import __version__, __author__, __author_email__, __website__
 from . import cli
 from .helpers import read, write, write_points_cells
 from .mesh import Mesh
+from .xdmf_io import XdmfTimeSeriesWriter
 
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "write",
     "write_points_cells",
     "Mesh",
+    "XdmfTimeSeriesWriter",
     "__version__",
     "__author__",
     "__author_email__",
