@@ -117,7 +117,7 @@ class XdmfTimeSeriesReader(object):
 
         for c in list(self.collection[k]):
             if c.tag == "Time":
-                t = c.attrib["Value"]
+                t = float(c.attrib["Value"])
             elif c.tag == "Attribute":
                 name = c.attrib["Name"]
 
