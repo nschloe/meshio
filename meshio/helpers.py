@@ -65,6 +65,9 @@ output_filetypes = [
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
+    "xdmf-binary",
+    "xdmf-hdf",
+    "xdmf-xml",
 ]
 
 _extension_to_filetype = {
