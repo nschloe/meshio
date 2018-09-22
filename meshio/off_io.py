@@ -2,7 +2,8 @@
 #
 """
 I/O for the OFF surface format, cf.
-<https://en.wikipedia.org/wiki/OFF_(file_format)>.
+<https://en.wikipedia.org/wiki/OFF_(file_format)>,
+<http://www.geomview.org/docs/html/OFF.html>.
 """
 from itertools import islice
 import logging
@@ -79,7 +80,9 @@ def read_buffer(f):
 
         data = stripped.split()
         num_points = int(data[0])
-        assert num_points == len(data) - 1
+        # Don't be too strict with the len(data) assertions here; the OFF specifications
+        # allows for RGB colors.
+        # assert num_points == len(data) - 1
         assert num_points == 3, "Can only handle triangular faces"
 
         data = [int(data[1]), int(data[2]), int(data[3])]
