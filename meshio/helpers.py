@@ -65,6 +65,9 @@ output_filetypes = [
     "vtu-ascii",
     "vtu-binary",
     "xdmf",
+    "xdmf-binary",
+    "xdmf-hdf",
+    "xdmf-xml",
 ]
 
 _extension_to_filetype = {
@@ -179,15 +182,15 @@ def write_points_cells(
     cell_data=None,
     field_data=None,
     file_format=None,
+    **kwargs,
 ):
     mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
-    write(filename, mesh, file_format=file_format)
-    return
+    return write(filename, mesh, file_format=file_format, **kwargs)
 
 
-def write(filename, mesh, file_format=None):
+def write(filename, mesh, file_format=None, **kwargs):
     """Writes mesh together with data to a file.
 
     :params filename: File to write to.
@@ -204,44 +207,54 @@ def write(filename, mesh, file_format=None):
     for key, value in mesh.cells.items():
         assert value.shape[1] == num_nodes_per_cell[key]
 
-    d = {
-        "moab": lambda: h5m_io.write(filename, mesh),
-        "ansys-ascii": lambda: ansys_io.write(filename, mesh, write_binary=False),
-        "ansys-binary": lambda: ansys_io.write(filename, mesh, write_binary=True),
-        "gmsh2-ascii": lambda: msh_io.write(filename, mesh, "2", write_binary=False),
-        "gmsh2-binary": lambda: msh_io.write(filename, mesh, "2", write_binary=True),
-        "gmsh4-ascii": lambda: msh_io.write(filename, mesh, "4", write_binary=False),
-        "gmsh4-binary": lambda: msh_io.write(filename, mesh, "4", write_binary=True),
-        "med": lambda: med_io.write(filename, mesh),
-        "medit": lambda: medit_io.write(filename, mesh),
-        "dolfin-xml": lambda: dolfin_io.write(filename, mesh),
-        "off": lambda: off_io.write(filename, mesh),
-        "permas": lambda: permas_io.write(filename, mesh),
-        "stl-ascii": lambda: stl_io.write(filename, mesh, write_binary=False),
-        "stl-binary": lambda: stl_io.write(filename, mesh, write_binary=True),
-        "vtu-ascii": lambda: vtu_io.write(filename, mesh, write_binary=False),
-        "vtu": lambda: vtu_io.write(filename, mesh, write_binary=True),
-        "vtu-binary": lambda: vtu_io.write(filename, mesh, write_binary=True),
-        "vtk-ascii": lambda: vtk_io.write(filename, mesh, write_binary=False),
-        "vtk": lambda: vtk_io.write(filename, mesh, write_binary=True),
-        "vtk-binary": lambda: vtk_io.write(filename, mesh, write_binary=True),
-        "xdmf": lambda: xdmf_io.write(filename, mesh),
-        "xdmf3": lambda: xdmf_io.write(filename, mesh),
-        "abaqus": lambda: abaqus_io.write(filename, mesh),
-        "exodus": lambda: exodus_io.write(filename, mesh),
-        "mdpa": lambda: mdpa_io.write(filename, mesh),
-        "svg": lambda: svg_io.write(filename, mesh),
-    }
-
     try:
-        writer = d[file_format]
+        interface, args, default_kwargs = _writer_map[file_format]
     except KeyError:
         raise KeyError(
             "Unknown format '{}'. Pick one of {}".format(
-                file_format, sorted(list(d.keys()))
+                file_format, sorted(list(_writer_map.keys()))
             )
         )
 
-    # Actually perform the write
-    writer()
-    return
+    # Build kwargs
+    _kwargs = default_kwargs.copy()
+    _kwargs.update(kwargs)
+
+    # Write
+    return interface.write(filename, mesh, *args, **_kwargs)
+
+
+_writer_map = {
+    "moab": (h5m_io, (), {}),
+    "ansys-ascii": (ansys_io, (), {"write_binary": False}),
+    "ansys-binary": (ansys_io, (), {"write_binary": True}),
+    "gmsh2-ascii": (msh_io, ("2",), {"write_binary": False}),
+    "gmsh2-binary": (msh_io, ("2",), {"write_binary": True}),
+    "gmsh4-ascii": (msh_io, ("4",), {"write_binary": False}),
+    "gmsh4-binary": (msh_io, ("4",), {"write_binary": True}),
+    "med": (med_io, (), {}),
+    "medit": (medit_io, (), {}),
+    "dolfin-xml": (dolfin_io, (), {}),
+    "off": (off_io, (), {}),
+    "permas": (permas_io, (), {}),
+    "stl-ascii": (stl_io, (), {"write_binary": False}),
+    "stl-binary": (stl_io, (), {"write_binary": True}),
+    "vtu-ascii": (vtu_io, (), {"write_binary": False}),
+    "vtu": (vtu_io, (), {"write_binary": True}),
+    "vtu-binary": (vtu_io, (), {"write_binary": True}),
+    "vtk-ascii": (vtk_io, (), {"write_binary": False}),
+    "vtk": (vtk_io, (), {"write_binary": True}),
+    "vtk-binary": (vtk_io, (), {"write_binary": True}),
+    "xdmf": (xdmf_io, (), {}),
+    "xdmf3": (xdmf_io, (), {}),
+    "xdmf-binary": (xdmf_io, (), {"data_format": "Binary"}),
+    "xdmf3-binary": (xdmf_io, (), {"data_format": "Binary"}),
+    "xdmf-hdf": (xdmf_io, (), {"data_format": "HDF"}),
+    "xdmf3-hdf": (xdmf_io, (), {"data_format": "HDF"}),
+    "xdmf-xml": (xdmf_io, (), {"data_format": "XML"}),
+    "xdmf3-xml": (xdmf_io, (), {"data_format": "XML"}),
+    "abaqus": (abaqus_io, (), {}),
+    "exodus": (exodus_io, (), {}),
+    "mdpa": (mdpa_io, (), {}),
+    "svg": (svg_io, (), {}),
+}

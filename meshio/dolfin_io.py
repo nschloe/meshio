@@ -137,7 +137,6 @@ def _write_mesh(filename, points, cell_type, cells):
     )
     vertices = ET.SubElement(mesh, "vertices", size=str(len(points)))
     for k, point in enumerate(points):
-        print(point)
         coords = {xyz: repr(p) for xyz, p in zip(coord_names, point)}
         ET.SubElement(vertices, "vertex", index=str(k), **coords)
 
