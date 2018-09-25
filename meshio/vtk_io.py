@@ -125,7 +125,7 @@ def read_buffer(f):
     f.readline()
     f.readline()
 
-    data_type = f.readline().decode("utf-8").strip()
+    data_type = f.readline().decode("utf-8").strip().upper()
     assert data_type in ["ASCII", "BINARY"], "Unknown VTK data type '{}'.".format(
         data_type
     )
@@ -152,10 +152,10 @@ def read_buffer(f):
             continue
 
         split = line.split()
-        section = split[0]
+        section = split[0].upper()
 
         if section == "DATASET":
-            dataset_type = split[1]
+            dataset_type = split[1].upper()
             assert (
                 dataset_type == "UNSTRUCTURED_GRID"
             ), "Only VTK UNSTRUCTURED_GRID supported (not {}).".format(
@@ -165,7 +165,7 @@ def read_buffer(f):
         elif section == "POINTS":
             active = "POINTS"
             num_points = int(split[1])
-            data_type = split[2]
+            data_type = split[2].lower()
             points = _read_points(f, data_type, is_ascii, num_points)
 
         elif section == "CELLS":
@@ -185,6 +185,11 @@ def read_buffer(f):
         elif section == "CELL_DATA":
             active = "CELL_DATA"
             num_items = int(split[1])
+
+        elif section == "LOOKUP_TABLE":
+            num_items = int(split[2])
+            data = numpy.fromfile(f, count=num_items * 4, sep=" ", dtype=float)
+            rgba = data.reshape((num_items, 4))  # noqa F841
 
         elif section == "SCALARS":
             if active == "POINT_DATA":
@@ -282,7 +287,7 @@ def _read_cell_types(f, is_ascii, num_items):
 
 def _read_scalar_field(f, num_data, split):
     data_name = split[1]
-    data_type = split[2]
+    data_type = split[2].lower()
     try:
         num_comp = int(split[3])
     except IndexError:
@@ -294,7 +299,7 @@ def _read_scalar_field(f, num_data, split):
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
     lt, _ = f.readline().decode("utf-8").split()
-    assert lt == "LOOKUP_TABLE"
+    assert lt.upper() == "LOOKUP_TABLE"
     data = numpy.fromfile(f, count=num_data, sep=" ", dtype=dtype)
 
     return {data_name: data}
@@ -312,7 +317,7 @@ def _read_vector_field(f, num_data, split):
 
 def _read_tensor_field(f, num_data, split):
     data_name = split[1]
-    data_type = split[2]
+    data_type = split[2].lower()
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
     data = numpy.fromfile(f, count=9 * num_data, sep=" ", dtype=dtype).reshape(-1, 3, 3)
@@ -326,7 +331,7 @@ def _read_fields(f, num_fields, is_ascii):
         name, shape0, shape1, data_type = f.readline().decode("utf-8").split()
         shape0 = int(shape0)
         shape1 = int(shape1)
-        dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+        dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type.lower()])
 
         if is_ascii:
             dat = numpy.fromfile(f, count=shape0 * shape1, sep=" ", dtype=dtype)
