@@ -188,7 +188,8 @@ def read_buffer(f):
 
         elif section == "LOOKUP_TABLE":
             num_items = int(split[2])
-            rgba = numpy.fromfile(f, count=num_items * 4, sep=" ", dtype=float)
+            data = numpy.fromfile(f, count=num_items * 4, sep=" ", dtype=float)
+            rgba = data.reshape((num_items, 4))  # noqa F841
 
         elif section == "SCALARS":
             if active == "POINT_DATA":
