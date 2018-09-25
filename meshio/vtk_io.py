@@ -165,7 +165,7 @@ def read_buffer(f):
         elif section == "POINTS":
             active = "POINTS"
             num_points = int(split[1])
-            data_type = split[2].upper()
+            data_type = split[2].lower()
             points = _read_points(f, data_type, is_ascii, num_points)
 
         elif section == "CELLS":
@@ -282,7 +282,7 @@ def _read_cell_types(f, is_ascii, num_items):
 
 def _read_scalar_field(f, num_data, split):
     data_name = split[1]
-    data_type = split[2]
+    data_type = split[2].lower()
     try:
         num_comp = int(split[3])
     except IndexError:
@@ -293,7 +293,7 @@ def _read_scalar_field(f, num_data, split):
     assert 0 < num_comp < 5
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
-    lt, _ = f.readline().decode("utf-8").split()
+    lt, _ = f.readline().decode("utf-8").split().upper()
     assert lt == "LOOKUP_TABLE"
     data = numpy.fromfile(f, count=num_data, sep=" ", dtype=dtype)
 
@@ -312,7 +312,7 @@ def _read_vector_field(f, num_data, split):
 
 def _read_tensor_field(f, num_data, split):
     data_name = split[1]
-    data_type = split[2]
+    data_type = split[2].lower()
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
     data = numpy.fromfile(f, count=9 * num_data, sep=" ", dtype=dtype).reshape(-1, 3, 3)
@@ -326,7 +326,7 @@ def _read_fields(f, num_fields, is_ascii):
         name, shape0, shape1, data_type = f.readline().decode("utf-8").split()
         shape0 = int(shape0)
         shape1 = int(shape1)
-        dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+        dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type.lower()])
 
         if is_ascii:
             dat = numpy.fromfile(f, count=shape0 * shape1, sep=" ", dtype=dtype)
