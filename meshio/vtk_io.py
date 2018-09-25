@@ -186,6 +186,10 @@ def read_buffer(f):
             active = "CELL_DATA"
             num_items = int(split[1])
 
+        elif section == "LOOKUP_TABLE":
+            num_items = int(split[2])
+            rgba = numpy.fromfile(f, count=num_items * 4, sep=" ", dtype=float)
+
         elif section == "SCALARS":
             if active == "POINT_DATA":
                 d = point_data
