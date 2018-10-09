@@ -158,9 +158,7 @@ def read_buffer(f):
             dataset_type = split[1].upper()
             assert (
                 dataset_type == "UNSTRUCTURED_GRID"
-            ), "Only VTK UNSTRUCTURED_GRID supported (not {}).".format(
-                dataset_type
-            )
+            ), "Only VTK UNSTRUCTURED_GRID supported (not {}).".format(dataset_type)
 
         elif section == "POINTS":
             active = "POINTS"
