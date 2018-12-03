@@ -44,6 +44,12 @@ class Mesh(object):
 
         return "\n".join(lines)
 
+    def __iter__(self):
+        for value in [
+            self.points, self.cells, self.point_data, self.cell_data, self.field_data,
+        ]:
+            yield value
+
     def prune(self):
         prune_list = []
 
