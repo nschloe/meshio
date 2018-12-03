@@ -46,7 +46,11 @@ class Mesh(object):
 
     def __iter__(self):
         for value in [
-            self.points, self.cells, self.point_data, self.cell_data, self.field_data,
+            self.points,
+            self.cells,
+            self.point_data,
+            self.cell_data,
+            self.field_data,
         ]:
             yield value
 
