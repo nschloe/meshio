@@ -20,7 +20,7 @@ vtk_to_meshio_type = {
     # 4: 'poly_line',
     5: "triangle",
     # 6: 'triangle_strip',
-    # 7: 'polygon',
+    7: 'polygon',
     # 8: 'pixel',
     9: "quad",
     10: "tetra",
@@ -359,25 +359,52 @@ def translate_cells(data, types, cell_data_raw):
     # See <https://stackoverflow.com/q/47310359/353337> for better
     # alternatives.
     bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
+    polygon = meshio_to_vtk_type['polygon'] in bins
 
     # Deduct offsets from the cell types. This is much faster than manually
     # going through the data array. Slight disadvantage: This doesn't work for
     # cells with a custom number of points.
     numnodes = numpy.empty(len(types), dtype=int)
-    for tpe, idx in bins.items():
-        numnodes[idx] = vtk_type_to_numnodes[tpe]
-    offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
+    if not polygon:
+        for tpe, idx in bins.items():
+            numnodes[idx] = vtk_type_to_numnodes[tpe]
+        offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
+    else:
+        # If some polygons are in the VTK file, loop over the cells
+        nbcells = len(types)
+        offsets = numpy.empty(len(types), dtype=int)
+        offsets[0] = 0
+        for idx in numpy.arange(nbcells - 1):
+            numnodes[idx] = data[offsets[idx]]
+            offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
+        idx = nbcells - 1
+        numnodes[idx] = data[offsets[idx]]
+
     assert numpy.all(numnodes == data[offsets])
 
     cells = {}
     cell_data = {}
-    for tpe, b in bins.items():
-        meshio_type = vtk_to_meshio_type[tpe]
-        n = data[offsets[b[0]]]
-        assert (data[offsets[b]] == n).all()
-        indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
-        cells[meshio_type] = data[indices]
-        cell_data[meshio_type] = {key: value[b] for key, value in cell_data_raw.items()}
+    if not polygon:
+        for tpe, b in bins.items():
+            meshio_type = vtk_to_meshio_type[tpe]
+            n = data[offsets[b[0]]]
+            assert (data[offsets[b]] == n).all()
+            indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
+            cells[meshio_type] = data[indices]
+            cell_data[meshio_type] = {key: value[b] for key, value in cell_data_raw.items()}
+
+    else:
+        # TODO: cell_data
+        for idx in numpy.arange(nbcells):
+            nbedges = data[offsets[idx]]
+            start = offsets[idx] + 1
+            end = start + numnodes[idx]
+            cell = data[start:end]
+            key = 'polygon' + str(nbedges)
+            if key in cells:
+                cells[key] = numpy.vstack([cells[key], cell])
+            else:
+                cells[key] = cell
 
     return cells, cell_data
 
