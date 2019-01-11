@@ -20,7 +20,7 @@ vtk_to_meshio_type = {
     # 4: 'poly_line',
     5: "triangle",
     # 6: 'triangle_strip',
-    7: 'polygon',
+    7: "polygon",
     # 8: 'pixel',
     9: "quad",
     10: "tetra",
@@ -359,7 +359,7 @@ def translate_cells(data, types, cell_data_raw):
     # See <https://stackoverflow.com/q/47310359/353337> for better
     # alternatives.
     bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
-    polygon = meshio_to_vtk_type['polygon'] in bins
+    polygon = meshio_to_vtk_type["polygon"] in bins
 
     # Deduct offsets from the cell types. This is much faster than manually
     # going through the data array. Slight disadvantage: This doesn't work for
@@ -391,7 +391,9 @@ def translate_cells(data, types, cell_data_raw):
             assert (data[offsets[b]] == n).all()
             indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
             cells[meshio_type] = data[indices]
-            cell_data[meshio_type] = {key: value[b] for key, value in cell_data_raw.items()}
+            cell_data[meshio_type] = {
+                key: value[b] for key, value in cell_data_raw.items()
+            }
 
     else:
         # TODO: cell_data
@@ -400,7 +402,7 @@ def translate_cells(data, types, cell_data_raw):
             start = offsets[idx] + 1
             end = start + numnodes[idx]
             cell = data[start:end]
-            key = 'polygon' + str(nbedges)
+            key = "polygon" + str(nbedges)
             if key in cells:
                 cells[key] = numpy.vstack([cells[key], cell])
             else:
