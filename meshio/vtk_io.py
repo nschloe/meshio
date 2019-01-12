@@ -107,7 +107,7 @@ numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype_name.items()}
 
 
 def read(filename):
-    """Reads a Gmsh msh file.
+    """Reads a VTK vtk file.
     """
     with open(filename, "rb") as f:
         out = read_buffer(f)
