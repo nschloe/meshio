@@ -359,13 +359,13 @@ def translate_cells(data, types, cell_data_raw):
     # See <https://stackoverflow.com/q/47310359/353337> for better
     # alternatives.
     bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
-    polygon = meshio_to_vtk_type["polygon"] in bins
+    has_polygon = meshio_to_vtk_type["polygon"] in bins
 
     # Deduct offsets from the cell types. This is much faster than manually
     # going through the data array. Slight disadvantage: This doesn't work for
     # cells with a custom number of points.
     numnodes = numpy.empty(len(types), dtype=int)
-    if not polygon:
+    if not has_polygon:
         for tpe, idx in bins.items():
             numnodes[idx] = vtk_type_to_numnodes[tpe]
         offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
@@ -384,7 +384,7 @@ def translate_cells(data, types, cell_data_raw):
 
     cells = {}
     cell_data = {}
-    if not polygon:
+    if not has_polygon:
         for tpe, b in bins.items():
             meshio_type = vtk_to_meshio_type[tpe]
             n = data[offsets[b[0]]]
