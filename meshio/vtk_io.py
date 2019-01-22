@@ -509,8 +509,14 @@ def _write_cells(f, cells, write_binary):
     else:
         # ascii
         for key in cells:
-            for _ in range(len(cells[key])):
-                f.write("{}\n".format(meshio_to_vtk_type[key]).encode("utf-8"))
+            if "polygon" not in key:
+                for _ in range(len(cells[key])):
+                    f.write("{}\n".format(meshio_to_vtk_type[key]).encode("utf-8"))
+            else:
+                for _ in range(len(cells[key])):
+                    f.write(
+                        "{}\n".format(meshio_to_vtk_type["polygon"]).encode("utf-8")
+                    )
     return
 
 
