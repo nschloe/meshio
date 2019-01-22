@@ -96,7 +96,7 @@ vtk_to_numpy_dtype_name = {
     "unsigned_short": "uint16",
     "short": "int16",
     "unsigned_int": "uint32",
-    "int": numpy.dtype("int32"),
+    "int": "int32",
     "unsigned_long": "int64",
     "long": "int64",
     "float": "float32",
