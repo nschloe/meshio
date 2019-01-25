@@ -406,7 +406,7 @@ def translate_cells(data, types, cell_data_raw):
             if key in cells:
                 cells[key] = numpy.vstack([cells[key], cell])
             else:
-                cells[key] = cell
+                cells[key] = numpy.reshape(cell, (1, -1))
 
     return cells, cell_data
 
