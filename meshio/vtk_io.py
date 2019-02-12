@@ -391,6 +391,15 @@ def write(filename, mesh, write_binary=True):
         mesh.points = numpy.column_stack(
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
+        if mesh.point_data:
+            for name, values in mesh.point_data.items():
+                if values.shape[1] == 2:
+                    logging.warning(
+                        "VTK requires 3D vectors, but 2D vectors given. "
+            "Appending 0 third component to {}.".format(name)
+        )
+                    mesh.point_data[name] = numpy.column_stack(
+                        [values[:, 0], values[:, 1], numpy.zeros(mesh.points.shape[0])])
 
     if not write_binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
