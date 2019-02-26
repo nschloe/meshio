@@ -123,10 +123,10 @@ def _read_nodes(f, is_ascii, int_size, data_size):
 
         idx = 0
         for k in range(num_entity_blocks):
-            # first line in the entity block:
-            # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-            line = f.readline().decode("utf-8")
-            tag_entity, dim_entity, type_node, num_nodes = map(int, line.split())
+            # entityDim(int) entityTag(int) parametric(int 1) numNodes(size_t)
+            _, __, ___ = fromfile(f, c_int, 3)
+            num_nodes, = fromfile(f, c_size_t, 1)
+
             for i in range(num_nodes):
                 # tag(int) x(double) y(double) z(double)
                 line = f.readline().decode("utf-8")
@@ -169,9 +169,9 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     cell_data = {}
 
     for k in range(num_entity_blocks):
-        # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
-        tag_entity, dim_entity, type_ele = fromfile(f, c_int, 3)
-        num_ele, = fromfile(f, c_ulong, 1)
+        # entityDim(int) entityTag(int) elementType(int) numElements(size_t)
+        dim_entity, tag_entity, type_ele = fromfile(f, c_int, 3)
+        num_ele, = fromfile(f, c_size_t, 1)
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
         d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape(
