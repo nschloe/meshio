@@ -4,7 +4,7 @@
 I/O for Gmsh's msh format (version 4), cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
-from ctypes import c_ulong, c_double, c_int
+from ctypes import c_ulong, c_double, c_int, c_size_t
 from functools import partial
 import logging
 import struct
@@ -111,10 +111,12 @@ def _read_entities(f, is_ascii, int_size, data_size):
 
 
 def _read_nodes(f, is_ascii, int_size, data_size):
+    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    
+    # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
+    num_entity_blocks, total_num_nodes, _, __ = fromfile(f, c_size_t, 4)
+    
     if is_ascii:
-        # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
-        line = f.readline().decode("utf-8")
-        num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
 
         points = numpy.empty((total_num_nodes, 3), dtype=float)
         tags = numpy.empty(total_num_nodes, dtype=int)
@@ -133,8 +135,6 @@ def _read_nodes(f, is_ascii, int_size, data_size):
                 tags[idx] = tag
                 idx += 1
     else:
-        # numEntityBlocks(unsigned long) numNodes(unsigned long)
-        num_entity_blocks, _ = numpy.fromfile(f, count=2, dtype=c_ulong)
 
         points = []
         tags = []
