@@ -128,7 +128,7 @@ def _read_nodes(f, is_ascii, int_size, data_size):
             num_nodes, = fromfile(f, c_size_t, 1)
 
             for i in range(num_nodes):
-                # tag(int) x(double) y(double) z(double)
+                # tag(size_t) x(double) y(double) z(double)
                 line = f.readline().decode("utf-8")
                 tag, x, y, z = line.split()
                 points[idx] = [float(x), float(y), float(z)]
