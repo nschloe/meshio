@@ -162,8 +162,8 @@ def _read_nodes(f, is_ascii, int_size, data_size):
 def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
-    # numEntityBlocks(unsigned long) numElements(unsigned long)
-    num_entity_blocks, total_num_elements = fromfile(f, c_ulong, 2)
+    # numEntityBlocks numElements minElementTag maxElementTag (all size_t)
+    num_entity_blocks, total_num_elements, _, __ = fromfile(f, c_size_t, 4)
 
     data = []
     cell_data = {}
