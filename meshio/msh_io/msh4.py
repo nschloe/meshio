@@ -112,10 +112,10 @@ def _read_entities(f, is_ascii, int_size, data_size):
 
 def _read_nodes(f, is_ascii, int_size, data_size):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
-    
+
     # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
     num_entity_blocks, total_num_nodes, _, __ = fromfile(f, c_size_t, 4)
-    
+
     if is_ascii:
 
         points = numpy.empty((total_num_nodes, 3), dtype=float)
