@@ -95,7 +95,7 @@ def _read_entities(f, is_ascii, int_size, data_size):
     for d, n in enumerate(number):
         for _ in range(n):
             tag, = fromfile(f, c_int, 1)
-            fromfile(f, c_double, 6)  # discard boxMinX…boxMaxZ
+            fromfile(f, c_double, 3 if d == 0 else 6)  # discard bounding-box
             num_physicals, = fromfile(f, c_ulong, 1)
             physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
