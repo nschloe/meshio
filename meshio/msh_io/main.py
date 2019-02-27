@@ -75,16 +75,18 @@ def _read_header(f, int_size):
     return format_version, data_size, is_ascii
 
 
-def write(filename, mesh, fmt_version, write_binary=True):
+def write(filename, mesh, format_version, write_binary=True):
 
     try:
-        version = versions[fmt_version]
+        version = versions[format_version]
     except KeyError:
         try:
-            version = versions[fmt_version.split(".")[0]]
+            version = versions[format_version.split(".")[0]]
         except KeyError:
             raise ValueError(
-                "Need mesh format in {} (got {})".format(versions.keys(), fmt_version)
+                "Need mesh format in {} (got {})".format(
+                    versions.keys(), format_version
+                )
             )
 
     version.write(filename, mesh, write_binary=write_binary)
