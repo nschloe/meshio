@@ -116,40 +116,24 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
     num_entity_blocks, total_num_nodes, _, __ = fromfile(f, c_size_t, 4)
 
-    if is_ascii:
+    points = numpy.empty((total_num_nodes, 3), dtype=float)
+    tags = numpy.empty(total_num_nodes, dtype=int)
 
-        points = numpy.empty((total_num_nodes, 3), dtype=float)
-        tags = numpy.empty(total_num_nodes, dtype=int)
+    idx = 0
+    for k in range(num_entity_blocks):
+        # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
+        _, __, parametric = fromfile(f, c_int, 3)
+        assert parametric == 0, "parametric nodes not implemented" 
+        num_nodes = int(fromfile(f, c_size_t, 1)[0])
 
-        idx = 0
-        for k in range(num_entity_blocks):
-            # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
-            _, __, parametric = fromfile(f, c_int, 3)
-            assert parametric == 0, "parametric nodes not implemented" 
-            num_nodes, = fromfile(f, c_size_t, 1)
-
-            for i in range(num_nodes):
-                # tag(size_t) x(double) y(double) z(double)
-                line = f.readline().decode("utf-8")
-                tag, x, y, z = line.split()
-                points[idx] = [float(x), float(y), float(z)]
-                tags[idx] = tag
-                idx += 1
-    else:
-
-        points = []
-        tags = []
-        for _ in range(num_entity_blocks):
-            # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-            numpy.fromfile(f, count=3, dtype=c_int)
-            num_nodes = numpy.fromfile(f, count=1, dtype=c_ulong)
-            dtype = [("tag", c_int), ("x", c_double, (3,))]
-            data = numpy.fromfile(f, count=int(num_nodes), dtype=dtype)
-            tags.append(data["tag"])
-            points.append(data["x"])
-
-        tags = numpy.concatenate(tags)
-        points = numpy.concatenate(points)
+        node_tags = fromfile(f, c_size_t, num_nodes)
+        xyz = fromfile(f, c_double, num_nodes * 3).reshape(
+            (num_nodes, 3))
+        points[idx:(idx + num_nodes)] = xyz
+        tags[idx:(idx + num_nodes)] = node_tags
+        idx += num_nodes
+        
+    if not is_ascii:
 
         line = f.readline().decode("utf-8")
         assert line == "\n"
