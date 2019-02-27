@@ -49,6 +49,7 @@ def _read_header(f, int_size):
        data-size(ASCII int; sizeof(size_t))
      < int with value one; only in binary mode, to detect endianness >
 
+    though here the version is left as str
     """
 
     # http://gmsh.info/dev/doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029
