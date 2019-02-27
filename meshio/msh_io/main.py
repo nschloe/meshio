@@ -31,9 +31,9 @@ def read_buffer(f):
             reader = readers[int(format_version)]
         except KeyError:
             raise ValueError(
-                "Need mesh format in {} (got {})".format(readers.keys(),
-                                                         format_version))
-    
+                "Need mesh format in {} (got {})".format(readers.keys(), format_version)
+            )
+
     return reader.read_buffer(f, is_ascii, int_size, data_size)
 
 
@@ -50,7 +50,7 @@ def _read_header(f, int_size):
     """
 
     # http://gmsh.info/dev/doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029
-    
+
     line = f.readline().decode("utf-8")
     # Split the line
     # 4.1 0 8
