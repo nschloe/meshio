@@ -31,7 +31,9 @@ def read_buffer(f):
             version = versions[format_version.split(".")[0]]
         except KeyError:
             raise ValueError(
-                "Need mesh format in {} (got {})".format(versions.keys(), format_version)
+                "Need mesh format in {} (got {})".format(
+                    versions.keys(), format_version
+                )
             )
 
     return version.read_buffer(f, is_ascii, int_size, data_size)
@@ -82,6 +84,6 @@ def write(filename, mesh, fmt_version, write_binary=True):
         except KeyError:
             raise ValueError(
                 "Need mesh format in {} (got {})".format(versions.keys(), fmt_version)
-                )
+            )
 
     version.write(filename, mesh, write_binary=write_binary)
