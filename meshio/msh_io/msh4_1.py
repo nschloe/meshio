@@ -123,8 +123,9 @@ def _read_nodes(f, is_ascii, int_size, data_size):
 
         idx = 0
         for k in range(num_entity_blocks):
-            # entityDim(int) entityTag(int) parametric(int 1) numNodes(size_t)
-            _, __, ___ = fromfile(f, c_int, 3)
+            # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
+            _, __, parametric = fromfile(f, c_int, 3)
+            assert parametric == 0, "parametric nodes not implemented" 
             num_nodes, = fromfile(f, c_size_t, 1)
 
             for i in range(num_nodes):
