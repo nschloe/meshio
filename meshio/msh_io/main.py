@@ -4,8 +4,6 @@ from ctypes import c_int, sizeof
 import struct
 from . import msh2, msh4_0, msh4_1
 
-versions = {"2": msh2, "4.0": msh4_0, "4.1": msh4_1}
-
 
 def read(filename):
     """Reads a Gmsh msh file.
@@ -24,17 +22,19 @@ def read_buffer(f):
     int_size = sizeof(c_int)
     format_version, data_size, is_ascii = _read_header(f, int_size)
 
+    readers = {2: msh2, 4.0: msh4_0, 4.1: msh4_1}
+
     try:
-        version = versions[format_version]
+        reader = readers[format_version]
     except KeyError:
         try:
-            version = versions[format_version.split(".")[0]]
+            reader = readers[int(format_version)]
         except KeyError:
             raise ValueError(
-                "Need mesh format in {} (got {})".format(versions.keys(), format_version)
+                "Need mesh format in {} (got {})".format(readers.keys(), format_version)
             )
 
-    return version.read_buffer(f, is_ascii, int_size, data_size)
+    return reader.read_buffer(f, is_ascii, int_size, data_size)
 
 
 def _read_header(f, int_size):
@@ -56,7 +56,7 @@ def _read_header(f, int_size):
     # 4.1 0 8
     # into its components.
     str_list = list(filter(None, line.split()))
-    format_version = str_list[0]
+    format_version = float(str_list[0])
     assert str_list[1] in ["0", "1"]
     is_ascii = str_list[1] == "0"
     data_size = int(str_list[2])
