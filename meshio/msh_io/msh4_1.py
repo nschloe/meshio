@@ -158,7 +158,7 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
         num_ele, = fromfile(f, c_size_t, 1)
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
-        d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape(
+        d = fromfile(f, c_size_t, int(num_ele * (1 + num_nodes_per_ele))).reshape(
             (num_ele, -1)
         )
         if physical_tags is None:
