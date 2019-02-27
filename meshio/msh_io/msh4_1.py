@@ -123,16 +123,15 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     for k in range(num_entity_blocks):
         # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
         _, __, parametric = fromfile(f, c_int, 3)
-        assert parametric == 0, "parametric nodes not implemented" 
+        assert parametric == 0, "parametric nodes not implemented"
         num_nodes = int(fromfile(f, c_size_t, 1)[0])
 
         node_tags = fromfile(f, c_size_t, num_nodes)
-        xyz = fromfile(f, c_double, num_nodes * 3).reshape(
-            (num_nodes, 3))
-        points[idx:(idx + num_nodes)] = xyz
-        tags[idx:(idx + num_nodes)] = node_tags
+        xyz = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
+        points[idx : (idx + num_nodes)] = xyz
+        tags[idx : (idx + num_nodes)] = node_tags
         idx += num_nodes
-        
+
     if not is_ascii:
 
         line = f.readline().decode("utf-8")
