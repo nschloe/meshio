@@ -152,7 +152,10 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
     # numEntityBlocks numElements minElementTag maxElementTag (all size_t)
-    num_entity_blocks, total_num_elements, _, __ = fromfile(f, c_size_t, 4)
+    num_entity_blocks, total_num_elements, min_ele_tag, max_ele_tag = fromfile(
+        f, c_size_t, 4
+    )
+    is_dense = min_ele_tag == 1 and max_ele_tag == total_num_elements
 
     data = []
     cell_data = {}
@@ -177,15 +180,15 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndElements"
 
-    # The msh4 elements array refers to the nodes by their tag, not the index. All other
-    # mesh formats use the index, which is far more efficient, too. Hence,
-    # unfortunately, we have to do a fairly expensive conversion here.
-    m = numpy.max(point_tags + 1)
-    itags = -numpy.ones(m, dtype=int)
-    itags[point_tags] = numpy.arange(len(point_tags))
+    if is_dense:
+        itags = point_tags
+    else:
+        m = numpy.max(point_tags + 1)
+        itags = -numpy.ones(m, dtype=int)
+        itags[point_tags] = numpy.arange(len(point_tags))
 
     # Note that the first column in the data array is the element tag; discard it.
-    data = [(physical_tag, tpe, itags[d[:, 1:]]) for physical_tag, tpe, d in data]
+    data = [(physical_tag, tpe, itags[d[:, 1:] - 1]) for physical_tag, tpe, d in data]
 
     cells = {}
     for physical_tag, key, values in data:
