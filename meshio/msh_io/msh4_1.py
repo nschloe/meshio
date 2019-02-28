@@ -114,10 +114,10 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
     # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
-    num_entity_blocks, total_num_nodes, minNodeTag, maxNodeTag = fromfile(
+    num_entity_blocks, total_num_nodes, min_node_tag, max_node_tag = fromfile(
         f, c_size_t, 4
     )
-    is_dense = minNodeTag == 1 and maxNodeTag == total_num_nodes
+    is_dense = min_node_tag == 1 and max_node_tag == total_num_nodes
 
     points = numpy.empty((total_num_nodes, 3), dtype=float)
     tags = (numpy.arange if is_dense else numpy.empty)(total_num_nodes, dtype=int)
