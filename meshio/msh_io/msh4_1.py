@@ -336,7 +336,7 @@ def _write_elements(fh, cells, write_binary):
     """
     fh.write("$Elements\n".encode("utf-8"))
 
-    total_num_cells = sum([data.shape[0] for _, data in cells.items()])
+    total_num_cells = sum(map(len, cells.values()))
     if write_binary:
         fh.write(numpy.array([len(cells), total_num_cells], dtype=c_ulong).tostring())
 
