@@ -257,7 +257,7 @@ def write(filename, mesh, write_binary=True):
         mode_idx = 1 if write_binary else 0
         size_of_double = 8
         fh.write(
-            ("$MeshFormat\n4 {} {}\n".format(mode_idx, size_of_double)).encode("utf-8")
+            ("$MeshFormat\n4.1 {} {}\n".format(mode_idx, size_of_double)).encode("utf-8")
         )
         if write_binary:
             fh.write(struct.pack("i", 1))
