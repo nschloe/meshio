@@ -240,8 +240,7 @@ def write(filename, mesh, write_binary=True):
         for key, value in mesh.cells.items():
             if value.dtype != c_int:
                 logging.warning(
-                    "Binary Gmsh needs c_size_t (got %s). Converting.",
-                    value.dtype,
+                    "Binary Gmsh needs c_size_t (got %s). Converting.", value.dtype
                 )
                 mesh.cells[key] = numpy.array(value, dtype=c_size_t)
 
@@ -299,14 +298,16 @@ def _write_nodes(fh, points, write_binary):
     #   ...
     # ...
     if write_binary:
-        fh.write(numpy.array([1, len(points), 1, len(points)], dtype=c_size_t).tostring())
-        
+        fh.write(
+            numpy.array([1, len(points), 1, len(points)], dtype=c_size_t).tostring()
+        )
+
         fh.write(numpy.array([dim_entity, 1, 0], dtype=c_int).tostring())
         fh.write(numpy.array([len(points)], dtype=c_size_t).tostring())
 
         fh.write(numpy.arange(1, 1 + len(points), dtype=c_size_t).tostring())
         fh.write(points.tostring())
-        
+
         fh.write(numpy.array([1, points.shape[0]], dtype=c_ulong).tostring())
         fh.write(numpy.array([1, dim_entity, type_node], dtype=c_int).tostring())
         fh.write(numpy.array([points.shape[0]], dtype=c_ulong).tostring())
