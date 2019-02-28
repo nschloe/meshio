@@ -359,7 +359,7 @@ def _write_elements(fh, cells, write_binary):
             )
             fh.write(numpy.array([node_idcs.shape[0]], dtype=c_ulong).tostring())
 
-            assert node_idcs.dtype == c_int
+            assert node_idcs.dtype == c_size_t
             data = numpy.column_stack(
                 [
                     numpy.arange(
