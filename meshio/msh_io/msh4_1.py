@@ -322,10 +322,22 @@ def _write_nodes(fh, points, write_binary):
 
 
 def _write_elements(fh, cells, write_binary):
+    """write the $Elements block
+
+    $Elements
+      numEntityBlocks(size_t) numElements(size_t)
+        minElementTag(size_t) maxElementTag(size_t)
+      entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
+        elementTag(size_t) nodeTag(size_t) ...
+        ...
+      ...
+    $EndElements
+
+    """
     fh.write("$Elements\n".encode("utf-8"))
 
+    total_num_cells = sum([data.shape[0] for _, data in cells.items()])
     if write_binary:
-        total_num_cells = sum([data.shape[0] for _, data in cells.items()])
         fh.write(numpy.array([len(cells), total_num_cells], dtype=c_ulong).tostring())
 
         consecutive_index = 0
@@ -360,8 +372,6 @@ def _write_elements(fh, cells, write_binary):
 
         fh.write("\n".encode("utf-8"))
     else:
-        # count all cells
-        total_num_cells = sum([data.shape[0] for _, data in cells.items()])
         fh.write("{} {}\n".format(len(cells), total_num_cells).encode("utf-8"))
 
         consecutive_index = 0
