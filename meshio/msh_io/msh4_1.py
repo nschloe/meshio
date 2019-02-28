@@ -344,7 +344,7 @@ def _write_elements(fh, cells, write_binary):
             ).tostring()
         )
 
-        element_tag = 0
+        consecutive_index = 0
         for entity_tag, (cell_type, node_idcs) in enumerate(cells.items(), 1):
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
             fh.write(
@@ -363,8 +363,8 @@ def _write_elements(fh, cells, write_binary):
             data = numpy.column_stack(
                 [
                     numpy.arange(
-                        element_tag,
-                        element_tag + len(node_idcs),
+                        consecutive_index,
+                        consecutive_index + len(node_idcs),
                         dtype=c_int,
                     ),
                     # increment indices by one to conform with gmsh standard
@@ -372,7 +372,7 @@ def _write_elements(fh, cells, write_binary):
                 ]
             )
             fh.write(data.tostring())
-            element_tag += len(node_idcs)
+            consecutive_index += len(node_idcs)
 
         fh.write("\n".encode("utf-8"))
     else:
@@ -382,7 +382,7 @@ def _write_elements(fh, cells, write_binary):
             ).encode("utf-8")
         )
 
-        element_tag = 0
+        consecutive_index = 0
         for entity_tag, (cell_type, node_idcs) in enumerate(cells.items(), 1):
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
             fh.write(
@@ -398,8 +398,8 @@ def _write_elements(fh, cells, write_binary):
 
             fmt = " ".join(["{}"] * (num_nodes_per_cell[cell_type] + 1)) + "\n"
             for idx in idcs:
-                fh.write(fmt.format(element_tag, *idx).encode("utf-8"))
-                element_tag += 1
+                fh.write(fmt.format(consecutive_index, *idx).encode("utf-8"))
+                consecutive_index += 1
 
     fh.write("$EndElements\n".encode("utf-8"))
     return
