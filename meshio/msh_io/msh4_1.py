@@ -338,7 +338,11 @@ def _write_elements(fh, cells, write_binary):
 
     total_num_cells = sum(map(len, cells.values()))
     if write_binary:
-        fh.write(numpy.array([len(cells), total_num_cells], dtype=c_ulong).tostring())
+        fh.write(
+            numpy.array(
+                [len(cells), total_num_cells, 1, total_num_cells], dtype=c_size_t
+            ).tostring()
+        )
 
         consecutive_index = 0
         for cell_type, node_idcs in cells.items():
@@ -372,7 +376,11 @@ def _write_elements(fh, cells, write_binary):
 
         fh.write("\n".encode("utf-8"))
     else:
-        fh.write("{} {}\n".format(len(cells), total_num_cells).encode("utf-8"))
+        fh.write(
+            "{} {} {} {}\n".format(
+                len(cells), total_num_cells, 1, total_num_cells
+            ).encode("utf-8")
+        )
 
         consecutive_index = 0
         for cell_type, node_idcs in cells.items():
