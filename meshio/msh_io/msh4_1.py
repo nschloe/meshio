@@ -345,19 +345,19 @@ def _write_elements(fh, cells, write_binary):
         )
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells.items():
-            # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+        for entity_tag, (cell_type, node_idcs) in enumerate(cells.items(), 1):
+            # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
             fh.write(
                 numpy.array(
                     [
-                        1,
                         _geometric_dimension[cell_type],
+                        entity_tag,
                         _meshio_to_gmsh_type[cell_type],
                     ],
                     dtype=c_int,
                 ).tostring()
             )
-            fh.write(numpy.array([node_idcs.shape[0]], dtype=c_ulong).tostring())
+            fh.write(numpy.array([node_idcs.shape[0]], dtype=c_size_t).tostring())
 
             assert node_idcs.dtype == c_size_t
             data = numpy.column_stack(
@@ -383,12 +383,12 @@ def _write_elements(fh, cells, write_binary):
         )
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells.items():
-            # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+        for entity_tag, (cell_type, node_idcs) in enumerate(cells.items(), 1):
+            # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
             fh.write(
                 "{} {} {} {}\n".format(
-                    1,  # tag
                     _geometric_dimension[cell_type],
+                    entity_tag,
                     _meshio_to_gmsh_type[cell_type],
                     node_idcs.shape[0],
                 ).encode("utf-8")
