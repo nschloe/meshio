@@ -114,10 +114,13 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
     # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
-    num_entity_blocks, total_num_nodes, _, __ = fromfile(f, c_size_t, 4)
+    num_entity_blocks, total_num_nodes, minNodeTag, maxNodeTag = fromfile(
+        f, c_size_t, 4
+    )
+    is_dense = minNodeTag == 1 and maxNodeTag == total_num_nodes
 
     points = numpy.empty((total_num_nodes, 3), dtype=float)
-    tags = numpy.empty(total_num_nodes, dtype=int)
+    tags = (numpy.arange if is_dense else numpy.empty)(total_num_nodes, dtype=int)
 
     idx = 0
     for k in range(num_entity_blocks):
@@ -125,11 +128,13 @@ def _read_nodes(f, is_ascii, int_size, data_size):
         _, __, parametric = fromfile(f, c_int, 3)
         assert parametric == 0, "parametric nodes not implemented"
         num_nodes = int(fromfile(f, c_size_t, 1)[0])
+        ixx = slice(idx, idx + num_nodes)
 
-        node_tags = fromfile(f, c_size_t, num_nodes)
-        xyz = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
-        points[idx : (idx + num_nodes)] = xyz
-        tags[idx : (idx + num_nodes)] = node_tags
+        if is_dense:
+            fromfile(f, c_size_t, num_nodes)
+        else:
+            tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
+        points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
         idx += num_nodes
 
     if not is_ascii:
