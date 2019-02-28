@@ -4,7 +4,7 @@ from ctypes import c_int, sizeof
 import struct
 from . import msh2, msh4_0, msh4_1
 
-versions = {"2": msh2, "4.0": msh4_0, "4.1": msh4_1}
+versions = {"2": msh2, "4.0": msh4_0, "4.1": msh4_1, "4": msh4_1}
 
 
 def read(filename):
