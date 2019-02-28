@@ -240,11 +240,10 @@ def write(filename, mesh, write_binary=True):
         for key, value in mesh.cells.items():
             if value.dtype != c_int:
                 logging.warning(
-                    "Binary Gmsh needs c_int (typically numpy.int32) integers "
-                    "(got %s). Converting.",
+                    "Binary Gmsh needs c_size_t (got %s). Converting.",
                     value.dtype,
                 )
-                mesh.cells[key] = numpy.array(value, dtype=c_int)
+                mesh.cells[key] = numpy.array(value, dtype=c_size_t)
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -289,37 +288,34 @@ def _write_nodes(fh, points, write_binary):
     dim_entity = 0
     type_node = 0
 
+    # write all points as one big block
+    # numEntityBlocks(size_t) numNodes(size_t) minNodeTag(size_t) maxNodeTag(size_t)
+    # entityDim(int) entityTag(int) parametric(int; 0 or 1) numNodesBlock(size_t)
+    #   nodeTag(size_t)
+    #   ...
+    #   x(double) y(double) z(double)
+    #     < u(double; if parametric and entityDim = 1 or entityDim = 2) >
+    #     < v(double; if parametric and entityDim = 2) >
+    #   ...
+    # ...
     if write_binary:
-        # write all points as one big block
-        # numEntityBlocks(unsigned long) numNodes(unsigned long)
-        # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-        # tag(int) x(double) y(double) z(double)
+        fh.write(numpy.array([1, len(points), 1, len(points)], dtype=c_size_t).tostring())
+        
+        fh.write(numpy.array([dim_entity, 1, 0], dtype=c_int).tostring())
+        fh.write(numpy.array([len(points)], dtype=c_size_t).tostring())
+
+        fh.write(numpy.arange(1, 1 + len(points), dtype=c_size_t).tostring())
+        fh.write(points.tostring())
+        
         fh.write(numpy.array([1, points.shape[0]], dtype=c_ulong).tostring())
         fh.write(numpy.array([1, dim_entity, type_node], dtype=c_int).tostring())
         fh.write(numpy.array([points.shape[0]], dtype=c_ulong).tostring())
-        dtype = [("index", c_int), ("x", c_double, (3,))]
-        tmp = numpy.empty(len(points), dtype=dtype)
-        tmp["index"] = 1 + numpy.arange(len(points))
-        tmp["x"] = points
-        fh.write(tmp.tostring())
         fh.write("\n".encode("utf-8"))
     else:
-        # write all points as one big block
-        # numEntityBlocks(unsigned long) numNodes(unsigned long)
-        fh.write("{} {}\n".format(1, len(points)).encode("utf-8"))
-
-        # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-        fh.write(
-            "{} {} {} {}\n".format(1, dim_entity, type_node, len(points)).encode(
-                "utf-8"
-            )
-        )
-
-        for k, x in enumerate(points):
-            # tag(int) x(double) y(double) z(double)
-            fh.write(
-                "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
-            )
+        fh.write("{} {} {} {}\n".format(1, len(points), 1, len(points)))
+        fh.write("{} {} {} {}\n".format(dim_entity, 1, 0, len(points)))
+        np.arange(1, 1 + len(points), dtype=c_size_t).tofile(fh, "\n", "%d")
+        np.savetxt(fh, points, "%d", " ", encoding="utf-8")
 
     fh.write("$EndNodes\n".encode("utf-8"))
     return
