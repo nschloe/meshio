@@ -242,7 +242,7 @@ def write(filename, mesh, write_binary=True):
                 logging.warning(
                     "Binary Gmsh needs c_size_t (got %s). Converting.", value.dtype
                 )
-                mesh.cells[key] = numpy.array(value, dtype=c_size_t)
+                mesh.cells[key] = value.astype(c_size_t)
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
