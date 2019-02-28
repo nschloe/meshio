@@ -322,8 +322,6 @@ def _write_nodes(fh, points, write_binary):
 
 
 def _write_elements(fh, cells, write_binary):
-    # TODO respect write_binary
-    # write elements
     fh.write("$Elements\n".encode("utf-8"))
 
     if write_binary:
