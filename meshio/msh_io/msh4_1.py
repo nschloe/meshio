@@ -312,10 +312,10 @@ def _write_nodes(fh, points, write_binary):
 
         fh.write("\n".encode("utf-8"))
     else:
-        fh.write("{} {} {} {}\n".format(1, len(points), 1, len(points)))
-        fh.write("{} {} {} {}\n".format(dim_entity, 1, 0, len(points)))
-        np.arange(1, 1 + len(points), dtype=c_size_t).tofile(fh, "\n", "%d")
-        np.savetxt(fh, points, "%d", " ", encoding="utf-8")
+        fh.write("{} {} {} {}\n".format(1, len(points), 1, len(points)).encode("utf-8"))
+        fh.write("{} {} {} {}\n".format(dim_entity, 1, 0, len(points)).encode("utf-8"))
+        numpy.arange(1, 1 + len(points), dtype=c_size_t).tofile(fh, "\n", "%d")
+        numpy.savetxt(fh, points, "%d", " ", encoding="utf-8")
 
     fh.write("$EndNodes\n".encode("utf-8"))
     return
