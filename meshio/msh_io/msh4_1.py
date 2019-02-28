@@ -23,6 +23,7 @@ from .common import (
 )
 from ..mesh import Mesh
 from ..common import num_nodes_per_cell, cell_data_from_raw, raw_from_cell_data
+from .msh2 import write as write2  # revert where necessary; TODO: drop this
 
 
 def read_buffer(f, is_ascii, int_size, data_size):
@@ -224,6 +225,11 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
 
 
 def write(filename, mesh, write_binary=True):
+    logging.warning("Writing MSH4.1 unimplemented, falling back on MSH2")
+    write2(filename, mesh, write_binary=write_binary)
+
+
+def write4_1(filename, mesh, write_binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
@@ -269,6 +275,7 @@ def write(filename, mesh, write_binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
+        _write_entities(fh, cells, write_binary)
         _write_nodes(fh, mesh.points, write_binary)
         _write_elements(fh, cells, write_binary)
         if mesh.gmsh_periodic is not None:
@@ -279,7 +286,37 @@ def write(filename, mesh, write_binary=True):
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, write_binary)
 
-    return
+
+def _write_entities(fh, cells, write_binary):
+    """write the $Entities block
+
+    specified as 
+
+    numPoints(size_t) numCurves(size_t)
+      numSurfaces(size_t) numVolumes(size_t)
+    pointTag(int) X(double) Y(double) Z(double)
+      numPhysicalTags(size_t) physicalTag(int) ...
+    ...
+    curveTag(int) minX(double) minY(double) minZ(double)
+      maxX(double) maxY(double) maxZ(double)
+      numPhysicalTags(size_t) physicalTag(int) ...
+      numBoundingPoints(size_t) pointTag(int) ...
+    ...
+    surfaceTag(int) minX(double) minY(double) minZ(double)
+      maxX(double) maxY(double) maxZ(double)
+      numPhysicalTags(size_t) physicalTag(int) ...
+      numBoundingCurves(size_t) curveTag(int) ...
+    ...
+    volumeTag(int) minX(double) minY(double) minZ(double)
+      maxX(double) maxY(double) maxZ(double)
+      numPhysicalTags(size_t) physicalTag(int) ...
+      numBoundngSurfaces(size_t) surfaceTag(int) ...
+    ...
+
+    """
+    fh.write("$Entities\n".encode("utf-8"))
+    raise NotImplementedError
+    fh.write("$EndEntities\n".encode("utf-8"))
 
 
 def _write_nodes(fh, points, write_binary):
