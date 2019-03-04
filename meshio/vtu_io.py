@@ -53,6 +53,57 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     return cells, cell_data
 
 
+def _organize_cells(point_offsets, cells, cell_data_raw):
+    assert len(point_offsets) == len(cells)
+
+    out_cells = {}
+    out_cell_data = {}
+    for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
+        cls, cell_data = _cells_from_data(
+            cls["connectivity"], cls["offsets"], cls["types"], cdr
+        )
+        for key in cls:
+            if key not in out_cells:
+                out_cells[key] = []
+            out_cells[key].append(cls[key] + offset)
+
+            if key not in out_cell_data:
+                out_cell_data[key] = {}
+
+            for name in cell_data[key]:
+                if name not in out_cell_data[key]:
+                    out_cell_data[key][name] = []
+                out_cell_data[key][name].append(cell_data[key][name])
+
+    for key in out_cells:
+        out_cells[key] = numpy.concatenate(out_cells[key])
+        for name in out_cell_data[key]:
+            out_cell_data[key][name] = numpy.concatenate(out_cell_data[key][name])
+
+    return out_cells, out_cell_data
+
+
+def get_grid(root):
+    grid = None
+    appended_data = None
+    for c in root:
+        if c.tag == "UnstructuredGrid":
+            assert grid is None, "More than one UnstructuredGrid found."
+            grid = c
+        else:
+            assert c.tag == "AppendedData", "Unknown main tag '{}'.".format(c.tag)
+            assert appended_data is None, "More than one AppendedData found."
+            assert c.attrib["encoding"] == "base64"
+            appended_data = c.text.strip()
+            # The appended data always begins with a (meaningless)
+            # underscore.
+            assert appended_data[0] == "_"
+            appended_data = appended_data[1:]
+
+    assert grid is not None, "No UnstructuredGrid found."
+    return grid, appended_data
+
+
 vtu_to_numpy_type = {
     "Float32": numpy.dtype(numpy.float32),
     "Float64": numpy.dtype(numpy.float64),
@@ -117,23 +168,7 @@ class VtuReader(object):
         except KeyError:
             self.byte_order = None
 
-        grid = None
-        self.appended_data = None
-        for c in root:
-            if c.tag == "UnstructuredGrid":
-                assert grid is None, "More than one UnstructuredGrid found."
-                grid = c
-            else:
-                assert c.tag == "AppendedData", "Unknown main tag '{}'.".format(c.tag)
-                assert self.appended_data is None, "More than one AppendedData found."
-                assert c.attrib["encoding"] == "base64"
-                self.appended_data = c.text.strip()
-                # The appended data always begins with a (meaningless)
-                # underscore.
-                assert self.appended_data[0] == "_"
-                self.appended_data = self.appended_data[1:]
-
-        assert grid is not None, "No UnstructuredGrid found."
+        grid, appended_data = get_grid(root)
 
         pieces = []
         field_data = {}
@@ -204,10 +239,10 @@ class VtuReader(object):
 
                     cell_data_raw.append(piece_cell_data_raw)
 
-        if cell_data_raw:
-            assert len(cell_data_raw) == len(cells)
-        else:
+        if not cell_data_raw:
             cell_data_raw = [{}] * len(cells)
+
+        assert len(cell_data_raw) == len(cells)
 
         point_offsets = (
             numpy.cumsum([pts.shape[0] for pts in points]) - points[0].shape[0]
@@ -225,31 +260,9 @@ class VtuReader(object):
         else:
             self.point_data = None
 
-        assert len(point_offsets) == len(cells)
-
-        self.cells = {}
-        self.cell_data = {}
-        for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
-            cls, cell_data = _cells_from_data(
-                cls["connectivity"], cls["offsets"], cls["types"], cdr
-            )
-            for key in cls:
-                if key not in self.cells:
-                    self.cells[key] = []
-                self.cells[key].append(cls[key] + offset)
-
-                if key not in self.cell_data:
-                    self.cell_data[key] = {}
-
-                for name in cell_data[key]:
-                    if name not in self.cell_data[key]:
-                        self.cell_data[key][name] = []
-                    self.cell_data[key][name].append(cell_data[key][name])
-
-        for key in self.cells:
-            self.cells[key] = numpy.concatenate(self.cells[key])
-            for name in self.cell_data[key]:
-                self.cell_data[key][name] = numpy.concatenate(self.cell_data[key][name])
+        self.cells, self.cell_data = _organize_cells(
+            point_offsets, cells, cell_data_raw
+        )
 
         self.field_data = field_data
         return
