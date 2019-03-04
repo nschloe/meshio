@@ -230,7 +230,7 @@ class XdmfReader(object):
             else:
                 assert c.tag == "Attribute", "Unknown section '{}'.".format(c.tag)
 
-                # Don't be too struct here: FEniCS, for example, calls this
+                # Don't be too strict here: FEniCS, for example, calls this
                 # 'AttributeType'.
                 # assert c.attrib['Type'] == 'None'
 
@@ -398,12 +398,32 @@ class XdmfWriter(object):
             data_item.text = self.numpy_to_xml_string(cd)
         return
 
+    def _attribute_type(self, data):
+        # <http://www.xdmf.org/index.php/XDMF_Model_and_Format#Attribute>
+        if len(data.shape) == 1 or (len(data.shape) == 2 and data.shape[1] == 1):
+            return "Scalar"
+        elif len(data.shape) == 2 and data.shape[1] in [2, 3]:
+            return "Vector"
+        elif (len(data.shape) == 2 and data.shape[1] == 9) or (
+            len(data.shape) == 3 and data.shape[1] == 3 and data.shape[2] == 3
+        ):
+            return "Tensor"
+        elif len(data.shape) == 2 and data.shape[1] == 6:
+            return "Tensor6"
+
+        assert len(data.shape) == 3
+        return "Matrix"
+
     def point_data(self, point_data, grid):
         from lxml import etree as ET
 
         for name, data in point_data.items():
             att = ET.SubElement(
-                grid, "Attribute", Name=name, Type="None", Center="Node"
+                grid,
+                "Attribute",
+                Name=name,
+                AttributeType=self._attribute_type(data),
+                Center="Node",
             )
             dt, prec = numpy_to_xdmf_dtype[data.dtype.name]
             dim = " ".join([str(s) for s in data.shape])
@@ -424,7 +444,11 @@ class XdmfWriter(object):
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(
-                grid, "Attribute", Name=name, Type="None", Center="Cell"
+                grid,
+                "Attribute",
+                Name=name,
+                AttributeType=self._attribute_type(data),
+                Center="Cell",
             )
             dt, prec = numpy_to_xdmf_dtype[data.dtype.name]
             dim = " ".join([str(s) for s in data.shape])
