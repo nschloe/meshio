@@ -53,6 +53,57 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     return cells, cell_data
 
 
+def _organize_cells(point_offsets, cells, cell_data_raw):
+    assert len(point_offsets) == len(cells)
+
+    out_cells = {}
+    out_cell_data = {}
+    for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
+        cls, cell_data = _cells_from_data(
+            cls["connectivity"], cls["offsets"], cls["types"], cdr
+        )
+        for key in cls:
+            if key not in out_cells:
+                out_cells[key] = []
+            out_cells[key].append(cls[key] + offset)
+
+            if key not in out_cell_data:
+                out_cell_data[key] = {}
+
+            for name in cell_data[key]:
+                if name not in out_cell_data[key]:
+                    out_cell_data[key][name] = []
+                out_cell_data[key][name].append(cell_data[key][name])
+
+    for key in out_cells:
+        out_cells[key] = numpy.concatenate(out_cells[key])
+        for name in out_cell_data[key]:
+            out_cell_data[key][name] = numpy.concatenate(out_cell_data[key][name])
+
+    return out_cells, out_cell_data
+
+
+def get_grid(root):
+    grid = None
+    appended_data = None
+    for c in root:
+        if c.tag == "UnstructuredGrid":
+            assert grid is None, "More than one UnstructuredGrid found."
+            grid = c
+        else:
+            assert c.tag == "AppendedData", "Unknown main tag '{}'.".format(c.tag)
+            assert appended_data is None, "More than one AppendedData found."
+            assert c.attrib["encoding"] == "base64"
+            appended_data = c.text.strip()
+            # The appended data always begins with a (meaningless)
+            # underscore.
+            assert appended_data[0] == "_"
+            appended_data = appended_data[1:]
+
+    assert grid is not None, "No UnstructuredGrid found."
+    return grid, appended_data
+
+
 vtu_to_numpy_type = {
     "Float32": numpy.dtype(numpy.float32),
     "Float64": numpy.dtype(numpy.float64),
@@ -76,12 +127,6 @@ class VtuReader(object):
 
     def __init__(self, filename):
         from lxml import etree as ET
-
-        points = None
-        point_data = {}
-        cell_data_raw = {}
-        cells = {}
-        field_data = {}
 
         # libxml2 and with it lxml have a safety net for memory overflows; see,
         # e.g., <https://stackoverflow.com/q/33828728/353337>.
@@ -123,86 +168,102 @@ class VtuReader(object):
         except KeyError:
             self.byte_order = None
 
-        grid = None
-        self.appended_data = None
-        for c in root:
-            if c.tag == "UnstructuredGrid":
-                assert grid is None, "More than one UnstructuredGrid found."
-                grid = c
-            else:
-                assert c.tag == "AppendedData", "Unknown main tag '{}'.".format(c.tag)
-                assert self.appended_data is None, "More than one AppendedData found."
-                assert c.attrib["encoding"] == "base64"
-                self.appended_data = c.text.strip()
-                # The appended data always begins with a (meaningless)
-                # underscore.
-                assert self.appended_data[0] == "_"
-                self.appended_data = self.appended_data[1:]
+        grid, appended_data = get_grid(root)
 
-        assert grid is not None, "No UnstructuredGrid found."
-
-        piece = None
+        pieces = []
+        field_data = {}
         for c in grid:
             if c.tag == "Piece":
-                assert piece is None, "More than one Piece found."
-                piece = c
+                pieces.append(c)
             else:
                 assert c.tag == "FieldData", "Unknown grid subtag '{}'.".format(c.tag)
                 # TODO test field data
                 for data_array in c:
                     field_data[data_array.attrib["Name"]] = self.read_data(data_array)
 
-        assert piece is not None, "No Piece found."
+        assert pieces, "No Piece found."
 
-        num_points = int(piece.attrib["NumberOfPoints"])
-        num_cells = int(piece.attrib["NumberOfCells"])
+        points = []
+        cells = []
+        point_data = []
+        cell_data_raw = []
 
-        for child in piece:
-            if child.tag == "Points":
-                data_arrays = list(child)
-                assert len(data_arrays) == 1
-                data_array = data_arrays[0]
+        for piece in pieces:
+            piece_cells = {}
+            piece_point_data = {}
+            piece_cell_data_raw = {}
 
-                assert data_array.tag == "DataArray"
+            num_points = int(piece.attrib["NumberOfPoints"])
+            num_cells = int(piece.attrib["NumberOfCells"])
 
-                points = self.read_data(data_array)
+            for child in piece:
+                if child.tag == "Points":
+                    data_arrays = list(child)
+                    assert len(data_arrays) == 1
+                    data_array = data_arrays[0]
 
-                num_components = int(data_array.attrib["NumberOfComponents"])
-                points = points.reshape(num_points, num_components)
-
-            elif child.tag == "Cells":
-                for data_array in child:
                     assert data_array.tag == "DataArray"
-                    cells[data_array.attrib["Name"]] = self.read_data(data_array)
 
-                assert len(cells["offsets"]) == num_cells
-                assert len(cells["types"]) == num_cells
+                    pts = self.read_data(data_array)
 
-            elif child.tag == "PointData":
-                for c in child:
-                    assert c.tag == "DataArray"
-                    point_data[c.attrib["Name"]] = self.read_data(c)
+                    num_components = int(data_array.attrib["NumberOfComponents"])
+                    points.append(pts.reshape(num_points, num_components))
 
-            else:
-                assert child.tag == "CellData", "Unknown tag '{}'.".format(child.tag)
+                elif child.tag == "Cells":
+                    for data_array in child:
+                        assert data_array.tag == "DataArray"
+                        piece_cells[data_array.attrib["Name"]] = self.read_data(
+                            data_array
+                        )
 
-                for c in child:
-                    assert c.tag == "DataArray"
-                    cell_data_raw[c.attrib["Name"]] = self.read_data(c)
+                    assert len(piece_cells["offsets"]) == num_cells
+                    assert len(piece_cells["types"]) == num_cells
 
-        assert points is not None
-        assert "connectivity" in cells
-        assert "offsets" in cells
-        assert "types" in cells
+                    cells.append(piece_cells)
 
-        cells, cell_data = _cells_from_data(
-            cells["connectivity"], cells["offsets"], cells["types"], cell_data_raw
+                elif child.tag == "PointData":
+                    for c in child:
+                        assert c.tag == "DataArray"
+                        piece_point_data[c.attrib["Name"]] = self.read_data(c)
+
+                    point_data.append(piece_point_data)
+
+                else:
+                    assert child.tag == "CellData", "Unknown tag '{}'.".format(
+                        child.tag
+                    )
+
+                    for c in child:
+                        assert c.tag == "DataArray"
+                        piece_cell_data_raw[c.attrib["Name"]] = self.read_data(c)
+
+                    cell_data_raw.append(piece_cell_data_raw)
+
+        if not cell_data_raw:
+            cell_data_raw = [{}] * len(cells)
+
+        assert len(cell_data_raw) == len(cells)
+
+        point_offsets = (
+            numpy.cumsum([pts.shape[0] for pts in points]) - points[0].shape[0]
         )
 
-        self.points = points
-        self.cells = cells
-        self.point_data = point_data
-        self.cell_data = cell_data
+        # Now merge across pieces
+        assert points
+        self.points = numpy.concatenate(points)
+
+        if point_data:
+            self.point_data = {
+                key: numpy.concatenate([pd[key] for pd in point_data])
+                for key in point_data[0]
+            }
+        else:
+            self.point_data = None
+
+        self.cells, self.cell_data = _organize_cells(
+            point_offsets, cells, cell_data_raw
+        )
+
         self.field_data = field_data
         return
 
@@ -249,19 +310,18 @@ class VtuReader(object):
         return block_data
 
     def read_data(self, c):
-        if c.attrib["format"] == "ascii":
+        fmt = c.attrib["format"] if "format" in c.attrib else "ascii"
+
+        if fmt == "ascii":
             # ascii
             data = numpy.array(
                 c.text.split(), dtype=vtu_to_numpy_type[c.attrib["type"]]
             )
-        elif c.attrib["format"] == "binary":
+        elif fmt == "binary":
             data = self.read_binary(c.text.strip(), c.attrib["type"])
         else:
             # appended data
-            assert c.attrib["format"] == "appended", "Unknown data format '{}'.".format(
-                c.attrib["format"]
-            )
-
+            assert fmt == "appended", "Unknown data format '{}'.".format(fmt)
             offset = int(c.attrib["offset"])
             data = self.read_binary(self.appended_data[offset:], c.attrib["type"])
 
