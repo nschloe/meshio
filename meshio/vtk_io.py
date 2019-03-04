@@ -374,7 +374,7 @@ def translate_cells(data, types, cell_data_raw):
         nbcells = len(types)
         offsets = numpy.empty(len(types), dtype=int)
         offsets[0] = 0
-        for idx in numpy.arange(nbcells - 1):
+        for idx in range(nbcells - 1):
             numnodes[idx] = data[offsets[idx]]
             offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
         idx = nbcells - 1
@@ -397,7 +397,7 @@ def translate_cells(data, types, cell_data_raw):
 
     else:
         # TODO: cell_data
-        for idx in numpy.arange(nbcells):
+        for idx in range(nbcells):
             nbedges = data[offsets[idx]]
             start = offsets[idx] + 1
             end = start + numnodes[idx]
