@@ -402,7 +402,12 @@ def translate_cells(data, types, cell_data_raw):
             start = offsets[idx] + 1
             end = start + numnodes[idx]
             cell = data[start:end]
-            key = "polygon" + str(nbedges)
+            if nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["triangle"]]:
+                key = "triangle"
+            elif nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["quad"]]:
+                key = "quad"
+            else:
+                key = "polygon" + str(nbedges)
             if key in cells:
                 cells[key] = numpy.vstack([cells[key], cell])
             else:
