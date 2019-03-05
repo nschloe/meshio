@@ -190,10 +190,7 @@ polygon_mesh = meshio.Mesh(
             [1.5, 1.2, 0.0],
         ]
     ),
-    {
-        "quad": numpy.array([[0, 1, 2, 3]]),
-        "polygon": numpy.array([[1, 4, 5, 6, 2]]),
-    },
+    {"quad": numpy.array([[0, 1, 2, 3]]), "polygon": numpy.array([[1, 4, 5, 6, 2]])},
 )
 
 
