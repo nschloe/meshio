@@ -205,7 +205,7 @@ def write(filename, mesh, file_format=None, **kwargs):
 
     # check cells for sanity
     for key, value in mesh.cells.items():
-        if "polygon" not in key:
+        if key[:7] != "polygon":
             assert value.shape[1] == num_nodes_per_cell[key]
 
     try:
