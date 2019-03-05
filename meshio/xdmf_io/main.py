@@ -296,8 +296,8 @@ class XdmfWriter(object):
         if self.data_format == "XML":
             s = BytesIO()
             fmt = dtype_to_format_string[data.dtype.name]
-            numpy.savetxt(s, data.flatten(), fmt)
-            return s.getvalue().decode()
+            numpy.savetxt(s, data, fmt)
+            return "\n" + s.getvalue().decode()
         elif self.data_format == "Binary":
             bin_filename = "{}{}.bin".format(
                 os.path.splitext(self.filename)[0], self.data_counter
