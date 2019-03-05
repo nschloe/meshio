@@ -178,6 +178,24 @@ hex20_mesh = meshio.Mesh(
     {"hexahedron20": numpy.array([range(20)])},
 )
 
+polygon_mesh = meshio.Mesh(
+    numpy.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [1.5, 0.0, 0.0],
+            [1.7, 0.5, 0.0],
+            [1.5, 1.2, 0.0],
+        ]
+    ),
+    {
+        "quad": numpy.array([[0, 1, 2, 3]]),
+        "polygon": numpy.array([[1, 4, 5, 6, 2]]),
+    },
+)
+
 
 def add_point_data(mesh, dim, num_tags=2):
     numpy.random.seed(0)
