@@ -3,6 +3,7 @@
 import pytest
 
 import meshio
+import numpy
 
 import helpers
 import legacy_reader
@@ -73,6 +74,20 @@ def test_generic_io():
     helpers.generic_io("test.vtk")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.vtk")
+    return
+
+
+@pytest.mark.parametrize("filename, md5, ref_sum, ref_num_cells", [
+    ("vtk/rbc_001.vtk", "19f431dcb07971d5f29de33d6bbed79a", 0.00031280518, 996)
+])
+def test_reference_file(filename, md5, ref_sum, ref_num_cells):
+    filename = helpers.download(filename, md5)
+
+    mesh = meshio.read(filename)
+    tol = 1.0e-2
+    s = numpy.sum(mesh.points)
+    assert abs(s - ref_sum) < tol * ref_sum
+    assert len(mesh.cells["triangle"]) == ref_num_cells
     return
 
 
