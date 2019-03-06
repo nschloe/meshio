@@ -77,9 +77,10 @@ def test_generic_io():
     return
 
 
-@pytest.mark.parametrize("filename, md5, ref_sum, ref_num_cells", [
-    ("vtk/rbc_001.vtk", "19f431dcb07971d5f29de33d6bbed79a", 0.00031280518, 996)
-])
+@pytest.mark.parametrize(
+    "filename, md5, ref_sum, ref_num_cells",
+    [("vtk/rbc_001.vtk", "19f431dcb07971d5f29de33d6bbed79a", 0.00031280518, 996)],
+)
 def test_reference_file(filename, md5, ref_sum, ref_num_cells):
     filename = helpers.download(filename, md5)
 
