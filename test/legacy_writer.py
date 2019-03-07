@@ -12,7 +12,7 @@ vtk_to_meshio_type = {
     # 4: 'poly_line',
     5: "triangle",
     # 6: 'triangle_strip',
-    # 7: 'polygon',
+    7: "polygon",
     # 8: 'pixel',
     9: "quad",
     10: "tetra",
@@ -183,7 +183,10 @@ def _generate_vtk_mesh(points, cells):
     len_array = 0
     for meshio_type, data in cells.items():
         numcells, num_local_nodes = data.shape
-        vtk_type = meshio_to_vtk_type[meshio_type]
+        if meshio_type[:7] == "polygon":
+            vtk_type = meshio_to_vtk_type[meshio_type[:7]]
+        else:
+            vtk_type = meshio_to_vtk_type[meshio_type]
         # add cell types
         cell_types.append(numpy.empty(numcells, dtype=numpy.ubyte))
         cell_types[-1].fill(vtk_type)
