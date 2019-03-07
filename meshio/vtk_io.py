@@ -526,7 +526,7 @@ def _write_cells(f, cells, write_binary):
     if write_binary:
         for key in cells:
             if key[:7] == "polygon":
-                d = numpy.full(len(cells[key]), meshio_to_vtk_type["polygon"]).astype(
+                d = numpy.full(len(cells[key]), meshio_to_vtk_type[key[:7]]).astype(
                     numpy.dtype(">i4")
                 )
             else:
@@ -540,9 +540,7 @@ def _write_cells(f, cells, write_binary):
         for key in cells:
             if key[:7] == "polygon":
                 for _ in range(len(cells[key])):
-                    f.write(
-                        "{}\n".format(meshio_to_vtk_type["polygon"]).encode("utf-8")
-                    )
+                    f.write("{}\n".format(meshio_to_vtk_type[key[:7]]).encode("utf-8"))
             else:
                 for _ in range(len(cells[key])):
                     f.write("{}\n".format(meshio_to_vtk_type[key]).encode("utf-8"))
