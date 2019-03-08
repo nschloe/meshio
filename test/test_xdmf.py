@@ -7,7 +7,6 @@ import meshio
 
 import helpers
 
-vtk = pytest.importorskip("vtk")
 lxml = pytest.importorskip("lxml")
 
 test_set_full = [

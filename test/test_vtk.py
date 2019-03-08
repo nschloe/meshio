@@ -7,9 +7,6 @@ import numpy
 
 import helpers
 
-vtk = pytest.importorskip("vtk")
-
-
 test_set = [
     helpers.tri_mesh,
     helpers.triangle6_mesh,
