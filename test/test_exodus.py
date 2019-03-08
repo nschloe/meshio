@@ -6,8 +6,6 @@ import meshio
 
 import helpers
 
-vtk = pytest.importorskip("vtk")
-
 test_set = [
     helpers.tri_mesh,
     helpers.tri_mesh_2d,
