@@ -10,7 +10,7 @@ jobs:
       - run: apt-get update
       # <https://stackoverflow.com/a/44333806/353337>
       - run: DEBIAN_FRONTEND=noninteractive apt install tzdata
-      - run: apt-get install -y git python3-h5py python3-netcdf4 python3-vtk7 python3-pip
+      - run: apt-get install -y git python3-h5py python3-netcdf4 python3-lxml python3-pip
       - run: pip3 install -U pytest pytest-cov flake8 black
       - checkout
       # format and lint

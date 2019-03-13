@@ -9,7 +9,7 @@ import meshio
 
 import helpers
 
-vtk = pytest.importorskip("lxml")
+lxml = pytest.importorskip("lxml")
 
 
 test_set = [helpers.tri_mesh, helpers.tri_mesh_2d, helpers.quad_mesh]

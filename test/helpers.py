@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 #
 import copy
+import hashlib
 import os
+import pathlib
+import shutil
 import string
 import tempfile
 
 import numpy
+import requests
 
 import meshio
 
@@ -178,6 +182,30 @@ hex20_mesh = meshio.Mesh(
     {"hexahedron20": numpy.array([range(20)])},
 )
 
+polygon_mesh = meshio.Mesh(
+    numpy.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [1.5, 0.0, 0.0],
+            [1.7, 0.5, 0.0],
+            [1.5, 1.2, 0.0],
+            [-0.1, 1.1, 0.0],
+            [-0.5, 1.4, 0.0],
+            [-0.7, 0.8, 0.0],
+            [-0.3, -0.1, 0.0],
+        ]
+    ),
+    {
+        "triangle": numpy.array([[0, 1, 2], [4, 5, 6]]),
+        "quad": numpy.array([[0, 1, 2, 3]]),
+        "polygon5": numpy.array([[1, 4, 5, 6, 2]]),
+        "polygon6": numpy.array([[0, 3, 7, 8, 9, 10], [1, 3, 7, 8, 9, 10]]),
+    },
+)
+
 
 def add_point_data(mesh, dim, num_tags=2):
     numpy.random.seed(0)
@@ -276,3 +304,32 @@ def generic_io(filename):
         assert (abs(out_mesh.points - tri_mesh.points) < 1.0e-15).all()
         assert (tri_mesh.cells["triangle"] == out_mesh.cells["triangle"]).all()
     return
+
+
+def download(name, md5):
+
+    filename = os.path.join("/tmp", name)
+    if not os.path.exists(filename):
+        print("Downloading {}...".format(name))
+        url = "https://nschloe.github.io/meshio/"
+        print(url + name)
+        r = requests.get(url + name, stream=True)
+        if not r.ok:
+            raise RuntimeError(
+                "Download error ({}, return code {}).".format(r.url, r.status_code)
+            )
+
+        pathlib.Path(os.path.dirname(filename)).mkdir(parents=True, exist_ok=True)
+
+        # save the mesh in /tmp
+        with open(filename, "wb") as f:
+            r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, f)
+
+    # check MD5
+    file_md5 = hashlib.md5(open(filename, "rb").read()).hexdigest()
+
+    if file_md5 != md5:
+        raise RuntimeError("Checksums not matching ({} != {}).".format(file_md5, md5))
+
+    return filename

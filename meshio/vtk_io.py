@@ -20,7 +20,7 @@ vtk_to_meshio_type = {
     # 4: 'poly_line',
     5: "triangle",
     # 6: 'triangle_strip',
-    # 7: 'polygon',
+    7: "polygon",
     # 8: 'pixel',
     9: "quad",
     10: "tetra",
@@ -96,7 +96,7 @@ vtk_to_numpy_dtype_name = {
     "unsigned_short": "uint16",
     "short": "int16",
     "unsigned_int": "uint32",
-    "int": numpy.dtype("int32"),
+    "int": "int32",
     "unsigned_long": "int64",
     "long": "int64",
     "float": "float32",
@@ -359,25 +359,58 @@ def translate_cells(data, types, cell_data_raw):
     # See <https://stackoverflow.com/q/47310359/353337> for better
     # alternatives.
     bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
+    has_polygon = meshio_to_vtk_type["polygon"] in bins
 
     # Deduct offsets from the cell types. This is much faster than manually
     # going through the data array. Slight disadvantage: This doesn't work for
     # cells with a custom number of points.
     numnodes = numpy.empty(len(types), dtype=int)
-    for tpe, idx in bins.items():
-        numnodes[idx] = vtk_type_to_numnodes[tpe]
-    offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
+    if has_polygon:
+        # If some polygons are in the VTK file, loop over the cells
+        nbcells = len(types)
+        offsets = numpy.empty(len(types), dtype=int)
+        offsets[0] = 0
+        for idx in range(nbcells - 1):
+            numnodes[idx] = data[offsets[idx]]
+            offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
+        idx = nbcells - 1
+        numnodes[idx] = data[offsets[idx]]
+    else:
+        for tpe, idx in bins.items():
+            numnodes[idx] = vtk_type_to_numnodes[tpe]
+        offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
+
     assert numpy.all(numnodes == data[offsets])
 
     cells = {}
     cell_data = {}
-    for tpe, b in bins.items():
-        meshio_type = vtk_to_meshio_type[tpe]
-        n = data[offsets[b[0]]]
-        assert (data[offsets[b]] == n).all()
-        indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
-        cells[meshio_type] = data[indices]
-        cell_data[meshio_type] = {key: value[b] for key, value in cell_data_raw.items()}
+    if has_polygon:
+        # TODO: cell_data
+        for idx in range(nbcells):
+            nbedges = data[offsets[idx]]
+            start = offsets[idx] + 1
+            end = start + numnodes[idx]
+            cell = data[start:end]
+            if nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["triangle"]]:
+                key = "triangle"
+            elif nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["quad"]]:
+                key = "quad"
+            else:
+                key = "polygon" + str(nbedges)
+            if key in cells:
+                cells[key] = numpy.vstack([cells[key], cell])
+            else:
+                cells[key] = numpy.reshape(cell, (1, -1))
+    else:
+        for tpe, b in bins.items():
+            meshio_type = vtk_to_meshio_type[tpe]
+            n = data[offsets[b[0]]]
+            assert (data[offsets[b]] == n).all()
+            indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
+            cells[meshio_type] = data[indices]
+            cell_data[meshio_type] = {
+                key: value[b] for key, value in cell_data_raw.items()
+            }
 
     return cells, cell_data
 
@@ -492,16 +525,25 @@ def _write_cells(f, cells, write_binary):
     f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
     if write_binary:
         for key in cells:
-            d = numpy.full(len(cells[key]), meshio_to_vtk_type[key]).astype(
-                numpy.dtype(">i4")
-            )
+            if key[:7] == "polygon":
+                d = numpy.full(len(cells[key]), meshio_to_vtk_type[key[:7]]).astype(
+                    numpy.dtype(">i4")
+                )
+            else:
+                d = numpy.full(len(cells[key]), meshio_to_vtk_type[key]).astype(
+                    numpy.dtype(">i4")
+                )
             f.write(d.tostring())
         f.write("\n".encode("utf-8"))
     else:
         # ascii
         for key in cells:
-            for _ in range(len(cells[key])):
-                f.write("{}\n".format(meshio_to_vtk_type[key]).encode("utf-8"))
+            if key[:7] == "polygon":
+                for _ in range(len(cells[key])):
+                    f.write("{}\n".format(meshio_to_vtk_type[key[:7]]).encode("utf-8"))
+            else:
+                for _ in range(len(cells[key])):
+                    f.write("{}\n".format(meshio_to_vtk_type[key]).encode("utf-8"))
     return
 
 
