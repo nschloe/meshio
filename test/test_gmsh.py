@@ -78,7 +78,7 @@ def test_gmsh2(mesh, write_binary):
 )
 @pytest.mark.parametrize("write_binary", [False, True])
 def test_gmsh4(mesh, write_binary):
-    writer = partial(meshio.msh_io.write, fmt_version="2", write_binary=write_binary)
+    writer = partial(meshio.msh_io.write, fmt_version="4", write_binary=write_binary)
 
     helpers.write_read(writer, meshio.msh_io.read, mesh, 1.0e-15)
     return
