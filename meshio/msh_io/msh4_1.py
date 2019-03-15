@@ -431,15 +431,13 @@ def _write_elements(fh, cells, write_binary):
                     node_idcs.shape[0],
                 ).encode("utf-8")
             )
-            # increment indices by one to conform with gmsh standard
-            idcs = node_idcs + 1
 
             numpy.savetxt(
                 fh,
                 numpy.column_stack(
                     [
                         first_element_tag_in_entity + numpy.arange(len(node_idcs)),
-                        node_idcs + 1,
+                        node_idcs + 1,  # Gmsh indexes from 1 not 0
                     ]
                 ).astype(c_size_t),
                 "%d",
