@@ -117,3 +117,27 @@ def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
 
     writer = partial(meshio.msh_io.write, fmt_version="2", write_binary=write_binary)
     helpers.write_read(writer, meshio.msh_io.read, mesh, 1.0e-15)
+
+
+@pytest.mark.parametrize(
+    "filename, md5, ref_sum, ref_num_cells",
+    [
+        (
+            "msh/insulated-4.1.msh",
+            "988a5f27c37aaa6065668f4ac2b3db0c",
+            2.001762136876221,
+            {"line": 21, "triangle": 111},
+        )
+    ],
+)
+def test_reference_file_readonly(filename, md5, ref_sum, ref_num_cells):
+    filename = helpers.download(filename, md5)
+
+    mesh = meshio.read(filename)
+    tol = 1.0e-2
+    s = mesh.points.sum()
+    assert abs(s - ref_sum) < tol * ref_sum
+    assert {k: len(v) for k, v in mesh.cells.items()} == ref_num_cells
+    assert {
+        k: len(v["gmsh:physical"]) for k, v in mesh.cell_data.items()
+    } == ref_num_cells
