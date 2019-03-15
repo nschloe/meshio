@@ -2,7 +2,7 @@
 #
 """
 I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2), cf.
-<http://gmsh.info/dev/doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
+<http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 """
 from ctypes import c_ulong, c_double, c_int, c_size_t
 from functools import partial
@@ -28,7 +28,7 @@ from .msh2 import write as write2  # revert where necessary; TODO: drop this
 
 def read_buffer(f, is_ascii, int_size, data_size):
     # The format is specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
+    # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 
     # Initialize the optional data fields
     points = []
@@ -65,7 +65,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
             _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
         else:
             # From
-            # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>:
+            # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>:
             # ```
             # Any section with an unrecognized header is simply ignored: you can thus
             # add comments in a .msh file by putting them e.g. inside a
@@ -231,7 +231,7 @@ def write(filename, mesh, write_binary=True):
 
 def write4_1(filename, mesh, write_binary=True):
     """Writes msh files, cf.
-    <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
+    <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
     """
     if mesh.points.shape[1] == 2:
         logging.warning(
