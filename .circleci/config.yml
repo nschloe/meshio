@@ -1,7 +1,16 @@
 version: 2
 
 jobs:
-
+  lint:
+    docker:
+      - image: ubuntu:18.04
+    steps:
+      - checkout
+      - run: apt update
+      - run: apt install -y python3-pip
+      - run: pip3 install -U black flake8
+      - run: LC_ALL=C.UTF-8 black --check setup.py meshio/ test/*.py
+      - run: flake8 setup.py meshio/ test/*.py
   build:
     working_directory: ~/work
     docker:
@@ -11,11 +20,8 @@ jobs:
       # <https://stackoverflow.com/a/44333806/353337>
       - run: DEBIAN_FRONTEND=noninteractive apt install tzdata
       - run: apt-get install -y git python3-h5py python3-netcdf4 python3-lxml python3-pip
-      - run: pip3 install -U pytest pytest-cov flake8 black
+      - run: pip3 install -U pytest pytest-cov
       - checkout
-      # format and lint
-      - run: LC_ALL=C.UTF-8 black --check setup.py meshio/ test/*.py
-      - run: flake8 setup.py meshio/ test/*.py
       # The actual test
       - run: pip3 install .[all]
       - run: cd test/ && pytest --cov meshio
