@@ -89,3 +89,27 @@ def test_generic_io():
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.msh")
     return
+
+
+@pytest.mark.parametrize(
+    "filename, md5, ref_sum, ref_num_cells",
+    [
+        (
+            "msh/insulated-2.2.msh",
+            "68096d514c7152c9d988796a6619ee40",
+            2.001762136876221,
+            {"line": 21, "triangle": 111},
+        )
+    ],
+)
+def test_reference_file(filename, md5, ref_sum, ref_num_cells):
+    filename = helpers.download(filename, md5)
+
+    mesh = meshio.read(filename)
+    tol = 1.0e-2
+    s = mesh.points.sum()
+    assert abs(s - ref_sum) < tol * ref_sum
+    assert {k: len(v) for k, v in mesh.cells.items()} == ref_num_cells
+    assert {
+        k: len(v["gmsh:physical"]) for k, v in mesh.cell_data.items()
+    } == ref_num_cells
