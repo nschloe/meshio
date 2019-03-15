@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 """
-I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.0), cf.
+I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2), cf.
 <http://gmsh.info/dev/doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
 from ctypes import c_ulong, c_double, c_int, c_size_t
