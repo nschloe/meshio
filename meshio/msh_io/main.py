@@ -17,7 +17,7 @@ def read(filename):
 
 def read_buffer(f):
     # The various versions of the format are specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
+    # <http://gmsh.info/doc/texinfo/gmsh.html#File-formats>.
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$MeshFormat"
@@ -50,7 +50,7 @@ def _read_header(f, int_size):
     though here the version is left as str
     """
 
-    # http://gmsh.info/dev/doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029
+    # http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format
 
     line = f.readline().decode("utf-8")
     # Split the line
