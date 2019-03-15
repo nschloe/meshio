@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
 """
-I/O for Gmsh's msh format (version 4), cf.
-<http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
+I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2), cf.
+<http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 """
-from ctypes import c_ulong, c_double, c_int
+from ctypes import c_ulong, c_double, c_int, c_size_t
 from functools import partial
 import logging
 import struct
@@ -23,11 +23,12 @@ from .common import (
 )
 from ..mesh import Mesh
 from ..common import num_nodes_per_cell, cell_data_from_raw, raw_from_cell_data
+from .msh2 import write as write2  # revert where necessary; TODO: drop this
 
 
 def read_buffer(f, is_ascii, int_size, data_size):
     # The format is specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
+    # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 
     # Initialize the optional data fields
     points = []
@@ -64,7 +65,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
             _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
         else:
             # From
-            # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>:
+            # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>:
             # ```
             # Any section with an unrecognized header is simply ignored: you can thus
             # add comments in a .msh file by putting them e.g. inside a
@@ -95,7 +96,7 @@ def _read_entities(f, is_ascii, int_size, data_size):
     for d, n in enumerate(number):
         for _ in range(n):
             tag, = fromfile(f, c_int, 1)
-            fromfile(f, c_double, 6)  # discard boxMinX…boxMaxZ
+            fromfile(f, c_double, 3 if d == 0 else 6)  # discard bounding-box
             num_physicals, = fromfile(f, c_ulong, 1)
             physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
@@ -111,44 +112,33 @@ def _read_entities(f, is_ascii, int_size, data_size):
 
 
 def _read_nodes(f, is_ascii, int_size, data_size):
-    if is_ascii:
-        # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
-        line = f.readline().decode("utf-8")
-        num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
+    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
-        points = numpy.empty((total_num_nodes, 3), dtype=float)
-        tags = numpy.empty(total_num_nodes, dtype=int)
+    # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
+    num_entity_blocks, total_num_nodes, min_node_tag, max_node_tag = fromfile(
+        f, c_size_t, 4
+    )
+    is_dense = min_node_tag == 1 and max_node_tag == total_num_nodes
 
-        idx = 0
-        for k in range(num_entity_blocks):
-            # first line in the entity block:
-            # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-            line = f.readline().decode("utf-8")
-            tag_entity, dim_entity, type_node, num_nodes = map(int, line.split())
-            for i in range(num_nodes):
-                # tag(int) x(double) y(double) z(double)
-                line = f.readline().decode("utf-8")
-                tag, x, y, z = line.split()
-                points[idx] = [float(x), float(y), float(z)]
-                tags[idx] = tag
-                idx += 1
-    else:
-        # numEntityBlocks(unsigned long) numNodes(unsigned long)
-        num_entity_blocks, _ = numpy.fromfile(f, count=2, dtype=c_ulong)
+    points = numpy.empty((total_num_nodes, 3), dtype=float)
+    tags = (numpy.arange if is_dense else numpy.empty)(total_num_nodes, dtype=int)
 
-        points = []
-        tags = []
-        for _ in range(num_entity_blocks):
-            # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-            numpy.fromfile(f, count=3, dtype=c_int)
-            num_nodes = numpy.fromfile(f, count=1, dtype=c_ulong)
-            dtype = [("tag", c_int), ("x", c_double, (3,))]
-            data = numpy.fromfile(f, count=int(num_nodes), dtype=dtype)
-            tags.append(data["tag"])
-            points.append(data["x"])
+    idx = 0
+    for k in range(num_entity_blocks):
+        # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
+        _, __, parametric = fromfile(f, c_int, 3)
+        assert parametric == 0, "parametric nodes not implemented"
+        num_nodes = int(fromfile(f, c_size_t, 1)[0])
+        ixx = slice(idx, idx + num_nodes)
 
-        tags = numpy.concatenate(tags)
-        points = numpy.concatenate(points)
+        if is_dense:
+            fromfile(f, c_size_t, num_nodes)
+        else:
+            tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
+        points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
+        idx += num_nodes
+
+    if not is_ascii:
 
         line = f.readline().decode("utf-8")
         assert line == "\n"
@@ -162,19 +152,22 @@ def _read_nodes(f, is_ascii, int_size, data_size):
 def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
-    # numEntityBlocks(unsigned long) numElements(unsigned long)
-    num_entity_blocks, total_num_elements = fromfile(f, c_ulong, 2)
+    # numEntityBlocks numElements minElementTag maxElementTag (all size_t)
+    num_entity_blocks, total_num_elements, min_ele_tag, max_ele_tag = fromfile(
+        f, c_size_t, 4
+    )
+    is_dense = min_ele_tag == 1 and max_ele_tag == total_num_elements
 
     data = []
     cell_data = {}
 
     for k in range(num_entity_blocks):
-        # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
-        tag_entity, dim_entity, type_ele = fromfile(f, c_int, 3)
-        num_ele, = fromfile(f, c_ulong, 1)
+        # entityDim(int) entityTag(int) elementType(int) numElements(size_t)
+        dim_entity, tag_entity, type_ele = fromfile(f, c_int, 3)
+        num_ele, = fromfile(f, c_size_t, 1)
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
-        d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape(
+        d = fromfile(f, c_size_t, int(num_ele * (1 + num_nodes_per_ele))).reshape(
             (num_ele, -1)
         )
         if physical_tags is None:
@@ -188,15 +181,15 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndElements"
 
-    # The msh4 elements array refers to the nodes by their tag, not the index. All other
-    # mesh formats use the index, which is far more efficient, too. Hence,
-    # unfortunately, we have to do a fairly expensive conversion here.
-    m = numpy.max(point_tags + 1)
-    itags = -numpy.ones(m, dtype=int)
-    itags[point_tags] = numpy.arange(len(point_tags))
+    if is_dense:
+        itags = point_tags
+    else:
+        m = numpy.max(point_tags + 1)
+        itags = -numpy.ones(m, dtype=int)
+        itags[point_tags] = numpy.arange(len(point_tags))
 
     # Note that the first column in the data array is the element tag; discard it.
-    data = [(physical_tag, tpe, itags[d[:, 1:]]) for physical_tag, tpe, d in data]
+    data = [(physical_tag, tpe, itags[d[:, 1:] - 1]) for physical_tag, tpe, d in data]
 
     cells = {}
     for physical_tag, key, values in data:
@@ -232,8 +225,13 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
 
 
 def write(filename, mesh, write_binary=True):
+    logging.warning("Writing MSH4.1 unimplemented, falling back on MSH2")
+    write2(filename, mesh, write_binary=write_binary)
+
+
+def write4_1(filename, mesh, write_binary=True):
     """Writes msh files, cf.
-    <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
+    <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
     """
     if mesh.points.shape[1] == 2:
         logging.warning(
@@ -248,11 +246,9 @@ def write(filename, mesh, write_binary=True):
         for key, value in mesh.cells.items():
             if value.dtype != c_int:
                 logging.warning(
-                    "Binary Gmsh needs c_int (typically numpy.int32) integers "
-                    "(got %s). Converting.",
-                    value.dtype,
+                    "Binary Gmsh needs c_size_t (got %s). Converting.", value.dtype
                 )
-                mesh.cells[key] = numpy.array(value, dtype=c_int)
+                mesh.cells[key] = value.astype(c_size_t)
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -267,7 +263,9 @@ def write(filename, mesh, write_binary=True):
         mode_idx = 1 if write_binary else 0
         size_of_double = 8
         fh.write(
-            ("$MeshFormat\n4 {} {}\n".format(mode_idx, size_of_double)).encode("utf-8")
+            ("$MeshFormat\n4.1 {} {}\n".format(mode_idx, size_of_double)).encode(
+                "utf-8"
+            )
         )
         if write_binary:
             fh.write(struct.pack("i", 1))
@@ -277,6 +275,7 @@ def write(filename, mesh, write_binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
+        _write_entities(fh, cells, write_binary)
         _write_nodes(fh, mesh.points, write_binary)
         _write_elements(fh, cells, write_binary)
         if mesh.gmsh_periodic is not None:
@@ -287,7 +286,37 @@ def write(filename, mesh, write_binary=True):
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, write_binary)
 
-    return
+
+def _write_entities(fh, cells, write_binary):
+    """write the $Entities block
+
+    specified as
+
+    numPoints(size_t) numCurves(size_t)
+      numSurfaces(size_t) numVolumes(size_t)
+    pointTag(int) X(double) Y(double) Z(double)
+      numPhysicalTags(size_t) physicalTag(int) ...
+    ...
+    curveTag(int) minX(double) minY(double) minZ(double)
+      maxX(double) maxY(double) maxZ(double)
+      numPhysicalTags(size_t) physicalTag(int) ...
+      numBoundingPoints(size_t) pointTag(int) ...
+    ...
+    surfaceTag(int) minX(double) minY(double) minZ(double)
+      maxX(double) maxY(double) maxZ(double)
+      numPhysicalTags(size_t) physicalTag(int) ...
+      numBoundingCurves(size_t) curveTag(int) ...
+    ...
+    volumeTag(int) minX(double) minY(double) minZ(double)
+      maxX(double) maxY(double) maxZ(double)
+      numPhysicalTags(size_t) physicalTag(int) ...
+      numBoundngSurfaces(size_t) surfaceTag(int) ...
+    ...
+
+    """
+    fh.write("$Entities\n".encode("utf-8"))
+    raise NotImplementedError
+    fh.write("$EndEntities\n".encode("utf-8"))
 
 
 def _write_nodes(fh, points, write_binary):
@@ -295,74 +324,84 @@ def _write_nodes(fh, points, write_binary):
 
     # TODO not sure what dimEntity is supposed to say
     dim_entity = 0
-    type_node = 0
 
+    # write all points as one big block
+    # numEntityBlocks(size_t) numNodes(size_t) minNodeTag(size_t) maxNodeTag(size_t)
+    # entityDim(int) entityTag(int) parametric(int; 0 or 1) numNodesBlock(size_t)
+    #   nodeTag(size_t)
+    #   ...
+    #   x(double) y(double) z(double)
+    #     < u(double; if parametric and entityDim = 1 or entityDim = 2) >
+    #     < v(double; if parametric and entityDim = 2) >
+    #   ...
+    # ...
     if write_binary:
-        # write all points as one big block
-        # numEntityBlocks(unsigned long) numNodes(unsigned long)
-        # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-        # tag(int) x(double) y(double) z(double)
-        fh.write(numpy.array([1, points.shape[0]], dtype=c_ulong).tostring())
-        fh.write(numpy.array([1, dim_entity, type_node], dtype=c_int).tostring())
-        fh.write(numpy.array([points.shape[0]], dtype=c_ulong).tostring())
-        dtype = [("index", c_int), ("x", c_double, (3,))]
-        tmp = numpy.empty(len(points), dtype=dtype)
-        tmp["index"] = 1 + numpy.arange(len(points))
-        tmp["x"] = points
-        fh.write(tmp.tostring())
-        fh.write("\n".encode("utf-8"))
-    else:
-        # write all points as one big block
-        # numEntityBlocks(unsigned long) numNodes(unsigned long)
-        fh.write("{} {}\n".format(1, len(points)).encode("utf-8"))
-
-        # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
         fh.write(
-            "{} {} {} {}\n".format(1, dim_entity, type_node, len(points)).encode(
-                "utf-8"
-            )
+            numpy.array([1, len(points), 1, len(points)], dtype=c_size_t).tostring()
         )
 
-        for k, x in enumerate(points):
-            # tag(int) x(double) y(double) z(double)
-            fh.write(
-                "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
-            )
+        fh.write(numpy.array([dim_entity, 1, 0], dtype=c_int).tostring())
+        fh.write(numpy.array([len(points)], dtype=c_size_t).tostring())
+
+        fh.write(numpy.arange(1, 1 + len(points), dtype=c_size_t).tostring())
+        fh.write(points.tostring())
+
+        fh.write("\n".encode("utf-8"))
+    else:
+        fh.write("{} {} {} {}\n".format(1, len(points), 1, len(points)).encode("utf-8"))
+        fh.write("{} {} {} {}\n".format(dim_entity, 1, 0, len(points)).encode("utf-8"))
+        numpy.arange(1, 1 + len(points), dtype=c_size_t).tofile(fh, "\n", "%d")
+        fh.write("\n".encode("utf-8"))
+        numpy.savetxt(fh, points, delimiter=" ", encoding="utf-8")
 
     fh.write("$EndNodes\n".encode("utf-8"))
     return
 
 
 def _write_elements(fh, cells, write_binary):
-    # TODO respect write_binary
-    # write elements
+    """write the $Elements block
+
+    $Elements
+      numEntityBlocks(size_t) numElements(size_t)
+        minElementTag(size_t) maxElementTag(size_t)
+      entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
+        elementTag(size_t) nodeTag(size_t) ...
+        ...
+      ...
+    $EndElements
+
+    """
     fh.write("$Elements\n".encode("utf-8"))
 
+    total_num_cells = sum(map(len, cells.values()))
     if write_binary:
-        total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-        fh.write(numpy.array([len(cells), total_num_cells], dtype=c_ulong).tostring())
+        fh.write(
+            numpy.array(
+                [len(cells), total_num_cells, 1, total_num_cells], dtype=c_size_t
+            ).tostring()
+        )
 
-        consecutive_index = 0
-        for cell_type, node_idcs in cells.items():
-            # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+        first_element_tag_in_entity = 0
+        for entity_tag, (cell_type, node_idcs) in enumerate(cells.items(), 1):
+            # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
             fh.write(
                 numpy.array(
                     [
-                        1,
                         _geometric_dimension[cell_type],
+                        entity_tag,
                         _meshio_to_gmsh_type[cell_type],
                     ],
                     dtype=c_int,
                 ).tostring()
             )
-            fh.write(numpy.array([node_idcs.shape[0]], dtype=c_ulong).tostring())
+            fh.write(numpy.array([node_idcs.shape[0]], dtype=c_size_t).tostring())
 
-            assert node_idcs.dtype == c_int
+            assert node_idcs.dtype == c_size_t
             data = numpy.column_stack(
                 [
                     numpy.arange(
-                        consecutive_index,
-                        consecutive_index + len(node_idcs),
+                        first_element_tag_in_entity,
+                        first_element_tag_in_entity + len(node_idcs),
                         dtype=c_int,
                     ),
                     # increment indices by one to conform with gmsh standard
@@ -370,32 +409,41 @@ def _write_elements(fh, cells, write_binary):
                 ]
             )
             fh.write(data.tostring())
-            consecutive_index += len(node_idcs)
+            first_element_tag_in_entity += len(node_idcs)
 
         fh.write("\n".encode("utf-8"))
     else:
-        # count all cells
-        total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-        fh.write("{} {}\n".format(len(cells), total_num_cells).encode("utf-8"))
+        fh.write(
+            "{} {} {} {}\n".format(
+                len(cells), total_num_cells, 1, total_num_cells
+            ).encode("utf-8")
+        )
 
-        consecutive_index = 0
-        for cell_type, node_idcs in cells.items():
-            # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
+        first_element_tag_in_entity = 1
+        for entity_tag, (cell_type, node_idcs) in enumerate(cells.items(), 1):
+            # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
             fh.write(
                 "{} {} {} {}\n".format(
-                    1,  # tag
                     _geometric_dimension[cell_type],
+                    entity_tag,
                     _meshio_to_gmsh_type[cell_type],
                     node_idcs.shape[0],
                 ).encode("utf-8")
             )
-            # increment indices by one to conform with gmsh standard
-            idcs = node_idcs + 1
 
-            fmt = " ".join(["{}"] * (num_nodes_per_cell[cell_type] + 1)) + "\n"
-            for idx in idcs:
-                fh.write(fmt.format(consecutive_index, *idx).encode("utf-8"))
-                consecutive_index += 1
+            numpy.savetxt(
+                fh,
+                numpy.column_stack(
+                    [
+                        first_element_tag_in_entity + numpy.arange(len(node_idcs)),
+                        node_idcs + 1,  # Gmsh indexes from 1 not 0
+                    ]
+                ).astype(c_size_t),
+                "%d",
+                " ",
+                encoding="utf-8",
+            )
+            first_element_tag_in_entity += len(node_idcs)
 
     fh.write("$EndElements\n".encode("utf-8"))
     return
