@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from functools import partial
 import pytest
 
 import meshio
@@ -57,6 +58,7 @@ def test_reference_file(filename, md5, ref_sum, ref_num_cells):
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * ref_sum
     assert len(mesh.cells["triangle"]) == ref_num_cells
+    helpers.write_read(meshio.vtk_io.write, meshio.vtk_io.read, mesh, 1.0e-15)
     return
 
 
