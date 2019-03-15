@@ -324,7 +324,6 @@ def _write_nodes(fh, points, write_binary):
 
     # TODO not sure what dimEntity is supposed to say
     dim_entity = 0
-    type_node = 0
 
     # write all points as one big block
     # numEntityBlocks(size_t) numNodes(size_t) minNodeTag(size_t) maxNodeTag(size_t)
