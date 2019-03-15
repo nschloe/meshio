@@ -290,7 +290,7 @@ def write4_1(filename, mesh, write_binary=True):
 def _write_entities(fh, cells, write_binary):
     """write the $Entities block
 
-    specified as 
+    specified as
 
     numPoints(size_t) numCurves(size_t)
       numSurfaces(size_t) numVolumes(size_t)
