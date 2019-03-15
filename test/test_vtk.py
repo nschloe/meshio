@@ -50,7 +50,8 @@ def test_generic_io():
     "filename, md5, ref_sum, ref_num_cells",
     [("vtk/rbc_001.vtk", "19f431dcb07971d5f29de33d6bbed79a", 0.00031280518, 996)],
 )
-def test_reference_file(filename, md5, ref_sum, ref_num_cells):
+@pytest.mark.parametrize("write_binary", [False, True])
+def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
     filename = helpers.download(filename, md5)
 
     mesh = meshio.read(filename)
@@ -58,7 +59,8 @@ def test_reference_file(filename, md5, ref_sum, ref_num_cells):
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * ref_sum
     assert len(mesh.cells["triangle"]) == ref_num_cells
-    helpers.write_read(meshio.vtk_io.write, meshio.vtk_io.read, mesh, 1.0e-15)
+    writer = partial(meshio.vtk_io.write, write_binary=write_binary)
+    helpers.write_read(writer, meshio.vtk_io.read, mesh, 1.0e-15)
     return
 
 
