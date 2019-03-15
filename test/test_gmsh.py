@@ -102,7 +102,8 @@ def test_generic_io():
         )
     ],
 )
-def test_reference_file(filename, md5, ref_sum, ref_num_cells):
+@pytest.mark.parametrize("write_binary", [False, True])
+def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
     filename = helpers.download(filename, md5)
 
     mesh = meshio.read(filename)
@@ -113,3 +114,6 @@ def test_reference_file(filename, md5, ref_sum, ref_num_cells):
     assert {
         k: len(v["gmsh:physical"]) for k, v in mesh.cell_data.items()
     } == ref_num_cells
+    
+    writer = partial(meshio.msh_io.write, fmt_version="2", write_binary=write_binary)
+    helpers.write_read(writer, meshio.msh_io.read, mesh, 1.0e-15)
