@@ -2,7 +2,9 @@
 #
 from ctypes import c_int, sizeof
 import struct
-from . import msh2, msh4
+from . import msh2, msh4_0, msh4_1
+
+versions = {"2": msh2, "4.0": msh4_0, "4.1": msh4_1, "4": msh4_1}
 
 
 def read(filename):
@@ -15,29 +17,47 @@ def read(filename):
 
 def read_buffer(f):
     # The various versions of the format are specified at
-    # <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
+    # <http://gmsh.info/doc/texinfo/gmsh.html#File-formats>.
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$MeshFormat"
     int_size = sizeof(c_int)
-    format_version, data_size, is_ascii = _read_header(f, int_size)
+    fmt_version, data_size, is_ascii = _read_header(f, int_size)
 
-    assert format_version in ["2", "4"], "Need mesh format 2 or 4 (got {})".format(
-        format_version
-    )
+    try:
+        version = versions[fmt_version]
+    except KeyError:
+        try:
+            version = versions[fmt_version.split(".")[0]]
+        except KeyError:
+            raise ValueError(
+                "Need mesh format in {} (got {})".format(versions.keys(), fmt_version)
+            )
 
-    reader = {"2": msh2, "4": msh4}[format_version]
-
-    return reader.read_buffer(f, is_ascii, int_size, data_size)
+    return version.read_buffer(f, is_ascii, int_size, data_size)
 
 
 def _read_header(f, int_size):
+    """Read the mesh format block
+
+    specified as
+
+     version(ASCII double; currently 4.1)
+       file-type(ASCII int; 0 for ASCII mode, 1 for binary mode)
+       data-size(ASCII int; sizeof(size_t))
+     < int with value one; only in binary mode, to detect endianness >
+
+    though here the version is left as str
+    """
+
+    # http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format
+
     line = f.readline().decode("utf-8")
     # Split the line
-    # 2.2 0 8
+    # 4.1 0 8
     # into its components.
     str_list = list(filter(None, line.split()))
-    format_version = str_list[0][0]
+    fmt_version = str_list[0]
     assert str_list[1] in ["0", "1"]
     is_ascii = str_list[1] == "0"
     data_size = int(str_list[2])
@@ -50,13 +70,19 @@ def _read_header(f, int_size):
         assert line == "\n"
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndMeshFormat"
-    return format_version, data_size, is_ascii
+    return fmt_version, data_size, is_ascii
 
 
 def write(filename, mesh, fmt_version, write_binary=True):
-    if fmt_version == "2":
-        msh2.write(filename, mesh, write_binary=write_binary)
-    else:
-        assert fmt_version == "4"
-        msh4.write(filename, mesh, write_binary=write_binary)
-    return
+
+    try:
+        version = versions[fmt_version]
+    except KeyError:
+        try:
+            version = versions[fmt_version.split(".")[0]]
+        except KeyError:
+            raise ValueError(
+                "Need mesh format in {} (got {})".format(versions.keys(), fmt_version)
+            )
+
+    version.write(filename, mesh, write_binary=write_binary)
