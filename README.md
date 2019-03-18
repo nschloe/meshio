@@ -22,7 +22,7 @@ meshio can read and write all of the following and smoothly converts between the
  * [H5M](https://www.mcs.anl.gov/~fathom/moab-docs/h5mmain.html)
  * [Kratos/MDPA](https://github.com/KratosMultiphysics/Kratos/wiki/Input-data)
  * [Medit](https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html)
- * [MED/Salome](https://docs.salome-platform.org/latest/dev/MEDCoupling/developer)
+ * [MED/Salome](https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html)
  * [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats) (versions 2 and 4)
  * [OFF](http://segeval.cs.princeton.edu/public/off_format.html)
  * [PERMAS](http://www.intes.de)

@@ -2,7 +2,7 @@
 #
 """
 I/O for MED/Salome, cf.
-<https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/>.
+<https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html>.
 """
 import numpy
 
