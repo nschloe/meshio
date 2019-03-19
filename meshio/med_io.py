@@ -51,20 +51,23 @@ def read(filename):
     number = pts_dataset.attrs["NBR"]
     points = pts_dataset[()].reshape(-1, number).T
 
-    # Cells
-    cells = {}
-    mai = mesh["MAI"]
-    for med_cell_type, med_cell_type_group in mai.items():
-        cell_type = med_to_meshio_type[med_cell_type]
-        cells[cell_type] = med_cell_type_group["NOD"][()].reshape(
-            num_nodes_per_cell[cell_type], -1).T - 1
-
     # Read nodal and cell data if they exist
     try:
         cha = f["CHA"]  # champs (fields) in french
         point_data, cell_data, field_data = _read_data(cha)
     except KeyError:
         point_data, cell_data, field_data = {}, {}, {}
+
+    # Cells
+    cells = {}
+    mai = mesh["MAI"]
+    for med_cell_type, med_cell_type_group in mai.items():
+        cell_type = med_to_meshio_type[med_cell_type]
+        families = med_cell_type_group["FAM"][()]
+        if families.any():
+            cells[cell_type] = med_cell_type_group["NOD"][()].reshape(
+                num_nodes_per_cell[cell_type], -1).T - 1
+            cell_data[cell_type]["gmsh:physical"] = families
 
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
