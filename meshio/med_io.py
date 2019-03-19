@@ -69,7 +69,7 @@ def read(filename):
                 num_nodes_per_cell[cell_type], -1).T - 1
             if cell_type not in cell_data:
                 cell_data[cell_type] = {}
-            cell_data[cell_type]["gmsh:physical"] = families
+            cell_data[cell_type]["gmsh:physical"] = -families
 
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
