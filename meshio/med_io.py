@@ -6,8 +6,8 @@ I/O for MED/Salome, cf.
 """
 import numpy
 
-from .common import num_nodes_per_cell
 from .mesh import Mesh
+
 
 # https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {
@@ -54,10 +54,10 @@ def read(filename):
     # Cells
     cells = {}
     mai = mesh["MAI"]
-    for med_cell_type, med_cell_type_group in mai.items():
-        cell_type = med_to_meshio_type[med_cell_type]
-        cells[cell_type] = med_cell_type_group["NOD"][()].reshape(
-            num_nodes_per_cell[cell_type], -1).T - 1
+    for key, med_type in meshio_to_med_type.items():
+        if med_type in mai:
+            nn = int("".join(filter(str.isdigit, med_type)))
+            cells[key] = mai[med_type]["NOD"][()].reshape(nn, -1).T - 1
 
     # Read nodal and cell data if they exist
     try:
