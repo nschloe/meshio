@@ -36,7 +36,8 @@ def read(filename):
     ens_maa = f["ENS_MAA"]
     meshes = ens_maa.keys()
     assert len(meshes) == 1, "Must only contain exactly 1 mesh"
-    mesh = ens_maa[list(meshes)[0]]
+    mesh_name = list(meshes)[0]
+    mesh = ens_maa[mesh_name]
 
     # Possible time-stepping
     if "NOE" not in mesh:
@@ -46,10 +47,27 @@ def read(filename):
         assert len(ts) == 1, "Must only contain exactly 1 time-step"
         mesh = mesh[list(ts)[0]]
 
+    # Read nodal and cell data if they exist
+    try:
+        cha = f["CHA"]  # champs (fields) in french
+        point_data, cell_data, field_data = _read_data(cha)
+    except KeyError:
+        point_data, cell_data, field_data = {}, {}, {}
+
     # Points
     pts_dataset = mesh["NOE"]["COO"]
     number = pts_dataset.attrs["NBR"]
     points = pts_dataset[()].reshape(-1, number).T
+
+    # Point tags
+    if "FAM" in mesh["NOE"]:
+        tags = mesh["NOE"]["FAM"][()]
+        point_data["point_function"] = tags
+
+    # Point sets
+    fas = f["FAS"][mesh_name]
+    if "NOEUD" in fas:
+        point_tags = _read_families(fas["NOEUD"])
 
     # Cells
     cells = {}
@@ -59,16 +77,23 @@ def read(filename):
         cells[cell_type] = med_cell_type_group["NOD"][()].reshape(
             num_nodes_per_cell[cell_type], -1).T - 1
 
-    # Read nodal and cell data if they exist
-    try:
-        cha = f["CHA"]  # champs (fields) in french
-        point_data, cell_data, field_data = _read_data(cha)
-    except KeyError:
-        point_data, cell_data, field_data = {}, {}, {}
+        # Cell tags
+        if "FAM" in med_cell_type_group:
+            tags = med_cell_type_group["FAM"][()]
+            if cell_type not in cell_data:
+                cell_data[cell_type] = {}
+            cell_data[cell_type]["cell_function"] = tags
 
-    return Mesh(
+    # Cell sets
+    if "ELEME" in fas:
+        cell_tags = _read_families(fas["ELEME"])
+
+    mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
+    mesh.point_tags = point_tags
+    mesh.cell_tags = cell_tags
+    return mesh
 
 
 def _read_data(cha):
@@ -132,6 +157,19 @@ def _read_cell_data(cell_data, name, supp, data):
     return cell_data
 
 
+def _read_families(fas_data):
+    families = {}
+    for _, node_set in fas_data.items():
+        num = node_set.attrs["NUM"]  # unique point set id
+        nbr = node_set["GRO"].attrs["NBR"]  # number of subsets
+        nom_dataset = node_set["GRO"]["NOM"][()]  # (nbr, 80) of int8
+        nom = [None] * nbr
+        for i in range(nbr):
+            nom[i] = "".join([chr(x) for x in nom_dataset[i] if x != 0])
+        families[num] = nom
+    return families
+
+
 def write(filename, mesh, add_global_ids=True):
     import h5py
 
@@ -191,7 +229,7 @@ def write(filename, mesh, add_global_ids=True):
             nod.attrs.create("CGT", 1)
             nod.attrs.create("NBR", len(mesh.cells[key]))
 
-    # Subgroups (familles in french)
+    # Sets (familles in french)
     fas = f.create_group("FAS")
     fm = fas.create_group(mesh_name)
     fz = fm.create_group("FAMILLE_ZERO")  # must be defined in any case
