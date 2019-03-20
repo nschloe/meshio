@@ -65,6 +65,7 @@ def read(filename):
         point_data["point_function"] = tags
 
     # Point sets
+    point_tags = None
     fas = f["FAS"][mesh_name]
     if "NOEUD" in fas:
         point_tags = _read_families(fas["NOEUD"])
@@ -85,6 +86,7 @@ def read(filename):
             cell_data[cell_type]["cell_function"] = tags
 
     # Cell sets
+    cell_tags = None
     if "ELEME" in fas:
         cell_tags = _read_families(fas["ELEME"])
 
