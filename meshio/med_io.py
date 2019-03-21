@@ -62,10 +62,10 @@ def read(filename):
     # Point tags
     if "FAM" in mesh["NOE"]:
         tags = mesh["NOE"]["FAM"][()]
-        point_data["point_function"] = tags
+        point_data["tags"] = tags  # this may replace previous "tags"
 
-    # Point sets
-    point_tags = None
+    # Information for point tags
+    point_tags = {}
     fas = f["FAS"][mesh_name]
     if "NOEUD" in fas:
         point_tags = _read_families(fas["NOEUD"])
@@ -83,18 +83,22 @@ def read(filename):
             tags = med_cell_type_group["FAM"][()]
             if cell_type not in cell_data:
                 cell_data[cell_type] = {}
-            cell_data[cell_type]["cell_function"] = tags
+            cell_data[cell_type]["tags"] = tags
 
-    # Cell sets
-    cell_tags = None
+    # Information for cell tags
+    cell_tags = {}
     if "ELEME" in fas:
         cell_tags = _read_families(fas["ELEME"])
+
+    # Merge point_tags and cell_tags, ensure first set id's are unique
+    assert len(set(point_tags.keys()).intersection(cell_tags.keys())) == 0
+    tags = point_tags.copy()  # works also for dying Python 2
+    tags.update(cell_tags)
 
     mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
-    mesh.point_tags = point_tags
-    mesh.cell_tags = cell_tags
+    mesh.tags = tags
     return mesh
 
 
@@ -162,7 +166,7 @@ def _read_cell_data(cell_data, name, supp, data):
 def _read_families(fas_data):
     families = {}
     for _, node_set in fas_data.items():
-        num = node_set.attrs["NUM"]  # unique point set id
+        num = node_set.attrs["NUM"]  # unique set id
         nbr = node_set["GRO"].attrs["NBR"]  # number of subsets
         nom_dataset = node_set["GRO"]["NOM"][()]  # (nbr, 80) of int8
         nom = [None] * nbr
