@@ -83,7 +83,7 @@ series with a shared mesh. You can write times series data using meshio with
 writer = meshio.XdmfTimeSeriesWriter(filename)
 writer.write_points_cells(points, cells)
 for t in [0.0, 0.1, 0.21]:
-    writer.write_point_data({"phi": data}, t)
+    writer.write_data(t, point_data={"phi": data})
 ```
 and read it with
 ```python
