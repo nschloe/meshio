@@ -56,8 +56,10 @@ def read(filename):
     mai = mesh["MAI"]
     for med_cell_type, med_cell_type_group in mai.items():
         cell_type = med_to_meshio_type[med_cell_type]
-        cells[cell_type] = med_cell_type_group["NOD"][()].reshape(
-            num_nodes_per_cell[cell_type], -1).T - 1
+        cells[cell_type] = (
+            med_cell_type_group["NOD"][()].reshape(num_nodes_per_cell[cell_type], -1).T
+            - 1
+        )
 
     # Read nodal and cell data if they exist
     try:
