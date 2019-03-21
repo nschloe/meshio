@@ -62,7 +62,7 @@ def read(filename):
     # Point tags
     if "FAM" in mesh["NOE"]:
         tags = mesh["NOE"]["FAM"][()]
-        point_data["tags"] = tags  # this may replace previous "tags"
+        point_data["point_tags"] = tags  # replacing previous "point_tags"
 
     # Information for point tags
     point_tags = {}
@@ -83,22 +83,19 @@ def read(filename):
             tags = med_cell_type_group["FAM"][()]
             if cell_type not in cell_data:
                 cell_data[cell_type] = {}
-            cell_data[cell_type]["tags"] = tags
+            cell_data[cell_type]["cell_tags"] = tags  # replacing previous "cell_tags"
 
     # Information for cell tags
     cell_tags = {}
     if "ELEME" in fas:
         cell_tags = _read_families(fas["ELEME"])
 
-    # Merge point_tags and cell_tags, ensure first set id's are unique
-    assert len(set(point_tags.keys()).intersection(cell_tags.keys())) == 0
-    tags = point_tags.copy()  # works also for dying Python 2
-    tags.update(cell_tags)
-
+    # Construct the mesh object
     mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
-    mesh.tags = tags
+    mesh.point_tags = point_tags
+    mesh.cell_tags = cell_tags
     return mesh
 
 
