@@ -41,6 +41,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
     point_data = {}
     physical_tags = None
     periodic = None
+    assert data_size == c_size_t(0).itemsize
     while True:
         line = f.readline().decode("utf-8")
         if not line:
@@ -262,13 +263,10 @@ def write4_1(filename, mesh, write_binary=True):
         ]
 
     with open(filename, "wb") as fh:
-        mode_idx = 1 if write_binary else 0
-        size_of_double = 8
-        fh.write(
-            ("$MeshFormat\n4.1 {} {}\n".format(mode_idx, size_of_double)).encode(
-                "utf-8"
-            )
-        )
+        file_type = 1 if write_binary else 0
+        data_size = c_size_t(0).itemsize
+        fh.write("$MeshFormat\n".encode("utf-8"))
+        fh.write("4.1 {} {}\n".format(file_type, data_size).encode("utf-8"))
         if write_binary:
             fh.write(struct.pack("i", 1))
             fh.write("\n".encode("utf-8"))
