@@ -50,9 +50,10 @@ def read(filename):
     # Read nodal and cell data if they exist
     try:
         cha = f["CHA"]  # champs (fields) in french
-        point_data, cell_data, field_data = _read_data(cha)
     except KeyError:
         point_data, cell_data, field_data = {}, {}, {}
+    else:
+        point_data, cell_data, field_data = _read_data(cha)
 
     # Points
     pts_dataset = mesh["NOE"]["COO"]
