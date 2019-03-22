@@ -445,8 +445,7 @@ def _write_periodic(fh, periodic, write_binary):
             ary = numpy.atleast_2d(ary)
             fmt = "%.16g" if dtype == c_double else "%d"
             fmt = kwargs.pop("fmt", fmt)
-            enc = kwargs.pop("encoding", "utf-8")
-            numpy.savetxt(fh, ary, fmt, encoding=enc, **kwargs)
+            numpy.savetxt(fh, ary, fmt, **kwargs)
 
     fh.write("$Periodic\n".encode("utf-8"))
     tofile(fh, len(periodic), c_int)

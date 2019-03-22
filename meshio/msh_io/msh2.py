@@ -415,7 +415,7 @@ def _write_periodic(fh, periodic):
             fh.write("Affine ".encode("utf-8"))
             affine = numpy.array(affine, dtype=float)
             affine = numpy.atleast_2d(affine.ravel())
-            numpy.savetxt(fh, affine, "%.16g", encoding="utf-8")
+            numpy.savetxt(fh, affine, "%.16g")
         slave_master = numpy.array(slave_master, dtype=int).reshape(-1, 2)
         slave_master = slave_master + 1  # Add one, Gmsh is 0-based
         fh.write("{}\n".format(len(slave_master)).encode("utf-8"))

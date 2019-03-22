@@ -385,7 +385,7 @@ def _write_nodes(fh, points, write_binary):
         fh.write("{} {} {} {}\n".format(dim_entity, 1, 0, len(points)).encode("utf-8"))
         numpy.arange(1, 1 + len(points), dtype=c_size_t).tofile(fh, "\n", "%d")
         fh.write("\n".encode("utf-8"))
-        numpy.savetxt(fh, points, delimiter=" ", encoding="utf-8")
+        numpy.savetxt(fh, points, delimiter=" ")
 
     fh.write("$EndNodes\n".encode("utf-8"))
     return
@@ -474,7 +474,6 @@ def _write_elements(fh, cells, write_binary):
                 ).astype(c_size_t),
                 "%d",
                 " ",
-                encoding="utf-8",
             )
             first_element_tag_in_entity += len(node_idcs)
 
@@ -507,8 +506,7 @@ def _write_periodic(fh, periodic, write_binary):
             ary = numpy.atleast_2d(ary)
             fmt = "%.16g" if dtype == c_double else "%d"
             fmt = kwargs.pop("fmt", fmt)
-            enc = kwargs.pop("encoding", "utf-8")
-            numpy.savetxt(fh, ary, fmt, encoding=enc, **kwargs)
+            numpy.savetxt(fh, ary, fmt, **kwargs)
 
     fh.write("$Periodic\n".encode("utf-8"))
     tofile(fh, len(periodic), c_size_t)
