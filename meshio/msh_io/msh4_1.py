@@ -54,7 +54,7 @@ def read_buffer(f, is_ascii, int_size, data_size):
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
         elif environ == "Elements":
-            cells, cell_tags = _read_cells(
+            cells, cell_tags = _read_elements(
                 f, point_tags, int_size, is_ascii, physical_tags
             )
         elif environ == "Periodic":
@@ -149,7 +149,7 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     return points, tags
 
 
-def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
+def _read_elements(f, point_tags, int_size, is_ascii, physical_tags):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
     # numEntityBlocks numElements minElementTag maxElementTag (all size_t)
