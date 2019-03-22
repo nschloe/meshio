@@ -4,12 +4,14 @@
 I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2), cf.
 <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 """
-from ctypes import c_ulong, c_double, c_int, c_size_t
 from functools import partial
 import logging
 import struct
 
 import numpy
+from numpy import intc as c_int
+from numpy import uintp as c_size_t
+from numpy import double as c_double
 
 from .common import (
     _read_physical_names,
@@ -91,16 +93,16 @@ def read_buffer(f, is_ascii, int_size, data_size):
 def _read_entities(f, is_ascii, int_size, data_size):
     physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
-    number = fromfile(f, numpy.dtype(c_ulong), 4)  # dims 0, 1, 2, 3
+    number = fromfile(f, c_size_t, 4)  # dims 0, 1, 2, 3
 
     for d, n in enumerate(number):
         for _ in range(n):
             tag, = fromfile(f, c_int, 1)
             fromfile(f, c_double, 3 if d == 0 else 6)  # discard bounding-box
-            num_physicals, = fromfile(f, c_ulong, 1)
+            num_physicals, = fromfile(f, c_size_t, 1)
             physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
-                num_BREP_, = fromfile(f, c_ulong, 1)
+                num_BREP_, = fromfile(f, c_size_t, 1)
                 fromfile(f, c_int, num_BREP_)
 
     if not is_ascii:
