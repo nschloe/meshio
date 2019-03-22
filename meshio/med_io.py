@@ -241,10 +241,13 @@ def write(filename, mesh, add_global_ids=True):
         nod.attrs.create("NBR", len(cells))
 
         # Cell tags
-        if "cell_tags" in mesh.cell_data[cell_type]:  # works only for med -> med
-            fam = mai.create_dataset("FAM", data=mesh.cell_data[cell_type]["cell_tags"])
-            fam.attrs.create("CGT", 1)
-            fam.attrs.create("NBR", len(cells))
+        if cell_type in mesh.cell_data:
+            if "cell_tags" in mesh.cell_data[cell_type]:  # works only for med -> med
+                fam = mai.create_dataset(
+                    "FAM", data=mesh.cell_data[cell_type]["cell_tags"]
+                )
+                fam.attrs.create("CGT", 1)
+                fam.attrs.create("NBR", len(cells))
 
     # Information about point and cell sets (familles in french)
     fas = f.create_group("FAS")
