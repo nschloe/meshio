@@ -11,7 +11,7 @@ import helpers
 
 def gmsh_periodic():
     mesh = copy.deepcopy(helpers.quad_mesh)
-    trns = "Affine{}".format(" 0" * 16)  # just for io testing
+    trns = [0] * 16  # just for io testing
     mesh.gmsh_periodic = [
         [0, (3, 1), None, [[2, 0]]],
         [0, (4, 6), None, [[3, 5]]],

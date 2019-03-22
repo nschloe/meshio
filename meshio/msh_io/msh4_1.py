@@ -9,24 +9,31 @@ import logging
 import struct
 
 import numpy
-from numpy import intc as c_int
-from numpy import uintp as c_size_t
-from numpy import double as c_double
 
+from ..mesh import Mesh
 from .common import (
-    _read_physical_names,
+    num_nodes_per_cell,
+    cell_data_from_raw,
+    raw_from_cell_data,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
+    _read_physical_names,
     _write_physical_names,
     _read_data,
     _write_data,
 )
-from ..mesh import Mesh
-from ..common import num_nodes_per_cell, cell_data_from_raw, raw_from_cell_data
 from .msh2 import write as write2  # revert where necessary; TODO: drop this
 
+c_int = numpy.dtype("i")
+c_size_t = numpy.dtype("P")
+c_double = numpy.dtype("d")
 
-def read_buffer(f, is_ascii, int_size, data_size):
+
+def _size_type(data_size):
+    return numpy.dtype("u{}".format(data_size))
+
+
+def read_buffer(f, is_ascii, data_size):
     # The format is specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 
@@ -39,7 +46,6 @@ def read_buffer(f, is_ascii, int_size, data_size):
     point_data = {}
     physical_tags = None
     periodic = None
-    assert data_size == c_size_t(0).itemsize
     while True:
         line = f.readline().decode("utf-8")
         if not line:
@@ -51,19 +57,19 @@ def read_buffer(f, is_ascii, int_size, data_size):
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Entities":
-            physical_tags = _read_entities(f, is_ascii, int_size, data_size)
+            physical_tags = _read_entities(f, is_ascii, data_size)
         elif environ == "Nodes":
-            points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
+            points, point_tags = _read_nodes(f, is_ascii, data_size)
         elif environ == "Elements":
             cells, cell_tags = _read_elements(
-                f, point_tags, int_size, is_ascii, physical_tags
+                f, point_tags, physical_tags, is_ascii, data_size
             )
         elif environ == "Periodic":
-            periodic = _read_periodic(f, is_ascii)
+            periodic = _read_periodic(f, is_ascii, data_size)
         elif environ == "NodeData":
-            _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
+            _read_data(f, "NodeData", point_data, data_size, is_ascii)
         elif environ == "ElementData":
-            _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
+            _read_data(f, "ElementData", cell_data_raw, data_size, is_ascii)
         else:
             # From
             # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>:
@@ -89,9 +95,10 @@ def read_buffer(f, is_ascii, int_size, data_size):
     )
 
 
-def _read_entities(f, is_ascii, int_size, data_size):
-    physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
+def _read_entities(f, is_ascii, data_size):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    c_size_t = _size_type(data_size)
+    physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
     number = fromfile(f, c_size_t, 4)  # dims 0, 1, 2, 3
 
     for d, n in enumerate(number):
@@ -112,8 +119,9 @@ def _read_entities(f, is_ascii, int_size, data_size):
     return physical_tags
 
 
-def _read_nodes(f, is_ascii, int_size, data_size):
+def _read_nodes(f, is_ascii, data_size):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    c_size_t = _size_type(data_size)
 
     # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
     num_entity_blocks, total_num_nodes, min_node_tag, max_node_tag = fromfile(
@@ -150,8 +158,9 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     return points, tags
 
 
-def _read_elements(f, point_tags, int_size, is_ascii, physical_tags):
+def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    c_size_t = _size_type(data_size)
 
     # numEntityBlocks numElements minElementTag maxElementTag (all size_t)
     num_entity_blocks, total_num_elements, min_ele_tag, max_ele_tag = fromfile(
@@ -225,23 +234,27 @@ def _read_elements(f, point_tags, int_size, is_ascii, physical_tags):
     return cells, cell_data
 
 
-def _read_periodic(f, is_ascii):
+def _read_periodic(f, is_ascii, data_size):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    c_size_t = _size_type(data_size)
     periodic = []
     # numPeriodicLinks(size_t)
-    num_periodic, = fromfile(f, c_size_t, 1)
+    num_periodic = int(fromfile(f, c_size_t, 1)[0])
     for _ in range(num_periodic):
         # entityDim(int) entityTag(int) entityTagMaster(int)
         edim, stag, mtag = fromfile(f, c_int, 3)
         # numAffine(size_t) value(double) ...
-        num_affine, = fromfile(f, c_size_t, 1)
+        num_affine = int(fromfile(f, c_size_t, 1)[0])
         affine = fromfile(f, c_double, num_affine)
         # numCorrespondingNodes(size_t)
-        num_nodes, = fromfile(f, c_size_t, 1)
+        num_nodes = int(fromfile(f, c_size_t, 1)[0])
         # nodeTag(size_t) nodeTagMaster(size_t) ...
         slave_master = fromfile(f, c_size_t, num_nodes * 2).reshape(-1, 2)
         slave_master = slave_master - 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
+    if not is_ascii:
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndPeriodic"
     return periodic
@@ -284,7 +297,7 @@ def write4_1(filename, mesh, write_binary=True):
 
     with open(filename, "wb") as fh:
         file_type = 1 if write_binary else 0
-        data_size = c_size_t(0).itemsize
+        data_size = c_size_t.itemsize
         fh.write("$MeshFormat\n".encode("utf-8"))
         fh.write("4.1 {} {}\n".format(file_type, data_size).encode("utf-8"))
         if write_binary:
@@ -486,40 +499,33 @@ def _write_periodic(fh, periodic, write_binary):
 
     """
 
-    def tofile(fh, value, dtype, end="\n"):
+    def tofile(fh, value, dtype, **kwargs):
         ary = numpy.array(value, dtype=dtype)
         if write_binary:
             ary.tofile(fh)
         else:
-            numpy.savetxt(fh, ary, encoding="utf-8")
-            if end is not None:
-                fh.write(end.encode("utf-8"))
+            ary = numpy.atleast_2d(ary)
+            fmt = "%.16g" if dtype == c_double else "%d"
+            fmt = kwargs.pop("fmt", fmt)
+            enc = kwargs.pop("encoding", "utf-8")
+            numpy.savetxt(fh, ary, fmt, encoding=enc, **kwargs)
 
     fh.write("$Periodic\n".encode("utf-8"))
     tofile(fh, len(periodic), c_size_t)
     for dim, (stag, mtag), affine, slave_master in periodic:
         tofile(fh, [dim, stag, mtag], c_int)
-        if isinstance(affine, str):
-            if affine.startswith("Affine"):
-                affine = affine.replace("Affine", "", 1)
-                affine = numpy.fromstring(affine, c_double, sep=" ")
-            else:
-                affine = None
         if affine is None or len(affine) == 0:
             tofile(fh, 0, c_size_t)
         else:
-            tofile(fh, len(affine), c_size_t, end=None)
-            tofile(fh, affine, c_double)
+            tofile(fh, len(affine), c_size_t, newline=" ")
+            tofile(fh, affine, c_double, fmt="%.16g")
         slave_master = numpy.array(slave_master, dtype=c_size_t)
         slave_master = slave_master.reshape(-1, 2)
         slave_master = slave_master + 1  # Add one, Gmsh is 1-based
         tofile(fh, len(slave_master), c_size_t)
-        if write_binary:
-            tofile(fh, slave_master, c_size_t)
-        else:
-            for entry in slave_master:
-                tofile(fh, entry, c_size_t)
-
+        tofile(fh, slave_master, c_size_t)
+    if write_binary:
+        fh.write("\n".encode("utf-8"))
     fh.write("$EndPeriodic\n".encode("utf-8"))
 
 

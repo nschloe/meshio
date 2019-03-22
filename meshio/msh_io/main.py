@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-from ctypes import c_int, sizeof
 import struct
 from . import msh2, msh4_0, msh4_1
 
@@ -21,8 +20,7 @@ def read_buffer(f):
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$MeshFormat"
-    int_size = sizeof(c_int)
-    fmt_version, data_size, is_ascii = _read_header(f, int_size)
+    fmt_version, data_size, is_ascii = _read_header(f)
 
     try:
         version = versions[fmt_version]
@@ -34,10 +32,10 @@ def read_buffer(f):
                 "Need mesh format in {} (got {})".format(versions.keys(), fmt_version)
             )
 
-    return version.read_buffer(f, is_ascii, int_size, data_size)
+    return version.read_buffer(f, is_ascii, data_size)
 
 
-def _read_header(f, int_size):
+def _read_header(f):
     """Read the mesh format block
 
     specified as
@@ -64,7 +62,7 @@ def _read_header(f, int_size):
     if not is_ascii:
         # The next line is the integer 1 in bytes. Useful for checking
         # endianness. Just assert that we get 1 here.
-        one = f.read(int_size)
+        one = f.read(struct.calcsize("i"))
         assert struct.unpack("i", one)[0] == 1
         line = f.readline().decode("utf-8")
         assert line == "\n"
