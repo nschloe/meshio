@@ -12,10 +12,14 @@ h5py = pytest.importorskip("h5py")
 @pytest.mark.parametrize(
     "mesh",
     [
-        helpers.tri_mesh,
         helpers.tri_mesh_2d,
+        helpers.tri_mesh,
+        helpers.triangle6_mesh,
         helpers.quad_mesh,
+        helpers.quad8_mesh,
+        helpers.tri_quad_mesh,
         helpers.tet_mesh,
+        helpers.tet10_mesh,
         helpers.hex_mesh,
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 2),

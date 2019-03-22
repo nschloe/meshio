@@ -294,10 +294,9 @@ def write(filename, mesh, add_global_ids=True):
             # Either data.shape = (n_cells, ) or (n_cells, n_components) -> ELEM
             # or data.shape = (n_cells, n_components, n_gauss_points) -> ELNO or ELGA
             med_type = meshio_to_med_type[cell_type]
-            nn = int(med_type[-1])  # number of nodes per cell
             if data.ndim <= 2:
                 supp = "ELEM"
-            elif data.shape[2] == nn:
+            elif data.shape[2] == num_nodes_per_cell[cell_type]:
                 supp = "ELNO"
             else:  # general ELGA data defined at unknown Gauss points
                 supp = "ELGA"
