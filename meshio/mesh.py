@@ -16,10 +16,10 @@ class Mesh(object):
     ):
         self.points = points
         self.cells = cells
-        self.point_data = point_data if point_data else {}
-        self.cell_data = cell_data if cell_data else {}
-        self.field_data = field_data if field_data else {}
-        self.node_sets = node_sets if node_sets else {}
+        self.point_data = {} if point_data is None else point_data
+        self.cell_data = {} if cell_data is None else cell_data
+        self.field_data = {} if field_data is None else field_data
+        self.node_sets = {} if node_sets is None else node_sets
         self.gmsh_periodic = gmsh_periodic
         return
 
