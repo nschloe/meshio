@@ -36,3 +36,33 @@ def test_generic_io():
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.med")
     return
+
+
+@pytest.mark.parametrize(
+    "filename, md5, ref_sum_points, ref_num_cells, ref_sum_point_tags, ref_sum_cell_tags",
+    [
+        (
+            "med/cylinder.med",
+            "e36b365542c72ef470b83fc21f4dad58",
+            16.53169892762988,
+            {"pyramid": 18, "quad": 18, "line": 17, "tetra": 63, "triangle": 4},
+            52,
+            {"pyramid": -116, "quad": -75, "line": -48, "tetra": -24, "triangle": -30},
+        )
+    ],
+)
+def test_reference_file(
+    filename, md5, ref_sum_points, ref_num_cells, ref_sum_point_tags, ref_sum_cell_tags
+):
+    filename = helpers.download(filename, md5)
+
+    mesh = meshio.read(filename)
+    tol = 1.0e-2
+    s = mesh.points.sum()
+    assert abs(s - ref_sum_points) < tol * ref_sum_points
+    assert {k: len(v) for k, v in mesh.cells.items()} == ref_num_cells
+    assert mesh.point_data["point_tags"].sum() == ref_sum_point_tags
+    assert {
+        k: v["cell_tags"].sum() for k, v in mesh.cell_data.items()
+    } == ref_sum_cell_tags
+    helpers.write_read(meshio.med_io.write, meshio.med_io.read, mesh, 1.0e-15)
