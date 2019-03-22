@@ -305,7 +305,7 @@ def write(filename, mesh, add_global_ids=True):
     return
 
 
-def _write_data(fields, mesh_name, profile, name, supp, data, med_type):
+def _write_data(fields, mesh_name, profile, name, supp, data, med_type=None):
     # Skip for general ELGA fields defined at unknown Gauss points
     if supp == "ELGA":
         return
