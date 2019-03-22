@@ -272,36 +272,35 @@ def write(filename, mesh, add_global_ids=True):
         pass
 
     # Write nodal/cell data
-    if mesh.point_data or mesh.cell_data:
-        cha = f.create_group("CHA")
+    cha = f.create_group("CHA")
 
-        # Nodal data
-        for name, data in mesh.point_data.items():
-            if name == "point_tags":  # ignore point_tags already written under FAS
+    # Nodal data
+    for name, data in mesh.point_data.items():
+        if name == "point_tags":  # ignore point_tags already written under FAS
+            continue
+        supp = "NOEU"  # nodal data
+        _write_data(cha, mesh_name, pfl, name, supp, data)
+
+    # Cell data
+    # Only support writing ELEM fields with only 1 Gauss point per cell
+    # Or ELNO (DG) fields defined at every node per cell
+    for cell_type, d in mesh.cell_data.items():
+        for name, data in d.items():
+            if name == "cell_tags":  # ignore cell_tags already written under FAS
                 continue
-            supp = "NOEU"  # nodal data
-            _write_data(cha, mesh_name, pfl, name, supp, data)
 
-        # Cell data
-        # Only support writing ELEM fields with only 1 Gauss point per cell
-        # Or ELNO (DG) fields defined at every node per cell
-        for cell_type, d in mesh.cell_data.items():
-            for name, data in d.items():
-                if name == "cell_tags":  # ignore cell_tags already written under FAS
-                    continue
-
-                # Determine the nature of the cell data
-                # Either data.shape = (nbr, ) or (nbr, nco) -> ELEM
-                # or data.shape = (nbr, nco, nga) -> ELNO or ELGA
-                med_type = meshio_to_med_type[cell_type]
-                nn = int(med_type[-1])  # number of nodes per cell
-                if data.ndim <= 2:
-                    supp = "ELEM"
-                elif data.shape[2] == nn:
-                    supp = "ELNO"
-                else:  # general ELGA data defined at unknown Gauss points
-                    supp = "ELGA"
-                _write_data(cha, mesh_name, pfl, name, supp, data, med_type)
+            # Determine the nature of the cell data
+            # Either data.shape = (nbr, ) or (nbr, nco) -> ELEM
+            # or data.shape = (nbr, nco, nga) -> ELNO or ELGA
+            med_type = meshio_to_med_type[cell_type]
+            nn = int(med_type[-1])  # number of nodes per cell
+            if data.ndim <= 2:
+                supp = "ELEM"
+            elif data.shape[2] == nn:
+                supp = "ELNO"
+            else:  # general ELGA data defined at unknown Gauss points
+                supp = "ELGA"
+            _write_data(cha, mesh_name, pfl, name, supp, data, med_type)
 
     return
 
