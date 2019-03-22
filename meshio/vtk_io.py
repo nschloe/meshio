@@ -4,6 +4,8 @@
 I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 """
 import logging
+from functools import reduce
+
 import numpy
 
 from .__about__ import __version__
@@ -200,9 +202,9 @@ def read_buffer(f):
             if section == "SCALARS":
                 d.update(_read_scalar_field(f, num_items, split))
             elif section == "VECTORS":
-                d.update(_read_vector_field(f, num_items, split))
+                d.update(_read_field(f, num_items, split, [3]))
             elif section == "TENSORS":
-                d.update(_read_tensor_field(f, num_items, split))
+                d.update(_read_field(f, num_items, split, [3, 3]))
             else:
                 assert section == "FIELD", "Unknown section '{}'.".format(section)
                 d.update(_read_fields(f, int(split[2]), is_ascii))
@@ -275,22 +277,16 @@ def _read_scalar_field(f, num_data, split):
     return {data_name: data}
 
 
-def _read_vector_field(f, num_data, split):
+def _read_field(f, num_data, split, shape):
     data_name = split[1]
     data_type = split[2].lower()
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
-    data = numpy.fromfile(f, count=3 * num_data, sep=" ", dtype=dtype).reshape(-1, 3)
-
-    return {data_name: data}
-
-
-def _read_tensor_field(f, num_data, split):
-    data_name = split[1]
-    data_type = split[2].lower()
-
-    dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
-    data = numpy.fromfile(f, count=9 * num_data, sep=" ", dtype=dtype).reshape(-1, 3, 3)
+    # <https://stackoverflow.com/q/2104782/353337>
+    k = reduce((lambda x, y: x * y), shape)
+    data = numpy.fromfile(f, count=k * num_data, sep=" ", dtype=dtype).reshape(
+        -1, *shape
+    )
 
     return {data_name: data}
 
@@ -532,13 +528,9 @@ def _write_field_data(f, data, write_binary):
             num_tuples = values.shape[0]
             num_components = values.shape[1]
 
-        if " " in name:
-            logging.warning(
-                "VTK doesn't support spaces in field names. " 'Renaming "%s" to "%s".',
-                name,
-                name.replace(" ", "_"),
-            )
-            name = name.replace(" ", "_")
+        assert (
+            " " not in name
+        ), 'VTK doesn\'t support spaces in field names ("{}").'.format(name)
 
         f.write(
             (
