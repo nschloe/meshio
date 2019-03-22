@@ -221,24 +221,58 @@ def write(filename, mesh, add_global_ids=True):
     coo.attrs.create("CGT", 1)
     coo.attrs.create("NBR", len(mesh.points))
 
+    # Point tags
+    if "point_tags" in mesh.point_data:  # works only for med -> med
+        fam = noe_group.create_dataset("FAM", data=mesh.point_data["point_tags"])
+        fam.attrs.create("CGT", 1)
+        fam.attrs.create("NBR", len(mesh.points))
+
     # Cells (mailles in french)
     mai_group = ts.create_group("MAI")
     mai_group.attrs.create("CGT", 1)
-    for key, med_type in meshio_to_med_type.items():
-        if key in mesh.cells:
-            mai = mai_group.create_group(med_type)
-            mai.attrs.create("CGT", 1)
-            mai.attrs.create("CGS", 1)
-            mai.attrs.create("PFL", pfl.encode("ascii"))
-            nod = mai.create_dataset("NOD", data=mesh.cells[key].T.flatten() + 1)
-            nod.attrs.create("CGT", 1)
-            nod.attrs.create("NBR", len(mesh.cells[key]))
+    for cell_type, cells in mesh.cells.items():
+        med_type = meshio_to_med_type[cell_type]
+        mai = mai_group.create_group(med_type)
+        mai.attrs.create("CGT", 1)
+        mai.attrs.create("CGS", 1)
+        mai.attrs.create("PFL", pfl.encode("ascii"))
+        nod = mai.create_dataset("NOD", data=cells.T.flatten() + 1)
+        nod.attrs.create("CGT", 1)
+        nod.attrs.create("NBR", len(cells))
 
-    # Sets (familles in french)
+        # Cell tags
+        if "cell_tags" in mesh.cell_data[cell_type]:  # works only for med -> med
+            fam = mai.create_dataset("FAM", data=mesh.cell_data[cell_type]["cell_tags"])
+            fam.attrs.create("CGT", 1)
+            fam.attrs.create("NBR", len(cells))
+
+    # Information about point and cell sets (familles in french)
     fas = f.create_group("FAS")
     fm = fas.create_group(mesh_name)
     fz = fm.create_group("FAMILLE_ZERO")  # must be defined in any case
     fz.attrs.create("NUM", 0)
+
+    # For point tags
+    try:
+        if len(mesh.point_tags) > 0:
+            noeud = fm.create_group("NOEUD")
+            _write_families(noeud, mesh.point_tags)
+    except AttributeError:
+        pass
+
+    # For cell tags
+    try:
+        if len(mesh.cell_tags) > 0:
+            eleme = fm.create_group("ELEME")
+            _write_families(eleme, mesh.cell_tags)
+    except AttributeError:
+        pass
+
+    # Ignore point_tags and cell_tags that are already
+    # written under FAS
+    mesh.point_data.pop("point_tags", None)
+    for cell_type in mesh.cell_data:
+        mesh.cell_data[cell_type].pop("cell_tags", None)
 
     # Write nodal/cell data
     if mesh.point_data or mesh.cell_data:
@@ -334,3 +368,26 @@ def _comp_nom(nco):
     the data, we just use V1, V2, ...
     """
     return "".join(["V%-15d" % (i + 1) for i in range(nco)])
+
+
+def _family_name(num, nom):
+    """
+    Return the FAM object name corresponding to
+    the unique set id and a list of subset names
+    """
+    return "FAM" + "_" + str(num) + "_" + "_".join(nom)
+
+
+def _write_families(fm_group, tags):
+    """
+    Write point/cell tag information under FAS/[mesh_name]
+    """
+    for num, nom in tags.items():
+        fam = fm_group.create_group(_family_name(num, nom))
+        fam.attrs.create("NUM", num)
+        gro = fam.create_group("GRO")
+        gro.attrs.create("NBR", len(nom))  # number of subsets
+        dataset = gro.create_dataset("NOM", (len(nom),), dtype="80int8")
+        for i in range(len(nom)):
+            nom_80 = nom[i] + "\x00" * (80 - len(nom[i]))  # make nom 80 characters
+            dataset[i] = [ord(x) for x in nom_80]
