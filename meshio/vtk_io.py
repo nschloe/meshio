@@ -214,11 +214,10 @@ def read_buffer(f):
         elif section == "TENSORS":
             if active == "POINT_DATA":
                 d = point_data
-            else:
-                assert active == "CELL_DATA", "Illegal SCALARS in section '{}'.".format(
-                    active
-                )
+            elif active == "CELL_DATA":
                 d = cell_data_raw
+            else:
+                d = field_data
 
             d.update(_read_tensor_field(f, num_items, split))
 
@@ -227,11 +226,10 @@ def read_buffer(f):
 
             if active == "POINT_DATA":
                 d = point_data
-            else:
-                assert active == "CELL_DATA", "Illegal FIELD in section '{}'.".format(
-                    active
-                )
+            elif active == "CELL_DATA":
                 d = cell_data_raw
+            else:
+                d = field_data
 
             d.update(_read_fields(f, int(split[2]), is_ascii))
 
