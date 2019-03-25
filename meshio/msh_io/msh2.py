@@ -56,9 +56,12 @@ def read_buffer(f, is_ascii, data_size):
             periodic = _read_periodic(f)
         elif environ == "NodeData":
             _read_data(f, "NodeData", point_data, data_size, is_ascii)
-        else:
-            assert environ == "ElementData", "Unknown environment '{}'.".format(environ)
+        elif environ == "ElementData":
             _read_data(f, "ElementData", cell_data_raw, data_size, is_ascii)
+        else:
+            # skip environment
+            while line != "$End" + environ:
+                line = f.readline().decode("utf-8").strip()
 
     if has_additional_tag_data:
         logging.warning("The file contains tag data that couldn't be processed.")
