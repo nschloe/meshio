@@ -18,8 +18,15 @@ def read_buffer(f):
     # The various versions of the format are specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#File-formats>.
 
-    line = f.readline().decode("utf-8")
-    assert line.strip() == "$MeshFormat"
+    line = f.readline().decode("utf-8").strip()
+
+    # skip any $Comments/$EndComments sections
+    while line == "$Comments":
+        while line != "$EndComments":
+            line = f.readline().decode("utf-8").strip()
+        line = f.readline().decode("utf-8").strip()
+
+    assert line == "$MeshFormat"
     fmt_version, data_size, is_ascii = _read_header(f)
 
     try:
