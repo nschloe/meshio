@@ -3,7 +3,8 @@
 import struct
 from . import msh2, msh4_0, msh4_1
 
-versions = {"2": msh2, "4.0": msh4_0, "4.1": msh4_1, "4": msh4_1}
+_readers = {"2": msh2, "4": msh4_0, "4.0": msh4_0, "4.1": msh4_1}
+_writers = {"2": msh2, "4": msh4_1, "4.0": msh4_0, "4.1": msh4_1}
 
 
 def read(filename):
@@ -30,16 +31,18 @@ def read_buffer(f):
     fmt_version, data_size, is_ascii = _read_header(f)
 
     try:
-        version = versions[fmt_version]
+        reader = _readers[fmt_version]
     except KeyError:
         try:
-            version = versions[fmt_version.split(".")[0]]
+            reader = _readers[fmt_version.split(".")[0]]
         except KeyError:
             raise ValueError(
-                "Need mesh format in {} (got {})".format(versions.keys(), fmt_version)
+                "Need mesh format in {} (got {})".format(
+                    sorted(_readers.keys()), fmt_version
+                )
             )
 
-    return version.read_buffer(f, is_ascii, data_size)
+    return reader.read_buffer(f, is_ascii, data_size)
 
 
 def _read_header(f):
@@ -79,15 +82,18 @@ def _read_header(f):
 
 
 def write(filename, mesh, fmt_version, write_binary=True):
-
+    """Writes a Gmsh msh file.
+    """
     try:
-        version = versions[fmt_version]
+        writer = _writers[fmt_version]
     except KeyError:
         try:
-            version = versions[fmt_version.split(".")[0]]
+            writer = _writers[fmt_version.split(".")[0]]
         except KeyError:
             raise ValueError(
-                "Need mesh format in {} (got {})".format(versions.keys(), fmt_version)
+                "Need mesh format in {} (got {})".format(
+                    sorted(_writers.keys()), fmt_version
+                )
             )
 
-    version.write(filename, mesh, write_binary=write_binary)
+    writer.write(filename, mesh, write_binary=write_binary)
