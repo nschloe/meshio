@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-from ctypes import c_int, sizeof
 import struct
 from . import msh2, msh4_0, msh4_1
 
-versions = {"2": msh2, "4.0": msh4_0, "4.1": msh4_1, "4": msh4_1}
+_readers = {"2": msh2, "4": msh4_0, "4.0": msh4_0, "4.1": msh4_1}
+_writers = {"2": msh2, "4": msh4_1, "4.0": msh4_0, "4.1": msh4_1}
 
 
 def read(filename):
@@ -19,25 +19,33 @@ def read_buffer(f):
     # The various versions of the format are specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#File-formats>.
 
-    line = f.readline().decode("utf-8")
-    assert line.strip() == "$MeshFormat"
-    int_size = sizeof(c_int)
-    fmt_version, data_size, is_ascii = _read_header(f, int_size)
+    line = f.readline().decode("utf-8").strip()
+
+    # skip any $Comments/$EndComments sections
+    while line == "$Comments":
+        while line != "$EndComments":
+            line = f.readline().decode("utf-8").strip()
+        line = f.readline().decode("utf-8").strip()
+
+    assert line == "$MeshFormat"
+    fmt_version, data_size, is_ascii = _read_header(f)
 
     try:
-        version = versions[fmt_version]
+        reader = _readers[fmt_version]
     except KeyError:
         try:
-            version = versions[fmt_version.split(".")[0]]
+            reader = _readers[fmt_version.split(".")[0]]
         except KeyError:
             raise ValueError(
-                "Need mesh format in {} (got {})".format(versions.keys(), fmt_version)
+                "Need mesh format in {} (got {})".format(
+                    sorted(_readers.keys()), fmt_version
+                )
             )
 
-    return version.read_buffer(f, is_ascii, int_size, data_size)
+    return reader.read_buffer(f, is_ascii, data_size)
 
 
-def _read_header(f, int_size):
+def _read_header(f):
     """Read the mesh format block
 
     specified as
@@ -64,7 +72,7 @@ def _read_header(f, int_size):
     if not is_ascii:
         # The next line is the integer 1 in bytes. Useful for checking
         # endianness. Just assert that we get 1 here.
-        one = f.read(int_size)
+        one = f.read(struct.calcsize("i"))
         assert struct.unpack("i", one)[0] == 1
         line = f.readline().decode("utf-8")
         assert line == "\n"
@@ -74,15 +82,18 @@ def _read_header(f, int_size):
 
 
 def write(filename, mesh, fmt_version, write_binary=True):
-
+    """Writes a Gmsh msh file.
+    """
     try:
-        version = versions[fmt_version]
+        writer = _writers[fmt_version]
     except KeyError:
         try:
-            version = versions[fmt_version.split(".")[0]]
+            writer = _writers[fmt_version.split(".")[0]]
         except KeyError:
             raise ValueError(
-                "Need mesh format in {} (got {})".format(versions.keys(), fmt_version)
+                "Need mesh format in {} (got {})".format(
+                    sorted(_writers.keys()), fmt_version
+                )
             )
 
-    version.write(filename, mesh, write_binary=write_binary)
+    writer.write(filename, mesh, write_binary=write_binary)

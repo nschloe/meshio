@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
 #
-from ctypes import c_int, c_double
 import logging
 import shlex
 
 import numpy
+from ..common import (  # noqa F401
+    num_nodes_per_cell,
+    cell_data_from_raw,
+    raw_from_cell_data,
+)
+
+c_int = numpy.dtype("i")
+c_double = numpy.dtype("d")
 
 
 def _read_physical_names(f, field_data):
@@ -20,33 +27,7 @@ def _read_physical_names(f, field_data):
     return
 
 
-def _read_periodic(f):
-    periodic = []
-    num_periodic = int(f.readline().decode("utf-8"))
-    for _ in range(num_periodic):
-        line = f.readline().decode("utf-8")
-        edim, stag, mtag = [int(s) for s in line.split()]
-        line = f.readline().decode("utf-8").strip()
-        if line.startswith("Affine"):
-            transform = line
-            num_nodes = int(f.readline().decode("utf-8"))
-        else:
-            transform = None
-            num_nodes = int(line)
-        slave_master = []
-        for _ in range(num_nodes):
-            line = f.readline().decode("utf-8")
-            snode, mnode = [int(s) for s in line.split()]
-            slave_master.append([snode, mnode])
-        slave_master = numpy.array(slave_master, dtype=int).reshape(-1, 2)
-        slave_master -= 1  # Subtract one, Python is 0-based
-        periodic.append([edim, (stag, mtag), transform, slave_master])
-    line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndPeriodic"
-    return periodic
-
-
-def _read_data(f, tag, data_dict, int_size, data_size, is_ascii):
+def _read_data(f, tag, data_dict, data_size, is_ascii):
     # Read string tags
     num_string_tags = int(f.readline().decode("utf-8"))
     string_tags = [
@@ -177,21 +158,6 @@ def _write_physical_names(fh, field_data):
             fh.write('{} {} "{}"\n'.format(*entry).encode("utf-8"))
         fh.write("$EndPhysicalNames\n".encode("utf-8"))
     return
-
-
-def _write_periodic(fh, periodic):
-    fh.write("$Periodic\n".encode("utf-8"))
-    fh.write("{}\n".format(len(periodic)).encode("utf-8"))
-    for dim, (stag, mtag), transform, slave_master in periodic:
-        fh.write("{} {} {}\n".format(dim, stag, mtag).encode("utf-8"))
-        if transform is not None:
-            fh.write("{}\n".format(transform).encode("utf-8"))
-        slave_master = numpy.array(slave_master, dtype=int).reshape(-1, 2)
-        slave_master = slave_master + 1  # Add one, Gmsh is 0-based
-        fh.write("{}\n".format(len(slave_master)).encode("utf-8"))
-        for snode, mnode in slave_master:
-            fh.write("{} {}\n".format(snode, mnode).encode("utf-8"))
-    fh.write("$EndPeriodic\n".encode("utf-8"))
 
 
 def _write_data(fh, tag, name, data, write_binary):

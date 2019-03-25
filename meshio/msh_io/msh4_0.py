@@ -4,29 +4,32 @@
 I/O for Gmsh's msh format (version 4.0, as used by Gmsh 4.1.5), cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
-from ctypes import c_ulong, c_double, c_int
 from functools import partial
 import logging
 import struct
 
 import numpy
 
+from ..mesh import Mesh
 from .common import (
-    _read_physical_names,
-    _read_periodic,
+    num_nodes_per_cell,
+    cell_data_from_raw,
+    raw_from_cell_data,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
+    _read_physical_names,
     _write_physical_names,
-    _write_periodic,
     _read_data,
     _write_data,
 )
-from ..mesh import Mesh
-from ..common import num_nodes_per_cell, cell_data_from_raw, raw_from_cell_data
+
+c_int = numpy.dtype("i")
+c_long = numpy.dtype("l")
+c_ulong = numpy.dtype("L")
+c_double = numpy.dtype("d")
 
 
-def read_buffer(f, is_ascii, int_size, data_size):
-
+def read_buffer(f, is_ascii, data_size):
     # Initialize the optional data fields
     points = []
     cells = {}
@@ -47,19 +50,19 @@ def read_buffer(f, is_ascii, int_size, data_size):
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Entities":
-            physical_tags = _read_entities(f, is_ascii, int_size, data_size)
+            physical_tags = _read_entities(f, is_ascii, data_size)
         elif environ == "Nodes":
-            points, point_tags = _read_nodes(f, is_ascii, int_size, data_size)
+            points, point_tags = _read_nodes(f, is_ascii, data_size)
         elif environ == "Elements":
-            cells, cell_tags = _read_cells(
-                f, point_tags, int_size, is_ascii, physical_tags
+            cells, cell_tags = _read_elements(
+                f, point_tags, physical_tags, is_ascii, data_size
             )
         elif environ == "Periodic":
-            periodic = _read_periodic(f)
+            periodic = _read_periodic(f, is_ascii)
         elif environ == "NodeData":
-            _read_data(f, "NodeData", point_data, int_size, data_size, is_ascii)
+            _read_data(f, "NodeData", point_data, data_size, is_ascii)
         elif environ == "ElementData":
-            _read_data(f, "ElementData", cell_data_raw, int_size, data_size, is_ascii)
+            _read_data(f, "ElementData", cell_data_raw, data_size, is_ascii)
         else:
             # From
             # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>:
@@ -85,30 +88,29 @@ def read_buffer(f, is_ascii, int_size, data_size):
     )
 
 
-def _read_entities(f, is_ascii, int_size, data_size):
+def _read_entities(f, is_ascii, data_size):
     physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
-    number = fromfile(f, numpy.dtype(c_ulong), 4)  # dims 0, 1, 2, 3
+    number = fromfile(f, c_ulong, 4)  # dims 0, 1, 2, 3
 
     for d, n in enumerate(number):
         for _ in range(n):
-            tag, = fromfile(f, c_int, 1)
+            tag = int(fromfile(f, c_int, 1)[0])
             fromfile(f, c_double, 6)  # discard boxMinX…boxMaxZ
-            num_physicals, = fromfile(f, c_ulong, 1)
+            num_physicals = int(fromfile(f, c_ulong, 1)[0])
             physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
-                num_BREP_, = fromfile(f, c_ulong, 1)
-                fromfile(f, c_int, num_BREP_)
-
+                num_BREP = int(fromfile(f, c_ulong, 1)[0])
+                fromfile(f, c_int, num_BREP)
     if not is_ascii:
-        line = f.readline().decode("utf-8").strip()
-        assert line == ""
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
     line = f.readline().decode("utf-8").strip()
     assert line == "$EndEntities"
     return physical_tags
 
 
-def _read_nodes(f, is_ascii, int_size, data_size):
+def _read_nodes(f, is_ascii, data_size):
     if is_ascii:
         # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
         line = f.readline().decode("utf-8")
@@ -157,7 +159,7 @@ def _read_nodes(f, is_ascii, int_size, data_size):
     return points, tags
 
 
-def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
+def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
 
     # numEntityBlocks(unsigned long) numElements(unsigned long)
@@ -229,6 +231,39 @@ def _read_cells(f, point_tags, int_size, is_ascii, physical_tags):
     return cells, cell_data
 
 
+def _read_periodic(f, is_ascii):
+    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    periodic = []
+    num_periodic = int(fromfile(f, c_int, 1)[0])
+    for _ in range(num_periodic):
+        edim, stag, mtag = fromfile(f, c_int, 3)
+        if is_ascii:
+            line = f.readline().decode("utf-8").strip()
+            if line.startswith("Affine"):
+                affine = line.replace("Affine", "", 1)
+                affine = numpy.fromstring(affine, float, sep=" ")
+                num_nodes = int(f.readline().decode("utf-8"))
+            else:
+                affine = None
+                num_nodes = int(line)
+        else:
+            num_nodes = int(fromfile(f, c_long, 1)[0])
+            if num_nodes < 0:
+                affine = fromfile(f, c_double, 16)
+                num_nodes = int(fromfile(f, c_ulong, 1)[0])
+            else:
+                affine = None
+        slave_master = fromfile(f, c_int, num_nodes * 2).reshape(-1, 2)
+        slave_master = slave_master - 1  # Subtract one, Python is 0-based
+        periodic.append([edim, (stag, mtag), affine, slave_master])
+    if not is_ascii:
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
+    line = f.readline().decode("utf-8")
+    assert line.strip() == "$EndPeriodic"
+    return periodic
+
+
 def write(filename, mesh, write_binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
@@ -280,7 +315,7 @@ def write(filename, mesh, write_binary=True):
         _write_nodes(fh, mesh.points, write_binary)
         _write_elements(fh, cells, write_binary)
         if mesh.gmsh_periodic is not None:
-            _write_periodic(fh, mesh.gmsh_periodic)
+            _write_periodic(fh, mesh.gmsh_periodic, write_binary)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, write_binary)
         cell_data_raw = raw_from_cell_data(mesh.cell_data)
@@ -399,6 +434,34 @@ def _write_elements(fh, cells, write_binary):
 
     fh.write("$EndElements\n".encode("utf-8"))
     return
+
+
+def _write_periodic(fh, periodic, write_binary):
+    def tofile(fh, value, dtype, **kwargs):
+        ary = numpy.array(value, dtype=dtype)
+        if write_binary:
+            ary.tofile(fh)
+        else:
+            ary = numpy.atleast_2d(ary)
+            fmt = "%.16g" if dtype == c_double else "%d"
+            fmt = kwargs.pop("fmt", fmt)
+            numpy.savetxt(fh, ary, fmt, **kwargs)
+
+    fh.write("$Periodic\n".encode("utf-8"))
+    tofile(fh, len(periodic), c_int)
+    for dim, (stag, mtag), affine, slave_master in periodic:
+        tofile(fh, [dim, stag, mtag], c_int)
+        if affine is not None and len(affine) > 0:
+            tofile(fh, -1, c_long)
+            tofile(fh, affine, c_double)
+        slave_master = numpy.array(slave_master, dtype=c_int)
+        slave_master = slave_master.reshape(-1, 2)
+        slave_master = slave_master + 1  # Add one, Gmsh is 1-based
+        tofile(fh, len(slave_master), c_int)
+        tofile(fh, slave_master, c_int)
+    if write_binary:
+        fh.write("\n".encode("utf-8"))
+    fh.write("$EndPeriodic\n".encode("utf-8"))
 
 
 _geometric_dimension = {
