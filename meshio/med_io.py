@@ -4,8 +4,6 @@
 I/O for MED/Salome, cf.
 <https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html>.
 """
-import numpy
-
 from .common import num_nodes_per_cell
 from .mesh import Mesh
 
@@ -57,8 +55,8 @@ def read(filename):
 
     # Points
     pts_dataset = mesh["NOE"]["COO"]
-    number = pts_dataset.attrs["NBR"]
-    points = pts_dataset[()].reshape(-1, number).T
+    n_points = pts_dataset.attrs["NBR"]
+    points = pts_dataset[()].reshape(n_points, -1, order="F")
 
     # Point tags
     if "FAM" in mesh["NOE"]:
@@ -76,10 +74,9 @@ def read(filename):
     med_cells = mesh["MAI"]
     for med_cell_type, med_cell_type_group in med_cells.items():
         cell_type = med_to_meshio_type[med_cell_type]
-        cells[cell_type] = (
-            med_cell_type_group["NOD"][()].reshape(num_nodes_per_cell[cell_type], -1).T
-            - 1
-        )
+        nod = med_cell_type_group["NOD"]
+        n_cells = nod.attrs["NBR"]
+        cells[cell_type] = nod[()].reshape(n_cells, -1, order="F") - 1
 
         # Cell tags
         if "FAM" in med_cell_type_group:
@@ -118,42 +115,42 @@ def _read_data(fields):
 
         # MED field can contain multiple types of data
         for i, key in enumerate(time_step):
-            datum = data[key]  # at a particular time step
+            med_data = data[key]  # at a particular time step
             name = names[i]
-            for supp in datum:
+            for supp in med_data:
                 if supp == "NOE":  # continuous nodal (NOEU) data
-                    point_data[name] = _read_nodal_data(datum)
+                    point_data[name] = _read_nodal_data(med_data)
                 else:  # Gauss points (ELGA) or DG (ELNO) data
-                    cell_data = _read_cell_data(cell_data, name, supp, datum)
+                    cell_data = _read_cell_data(cell_data, name, supp, med_data)
 
     return point_data, cell_data, field_data
 
 
-def _read_nodal_data(data):
-    nodal_dataset = data["NOE"][data["NOE"].attrs["PFL"]]
-    n_components = nodal_dataset.attrs["NBR"]
-    values = nodal_dataset["CO"][()].reshape(-1, n_components).T
-    if values.shape[1] == 1:  # cut off for scalars
+def _read_nodal_data(med_data):
+    data_profile = med_data["NOE"][med_data["NOE"].attrs["PFL"]]
+    n_data = data_profile.attrs["NBR"]
+    values = data_profile["CO"][()].reshape(n_data, -1, order="F")
+    if values.shape[-1] == 1:  # cut off for scalars
         values = values[:, 0]
     return values
 
 
-def _read_cell_data(cell_data, name, supp, data):
+def _read_cell_data(cell_data, name, supp, med_data):
     med_type = supp.partition(".")[2]
-    cell_dataset = data[supp][data[supp].attrs["PFL"]]
-    n_components = cell_dataset.attrs["NBR"]
-    n_gauss_points = cell_dataset.attrs["NGA"]
+    data_profile = med_data[supp][med_data[supp].attrs["PFL"]]
+    n_data = data_profile.attrs["NBR"]
+    n_gauss_points = data_profile.attrs["NGA"]
 
-    # Only 1 Gauss/elemental nodal point per cell
+    # Only 1 data point per cell, shape = (n_data, n_components)
     if n_gauss_points == 1:
-        values = cell_dataset["CO"][()].reshape(-1, n_components).T
-        if values.shape[1] == 1:  # cut off for scalars
+        values = data_profile["CO"][()].reshape(n_data, -1, order="F")
+        if values.shape[-1] == 1:  # cut off for scalars
             values = values[:, 0]
-    # Multiple Gauss/elemental nodal points per cell
-    # In general at each cell the value shape will be (n_components, n_gauss_points)
+    # Multiple data points per cell, shape = (n_data, n_gauss_points, n_components)
     else:
-        values = cell_dataset["CO"][()].reshape(-1, n_components, n_gauss_points)
-        values = numpy.swapaxes(values, 0, 1)
+        values = data_profile["CO"][()].reshape(n_data, n_gauss_points, -1, order="F")
+        if values.shape[-1] == 1:  # cut off for scalars
+            values = values[:, :, 0]
 
     try:  # cell type already exists
         key = med_to_meshio_type[med_type]
@@ -171,7 +168,7 @@ def _read_families(fas_data):
         nom_dataset = node_set["GRO"]["NOM"][()]  # (n_subsets, 80) of int8
         name = [None] * n_subsets
         for i in range(n_subsets):
-            name[i] = "".join([chr(x) for x in nom_dataset[i] if x != 0])
+            name[i] = "".join([chr(x) for x in nom_dataset[i]]).strip().rstrip("\x00")
         families[set_id] = name
     return families
 
@@ -218,7 +215,7 @@ def write(filename, mesh, add_global_ids=True):
     nodes_group.attrs.create("CGS", 1)
     profile = "MED_NO_PROFILE_INTERNAL"
     nodes_group.attrs.create("PFL", profile.encode("ascii"))
-    coo = nodes_group.create_dataset("COO", data=mesh.points.T.flatten())
+    coo = nodes_group.create_dataset("COO", data=mesh.points.flatten(order="F"))
     coo.attrs.create("CGT", 1)
     coo.attrs.create("NBR", len(mesh.points))
 
@@ -237,7 +234,7 @@ def write(filename, mesh, add_global_ids=True):
         med_cells.attrs.create("CGT", 1)
         med_cells.attrs.create("CGS", 1)
         med_cells.attrs.create("PFL", profile.encode("ascii"))
-        nod = med_cells.create_dataset("NOD", data=cells.T.flatten() + 1)
+        nod = med_cells.create_dataset("NOD", data=cells.flatten(order="F") + 1)
         nod.attrs.create("CGT", 1)
         nod.attrs.create("NBR", len(cells))
 
@@ -291,12 +288,12 @@ def write(filename, mesh, add_global_ids=True):
                 continue
 
             # Determine the nature of the cell data
-            # Either data.shape = (n_cells, ) or (n_cells, n_components) -> ELEM
-            # or data.shape = (n_cells, n_components, n_gauss_points) -> ELNO or ELGA
+            # Either shape = (n_data, ) or (n_data, n_components) -> ELEM
+            # or shape = (n_data, n_gauss_points, n_components) -> ELNO or ELGA
             med_type = meshio_to_med_type[cell_type]
             if data.ndim <= 2:
                 supp = "ELEM"
-            elif data.shape[2] == num_nodes_per_cell[cell_type]:
+            elif data.shape[1] == num_nodes_per_cell[cell_type]:
                 supp = "ELNO"
             else:  # general ELGA data defined at unknown Gauss points
                 supp = "ELGA"
@@ -317,7 +314,7 @@ def _write_data(fields, mesh_name, profile, name, supp, data, med_type=None):
         field.attrs.create("TYP", 6)  # MED_FLOAT64
         field.attrs.create("UNI", b"")  # physical unit
         field.attrs.create("UNT", b"")  # time unit
-        n_components = 1 if data.ndim == 1 else data.shape[1]
+        n_components = 1 if data.ndim == 1 else data.shape[-1]
         field.attrs.create("NCO", n_components)  # number of components
         field.attrs.create("NOM", _component_names(n_components).encode("ascii"))
 
@@ -346,19 +343,15 @@ def _write_data(fields, mesh_name, profile, name, supp, data, med_type=None):
     typ.attrs.create("GAU", b"")  # no associated Gauss points
     typ.attrs.create("PFL", profile.encode("ascii"))
     profile = typ.create_group(profile)
-    profile.attrs.create("NBR", len(data))  # number of points
+    profile.attrs.create("NBR", len(data))  # number of data
     if supp == "ELNO":
-        profile.attrs.create("NGA", data.shape[2])
+        profile.attrs.create("NGA", data.shape[1])
     else:
         profile.attrs.create("NGA", 1)
     profile.attrs.create("GAU", b"")
 
-    # Data
-    if supp == "NOEU" or supp == "ELEM":
-        profile.create_dataset("CO", data=data.T.flatten())
-    else:  # ELNO fields
-        data = numpy.swapaxes(data, 0, 1)
-        profile.create_dataset("CO", data=data.flatten())
+    # Dataset
+    profile.create_dataset("CO", data=data.flatten(order="F"))
 
 
 def _component_names(n_components):
