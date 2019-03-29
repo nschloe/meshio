@@ -120,7 +120,7 @@ def read_buffer(f):
             elif word.startswith("NODE"):
                 points, point_gids = _read_nodes(f)
             elif word.startswith("ELEMENT"):
-                key, idx = _read_cells(f, word)
+                key, idx = _read_cells(f, word, point_gids)
                 cells[key] = idx
             elif word.startswith("NSET"):
                 params_map = get_param_map(word, required_keys=["NSET"])
@@ -139,8 +139,6 @@ def read_buffer(f):
             else:
                 pass
 
-    cells = _scan_cells(point_gids, cells)
-
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
@@ -148,7 +146,8 @@ def read_buffer(f):
 
 def _read_nodes(f):
     points = []
-    point_gids = []
+    point_gids = {}
+    index = 0
     while True:
         last_pos = f.tell()
         line = f.readline()
@@ -156,14 +155,15 @@ def _read_nodes(f):
             break
         entries = line.strip().split(",")
         gid, x = entries[0], entries[1:]
-        point_gids.append(int(gid))
+        point_gids[int(gid)] = index
         points.append([float(xx) for xx in x])
+        index += 1
 
     f.seek(last_pos)
-    return numpy.array(points, dtype=float), numpy.array(point_gids, dtype=int)
+    return numpy.array(points, dtype=float), point_gids
 
 
-def _read_cells(f, line0):
+def _read_cells(f, line0, point_gids):
     sline = line0.split(",")[1:]
     etype_sline = sline[0]
     assert "TYPE" in etype_sline, etype_sline
@@ -180,18 +180,11 @@ def _read_cells(f, line0):
         if line.startswith("*"):
             break
         entries = [int(k) for k in filter(None, line.split(","))]
-        idx = entries[1:]
+        idx = [point_gids[k] for k in entries[1:]]
         cells.append(idx)
 
     f.seek(last_pos)
     return cell_type, numpy.array(cells)
-
-
-def _scan_cells(point_gids, cells):
-    for arr in cells.values():
-        for value in numpy.nditer(arr, op_flags=["readwrite"]):
-            value[...] = numpy.flatnonzero(point_gids == value)[0]
-    return cells
 
 
 def get_param_map(word, required_keys=None):
