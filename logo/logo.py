@@ -19,8 +19,9 @@ def create_logo():
 
     geom.boolean_difference([container], [letter_i, i_dot, letter_o])
 
-    X, cells, _, _, _ = pygmsh.generate_mesh(geom)
-    X, cells = optimesh.lloyd(X, cells["triangle"], 1.0e-3, 1000)
+    mesh = pygmsh.generate_mesh(geom)
+    X, cells = mesh.points, mesh.cells
+    X, cells = optimesh.cvt.lloyd.quasi_newton_uniform_lloyd(X, cells["triangle"], 1.0e-3, 1000)
     return X, cells
 
 
