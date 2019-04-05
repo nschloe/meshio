@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import numpy
 import pytest
 
 import meshio
@@ -26,4 +27,20 @@ def test(mesh):
         return meshio.abaqus_io.write(*args, **kwargs)
 
     helpers.write_read(writer, meshio.abaqus_io.read, mesh, 1.0e-15)
+    return
+
+
+@pytest.mark.parametrize(
+    "filename, md5, ref_sum, ref_num_cells",
+    [("abaqus/abaqus_mesh_ex.inp", "e0a9a7a88b25d9fadccdd653c91e33ea", -68501.914611293, 3492)],
+)
+@pytest.mark.parametrize("write_binary", [False, True])
+def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
+    filename = helpers.download(filename, md5)
+
+    mesh = meshio.read(filename)
+    tol = 1.0e-2
+    s = numpy.sum(mesh.points)
+    assert abs(s - ref_sum) < tol * abs(ref_sum)
+    assert len(mesh.cells["quad"]) == ref_num_cells
     return
