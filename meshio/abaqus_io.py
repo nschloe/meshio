@@ -84,6 +84,9 @@ abaqus_to_meshio_type = {
     #
     # "PYRAMID": "pyramid",
     "C3D6": "wedge",
+    #
+    # 4-node bilinear displacement and pore pressure
+    "CAX4P": "quad",
 }
 meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
@@ -116,16 +119,7 @@ def read_buffer(f):
             continue
 
         keyword = line.strip("*").upper()
-        if (
-            keyword.startswith("HEADING")
-            or keyword.startswith("PREPRINT")
-            or keyword.startswith("ASSEMBLY")
-            or keyword.startswith("INSTANCE")
-            or keyword.startswith("PART")
-            or keyword.startswith("END PART")
-        ):
-            pass
-        elif keyword.startswith("NODE"):
+        if keyword.startswith("NODE"):
             points, point_gids = _read_nodes(f)
         elif keyword.startswith("ELEMENT"):
             key, idx = _read_cells(f, keyword, point_gids)
@@ -145,7 +139,8 @@ def read_buffer(f):
                 elsets[name] = []
             elsets[name].append(setids)
         else:
-            logging.warning("Unknown keyword {}. Skipping.".format(keyword.strip()))
+            # There are just too many Abaqus keywords to explicitly skip them.
+            pass
 
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
