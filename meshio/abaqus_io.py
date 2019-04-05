@@ -111,33 +111,41 @@ def read_buffer(f):
             # EOF
             break
 
-        if line.startswith("*"):
-            word = line.strip("*").upper()
-            if word == "HEADING":
-                pass
-            elif word.startswith("PREPRINT"):
-                pass
-            elif word.startswith("NODE"):
-                points, point_gids = _read_nodes(f)
-            elif word.startswith("ELEMENT"):
-                key, idx = _read_cells(f, word, point_gids)
-                cells[key] = idx
-            elif word.startswith("NSET"):
-                params_map = get_param_map(word, required_keys=["NSET"])
-                setids = read_set(f, params_map)
-                name = params_map["NSET"]
-                if name not in nsets:
-                    nsets[name] = []
-                nsets[name].append(setids)
-            elif word.startswith("ELSET"):
-                params_map = get_param_map(word, required_keys=["ELSET"])
-                setids = read_set(f, params_map)
-                name = params_map["ELSET"]
-                if name not in elsets:
-                    elsets[name] = []
-                elsets[name].append(setids)
-            else:
-                pass
+        # Comments
+        if line.startswith("**"):
+            continue
+
+        keyword = line.strip("*").upper()
+        if (
+            keyword.startswith("HEADING")
+            or keyword.startswith("PREPRINT")
+            or keyword.startswith("ASSEMBLY")
+            or keyword.startswith("INSTANCE")
+            or keyword.startswith("PART")
+            or keyword.startswith("END PART")
+        ):
+            pass
+        elif keyword.startswith("NODE"):
+            points, point_gids = _read_nodes(f)
+        elif keyword.startswith("ELEMENT"):
+            key, idx = _read_cells(f, keyword, point_gids)
+            cells[key] = idx
+        elif keyword.startswith("NSET"):
+            params_map = get_param_map(keyword, required_keys=["NSET"])
+            setids = read_set(f, params_map)
+            name = params_map["NSET"]
+            if name not in nsets:
+                nsets[name] = []
+            nsets[name].append(setids)
+        elif keyword.startswith("ELSET"):
+            params_map = get_param_map(keyword, required_keys=["ELSET"])
+            setids = read_set(f, params_map)
+            name = params_map["ELSET"]
+            if name not in elsets:
+                elsets[name] = []
+            elsets[name].append(setids)
+        else:
+            logging.warning("Unknown keyword {}. Skipping.".format(keyword.strip()))
 
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
@@ -177,7 +185,7 @@ def _read_cells(f, line0, point_gids):
     while True:
         last_pos = f.tell()
         line = f.readline()
-        if line.startswith("*"):
+        if line.startswith("*") or line == "":
             break
         entries = [int(k) for k in filter(None, line.split(","))]
         idx = [point_gids[k] for k in entries[1:]]
