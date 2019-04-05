@@ -6,6 +6,7 @@ I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2), cf.
 """
 from functools import partial
 import logging
+
 # import struct
 
 import numpy
@@ -19,8 +20,8 @@ from .common import (
     # _meshio_to_gmsh_type,
     _read_physical_names,
     # _write_physical_names,
-    _read_data,
     # _write_data,
+    _read_data,
 )
 from .msh2 import write as write2  # revert where necessary; TODO: drop this
 

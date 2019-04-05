@@ -32,7 +32,15 @@ def test(mesh):
 
 @pytest.mark.parametrize(
     "filename, md5, ref_sum, ref_num_cells",
-    [("abaqus/abaqus_mesh_ex.inp", "e0a9a7a88b25d9fadccdd653c91e33ea", -68501.914611293, 3492)],
+    [
+        (
+            "abaqus/abaqus_mesh_ex.inp",
+            "e0a9a7a88b25d9fadccdd653c91e33ea",
+            -68501.914611293,
+            3492,
+        ),
+        ("abaqus/UUea.inp", "d76e526eeced5f79ba867d496559002a", 4950.0, 50),
+    ],
 )
 @pytest.mark.parametrize("write_binary", [False, True])
 def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
