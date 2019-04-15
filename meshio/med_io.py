@@ -6,6 +6,7 @@ I/O for MED/Salome, cf.
 """
 from .common import num_nodes_per_cell
 from .mesh import Mesh
+import numpy
 
 # https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {
@@ -51,7 +52,8 @@ def read(filename):
     except KeyError:
         point_data, cell_data, field_data = {}, {}, {}
     else:
-        point_data, cell_data, field_data = _read_data(fields)
+        profiles = f["PROFILS"] if "PROFILS" in f else None
+        point_data, cell_data, field_data = _read_data(fields, profiles)
 
     # Points
     pts_dataset = mesh["NOE"]["COO"]
@@ -99,7 +101,7 @@ def read(filename):
     return mesh
 
 
-def _read_data(fields):
+def _read_data(fields, profiles):
     point_data = {}
     cell_data = {}
     field_data = {}
@@ -119,38 +121,59 @@ def _read_data(fields):
             name = names[i]
             for supp in med_data:
                 if supp == "NOE":  # continuous nodal (NOEU) data
-                    point_data[name] = _read_nodal_data(med_data)
+                    point_data[name] = _read_nodal_data(med_data, profiles)
                 else:  # Gauss points (ELGA) or DG (ELNO) data
-                    cell_data = _read_cell_data(cell_data, name, supp, med_data)
+                    cell_data = _read_cell_data(cell_data, name, supp, med_data, profiles)
 
     return point_data, cell_data, field_data
 
 
-def _read_nodal_data(med_data):
-    data_profile = med_data["NOE"][med_data["NOE"].attrs["PFL"]]
-    n_data = data_profile.attrs["NBR"]
-    values = data_profile["CO"][()].reshape(n_data, -1, order="F")
+def _read_nodal_data(med_data, profiles):
+    profile = med_data["NOE"].attrs["PFL"]
+    data_profile = med_data["NOE"][profile]
+    n_points = data_profile.attrs["NBR"]
+    if profile.decode() == "MED_NO_PROFILE_INTERNAL":  # default profile with everything
+        n_data = n_points
+        index = numpy.arange(n_points, dtype=int)
+    else:
+        n_data = profiles[profile].attrs["NBR"]
+        index = profiles[profile]["PFL"][()] - 1
+    values_profile = data_profile["CO"][()].reshape(n_data, -1, order="F")
+    values = numpy.empty((n_points, values_profile.shape[-1]))
+    values.fill(numpy.nan)
+    values[index] = values_profile
     if values.shape[-1] == 1:  # cut off for scalars
         values = values[:, 0]
     return values
 
 
-def _read_cell_data(cell_data, name, supp, med_data):
+def _read_cell_data(cell_data, name, supp, med_data, profiles):
     med_type = supp.partition(".")[2]
-    data_profile = med_data[supp][med_data[supp].attrs["PFL"]]
-    n_data = data_profile.attrs["NBR"]
+    profile = med_data[supp].attrs["PFL"]
+    data_profile = med_data[supp][profile]
+    n_cells = data_profile.attrs["NBR"]
     n_gauss_points = data_profile.attrs["NGA"]
+    if profile.decode() == "MED_NO_PROFILE_INTERNAL":  # default profile with everything
+        n_data = n_cells
+        index = numpy.arange(n_cells, dtype=int)
+    else:
+        n_data = profiles[profile].attrs["NBR"]
+        index = profiles[profile]["PFL"][()] - 1
 
     # Only 1 data point per cell, shape = (n_data, n_components)
     if n_gauss_points == 1:
-        values = data_profile["CO"][()].reshape(n_data, -1, order="F")
+        values_profile = data_profile["CO"][()].reshape(n_data, -1, order="F")
+        values = numpy.empty((n_cells, values_profile.shape[-1]))
+        values.fill(numpy.nan)
+        values[index] = values_profile
         if values.shape[-1] == 1:  # cut off for scalars
             values = values[:, 0]
     # Multiple data points per cell, shape = (n_data, n_gauss_points, n_components)
     else:
-        values = data_profile["CO"][()].reshape(n_data, n_gauss_points, -1, order="F")
-        if values.shape[-1] == 1:  # cut off for scalars
-            values = values[:, :, 0]
+        values_profile = data_profile["CO"][()].reshape(n_data, n_gauss_points, -1, order="F")
+        values = numpy.empty((n_cells, values_profile.shape[1], values_profile.shape[2]))
+        values.fill(numpy.nan)
+        values[index] = values_profile
 
     try:  # cell type already exists
         key = med_to_meshio_type[med_type]
