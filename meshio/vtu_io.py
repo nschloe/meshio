@@ -168,7 +168,7 @@ class VtuReader(object):
         except KeyError:
             self.byte_order = None
 
-        grid, appended_data = get_grid(root)
+        grid, self.appended_data = get_grid(root)
 
         pieces = []
         field_data = {}
