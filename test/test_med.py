@@ -116,10 +116,10 @@ def test_reference_file_with_point_cell_data():
     assert numpy.allclose(data_sig_mean, sig_ref)
 
     data_psi = mesh.cell_data["hexahedron"]["resu____ENEL_ELNO"]
-    assert data_psi.shape == (1, 8)  # (n_cells, n_nodes_per_element, ) with 1 cut off
+    assert data_psi.shape == (1, 8, 1)  # (n_cells, n_nodes_per_element, n_components)
 
     # ELEM (1 data point for each element)
     data_psi_elem = mesh.cell_data["hexahedron"]["resu____ENEL_ELEM"]
-    assert numpy.isclose(numpy.mean(data_psi, axis=1)[0], data_psi_elem[0])
+    assert numpy.isclose(numpy.mean(data_psi, axis=1)[0, 0], data_psi_elem[0])
 
     helpers.write_read(meshio.med_io.write, meshio.med_io.read, mesh, 1.0e-15)
