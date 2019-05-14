@@ -103,6 +103,11 @@ pip install -U meshio
 ```
 to install or upgrade.
 
+Additional dependencies (`netcdf4`, `h5py` and `lxml`) are required for some of the output formats and can be pulled in by:
+
+```
+pip install -U meshio[all]
+```
 
 ### Testing
 
