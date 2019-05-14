@@ -133,15 +133,13 @@ def _read_nodal_data(med_data, profiles):
     data_profile = med_data["NOE"][profile]
     n_points = data_profile.attrs["NBR"]
     if profile.decode() == "MED_NO_PROFILE_INTERNAL":  # default profile with everything
-        n_data = n_points
-        index = numpy.arange(n_points, dtype=int)
+        values = data_profile["CO"][()].reshape(n_points, -1, order="F")
     else:
         n_data = profiles[profile].attrs["NBR"]
-        index = profiles[profile]["PFL"][()] - 1
-    values_profile = data_profile["CO"][()].reshape(n_data, -1, order="F")
-    values = numpy.empty((n_points, values_profile.shape[-1]))
-    values.fill(numpy.nan)
-    values[index] = values_profile
+        index_profile = profiles[profile]["PFL"][()] - 1
+        values_profile = data_profile["CO"][()].reshape(n_data, -1, order="F")
+        values = numpy.full((n_points, values_profile.shape[1]), numpy.nan)
+        values[index_profile] = values_profile
     if values.shape[-1] == 1:  # cut off for scalars
         values = values[:, 0]
     return values
@@ -154,26 +152,19 @@ def _read_cell_data(cell_data, name, supp, med_data, profiles):
     n_cells = data_profile.attrs["NBR"]
     n_gauss_points = data_profile.attrs["NGA"]
     if profile.decode() == "MED_NO_PROFILE_INTERNAL":  # default profile with everything
-        n_data = n_cells
-        index = numpy.arange(n_cells, dtype=int)
+        values = data_profile["CO"][()].reshape(n_cells, n_gauss_points, -1, order="F")
     else:
         n_data = profiles[profile].attrs["NBR"]
-        index = profiles[profile]["PFL"][()] - 1
+        index_profile = profiles[profile]["PFL"][()] - 1
+        values_profile = data_profile["CO"][()].reshape(n_data, n_gauss_points, -1, order="F")
+        values = numpy.full((n_cells, values_profile.shape[1], values_profile.shape[2]), numpy.nan)
+        values[index_profile] = values_profile
 
-    # Only 1 data point per cell, shape = (n_data, n_components)
+    # Only 1 data point per cell, shape -> (n_cells, n_components)
     if n_gauss_points == 1:
-        values_profile = data_profile["CO"][()].reshape(n_data, -1, order="F")
-        values = numpy.empty((n_cells, values_profile.shape[-1]))
-        values.fill(numpy.nan)
-        values[index] = values_profile
+        values = values[:, 0, :]
         if values.shape[-1] == 1:  # cut off for scalars
             values = values[:, 0]
-    # Multiple data points per cell, shape = (n_data, n_gauss_points, n_components)
-    else:
-        values_profile = data_profile["CO"][()].reshape(n_data, n_gauss_points, -1, order="F")
-        values = numpy.empty((n_cells, values_profile.shape[1], values_profile.shape[2]))
-        values.fill(numpy.nan)
-        values[index] = values_profile
 
     try:  # cell type already exists
         key = med_to_meshio_type[med_type]
