@@ -123,7 +123,9 @@ def _read_data(fields, profiles):
                 if supp == "NOE":  # continuous nodal (NOEU) data
                     point_data[name] = _read_nodal_data(med_data, profiles)
                 else:  # Gauss points (ELGA) or DG (ELNO) data
-                    cell_data = _read_cell_data(cell_data, name, supp, med_data, profiles)
+                    cell_data = _read_cell_data(
+                        cell_data, name, supp, med_data, profiles
+                    )
 
     return point_data, cell_data, field_data
 
@@ -156,8 +158,12 @@ def _read_cell_data(cell_data, name, supp, med_data, profiles):
     else:
         n_data = profiles[profile].attrs["NBR"]
         index_profile = profiles[profile]["PFL"][()] - 1
-        values_profile = data_profile["CO"][()].reshape(n_data, n_gauss_points, -1, order="F")
-        values = numpy.full((n_cells, values_profile.shape[1], values_profile.shape[2]), numpy.nan)
+        values_profile = data_profile["CO"][()].reshape(
+            n_data, n_gauss_points, -1, order="F"
+        )
+        values = numpy.full(
+            (n_cells, values_profile.shape[1], values_profile.shape[2]), numpy.nan
+        )
         values[index_profile] = values_profile
 
     # Only 1 data point per cell, shape -> (n_cells, n_components)
