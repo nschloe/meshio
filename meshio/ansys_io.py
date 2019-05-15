@@ -386,7 +386,7 @@ def write(filename, mesh, write_binary=True):
         key = "3010" if write_binary else "10"
         fh.write(
             (
-                "({} (1 {:x} {:x} 1 {:x}))(\n".format(
+                "({} (1 {:x} {:x} 1 {:x})(\n".format(
                     key, first_node_index, mesh.points.shape[0], mesh.points.shape[1]
                 )
             ).encode("utf8")
