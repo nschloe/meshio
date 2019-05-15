@@ -43,7 +43,7 @@ In Python, simply call
 ```python
 import meshio
 
-mesh = meshio.read(filename)
+mesh = meshio.read(filename)  # optionally specify file_format
 # mesh.points, mesh.cells, ...
 ```
 to read a mesh. To write, do
@@ -115,17 +115,6 @@ To run the meshio unit tests, check out this repository and type
 ```
 pytest
 ```
-
-### Distribution
-
-To create a new release
-
-1. bump the `__version__` number,
-
-2. tag and upload to PyPi:
-    ```
-    make publish
-    ```
 
 ### License
 
