@@ -212,3 +212,13 @@ def _write_data(fh, tag, name, data, write_binary):
 
     fh.write("$End{}\n".format(tag).encode("utf-8"))
     return
+
+
+def check_whether_2D(points):
+    # determine, whether 2D data
+    # compare to z component of first element. if z is always the same, the mesh is 2D
+    reference = points[0][2]
+    if all(point == reference for point in points[:, 2:]):
+        # make it 2D
+        points = points[:, :2]
+    return points

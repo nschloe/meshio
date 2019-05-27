@@ -22,6 +22,7 @@ from .common import (
     # _write_physical_names,
     # _write_data,
     _read_data,
+    check_whether_2D
 )
 from .msh2 import write as write2  # revert where necessary; TODO: drop this
 
@@ -155,7 +156,7 @@ def _read_nodes(f, is_ascii, data_size):
 
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndNodes"
-
+    points = check_whether_2D(points)
     return points, tags
 
 
