@@ -158,7 +158,6 @@ def _read_nodes(f, is_ascii, data_size):
     assert line.strip() == "$EndNodes"
     points = check_whether_2D(points)
 
-
     return points, tags
 
 
