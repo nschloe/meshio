@@ -131,7 +131,7 @@ def _read_nodes(f, is_ascii, data_size):
     is_dense = min_node_tag == 1 and max_node_tag == total_num_nodes
 
     points = numpy.empty((total_num_nodes, 3), dtype=float)
-    tags = (numpy.arange if is_dense else numpy.empty)(total_num_nodes, dtype=int)
+    tags = numpy.empty(total_num_nodes, dtype=int)
 
     idx = 0
     for k in range(num_entity_blocks):
@@ -141,11 +141,8 @@ def _read_nodes(f, is_ascii, data_size):
         num_nodes = int(fromfile(f, c_size_t, 1)[0])
         ixx = slice(idx, idx + num_nodes)
 
-        if is_dense:
-            fromfile(f, c_size_t, num_nodes)
-        else:
-            tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
-        points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
+        tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
+        points[tags[ixx]] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
         idx += num_nodes
 
     if not is_ascii:
