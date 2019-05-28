@@ -128,7 +128,6 @@ def _read_nodes(f, is_ascii, data_size):
     num_entity_blocks, total_num_nodes, min_node_tag, max_node_tag = fromfile(
         f, c_size_t, 4
     )
-    is_dense = min_node_tag == 1 and max_node_tag == total_num_nodes
 
     points = numpy.empty((total_num_nodes, 3), dtype=float)
     tags = numpy.empty(total_num_nodes, dtype=int)
