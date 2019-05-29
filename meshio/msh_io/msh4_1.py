@@ -128,10 +128,9 @@ def _read_nodes(f, is_ascii, data_size):
     num_entity_blocks, total_num_nodes, min_node_tag, max_node_tag = fromfile(
         f, c_size_t, 4
     )
-    is_dense = min_node_tag == 1 and max_node_tag == total_num_nodes
 
     points = numpy.empty((total_num_nodes, 3), dtype=float)
-    tags = (numpy.arange if is_dense else numpy.empty)(total_num_nodes, dtype=int)
+    tags = numpy.empty(total_num_nodes, dtype=int)
 
     idx = 0
     for k in range(num_entity_blocks):
@@ -139,13 +138,22 @@ def _read_nodes(f, is_ascii, data_size):
         _, __, parametric = fromfile(f, c_int, 3)
         assert parametric == 0, "parametric nodes not implemented"
         num_nodes = int(fromfile(f, c_size_t, 1)[0])
-        ixx = slice(idx, idx + num_nodes)
 
-        if is_dense:
-            fromfile(f, c_size_t, num_nodes)
-        else:
-            tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
-        points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
+        # nodeTag(size_t) (* numNodes)
+
+        # Note that 'tags can be "sparse", i.e., do not have to
+        # constitute a continuous list of numbers (the format even
+        # allows them to not be ordered)'
+        # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
+        # Following https://github.com/nschloe/meshio/issues/388, we
+        # read the tags and populate the points array accordingly,
+        # thereby preserving the order of indices of nodes/points.
+
+        ixx = slice(idx, idx + num_nodes)
+        tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
+
+        # x(double) y(double) z(double) (* numNodes)
+        points[tags[ixx]] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
         idx += num_nodes
 
     if not is_ascii:
