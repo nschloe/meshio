@@ -138,9 +138,21 @@ def _read_nodes(f, is_ascii, data_size):
         _, __, parametric = fromfile(f, c_int, 3)
         assert parametric == 0, "parametric nodes not implemented"
         num_nodes = int(fromfile(f, c_size_t, 1)[0])
-        ixx = slice(idx, idx + num_nodes)
 
+        # nodeTag(size_t) (* numNodes)
+
+        # Note that 'tags can be "sparse", i.e., do not have to
+        # constitute a continuous list of numbers (the format even
+        # allows them to not be ordered)'
+        # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
+        # Following https://github.com/nschloe/meshio/issues/388, we
+        # read the tags and populate the points array accordingly,
+        # thereby preserving the order of indices of nodes/points.
+        
+        ixx = slice(idx, idx + num_nodes)
         tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
+
+        # x(double) y(double) z(double) (* numNodes)
         points[tags[ixx]] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
         idx += num_nodes
 
