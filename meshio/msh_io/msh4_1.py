@@ -148,7 +148,7 @@ def _read_nodes(f, is_ascii, data_size):
         # Following https://github.com/nschloe/meshio/issues/388, we
         # read the tags and populate the points array accordingly,
         # thereby preserving the order of indices of nodes/points.
-        
+
         ixx = slice(idx, idx + num_nodes)
         tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
 
