@@ -447,7 +447,7 @@ def _write_elements_and_conditions(
 
 def _write_data(fh, tag, name, data, write_binary):
     assert not write_binary
-    fh.write("Begin " + tag + " " + name + "\n\n".encode("utf-8"))
+    fh.write(("Begin " + tag + " " + name + "\n\n").encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
 
@@ -466,7 +466,7 @@ def _write_data(fh, tag, name, data, write_binary):
         for k, x in enumerate(data):
             fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
-    fh.write("End " + tag + " " + name + "\n\n".encode("utf-8"))
+    fh.write(("End " + tag + " " + name + "\n\n").encode("utf-8"))
     return
 
 

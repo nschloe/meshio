@@ -25,22 +25,23 @@ class Mesh(object):
 
     def __repr__(self):
         lines = []
-        lines.append("Number of points: {}".format(len(self.points)))
-        lines.append("Number of elements:")
+        lines.append("<meshio mesh object>")
+        lines.append("  Number of points: {}".format(len(self.points)))
+        lines.append("  Number of elements:")
         for tpe, elems in self.cells.items():
-            lines.append("  {}: {}".format(tpe, len(elems)))
+            lines.append("    {}: {}".format(tpe, len(elems)))
 
         if self.node_sets:
-            lines.append("Node sets: {}".format(", ".join(self.node_sets.keys())))
+            lines.append("  Node sets: {}".format(", ".join(self.node_sets.keys())))
 
         if self.point_data:
-            lines.append("Point data: {}".format(", ".join(self.point_data.keys())))
+            lines.append("  Point data: {}".format(", ".join(self.point_data.keys())))
 
         cell_data_keys = set()
         for cell_type in self.cell_data:
             cell_data_keys = cell_data_keys.union(self.cell_data[cell_type].keys())
         if cell_data_keys:
-            lines.append("Cell data: {}".format(", ".join(cell_data_keys)))
+            lines.append("  Cell data: {}".format(", ".join(cell_data_keys)))
 
         return "\n".join(lines)
 
