@@ -46,7 +46,7 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
         meshio_type = vtk_to_meshio_type[tpe]
         n = num_nodes_per_cell[meshio_type]
         # The offsets point to the _end_ of the indices
-        indices = numpy.add.outer(offsets[b], numpy.arange(-n, 0))
+        indices = numpy.add.outer(offsets[b], numpy.arange(-n, 0)).astype(offsets.dtype)
         cells[meshio_type] = connectivity[indices]
         cell_data[meshio_type] = {key: value[b] for key, value in cell_data_raw.items()}
 
