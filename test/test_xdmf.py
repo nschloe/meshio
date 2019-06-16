@@ -78,5 +78,15 @@ def test_time_series():
     return
 
 
+def test_tags_xdmf():
+    mesh = meshio.read("tagging.msh")
+    points, cells, cell_data, field_data = mesh.points, mesh.cells, mesh.cell_data, mesh.field_data
+    meshio.write("mesh_2d.xdmf", meshio.Mesh(
+        points=points,
+        cells={"triangle": cells["triangle"]},
+        field_data=field_data))
+    return
+
+
 if __name__ == "__main__":
     test_time_series()
