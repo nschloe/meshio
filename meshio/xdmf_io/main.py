@@ -281,11 +281,13 @@ class XdmfWriter(object):
 
         domain = ET.SubElement(xdmf_file, "Domain")
         grid = ET.SubElement(domain, "Grid", Name="Grid")
+        information = ET.SubElement(domain, "Information", Name="Information")
 
         self.points(grid, mesh.points)
         self.cells(mesh.cells, grid)
         self.point_data(mesh.point_data, grid)
         self.cell_data(mesh.cell_data, grid)
+        self.field_data(mesh.field_data, information)
 
         ET.register_namespace("xi", "https://www.w3.org/2001/XInclude/")
 
@@ -461,6 +463,20 @@ class XdmfWriter(object):
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(data)
+        return
+
+    def field_data(self, field_data, information):
+        from lxml import etree as ET
+
+        info = ET.Element("main")
+        for name, data in field_data.items():
+            data_item = ET.SubElement(
+                info,
+                "map",
+                key=name,
+            )
+            data_item.text = str(data[0])
+        information.text = ET.CDATA(ET.tostring(info))
         return
 
 
