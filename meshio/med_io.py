@@ -4,9 +4,10 @@
 I/O for MED/Salome, cf.
 <https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html>.
 """
+import numpy
+
 from .common import num_nodes_per_cell
 from .mesh import Mesh
-import numpy
 
 # https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {

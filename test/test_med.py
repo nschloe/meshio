@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-import pytest
-import meshio
-import helpers
 import numpy
+import pytest
+
+import helpers
+import meshio
 
 
 @pytest.mark.parametrize(

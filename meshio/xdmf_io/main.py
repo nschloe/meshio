@@ -6,26 +6,25 @@ http://www.xdmf.org/index.php/XDMF_Model_and_Format
 """
 import os
 
+import numpy
+
+from ..common import cell_data_from_raw, write_xml
+from ..mesh import Mesh
+from ..vtk_io import raw_from_cell_data
+from .common import (
+    dtype_to_format_string,
+    meshio_to_xdmf_type,
+    meshio_type_to_xdmf_index,
+    numpy_to_xdmf_dtype,
+    translate_mixed_cells,
+    xdmf_to_meshio_type,
+    xdmf_to_numpy_type,
+)
+
 try:
     from StringIO import cStringIO as BytesIO
 except ImportError:
     from io import BytesIO
-
-import numpy
-
-from .common import (
-    xdmf_to_numpy_type,
-    xdmf_to_meshio_type,
-    numpy_to_xdmf_dtype,
-    meshio_type_to_xdmf_index,
-    meshio_to_xdmf_type,
-    dtype_to_format_string,
-    translate_mixed_cells,
-)
-
-from ..mesh import Mesh
-from ..common import cell_data_from_raw, write_xml
-from ..vtk_io import raw_from_cell_data
 
 
 def read(filename):

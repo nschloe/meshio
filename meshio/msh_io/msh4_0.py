@@ -4,23 +4,23 @@
 I/O for Gmsh's msh format (version 4.0, as used by Gmsh 4.1.5), cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
-from functools import partial
 import logging
 import struct
+from functools import partial
 
 import numpy
 
 from ..mesh import Mesh
 from .common import (
-    num_nodes_per_cell,
-    cell_data_from_raw,
-    raw_from_cell_data,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
-    _read_physical_names,
-    _write_physical_names,
     _read_data,
+    _read_physical_names,
     _write_data,
+    _write_physical_names,
+    cell_data_from_raw,
+    num_nodes_per_cell,
+    raw_from_cell_data,
 )
 
 c_int = numpy.dtype("i")
