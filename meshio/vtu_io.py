@@ -5,20 +5,20 @@ I/O for VTU.
 """
 import base64
 import logging
-
-try:
-    from StringIO import cStringIO as BytesIO
-except ImportError:
-    from io import BytesIO
 import sys
 import zlib
 
 import numpy
 
 from .__about__ import __version__
-from .mesh import Mesh
-from .vtk_io import vtk_to_meshio_type, meshio_to_vtk_type, raw_from_cell_data
 from .common import num_nodes_per_cell, write_xml
+from .mesh import Mesh
+from .vtk_io import meshio_to_vtk_type, raw_from_cell_data, vtk_to_meshio_type
+
+try:
+    from StringIO import cStringIO as BytesIO
+except ImportError:
+    from io import BytesIO
 
 
 def num_bytes_to_num_base64_chars(num_bytes):

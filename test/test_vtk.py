@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 #
 from functools import partial
+
+import numpy
 import pytest
 
-import meshio
-import numpy
-
 import helpers
+import meshio
 
 test_set = [
     helpers.tri_mesh,

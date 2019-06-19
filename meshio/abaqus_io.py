@@ -10,7 +10,6 @@ import numpy
 from .__about__ import __version__
 from .mesh import Mesh
 
-
 abaqus_to_meshio_type = {
     # trusss
     "T2D2": "line",

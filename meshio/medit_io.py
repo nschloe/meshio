@@ -9,9 +9,10 @@ Check out
 <https://www.math.u-bordeaux.fr/~dobrzyns/logiciels/RT-422/node58.html>
 for something like a specification.
 """
-from ctypes import c_float, c_double
-import re
 import logging
+import re
+from ctypes import c_double, c_float
+
 import numpy
 
 from .mesh import Mesh

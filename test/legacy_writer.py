@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import logging
+
 import numpy
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html

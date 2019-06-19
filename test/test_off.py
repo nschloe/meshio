@@ -2,9 +2,8 @@
 #
 import pytest
 
-import meshio
-
 import helpers
+import meshio
 
 
 @pytest.mark.parametrize("mesh", [helpers.tri_mesh])

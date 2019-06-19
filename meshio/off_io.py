@@ -5,8 +5,8 @@ I/O for the OFF surface format, cf.
 <https://en.wikipedia.org/wiki/OFF_(file_format)>,
 <http://www.geomview.org/docs/html/OFF.html>.
 """
-from itertools import islice
 import logging
+from itertools import islice
 
 import numpy
 
