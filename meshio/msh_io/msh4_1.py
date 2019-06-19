@@ -9,13 +9,12 @@ from functools import partial
 
 import numpy
 
+from ..common import cell_data_from_raw
 from ..mesh import Mesh
-
-from .common import (  # raw_from_cell_data,; _meshio_to_gmsh_type,; _write_physical_names,; _write_data,
+from .common import (
     _gmsh_to_meshio_type,
     _read_data,
     _read_physical_names,
-    cell_data_from_raw,
     num_nodes_per_cell,
 )
 

@@ -10,6 +10,7 @@ from functools import partial
 
 import numpy
 
+from ..common import cell_data_from_raw, raw_from_cell_data
 from ..mesh import Mesh
 from .common import (
     _gmsh_to_meshio_type,
@@ -18,9 +19,7 @@ from .common import (
     _read_physical_names,
     _write_data,
     _write_physical_names,
-    cell_data_from_raw,
     num_nodes_per_cell,
-    raw_from_cell_data,
 )
 
 c_int = numpy.dtype("i")

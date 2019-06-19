@@ -6,7 +6,6 @@ import shlex
 import numpy
 
 from ..common import num_nodes_per_cell  # noqa F401
-from ..common import cell_data_from_raw, raw_from_cell_data
 
 c_int = numpy.dtype("i")
 c_double = numpy.dtype("d")
