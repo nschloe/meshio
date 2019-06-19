@@ -13,7 +13,6 @@ import numpy
 from .__about__ import __version__
 from .mesh import Mesh
 
-
 exodus_to_meshio_type = {
     # curves
     "BEAM": "line",

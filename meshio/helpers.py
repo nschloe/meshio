@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
 #
-from .mesh import Mesh
+from . import (
+    abaqus_io,
+    ansys_io,
+    dolfin_io,
+    exodus_io,
+    h5m_io,
+    mdpa_io,
+    med_io,
+    medit_io,
+    msh_io,
+    off_io,
+    permas_io,
+    stl_io,
+    svg_io,
+    vtk_io,
+    vtu_io,
+    xdmf_io,
+)
 from .common import num_nodes_per_cell
-from . import abaqus_io
-from . import ansys_io
-from . import dolfin_io
-from . import exodus_io
-from . import h5m_io
-from . import mdpa_io
-from . import med_io
-from . import medit_io
-from . import msh_io
-from . import off_io
-from . import permas_io
-from . import stl_io
-from . import svg_io
-from . import vtk_io
-from . import vtu_io
-from . import xdmf_io
+from .mesh import Mesh
 
 input_filetypes = [
     "abaqus",

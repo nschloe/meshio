@@ -2,7 +2,6 @@
 #
 import numpy
 
-
 num_nodes_per_cell = {
     "vertex": 1,
     "line": 2,

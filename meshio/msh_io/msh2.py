@@ -9,17 +9,16 @@ import struct
 
 import numpy
 
+from ..common import cell_data_from_raw, raw_from_cell_data
 from ..mesh import Mesh
 from .common import (
-    num_nodes_per_cell,
-    cell_data_from_raw,
-    raw_from_cell_data,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
-    _read_physical_names,
-    _write_physical_names,
     _read_data,
+    _read_physical_names,
     _write_data,
+    _write_physical_names,
+    num_nodes_per_cell,
 )
 
 c_int = numpy.dtype("i")

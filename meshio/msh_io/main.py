@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import struct
+
 from . import msh2, msh4_0, msh4_1
 
 _readers = {"2": msh2, "4": msh4_0, "4.0": msh4_0, "4.1": msh4_1}
