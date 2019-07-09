@@ -291,7 +291,6 @@ def read_buffer(f):
         ]
         points = _generate_points(axis)
         c, ct = _generate_cells(dim=dataset["DIMENSIONS"])
-        pass
     elif dataset["type"] == "RECTILINEAR_GRID":
         axis = [
             dataset["X_COORDINATES"],
