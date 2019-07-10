@@ -278,6 +278,15 @@ def read_buffer(f):
                 assert section == "FIELD", "Unknown section '{}'.".format(section)
                 d.update(_read_fields(f, int(split[2]), is_ascii))
 
+    points, c, ct = _check_mesh(dataset, points, c, ct)
+    cells, cell_data = translate_cells(c, ct, cell_data_raw)
+
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
+
+
+def _check_mesh(dataset, points, c, ct):
     if dataset["type"] == "UNSTRUCTURED_GRID":
         assert c is not None, "Required section CELLS not found."
         assert ct is not None, "Required section CELL_TYPES not found."
@@ -301,12 +310,7 @@ def read_buffer(f):
         c, ct = _generate_cells(dim=dataset["DIMENSIONS"])
     elif dataset["type"] == "STRUCTURED_GRID":
         c, ct = _generate_cells(dim=dataset["DIMENSIONS"])
-
-    cells, cell_data = translate_cells(c, ct, cell_data_raw)
-
-    return Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
-    )
+    return points, c, ct
 
 
 def _generate_cells(dim):
