@@ -148,7 +148,7 @@ def read(filename):
     return out
 
 
-def read_buffer(f):
+def read_buffer(f):  # noqa: C901
     # initialize output data
     points = None
     field_data = {}
