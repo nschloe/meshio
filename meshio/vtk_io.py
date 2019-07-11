@@ -276,9 +276,7 @@ def _read_sub_section(f, info):
         if info.section[1:] == "_COORDINATES":
             info.num_points = int(info.split[1])
             data_type = info.split[2].lower()
-            d[info.section] = _read_coords(
-                f, data_type, info.is_ascii, info.num_points
-            )
+            d[info.section] = _read_coords(f, data_type, info.is_ascii, info.num_points)
         else:
             d[info.section] = list(map(int, info.split[1:]))
             assert (
