@@ -67,6 +67,7 @@ def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
 @pytest.mark.parametrize(
     "filename, md5, ref_cells, ref_num_cells, ref_num_pnt",
     [
+        ("vtk/00_image.vtk", "2c800ca9734fe92172d9693f0e58fe8f", "quad", 81, 100),
         ("vtk/01_image.vtk", "3981abae840ef521121bf8829252ae04", "hexahedron", 72, 147),
         (
             "vtk/02_structured.vtk",
