@@ -276,15 +276,15 @@ def _read_sub_section(f, info):
         if info.section[1:] == "_COORDINATES":
             info.num_points = int(info.split[1])
             data_type = info.split[2].lower()
-            info.dataset[info.section] = _read_coords(
+            d[info.section] = _read_coords(
                 f, data_type, info.is_ascii, info.num_points
             )
         else:
-            info.dataset[info.section] = list(map(int, info.split[1:]))
+            d[info.section] = list(map(int, info.split[1:]))
             assert (
-                len(info.dataset[info.section]) == 3
+                len(d[info.section]) == 3
             ), "Wrong number of info in section '{}'. Need 3, got {}.".format(
-                info.section, len(info.dataset[info.section])
+                info.section, len(d[info.section])
             )
     elif info.section == "SCALARS":
         d.update(_read_scalar_field(f, info.num_items, info.split))
