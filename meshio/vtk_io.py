@@ -106,7 +106,6 @@ vtk_to_numpy_dtype_name = {
 
 numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype_name.items()}
 
-
 # supported vtk dataset types
 vtk_dataset_types = [
     "UNSTRUCTURED_GRID",
@@ -131,13 +130,41 @@ vtk_dataset_infos = {
         "Z_COORDINATES",
     ],
 }
-# dataset infos with 3 integers
-vtk_dataset_int = [
-    "DIMENSIONS",
-    "ORIGIN",
-    "SPACING",
-    "ASPECT_RATIO",  # alternative for SPACING in version 1.0 and 2.0
+
+# all main sections in vtk
+vtk_sections = [
+    "METADATA",
+    "DATASET",
+    "POINTS",
+    "CELLS",
+    "CELL_TYPES",
+    "POINT_DATA",
+    "CELL_DATA",
+    "LOOKUP_TABLE",
 ]
+
+
+class Info(object):
+    """Info Container for the VTK reader."""
+
+    def __init__(self):
+        self.points = None
+        self.field_data = {}
+        self.cell_data_raw = {}
+        self.point_data = {}
+        self.dataset = {}
+        self.c = None
+        self.ct = None
+        self.active = None
+        self.is_ascii = False
+        self.split = []
+        self.num_items = 0
+        # One of the problem in reading VTK files are POINT_DATA and CELL_DATA fields. They
+        # can contain a number of SCALARS+LOOKUP_TABLE tables, without giving and indication
+        # of how many there are. Hence, SCALARS must be treated like a first-class section.
+        # To associate it with POINT/CELL_DATA, we store the `active` section in this
+        # variable.
+        self.section = None
 
 
 def read(filename):
@@ -148,13 +175,9 @@ def read(filename):
     return out
 
 
-def read_buffer(f):  # noqa: C901
+def read_buffer(f):
     # initialize output data
-    points = None
-    field_data = {}
-    cell_data_raw = {}
-    point_data = {}
-    dataset = {}
+    info = Info()
 
     # skip header and title
     f.readline()
@@ -164,19 +187,7 @@ def read_buffer(f):  # noqa: C901
     assert data_type in ["ASCII", "BINARY"], "Unknown VTK data type '{}'.".format(
         data_type
     )
-    is_ascii = data_type == "ASCII"
-
-    c = None
-    ct = None
-
-    # One of the problem in reading VTK files are POINT_DATA and CELL_DATA fields. They
-    # can contain a number of SCALARS+LOOKUP_TABLE tables, without giving and indication
-    # of how many there are. Hence, SCALARS must be treated like a first-class section.
-    # To associate it with POINT/CELL_DATA, we store the `active` section in this
-    # variable.
-    active = None
-    # state if current content is just meta-data
-    meta = False
+    info.is_ascii = data_type == "ASCII"
 
     while True:
         line = f.readline().decode("utf-8")
@@ -186,131 +197,134 @@ def read_buffer(f):  # noqa: C901
 
         line = line.strip()
         if len(line) == 0:
-            # metadata ends with blank line
-            meta = False
             continue
 
-        # skip metadata
-        # https://vtk.org/doc/nightly/html/IOLegacyInformationFormat.html
-        if meta:
-            continue
+        info.split = line.split()
+        info.section = info.split[0].upper()
 
-        split = line.split()
-        section = split[0].upper()
-
-        if section == "METADATA":
-            meta = True
-
-        elif section == "DATASET":
-            active = "DATASET"
-            dataset["type"] = split[1].upper()
-            assert (
-                dataset["type"] in vtk_dataset_types
-            ), "Only VTK '{}' supported (not {}).".format(
-                "', '".join(vtk_dataset_types), dataset["type"]
-            )
-
-        elif active == "DATASET" and section[1:] == "_COORDINATES":
-            axes = section[0]
-            assert (
-                axes in ["X", "Y", "Z"] and dataset["type"] == "RECTILINEAR_GRID"
-            ), "'{}' only supported in RECTILINEAR_GRID, not in {}.".format(
-                section, dataset["type"]
-            )
-            num_points = int(split[1])
-            data_type = split[2].lower()
-            dataset[section] = _read_coords(f, data_type, is_ascii, num_points)
-
-        elif section == "POINTS":
-            active = "POINTS"
-            num_points = int(split[1])
-            data_type = split[2].lower()
-            points = _read_points(f, data_type, is_ascii, num_points)
-
-        elif section == "CELLS":
-            active = "CELLS"
-            num_items = int(split[2])
-            c = _read_cells(f, is_ascii, num_items)
-
-        elif section == "CELL_TYPES":
-            active = "CELL_TYPES"
-            num_items = int(split[1])
-            ct = _read_cell_types(f, is_ascii, num_items)
-
-        elif section == "POINT_DATA":
-            active = "POINT_DATA"
-            num_items = int(split[1])
-
-        elif section == "CELL_DATA":
-            active = "CELL_DATA"
-            num_items = int(split[1])
-
-        elif section == "LOOKUP_TABLE":
-            num_items = int(split[2])
-            data = numpy.fromfile(f, count=num_items * 4, sep=" ", dtype=float)
-            rgba = data.reshape((num_items, 4))  # noqa F841
-
+        if info.section in vtk_sections:
+            _read_section(f, info)
         else:
-            if active == "POINT_DATA":
-                d = point_data
-            elif active == "CELL_DATA":
-                d = cell_data_raw
-            else:
-                d = field_data
+            _read_sub_section(f, info)
 
-            if active == "DATASET" and section in vtk_dataset_infos[dataset["type"]]:
-                assert section in vtk_dataset_int, "Unknown section '{}'.".format(
-                    section
-                )
-                dataset[section] = list(map(int, split[1:]))
-                assert (
-                    len(dataset[section]) == 3
-                ), "Wrong number of info in section '{}'. Need 3, got {}.".format(
-                    section, len(dataset[section])
-                )
-            elif section == "SCALARS":
-                d.update(_read_scalar_field(f, num_items, split))
-            elif section == "VECTORS":
-                d.update(_read_field(f, num_items, split, [3]))
-            elif section == "TENSORS":
-                d.update(_read_field(f, num_items, split, [3, 3]))
-            else:
-                assert section == "FIELD", "Unknown section '{}'.".format(section)
-                d.update(_read_fields(f, int(split[2]), is_ascii))
-
-    points, c, ct = _check_mesh(dataset, points, c, ct)
-    cells, cell_data = translate_cells(c, ct, cell_data_raw)
+    _check_mesh(info)
+    cells, cell_data = translate_cells(info.c, info.ct, info.cell_data_raw)
 
     return Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+        info.points,
+        cells,
+        point_data=info.point_data,
+        cell_data=cell_data,
+        field_data=info.field_data,
     )
 
 
-def _check_mesh(dataset, points, c, ct):
-    if dataset["type"] == "UNSTRUCTURED_GRID":
-        assert c is not None, "Required section CELLS not found."
-        assert ct is not None, "Required section CELL_TYPES not found."
-    elif dataset["type"] == "STRUCTURED_POINTS":
-        dim = dataset["DIMENSIONS"]
-        ori = dataset["ORIGIN"]
-        spa = dataset["SPACING"] if "SPACING" in dataset else dataset["ASPECT_RATIO"]
+def _read_section(f, info):
+    if info.section == "METADATA":
+        _skip_meta(f)
+
+    elif info.section == "DATASET":
+        info.active = "DATASET"
+        info.dataset["type"] = info.split[1].upper()
+        assert (
+            info.dataset["type"] in vtk_dataset_types
+        ), "Only VTK '{}' supported (not {}).".format(
+            "', '".join(vtk_dataset_types), info.dataset["type"]
+        )
+
+    elif info.section == "POINTS":
+        info.active = "POINTS"
+        info.num_points = int(info.split[1])
+        data_type = info.split[2].lower()
+        info.points = _read_points(f, data_type, info.is_ascii, info.num_points)
+
+    elif info.section == "CELLS":
+        info.active = "CELLS"
+        info.num_items = int(info.split[2])
+        info.c = _read_cells(f, info.is_ascii, info.num_items)
+
+    elif info.section == "CELL_TYPES":
+        info.active = "CELL_TYPES"
+        info.num_items = int(info.split[1])
+        info.ct = _read_cell_types(f, info.is_ascii, info.num_items)
+
+    elif info.section == "POINT_DATA":
+        info.active = "POINT_DATA"
+        info.num_items = int(info.split[1])
+
+    elif info.section == "CELL_DATA":
+        info.active = "CELL_DATA"
+        info.num_items = int(info.split[1])
+
+    elif info.section == "LOOKUP_TABLE":
+        info.num_items = int(info.split[2])
+        data = numpy.fromfile(f, count=info.num_items * 4, sep=" ", dtype=float)
+        rgba = data.reshape((info.num_items, 4))  # noqa F841
+
+
+def _read_sub_section(f, info):
+    if info.active == "POINT_DATA":
+        d = info.point_data
+    elif info.active == "CELL_DATA":
+        d = info.cell_data_raw
+    elif info.active == "DATASET":
+        d = info.dataset
+    else:
+        d = info.field_data
+
+    if info.section in vtk_dataset_infos[info.dataset["type"]]:
+        if info.section[1:] == "_COORDINATES":
+            info.num_points = int(info.split[1])
+            data_type = info.split[2].lower()
+            info.dataset[info.section] = _read_coords(
+                f, data_type, info.is_ascii, info.num_points
+            )
+        else:
+            info.dataset[info.section] = list(map(int, info.split[1:]))
+            assert (
+                len(info.dataset[info.section]) == 3
+            ), "Wrong number of info in section '{}'. Need 3, got {}.".format(
+                info.section, len(info.dataset[info.section])
+            )
+    elif info.section == "SCALARS":
+        d.update(_read_scalar_field(f, info.num_items, info.split))
+    elif info.section == "VECTORS":
+        d.update(_read_field(f, info.num_items, info.split, [3]))
+    elif info.section == "TENSORS":
+        d.update(_read_field(f, info.num_items, info.split, [3, 3]))
+    else:
+        assert info.section == "FIELD", "Unknown section '{}'.".format(info.section)
+        d.update(_read_fields(f, int(info.split[2]), info.is_ascii))
+
+
+def _check_mesh(info):
+    if info.dataset["type"] == "UNSTRUCTURED_GRID":
+        assert info.c is not None, "Required section CELLS not found."
+        assert info.ct is not None, "Required section CELL_TYPES not found."
+    elif info.dataset["type"] == "STRUCTURED_POINTS":
+        dim = info.dataset["DIMENSIONS"]
+        ori = info.dataset["ORIGIN"]
+        spa = (
+            info.dataset["SPACING"]
+            if "SPACING" in info.dataset
+            else info.dataset["ASPECT_RATIO"]
+        )
         axis = [
             numpy.linspace(ori[i], ori[i] + (dim[i] - 1.0) * spa[i], dim[i])
             for i in range(3)
         ]
-        points = _generate_points(axis)
-        c, ct = _generate_cells(dim=dataset["DIMENSIONS"])
-    elif dataset["type"] == "RECTILINEAR_GRID":
+        info.points = _generate_points(axis)
+        info.c, info.ct = _generate_cells(dim=info.dataset["DIMENSIONS"])
+    elif info.dataset["type"] == "RECTILINEAR_GRID":
         axis = [
-            dataset["X_COORDINATES"],
-            dataset["Y_COORDINATES"],
-            dataset["Z_COORDINATES"],
+            info.dataset["X_COORDINATES"],
+            info.dataset["Y_COORDINATES"],
+            info.dataset["Z_COORDINATES"],
         ]
-        points = _generate_points(axis)
-        c, ct = _generate_cells(dim=dataset["DIMENSIONS"])
-    elif dataset["type"] == "STRUCTURED_GRID":
-        c, ct = _generate_cells(dim=dataset["DIMENSIONS"])
-    return points, c, ct
+        info.points = _generate_points(axis)
+        info.c, info.ct = _generate_cells(dim=info.dataset["DIMENSIONS"])
+    elif info.dataset["type"] == "STRUCTURED_GRID":
+        info.c, info.ct = _generate_cells(dim=info.dataset["DIMENSIONS"])
 
 
 def _generate_cells(dim):
@@ -461,14 +475,8 @@ def _read_fields(f, num_fields, is_ascii):
     data = {}
     for _ in range(num_fields):
         line = f.readline().decode("utf-8").split()
-        # skip possible metadata
-        # https://vtk.org/doc/nightly/html/IOLegacyInformationFormat.html
         if line[0] == "METADATA":
-            while True:
-                line = f.readline().decode("utf-8").strip()
-                if not line:
-                    # end of metadata
-                    break
+            _skip_meta(f)
             name, shape0, shape1, data_type = f.readline().decode("utf-8").split()
         else:
             name, shape0, shape1, data_type = line
@@ -492,6 +500,16 @@ def _read_fields(f, num_fields, is_ascii):
         data[name] = dat
 
     return data
+
+
+def _skip_meta(f):
+    # skip possible metadata
+    # https://vtk.org/doc/nightly/html/IOLegacyInformationFormat.html
+    while True:
+        line = f.readline().decode("utf-8").strip()
+        if not line:
+            # end of metadata is a blank line
+            break
 
 
 def translate_cells(data, types, cell_data_raw):
