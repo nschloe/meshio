@@ -278,7 +278,10 @@ def _read_sub_section(f, info):
             data_type = info.split[2].lower()
             d[info.section] = _read_coords(f, data_type, info.is_ascii, info.num_points)
         else:
-            d[info.section] = list(map(int, info.split[1:]))
+            if info.section == "DIMENSIONS":
+                d[info.section] = list(map(int, info.split[1:]))
+            else:
+                d[info.section] = list(map(float, info.split[1:]))
             assert (
                 len(d[info.section]) == 3
             ), "Wrong number of info in section '{}'. Need 3, got {}.".format(
