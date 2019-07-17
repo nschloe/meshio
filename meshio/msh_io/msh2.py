@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 """
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.

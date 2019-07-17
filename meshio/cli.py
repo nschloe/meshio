@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-#
 """
 Convert a mesh file to another.
 """
-from __future__ import print_function
-
 import sys
 
 import numpy

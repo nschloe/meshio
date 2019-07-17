@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 """
 I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
 """

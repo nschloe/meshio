@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 import numpy
 
 from meshio import Mesh

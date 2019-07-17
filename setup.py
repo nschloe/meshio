@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 import codecs
 import os
 
@@ -29,6 +27,7 @@ setup(
     license=about["__license__"],
     platforms="any",
     install_requires=["numpy"],
+    python_requires=">=3",
     extras_require={
         "all": ["netCDF4", "h5py", "lxml"],
         "exodus": ["netCDF4"],

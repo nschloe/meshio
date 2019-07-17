@@ -1,17 +1,16 @@
-# meshio
-
-[![CircleCI](https://img.shields.io/circleci/project/github/nschloe/meshio/master.svg)](https://circleci.com/gh/nschloe/meshio)
-[![codecov](https://img.shields.io/codecov/c/github/nschloe/meshio.svg)](https://codecov.io/gh/nschloe/meshio)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
-[![PyPi Version](https://img.shields.io/pypi/v/meshio.svg)](https://pypi.org/project/meshio)
-[![Debian CI](https://badges.debian.net/badges/debian/testing/python3-meshio/version.svg)](https://tracker.debian.org/pkg/python-meshio)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1173115.svg)](https://doi.org/10.5281/zenodo.1173115)
-[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshio)
-[![PyPi downloads](https://img.shields.io/pypi/dd/meshio.svg)](https://pypistats.org/packages/meshio)
-
 <p align="center">
-  <img src="https://nschloe.github.io/meshio/meshio_logo.svg" width="20%">
+  <a href="https://github.com/nschloe/meshio"><img alt="meshio" src="https://nschloe.github.io/meshio/logo-with-text.svg" width="60%"></a>
+  <p align="center">I/O for mesh files.</p>
 </p>
+
+[![CircleCI](https://img.shields.io/circleci/project/github/nschloe/meshio/master.svg?style=flat-square)](https://circleci.com/gh/nschloe/meshio)
+[![codecov](https://img.shields.io/codecov/c/github/nschloe/meshio.svg?style=flat-square)](https://codecov.io/gh/nschloe/meshio)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
+[![PyPi Version](https://img.shields.io/pypi/v/meshio.svg?style=flat-square)](https://pypi.org/project/meshio)
+[![Debian CI](https://badges.debian.net/badges/debian/testing/python3-meshio/version.svg?style=flat-square)](https://tracker.debian.org/pkg/python-meshio)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1173115.svg?style=flat-square)](https://doi.org/10.5281/zenodo.1173115)
+[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshio)
+[![PyPi downloads](https://img.shields.io/pypi/dd/meshio.svg?style=flat-square)](https://pypistats.org/packages/meshio)
 
 There are various mesh formats available for representing unstructured meshes.
 meshio can read and write all of the following and smoothly converts between them:
@@ -33,13 +32,17 @@ meshio can read and write all of the following and smoothly converts between the
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format)
 
-Simply call
+Install with
+```
+pip3 install meshio[all] --user
+```
+and simply call
 ```
 meshio-convert input.msh output.vtu
 ```
 with any of the supported formats.
 
-In Python, simply call
+In Python, simply do
 ```python
 import meshio
 
@@ -74,7 +77,7 @@ mesh = meshio.Mesh(points, cells)
 meshio.write("foo.vtk", mesh)
 ```
 For both input and output, you can optionally specify the exact `file_format`
-(in case you would like to enforce binary over ASCII VTK, for example).
+(in case you would like to enforce ASCII over binary VTK, for example).
 
 #### Time series
 
@@ -96,15 +99,15 @@ for k in range(reader.num_steps):
 
 ### Installation
 
-meshio is [available from the Python Package
-Index](https://pypi.org/project/meshio/), so simply type
+meshio is [available from the Python Package Index](https://pypi.org/project/meshio/),
+so simply do
 ```
-pip install -U meshio
+pip3 install meshio --user
 ```
-to install or upgrade.
+to install.
 
-Additional dependencies (`netcdf4`, `h5py` and `lxml`) are required for some of the output formats and can be pulled in by:
-
+Additional dependencies (`netcdf4`, `h5py` and `lxml`) are required for some of the
+output formats and can be pulled in by
 ```
 pip install -U meshio[all]
 ```
