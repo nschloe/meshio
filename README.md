@@ -32,13 +32,17 @@ meshio can read and write all of the following and smoothly converts between the
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)
  * [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format)
 
-Simply call
+Install with
+```
+pip3 install meshio[all] --user
+```
+and simply call
 ```
 meshio-convert input.msh output.vtu
 ```
 with any of the supported formats.
 
-In Python, simply call
+In Python, simply do
 ```python
 import meshio
 
@@ -73,7 +77,7 @@ mesh = meshio.Mesh(points, cells)
 meshio.write("foo.vtk", mesh)
 ```
 For both input and output, you can optionally specify the exact `file_format`
-(in case you would like to enforce binary over ASCII VTK, for example).
+(in case you would like to enforce ASCII over binary VTK, for example).
 
 #### Time series
 
@@ -95,15 +99,15 @@ for k in range(reader.num_steps):
 
 ### Installation
 
-meshio is [available from the Python Package
-Index](https://pypi.org/project/meshio/), so simply type
+meshio is [available from the Python Package Index](https://pypi.org/project/meshio/),
+so simply do
 ```
-pip install -U meshio
+pip3 install meshio --user
 ```
-to install or upgrade.
+to install.
 
-Additional dependencies (`netcdf4`, `h5py` and `lxml`) are required for some of the output formats and can be pulled in by:
-
+Additional dependencies (`netcdf4`, `h5py` and `lxml`) are required for some of the
+output formats and can be pulled in by
 ```
 pip install -U meshio[all]
 ```
