@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 """
 Convert a mesh file to another.
 """

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 import numpy
 
 num_nodes_per_cell = {

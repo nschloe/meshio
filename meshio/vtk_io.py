@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 """
 I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 """

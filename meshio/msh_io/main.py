@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 import struct
 
 from . import msh2, msh4_0, msh4_1

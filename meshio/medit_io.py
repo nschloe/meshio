@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 """
 I/O for Medit's format, cf.
 <https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html>.

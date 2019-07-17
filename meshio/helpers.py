@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 from . import (
     abaqus_io,
     ansys_io,

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 """
 I/O for the STL format, cf.
 <https://en.wikipedia.org/wiki/STL_(file_format)>.

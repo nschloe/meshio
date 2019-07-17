@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 """
 I/O for Ansys's msh format, cf.
 <http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>.
