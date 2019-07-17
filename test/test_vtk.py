@@ -62,5 +62,37 @@ def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
     return
 
 
+@pytest.mark.parametrize(
+    "filename, md5, ref_cells, ref_num_cells, ref_num_pnt",
+    [
+        ("vtk/00_image.vtk", "2c800ca9734fe92172d9693f0e58fe8f", "quad", 81, 100),
+        ("vtk/01_image.vtk", "3981abae840ef521121bf8829252ae04", "hexahedron", 72, 147),
+        (
+            "vtk/02_structured.vtk",
+            "0a958a46b7629149abb03e4af47b7d29",
+            "hexahedron",
+            72,
+            147,
+        ),
+        (
+            "vtk/03_rectilinear.vtk",
+            "7b5c057940e61e88a933f7a63e99aae0",
+            "hexahedron",
+            72,
+            147,
+        ),
+        ("vtk/04_rectilinear.vtk", "f75ddbebb907fdd73159bfcfc46fdbd5", "quad", 27, 40),
+        ("vtk/05_rectilinear.vtk", "9f9bbccb7d76277b457162c0a2d3f9e9", "quad", 27, 40),
+    ],
+)
+def test_structured(filename, md5, ref_cells, ref_num_cells, ref_num_pnt):
+    filename = helpers.download(filename, md5)
+    mesh = meshio.read(filename)
+    assert len(mesh.cells) == 1
+    assert ref_cells in mesh.cells
+    assert len(mesh.cells[ref_cells]) == ref_num_cells
+    assert len(mesh.points) == ref_num_pnt
+
+
 if __name__ == "__main__":
     test(helpers.tri_mesh, write_binary=True)

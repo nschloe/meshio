@@ -70,7 +70,14 @@ def read_buffer(f, is_ascii, data_size):
             # ```
             # skip environment
             while line != "$End" + environ:
-                line = f.readline().decode("utf-8").strip()
+                line = f.readline()
+                # Skip binary strings, but try to recognize text strings
+                # to catch the end of the environment
+                # See also https://github.com/nschloe/pygalmesh/issues/34
+                try:
+                    line = line.decode("utf-8").strip()
+                except UnicodeDecodeError:
+                    pass
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
     cell_data.update(cell_tags)
