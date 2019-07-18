@@ -60,7 +60,7 @@ exodus_to_meshio_type = {
 meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
-def read(filename):
+def read(filename):  # noqa: C901
     import netCDF4
 
     nc = netCDF4.Dataset(filename)
@@ -79,7 +79,7 @@ def read(filename):
     cd = {}
     cells = {}
     ns_names = []
-    eb_names = []
+    # eb_names = []
     ns = []
     node_sets = {}
     info = []
@@ -159,13 +159,18 @@ def read(filename):
         point_data[name] = numpy.column_stack([pd[idx0], pd[idx1], pd[idx2]])
 
     cell_data = {}
-    for name, data in zip(cell_data_names, cd.values()):
-        cell_data[name] = data
+    k = 0
+    for cell_type, cell in cells.items():
+        n = len(cell)
+        cell_data[cell_type] = {}
+        for name, data in zip(cell_data_names, cd.values()):
+            cell_data[cell_type][name] = data[k : k + n]
+        k += n
 
     node_sets = {name: dat for name, dat in zip(ns_names, ns)}
 
     nc.close()
-    return Mesh(points, cells, point_data=point_data, node_sets=node_sets, info=info)
+    return Mesh(points, cells, point_data=point_data, cell_data=cell_data, node_sets=node_sets, info=info)
 
 
 def categorize(names):
@@ -322,7 +327,6 @@ def write(filename, mesh):
         # Set data. ParaView might have some problems here, see
         # <https://gitlab.kitware.com/paraview/paraview/issues/18403>.
         for k, (name, data) in enumerate(mesh.point_data.items()):
-            print(data.shape)
             for i, s in enumerate(data.shape):
                 rootgrp.createDimension("dim_nod_var{}{}".format(k, i), s)
             dims = ["time_step"] + [
