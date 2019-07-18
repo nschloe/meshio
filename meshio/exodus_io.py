@@ -5,6 +5,8 @@ See <http://prod.sandia.gov/techlib/access-control.cgi/1992/922137.pdf>, in
 particular Appendix A (page 171, Implementation of EXODUS II with netCDF).
 """
 import datetime
+import re
+import warnings
 
 import numpy
 
@@ -58,7 +60,7 @@ exodus_to_meshio_type = {
 meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
-def read(filename):
+def read(filename):  # noqa: C901
     import netCDF4
 
     nc = netCDF4.Dataset(filename)
@@ -73,13 +75,25 @@ def read(filename):
 
     points = numpy.zeros((len(nc.dimensions["num_nodes"]), 3))
     point_data_names = []
+    cell_data_names = []
     pd = {}
+    cd = {}
     cells = {}
     ns_names = []
+    # eb_names = []
     ns = []
     node_sets = {}
+    info = []
+
     for key, value in nc.variables.items():
-        if key[:7] == "connect":
+        if key == "info_records":
+            value.set_auto_mask(False)
+            info += [b"".join(c).decode("UTF-8") for c in value[:]]
+        elif key == "qa_records":
+            value.set_auto_mask(False)
+            for val in value:
+                info += [b"".join(c).decode("UTF-8") for c in val[:]]
+        elif key[:7] == "connect":
             meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
             if meshio_type in cells:
                 cells[meshio_type] = numpy.vstack([cells[meshio_type], value[:] - 1])
@@ -97,17 +111,41 @@ def read(filename):
             value.set_auto_mask(False)
             point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
         elif key[:12] == "vals_nod_var":
-            if len(key) == 12:
-                idx = 0
-            else:
-                idx = int(key[12:]) - 1
+            idx = 0 if len(key) == 12 else int(key[12:]) - 1
             value.set_auto_mask(False)
+            # For now only take the first value
             pd[idx] = value[0]
+            if len(value) > 1:
+                warnings.warn("Skipping some time data")
+        elif key == "name_elem_var":
+            value.set_auto_mask(False)
+            cell_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+        elif key[:13] == "vals_elem_var":
+            # eb: element block
+            m = re.match("vals_elem_var(\\d+)?(?:eb(\\d+))?", key)
+            idx = 0 if m.group(1) is None else int(m.group(1)) - 1
+            block = 0 if m.group(2) is None else int(m.group(2)) - 1
+
+            value.set_auto_mask(False)
+            # For now only take the first value
+            if idx not in cd:
+                cd[idx] = {}
+            cd[idx][block] = value[0]
+
+            if len(value) > 1:
+                warnings.warn("Skipping some time data")
         elif key == "ns_names":
             value.set_auto_mask(False)
             ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+        # elif key == "eb_names":
+        #     value.set_auto_mask(False)
+        #     eb_names = [b"".join(c).decode("UTF-8") for c in value[:]]
         elif key == "node_ns":
             ns = value
+
+    # merge element block data; can't handle blocks yet
+    for k, value in cd.items():
+        cd[k] = numpy.concatenate(list(value.values()))
 
     # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
     # triplets in the point data. If yes, they belong together.
@@ -121,10 +159,26 @@ def read(filename):
     for name, idx0, idx1, idx2 in triple:
         point_data[name] = numpy.column_stack([pd[idx0], pd[idx1], pd[idx2]])
 
+    cell_data = {}
+    k = 0
+    for cell_type, cell in cells.items():
+        n = len(cell)
+        cell_data[cell_type] = {}
+        for name, data in zip(cell_data_names, cd.values()):
+            cell_data[cell_type][name] = data[k : k + n]
+        k += n
+
     node_sets = {name: dat for name, dat in zip(ns_names, ns)}
 
     nc.close()
-    return Mesh(points, cells, point_data=point_data, node_sets=node_sets)
+    return Mesh(
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        node_sets=node_sets,
+        info=info,
+    )
 
 
 def categorize(names):
@@ -281,7 +335,6 @@ def write(filename, mesh):
         # Set data. ParaView might have some problems here, see
         # <https://gitlab.kitware.com/paraview/paraview/issues/18403>.
         for k, (name, data) in enumerate(mesh.point_data.items()):
-            print(data.shape)
             for i, s in enumerate(data.shape):
                 rootgrp.createDimension("dim_nod_var{}{}".format(k, i), s)
             dims = ["time_step"] + [
