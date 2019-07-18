@@ -170,7 +170,14 @@ def read(filename):  # noqa: C901
     node_sets = {name: dat for name, dat in zip(ns_names, ns)}
 
     nc.close()
-    return Mesh(points, cells, point_data=point_data, cell_data=cell_data, node_sets=node_sets, info=info)
+    return Mesh(
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        node_sets=node_sets,
+        info=info,
+    )
 
 
 def categorize(names):
