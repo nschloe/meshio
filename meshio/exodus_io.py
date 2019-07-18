@@ -75,6 +75,7 @@ def read(filename):  # noqa: C901
 
     points = numpy.zeros((len(nc.dimensions["num_nodes"]), 3))
     point_data_names = []
+    cell_data_names = []
     pd = {}
     cd = {}
     cells = {}

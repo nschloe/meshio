@@ -27,6 +27,9 @@ format:
 	isort -rc .
 	black .
 
+black:
+	black .
+
 lint:
 	black --check .
 	flake8 setup.py meshio/ test/*.py
