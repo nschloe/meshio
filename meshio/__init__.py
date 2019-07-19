@@ -1,11 +1,11 @@
-from . import cli
+from . import _cli
 from .__about__ import __author__, __author_email__, __version__, __website__
-from .helpers import read, write, write_points_cells
-from .mesh import Mesh
-from .xdmf_io import XdmfTimeSeriesReader, XdmfTimeSeriesWriter
+from ._helpers import read, write, write_points_cells
+from ._mesh import Mesh
+from ._xdmf import XdmfTimeSeriesReader, XdmfTimeSeriesWriter
 
 __all__ = [
-    "cli",
+    "_cli",
     "read",
     "write",
     "write_points_cells",

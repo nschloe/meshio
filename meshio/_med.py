@@ -4,8 +4,8 @@ I/O for MED/Salome, cf.
 """
 import numpy
 
-from .common import num_nodes_per_cell
-from .mesh import Mesh
+from ._common import num_nodes_per_cell
+from ._mesh import Mesh
 
 # https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {

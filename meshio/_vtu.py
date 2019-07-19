@@ -9,9 +9,9 @@ import zlib
 import numpy
 
 from .__about__ import __version__
-from .common import num_nodes_per_cell, write_xml
-from .mesh import Mesh
-from .vtk_io import meshio_to_vtk_type, raw_from_cell_data, vtk_to_meshio_type
+from ._common import num_nodes_per_cell, write_xml
+from ._mesh import Mesh
+from ._vtk import meshio_to_vtk_type, raw_from_cell_data, vtk_to_meshio_type
 
 try:
     from StringIO import cStringIO as BytesIO

@@ -8,7 +8,7 @@ import re
 import numpy
 
 from .__about__ import __version__
-from .mesh import Mesh
+from ._mesh import Mesh
 
 
 def _skip_to(f, char):

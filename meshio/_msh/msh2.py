@@ -7,8 +7,8 @@ import struct
 
 import numpy
 
-from ..common import cell_data_from_raw, raw_from_cell_data
-from ..mesh import Mesh
+from .._common import cell_data_from_raw, raw_from_cell_data
+from .._mesh import Mesh
 from .common import (
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,

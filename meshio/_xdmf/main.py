@@ -6,9 +6,9 @@ import os
 
 import numpy
 
-from ..common import cell_data_from_raw, write_xml
-from ..mesh import Mesh
-from ..vtk_io import raw_from_cell_data
+from .._common import cell_data_from_raw, write_xml
+from .._mesh import Mesh
+from .._vtk import raw_from_cell_data
 from .common import (
     dtype_to_format_string,
     meshio_to_xdmf_type,

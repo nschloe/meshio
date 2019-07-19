@@ -7,8 +7,8 @@ from functools import reduce
 import numpy
 
 from .__about__ import __version__
-from .common import raw_from_cell_data
-from .mesh import Mesh
+from ._common import raw_from_cell_data
+from ._mesh import Mesh
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {

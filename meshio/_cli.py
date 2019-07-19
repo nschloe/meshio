@@ -6,7 +6,7 @@ import sys
 import numpy
 
 from .__about__ import __copyright__, __version__
-from .helpers import input_filetypes, output_filetypes, read, write
+from ._helpers import input_filetypes, output_filetypes, read, write
 
 
 def _get_version_text():

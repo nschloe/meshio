@@ -8,7 +8,7 @@ from itertools import islice
 
 import numpy
 
-from .mesh import Mesh
+from ._mesh import Mesh
 
 
 def read(filename):
