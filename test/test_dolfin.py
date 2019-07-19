@@ -17,8 +17,8 @@ lxml = pytest.importorskip("lxml")
         helpers.add_cell_data(helpers.tri_mesh, 1, dtype=numpy.int32),
     ],
 )
-def test_io(mesh):
-    helpers.write_read(meshio.dolfin_io.write, meshio.dolfin_io.read, mesh, 1.0e-15)
+def test_dolfin(mesh):
+    helpers.write_read(meshio._dolfin.write, meshio._dolfin.read, mesh, 1.0e-15)
     return
 
 
