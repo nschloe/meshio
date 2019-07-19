@@ -6,9 +6,9 @@ import logging
 
 import numpy
 
-from .common import num_nodes_per_cell
-from .mesh import Mesh
-from .vtk_io import raw_from_cell_data
+from ._common import num_nodes_per_cell
+from ._mesh import Mesh
+from ._vtk import raw_from_cell_data
 
 ## We check if we can read/write the mesh natively from Kratos
 # TODO: Implement native reading

@@ -28,7 +28,7 @@ import meshio
     ],
 )
 def test_io(mesh):
-    helpers.write_read(meshio.mdpa_io.write, meshio.mdpa_io.read, mesh, 1.0e-15)
+    helpers.write_read(meshio._mdpa.write, meshio._mdpa.read, mesh, 1.0e-15)
     return
 
 

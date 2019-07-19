@@ -21,9 +21,9 @@ import meshio
 )
 def test(mesh):
     def writer(*args, **kwargs):
-        return meshio.abaqus_io.write(*args, **kwargs)
+        return meshio._abaqus.write(*args, **kwargs)
 
-    helpers.write_read(writer, meshio.abaqus_io.read, mesh, 1.0e-15)
+    helpers.write_read(writer, meshio._abaqus.read, mesh, 1.0e-15)
     return
 
 

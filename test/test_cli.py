@@ -13,7 +13,7 @@ def test_cli():
 
     outfile = tempfile.NamedTemporaryFile().name
 
-    meshio.cli.main(
+    meshio._cli.main(
         [
             infile,
             outfile,

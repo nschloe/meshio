@@ -7,8 +7,8 @@ from functools import partial
 
 import numpy
 
-from ..common import cell_data_from_raw
-from ..mesh import Mesh
+from .._common import cell_data_from_raw
+from .._mesh import Mesh
 from .common import (
     _gmsh_to_meshio_type,
     _read_data,

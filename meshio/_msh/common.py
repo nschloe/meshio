@@ -3,7 +3,7 @@ import shlex
 
 import numpy
 
-from ..common import num_nodes_per_cell  # noqa F401
+from .._common import num_nodes_per_cell  # noqa F401
 
 c_int = numpy.dtype("i")
 c_double = numpy.dtype("d")

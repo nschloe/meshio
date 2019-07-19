@@ -6,7 +6,7 @@ import logging
 import numpy
 
 from .__about__ import __version__
-from .mesh import Mesh
+from ._mesh import Mesh
 
 abaqus_to_meshio_type = {
     # trusss
