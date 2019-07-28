@@ -187,12 +187,12 @@ def _read_cells(f, line0, point_gids):
         if is_new_cell:
             idx = [point_gids[k] for k in entries[1:]]
         else:
-            idx.extend([point_gids[k] for k in entries]) 
-        
-        if line.rstrip().endswith(','):
-            is_new_cell = False 
+            idx.extend([point_gids[k] for k in entries])
+
+        if line.rstrip().endswith(","):
+            is_new_cell = False
         else:
-            is_new_cell = True 
+            is_new_cell = True
             cells.append(idx)
     f.seek(last_pos)
     return cell_type, numpy.array(cells)

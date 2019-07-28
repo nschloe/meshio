@@ -33,7 +33,7 @@ def test(mesh, write_binary):
             write_binary=write_binary,
             # don't use pretty xml to increase test coverage
             pretty_xml=False,
-            **kwargs
+            **kwargs,
         )
 
     # ASCII files are only meant for debugging, VTK stores only 11 digits
