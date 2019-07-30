@@ -174,15 +174,26 @@ def _read_cells(f, line0, point_gids):
     cell_type = abaqus_to_meshio_type[etype]
 
     cells = []
+    is_new_cell = True
     while True:
         last_pos = f.tell()
         line = f.readline()
         if line.startswith("*") or line == "":
             break
-        entries = [int(k) for k in filter(None, line.split(","))]
-        idx = [point_gids[k] for k in entries[1:]]
-        cells.append(idx)
+        # remove trailing newlines
+        entries = [int(k) for k in filter(None, line.rstrip().split(","))]
 
+        # check for element connectivity spanning multiple lines
+        if is_new_cell:
+            idx = [point_gids[k] for k in entries[1:]]
+        else:
+            idx.extend([point_gids[k] for k in entries])
+
+        if line.rstrip().endswith(","):
+            is_new_cell = False
+        else:
+            is_new_cell = True
+            cells.append(idx)
     f.seek(last_pos)
     return cell_type, numpy.array(cells)
 
