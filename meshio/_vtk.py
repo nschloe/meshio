@@ -578,33 +578,33 @@ def translate_cells(data, types, cell_data_raw):
 
 
 def write(filename, mesh, write_binary=True):
+    def pad(array):
+        return numpy.pad(array, ((0, 0), (0, 1)), "constant")
+
     if mesh.points.shape[1] == 2:
-
-        def pad(array):
-            return numpy.pad(array, ((0, 0), (0, 1)), "constant")
-
         logging.warning(
             "VTK requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
         mesh.points = pad(mesh.points)
 
-        if mesh.point_data:
-            for name, values in mesh.point_data.items():
-                if values.shape[1] == 2:
+    if mesh.point_data:
+        for name, values in mesh.point_data.items():
+            if len(values.shape) == 2 and values.shape[1] == 2:
+                logging.warning(
+                    "VTK requires 3D vectors, but 2D vectors given. "
+                    "Appending 0 third component to {}.".format(name)
+                )
+                mesh.point_data[name] = pad(values)
+
+    if mesh.cell_data:
+        for t, data in mesh.cell_data.items():
+            for name, values in data.items():
+                if len(values.shape) == 2 and values.shape[1] == 2:
                     logging.warning(
                         "VTK requires 3D vectors, but 2D vectors given. "
                         "Appending 0 third component to {}.".format(name)
                     )
-                    mesh.point_data[name] = pad(values)
-        if mesh.cell_data:
-            for t, data in mesh.cell_data.items():
-                for name, values in data.items():
-                    if values.shape[1] == 2:
-                        logging.warning(
-                            "VTK requires 3D vectors, but 2D vectors given. "
-                            "Appending 0 third component to {}.".format(name)
-                        )
                     mesh.cell_data[t][name] = pad(mesh.cell_data[t][name])
 
     if not write_binary:
