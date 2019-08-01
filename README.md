@@ -27,6 +27,7 @@ meshio can read and write all of the following and smoothly converts between the
  * [OFF](http://segeval.cs.princeton.edu/public/off_format.html)
  * [PERMAS](http://www.intes.de)
  * [STL](https://en.wikipedia.org/wiki/STL_(file_format))
+ * [TetGen .node/.ele](https://wias-berlin.de/software/tetgen/fformats.html)
  * [SVG](https://www.w3.org/TR/SVG/) (2D only, output only)
  * [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats)

@@ -12,6 +12,7 @@ from . import (
     _permas,
     _stl,
     _svg,
+    _tetgen,
     _vtk,
     _vtu,
     _xdmf,
@@ -60,6 +61,7 @@ output_filetypes = [
     "stl-ascii",
     "stl-binary",
     "svg",
+    "tetgen",
     "vtk-ascii",
     "vtk-binary",
     "vtu-ascii",
@@ -92,6 +94,8 @@ _extension_to_filetype = {
     ".inp": "abaqus",
     ".mdpa": "mdpa",
     ".svg": "svg",
+    ".node": "tetgen",
+    ".ele": "tetgen",
 }
 
 
@@ -152,6 +156,8 @@ def read(filename, file_format=None):
         "stl": _stl,
         "stl-ascii": _stl,
         "stl-binary": _stl,
+        #
+        "tetgen": _tetgen,
         #
         "vtu-ascii": _vtu,
         "vtu-binary": _vtu,
@@ -242,6 +248,7 @@ _writer_map = {
     "permas": (_permas, (), {}),
     "stl-ascii": (_stl, (), {"write_binary": False}),
     "stl-binary": (_stl, (), {"write_binary": True}),
+    "tetgen": (_tetgen, (), {}),
     "vtu-ascii": (_vtu, (), {"write_binary": False}),
     "vtu": (_vtu, (), {"write_binary": True}),
     "vtu-binary": (_vtu, (), {"write_binary": True}),

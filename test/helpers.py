@@ -253,11 +253,11 @@ def add_node_sets(mesh):
     return mesh2
 
 
-def write_read(writer, reader, input_mesh, atol):
+def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     """Write and read a file, and make sure the data is the same as before.
     """
     with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = os.path.join(temp_dir, "test.dat")
+        filepath = os.path.join(temp_dir, "test" + extension)
         writer(filepath, input_mesh)
         mesh = reader(filepath)
 
