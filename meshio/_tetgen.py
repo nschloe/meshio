@@ -2,8 +2,8 @@
 I/O for the TetGen file format, c.f.
 <https://wias-berlin.de/software/tetgen/fformats.node.html>
 """
-import os
 import logging
+import os
 from itertools import islice
 
 import numpy
