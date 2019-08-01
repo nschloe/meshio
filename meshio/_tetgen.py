@@ -25,7 +25,7 @@ def read(filename):
     # read nodes
     with open(node_filename) as f:
         line = next(islice(f, 1)).strip()
-        while line[0] == "#":
+        while len(line) == 0 or line[0] == "#":
             line = next(islice(f, 1)).strip()
 
         num_points, dim, num_attrs, num_bmarkers = [
@@ -36,7 +36,7 @@ def read(filename):
         points = numpy.empty((num_points, 3), dtype=float)
         for k in range(num_points):
             line = next(islice(f, 1)).strip()
-            if line[0] == "#":
+            if len(line) == 0 or line[0] == "#":
                 continue
 
             out = [item for item in line.split(" ") if item != ""]
@@ -51,7 +51,7 @@ def read(filename):
     # read elements
     with open(ele_filename) as f:
         line = next(islice(f, 1)).strip()
-        while line[0] == "#":
+        while len(line) == 0 or line[0] == "#":
             line = next(islice(f, 1)).strip()
 
         num_tets, num_points_per_tet, num_attrs = [
@@ -61,7 +61,7 @@ def read(filename):
         cells = numpy.empty((num_tets, 4), dtype=int)
         for k in range(num_tets):
             line = next(islice(f, 1)).strip()
-            if line[0] == "#":
+            if len(line) == 0 or line[0] == "#":
                 continue
 
             out = [item for item in line.split(" ") if item != ""]
