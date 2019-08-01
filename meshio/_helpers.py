@@ -12,6 +12,7 @@ from . import (
     _permas,
     _stl,
     _svg,
+    _tetgen,
     _vtk,
     _vtu,
     _xdmf,
@@ -92,6 +93,8 @@ _extension_to_filetype = {
     ".inp": "abaqus",
     ".mdpa": "mdpa",
     ".svg": "svg",
+    ".node": "tetgen",
+    ".ele": "tetgen",
 }
 
 
@@ -152,6 +155,8 @@ def read(filename, file_format=None):
         "stl": _stl,
         "stl-ascii": _stl,
         "stl-binary": _stl,
+        #
+        "tetgen": _tetgen,
         #
         "vtu-ascii": _vtu,
         "vtu-binary": _vtu,
