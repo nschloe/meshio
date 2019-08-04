@@ -203,7 +203,7 @@ def read_buffer(f):
         if info.section in vtk_sections:
             _read_section(f, info)
         else:
-            _read_sub_section(f, info)
+            _read_subsection(f, info)
 
     _check_mesh(info)
     cells, cell_data = translate_cells(info.c, info.ct, info.cell_data_raw)
@@ -260,7 +260,7 @@ def _read_section(f, info):
         rgba = data.reshape((info.num_items, 4))  # noqa F841
 
 
-def _read_sub_section(f, info):
+def _read_subsection(f, info):
     if info.active == "POINT_DATA":
         d = info.point_data
     elif info.active == "CELL_DATA":
@@ -286,11 +286,11 @@ def _read_sub_section(f, info):
                 info.section, len(d[info.section])
             )
     elif info.section == "SCALARS":
-        d.update(_read_scalar_field(f, info.num_items, info.split))
+        d.update(_read_scalar_field(f, info.num_items, info.split, info.is_ascii))
     elif info.section == "VECTORS":
-        d.update(_read_field(f, info.num_items, info.split, [3]))
+        d.update(_read_field(f, info.num_items, info.split, [3], info.is_ascii))
     elif info.section == "TENSORS":
-        d.update(_read_field(f, info.num_items, info.split, [3, 3]))
+        d.update(_read_field(f, info.num_items, info.split, [3, 3], info.is_ascii))
     else:
         assert info.section == "FIELD", "Unknown section '{}'.".format(info.section)
         d.update(_read_fields(f, int(info.split[2]), info.is_ascii))
@@ -436,7 +436,7 @@ def _read_cell_types(f, is_ascii, num_items):
     return ct
 
 
-def _read_scalar_field(f, num_data, split):
+def _read_scalar_field(f, num_data, split, is_ascii):
     data_name = split[1]
     data_type = split[2].lower()
     try:
@@ -451,22 +451,39 @@ def _read_scalar_field(f, num_data, split):
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
     lt, _ = f.readline().decode("utf-8").split()
     assert lt.upper() == "LOOKUP_TABLE"
-    data = numpy.fromfile(f, count=num_data, sep=" ", dtype=dtype)
+
+    if is_ascii:
+        data = numpy.fromfile(f, count=num_data, sep=" ", dtype=dtype)
+    else:
+        # Binary data is big endian, see
+        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        dtype = dtype.newbyteorder(">")
+        data = numpy.fromfile(f, count=num_data, dtype=dtype)
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
 
     return {data_name: data}
 
 
-def _read_field(f, num_data, split, shape):
+def _read_field(f, num_data, split, shape, is_ascii):
     data_name = split[1]
     data_type = split[2].lower()
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
     # <https://stackoverflow.com/q/2104782/353337>
     k = reduce((lambda x, y: x * y), shape)
-    data = numpy.fromfile(f, count=k * num_data, sep=" ", dtype=dtype).reshape(
-        -1, *shape
-    )
 
+    if is_ascii:
+        data = numpy.fromfile(f, count=k * num_data, sep=" ", dtype=dtype)
+    else:
+        # Binary data is big endian, see
+        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        dtype = dtype.newbyteorder(">")
+        data = numpy.fromfile(f, count=k * num_data, dtype=dtype)
+        line = f.readline().decode("utf-8")
+        assert line == "\n"
+
+    data = data.reshape(-1, *shape)
     return {data_name: data}
 
 
