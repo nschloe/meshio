@@ -380,13 +380,13 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
     # Don't use byteswap to make sure that the dtype is changed; see
     # <https://github.com/numpy/numpy/issues/10372>.
     points = mesh.points.astype(mesh.points.dtype.newbyteorder("="))
-    for data in mesh.point_data.values():
-        data = data.astype(data.dtype.newbyteorder("="))
+    for key, data in mesh.point_data.items():
+        mesh.point_data[key] = data.astype(data.dtype.newbyteorder("="))
     for data in mesh.cell_data.values():
-        for dat in data.values():
-            dat = dat.astype(dat.dtype.newbyteorder("="))
-    for data in mesh.field_data.values():
-        data = data.astype(data.dtype.newbyteorder("="))
+        for key, dat in data.items():
+            data[key] = dat.astype(dat.dtype.newbyteorder("="))
+    for key, data in mesh.field_data.items():
+        mesh.field_data[key] = data.astype(data.dtype.newbyteorder("="))
 
     def numpy_to_xml_array(parent, name, fmt, data):
         da = ET.SubElement(
