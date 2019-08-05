@@ -24,7 +24,6 @@ jobs:
       - checkout
       # The actual test
       - run: pip3 install .[all]
-      - run: pip3 install -r test_requirements.txt
       - run: cd test/ && pytest --cov meshio
       # submit to codecov
       - run: apt-get install -y curl
