@@ -1,3 +1,5 @@
+import os
+
 import numpy
 import pytest
 
@@ -28,21 +30,13 @@ def test(mesh):
 
 
 @pytest.mark.parametrize(
-    "filename, md5, ref_sum, ref_num_cells",
-    [
-        (
-            "abaqus/abaqus_mesh_ex.inp",
-            "e0a9a7a88b25d9fadccdd653c91e33ea",
-            -68501.914611293,
-            3492,
-        ),
-        ("abaqus/UUea.inp", "d76e526eeced5f79ba867d496559002a", 4950.0, 50),
-    ],
+    "filename, ref_sum, ref_num_cells",
+    [("abaqus_mesh_ex.inp", -68501.914611293, 3492), ("UUea.inp", 4950.0, 50)],
 )
 @pytest.mark.parametrize("write_binary", [False, True])
-def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
-    filename = helpers.download(filename, md5)
-
+def test_reference_file(filename, ref_sum, ref_num_cells, write_binary):
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "abaqus", filename)
     mesh = meshio.read(filename)
     tol = 1.0e-2
     s = numpy.sum(mesh.points)

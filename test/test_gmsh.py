@@ -1,4 +1,5 @@
 import copy
+import os
 from functools import partial
 
 import pytest
@@ -121,20 +122,13 @@ def test_generic_io():
 
 
 @pytest.mark.parametrize(
-    "filename, md5, ref_sum, ref_num_cells",
-    [
-        (
-            "msh/insulated-2.2.msh",
-            "68096d514c7152c9d988796a6619ee40",
-            2.001762136876221,
-            {"line": 21, "triangle": 111},
-        )
-    ],
+    "filename, ref_sum, ref_num_cells",
+    [("insulated-2.2.msh", 2.001762136876221, {"line": 21, "triangle": 111})],
 )
 @pytest.mark.parametrize("write_binary", [False, True])
-def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
-    filename = helpers.download(filename, md5)
-
+def test_reference_file(filename, ref_sum, ref_num_cells, write_binary):
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "msh", filename)
     mesh = meshio.read(filename)
     tol = 1.0e-2
     s = mesh.points.sum()
@@ -149,18 +143,12 @@ def test_reference_file(filename, md5, ref_sum, ref_num_cells, write_binary):
 
 
 @pytest.mark.parametrize(
-    "filename, md5, ref_sum, ref_num_cells",
-    [
-        (
-            "msh/insulated-4.1.msh",
-            "988a5f27c37aaa6065668f4ac2b3db0c",
-            2.001762136876221,
-            {"line": 21, "triangle": 111},
-        )
-    ],
+    "filename, ref_sum, ref_num_cells",
+    [("insulated-4.1.msh", 2.001762136876221, {"line": 21, "triangle": 111})],
 )
-def test_reference_file_readonly(filename, md5, ref_sum, ref_num_cells):
-    filename = helpers.download(filename, md5)
+def test_reference_file_readonly(filename, ref_sum, ref_num_cells):
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "msh", filename)
 
     mesh = meshio.read(filename)
     tol = 1.0e-2

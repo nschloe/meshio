@@ -1,3 +1,5 @@
+import os
+
 import numpy
 import pytest
 
@@ -39,9 +41,8 @@ def test_generic_io():
 
 
 def test_reference_file_with_mixed_cells():
-    filename = "med/cylinder.med"
-    md5 = "e36b365542c72ef470b83fc21f4dad58"
-    filename = helpers.download(filename, md5)
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "med", "cylinder.med")
     mesh = meshio.read(filename)
 
     # Points
@@ -82,9 +83,9 @@ def test_reference_file_with_mixed_cells():
 
 
 def test_reference_file_with_point_cell_data():
-    filename = "med/box.med"
-    md5 = "0867fb11bd14b83ad11ab20e2b1fd57d"
-    filename = helpers.download(filename, md5)
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "med", "box.med")
+
     mesh = meshio.read(filename)
 
     # Points
