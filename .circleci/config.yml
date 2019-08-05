@@ -22,6 +22,7 @@ jobs:
       - run: apt-get install -y git git-lfs python3-h5py python3-netcdf4 python3-lxml python3-pip
       - run: pip3 install -U pytest pytest-cov
       - checkout
+      - run: git lfs pull
       # The actual test
       - run: pip3 install .[all]
       - run: cd test/ && pytest --cov meshio
