@@ -107,6 +107,18 @@ def read_buffer(file):
 
             # adapt 0-base
             cells[meshio_name] = cells1 - 1
+        elif keyword == "Normals":
+            # those are just discarded
+            num_normals = int(reader.next_item())
+            normals = numpy.empty((num_normals, dim), dtype=dtype)
+            for k in range(num_normals):
+                normals[k] = numpy.array(reader.next_items(dim), dtype=dtype)
+        elif keyword == "NormalAtVertices":
+            # those are just discarded
+            num_normal_at_vertices = int(reader.next_item())
+            normal_at_vertices = numpy.empty((num_normal_at_vertices, 2), dtype=int)
+            for k in range(num_normals):
+                normal_at_vertices[k] = numpy.array(reader.next_items(2), dtype=int)
         else:
             assert keyword == "End", "Unknown keyword '{}'.".format(keyword)
 
