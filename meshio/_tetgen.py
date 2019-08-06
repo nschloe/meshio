@@ -39,7 +39,8 @@ def read(filename):
         node_index_base = int(points[0, 0])
         # make sure the nodes a numbered consecutively
         assert numpy.all(
-            points[:, 0] == numpy.arange(node_index_base, node_index_base + points.shape[0])
+            points[:, 0]
+            == numpy.arange(node_index_base, node_index_base + points.shape[0])
         )
         # remove the leading index column, the attributes, and the boundary markers
         points = points[:, 1:4]
