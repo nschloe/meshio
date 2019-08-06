@@ -8,6 +8,7 @@ from . import (
     _med,
     _medit,
     _msh,
+    _nastran,
     _off,
     _permas,
     _stl,
@@ -31,6 +32,7 @@ input_filetypes = [
     "med",
     "medit",
     "moab",
+    "nastran",
     "permas",
     "off",
     "stl-ascii",
@@ -56,6 +58,7 @@ output_filetypes = [
     "med",
     "medit",
     "moab",
+    "nastran",
     "off",
     "permas",
     "stl-ascii",
@@ -73,12 +76,15 @@ output_filetypes = [
 ]
 
 _extension_to_filetype = {
+    ".bdf": "nastran",
     ".e": "exodus",
     ".ex2": "exodus",
     ".exo": "exodus",
+    ".fem": "nastran",
     ".med": "med",
     ".mesh": "medit",
     ".msh": "gmsh4-binary",
+    ".nas": "nastran",
     ".xml": "dolfin-xml",
     ".post": "permas",
     ".post.gz": "permas",
@@ -148,6 +154,7 @@ def read(filename, file_format=None):
         #
         "med": _med,
         "medit": _medit,
+        "nastran": _nastran,
         "dolfin-xml": _dolfin,
         "permas": _permas,
         "moab": _h5m,
@@ -267,4 +274,5 @@ _writer_map = {
     "exodus": (_exodus, (), {}),
     "mdpa": (_mdpa, (), {}),
     "svg": (_svg, (), {}),
+    "nastran": (_nastran, (), {}),
 }
