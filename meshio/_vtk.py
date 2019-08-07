@@ -690,15 +690,11 @@ def _write_cells(f, cells, write_binary):
         # ascii
         for key in cells:
             n = cells[key].shape[1]
-            for cell in cells[key]:
-                f.write(
-                    (
-                        " ".join(
-                            ["{}".format(idx) for idx in numpy.concatenate([[n], cell])]
-                        )
-                        + "\n"
-                    ).encode("utf-8")
-                )
+            # prepend a column with the value n
+            out = numpy.column_stack([numpy.full(cells[key].shape[0], n), cells[key]])
+            # map them all together as strings
+            out = "\n".join([" ".join(map(str, row)) for row in out]) + "\n"
+            f.write(out.encode("utf-8"))
 
     # write cell types
     f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
