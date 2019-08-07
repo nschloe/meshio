@@ -2,7 +2,6 @@
 I/O for VTU.
 """
 import base64
-import io
 import logging
 import sys
 import zlib
@@ -409,10 +408,7 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
             ).decode()
         else:
             da.set("format", "ascii")
-            s = io.BytesIO()
-            # This savetxt is quite slow. :(
-            numpy.savetxt(s, data.reshape(-1), fmt)
-            da.text = s.getvalue().decode()
+            da.text = "\n".join(map(fmt.format, data.reshape(-1)))
         return
 
     comment = ET.Comment("This file was created by meshio v{}".format(__version__))
@@ -431,7 +427,7 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
     # points
     if points is not None:
         pts = ET.SubElement(piece, "Points")
-        numpy_to_xml_array(pts, "Points", "%.11e", points)
+        numpy_to_xml_array(pts, "Points", "{:.11e}", points)
 
     if mesh.cells is not None:
         cls = ET.SubElement(piece, "Cells")
@@ -451,19 +447,19 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
             [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in mesh.cells.items()]
         )
 
-        numpy_to_xml_array(cls, "connectivity", "%d", connectivity)
-        numpy_to_xml_array(cls, "offsets", "%d", offsets)
-        numpy_to_xml_array(cls, "types", "%d", types)
+        numpy_to_xml_array(cls, "connectivity", "{:d}", connectivity)
+        numpy_to_xml_array(cls, "offsets", "{:d}", offsets)
+        numpy_to_xml_array(cls, "types", "{:d}", types)
 
     if mesh.point_data:
         pd = ET.SubElement(piece, "PointData")
         for name, data in mesh.point_data.items():
-            numpy_to_xml_array(pd, name, "%.11e", data)
+            numpy_to_xml_array(pd, name, "{:.11e}", data)
 
     if mesh.cell_data:
         cd = ET.SubElement(piece, "CellData")
         for name, data in raw_from_cell_data(mesh.cell_data).items():
-            numpy_to_xml_array(cd, name, "%.11e", data)
+            numpy_to_xml_array(cd, name, "{:.11e}", data)
 
     write_xml(filename, vtk_file, pretty_xml)
     return
