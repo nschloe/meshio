@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
-#
 import tempfile
 
 import numpy
 
-import meshio
-
 import helpers
+import meshio
 
 
 def test_cli():
@@ -16,7 +13,7 @@ def test_cli():
 
     outfile = tempfile.NamedTemporaryFile().name
 
-    meshio.cli.main(
+    meshio._cli.main(
         [
             infile,
             outfile,

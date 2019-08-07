@@ -1,0 +1,5 @@
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.inp filter=lfs diff=lfs merge=lfs -text
+*.med filter=lfs diff=lfs merge=lfs -text
+*.msh filter=lfs diff=lfs merge=lfs -text
+*.vtk filter=lfs diff=lfs merge=lfs -text

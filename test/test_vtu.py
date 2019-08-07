@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-#
 import pytest
 
-import meshio
-
 import helpers
+import meshio
 
 lxml = pytest.importorskip("lxml")
 
@@ -31,18 +28,18 @@ test_set = [
 @pytest.mark.parametrize("write_binary", [False, True])
 def test(mesh, write_binary):
     def writer(*args, **kwargs):
-        return meshio.vtu_io.write(
+        return meshio._vtu.write(
             *args,
             write_binary=write_binary,
             # don't use pretty xml to increase test coverage
             pretty_xml=False,
-            **kwargs
+            **kwargs,
         )
 
     # ASCII files are only meant for debugging, VTK stores only 11 digits
     # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
     tol = 1.0e-15 if write_binary else 1.0e-11
-    helpers.write_read(writer, meshio.vtu_io.read, mesh, tol)
+    helpers.write_read(writer, meshio._vtu.read, mesh, tol)
     return
 
 

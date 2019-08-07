@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-#
 import pytest
 
-import meshio
-
 import helpers
+import meshio
 
 
 @pytest.mark.parametrize(
@@ -19,7 +16,7 @@ import helpers
     ],
 )
 def test_io(mesh):
-    helpers.write_read(meshio.medit_io.write, meshio.medit_io.read, mesh, 1.0e-15)
+    helpers.write_read(meshio._medit.write, meshio._medit.read, mesh, 1.0e-15)
     return
 
 

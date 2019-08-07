@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-#
 import codecs
 import os
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 # https://packaging.python.org/single_source_version/
 base_dir = os.path.abspath(os.path.dirname(__file__))
@@ -29,6 +27,7 @@ setup(
     license=about["__license__"],
     platforms="any",
     install_requires=["numpy"],
+    python_requires=">=3",
     extras_require={
         "all": ["netCDF4", "h5py", "lxml"],
         "exodus": ["netCDF4"],
@@ -44,5 +43,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering",
     ],
-    entry_points={"console_scripts": ["meshio-convert = meshio.cli:main"]},
+    entry_points={"console_scripts": ["meshio-convert = meshio._cli:main"]},
 )
