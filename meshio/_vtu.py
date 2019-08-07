@@ -2,6 +2,7 @@
 I/O for VTU.
 """
 import base64
+import io
 import logging
 import sys
 import zlib
@@ -12,11 +13,6 @@ from .__about__ import __version__
 from ._common import num_nodes_per_cell, write_xml
 from ._mesh import Mesh
 from ._vtk import meshio_to_vtk_type, raw_from_cell_data, vtk_to_meshio_type
-
-try:
-    from StringIO import cStringIO as BytesIO
-except ImportError:
-    from io import BytesIO
 
 
 def num_bytes_to_num_base64_chars(num_bytes):
@@ -396,7 +392,9 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
             last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
 
             compressed_blocks = [
-                zlib.compress(block) for block in _chunk_it(data_bytes, max_block_size)
+                # This zlib.compress is the slowest part of the writer
+                zlib.compress(block)
+                for block in _chunk_it(data_bytes, max_block_size)
             ]
 
             # collect header
@@ -411,8 +409,9 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
             ).decode()
         else:
             da.set("format", "ascii")
-            s = BytesIO()
-            numpy.savetxt(s, data.flatten(), fmt)
+            s = io.BytesIO()
+            # This savetxt is quite slow. :(
+            numpy.savetxt(s, data.reshape(-1), fmt)
             da.text = s.getvalue().decode()
         return
 
