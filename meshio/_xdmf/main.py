@@ -104,11 +104,12 @@ class XdmfReader(object):
 
     def read_information(self, c_data):
         from lxml import etree as ET
+
         field_data = {}
         root = ET.fromstring(c_data)
         for child in root:
-            str_tag = child.attrib['key']
-            dim = int(child.attrib['dim'])
+            str_tag = child.attrib["key"]
+            dim = int(child.attrib["dim"])
             num_tag = int(child.text)
             field_data[str_tag] = numpy.array([num_tag, dim])
         return field_data
@@ -294,9 +295,9 @@ class XdmfWriter(object):
 
         domain = ET.SubElement(xdmf_file, "Domain")
         grid = ET.SubElement(domain, "Grid", Name="Grid")
-        information = ET.SubElement(grid, "Information",
-                                    Name="Information",
-                                    Value=str(len(mesh.field_data)))
+        information = ET.SubElement(
+            grid, "Information", Name="Information", Value=str(len(mesh.field_data))
+        )
 
         self.points(grid, mesh.points)
         self.field_data(mesh.field_data, information)
@@ -485,12 +486,7 @@ class XdmfWriter(object):
 
         info = ET.Element("main")
         for name, data in field_data.items():
-            data_item = ET.SubElement(
-                info,
-                "map",
-                key=name,
-                dim=str(data[1]),
-            )
+            data_item = ET.SubElement(info, "map", key=name, dim=str(data[1]))
             data_item.text = str(data[0])
         information.text = ET.CDATA(ET.tostring(info))
         return
