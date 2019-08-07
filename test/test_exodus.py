@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-#
 import pytest
 
-import meshio
-
 import helpers
+import meshio
 
 test_set = [
     helpers.tri_mesh,
@@ -27,7 +24,7 @@ test_set = [
 
 @pytest.mark.parametrize("mesh", test_set)
 def test_io(mesh):
-    helpers.write_read(meshio.exodus_io.write, meshio.exodus_io.read, mesh, 1.0e-15)
+    helpers.write_read(meshio._exodus.write, meshio._exodus.read, mesh, 1.0e-15)
     return
 
 

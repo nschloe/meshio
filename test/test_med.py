@@ -1,9 +1,10 @@
-# -*- coding: utf-8 -*-
-#
-import pytest
-import meshio
-import helpers
+import os
+
 import numpy
+import pytest
+
+import helpers
+import meshio
 
 
 @pytest.mark.parametrize(
@@ -28,7 +29,7 @@ import numpy
     ],
 )
 def test_io(mesh):
-    helpers.write_read(meshio.med_io.write, meshio.med_io.read, mesh, 1.0e-15)
+    helpers.write_read(meshio._med.write, meshio._med.read, mesh, 1.0e-15)
     return
 
 
@@ -40,9 +41,8 @@ def test_generic_io():
 
 
 def test_reference_file_with_mixed_cells():
-    filename = "med/cylinder.med"
-    md5 = "e36b365542c72ef470b83fc21f4dad58"
-    filename = helpers.download(filename, md5)
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "med", "cylinder.med")
     mesh = meshio.read(filename)
 
     # Points
@@ -79,13 +79,13 @@ def test_reference_file_with_mixed_cells():
     }
     assert mesh.cell_tags == ref_cell_tags_info
 
-    helpers.write_read(meshio.med_io.write, meshio.med_io.read, mesh, 1.0e-15)
+    helpers.write_read(meshio._med.write, meshio._med.read, mesh, 1.0e-15)
 
 
 def test_reference_file_with_point_cell_data():
-    filename = "med/box.med"
-    md5 = "0867fb11bd14b83ad11ab20e2b1fd57d"
-    filename = helpers.download(filename, md5)
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "med", "box.med")
+
     mesh = meshio.read(filename)
 
     # Points
@@ -116,10 +116,10 @@ def test_reference_file_with_point_cell_data():
     assert numpy.allclose(data_sig_mean, sig_ref)
 
     data_psi = mesh.cell_data["hexahedron"]["resu____ENEL_ELNO"]
-    assert data_psi.shape == (1, 8)  # (n_cells, n_nodes_per_element, ) with 1 cut off
+    assert data_psi.shape == (1, 8, 1)  # (n_cells, n_nodes_per_element, n_components)
 
     # ELEM (1 data point for each element)
     data_psi_elem = mesh.cell_data["hexahedron"]["resu____ENEL_ELEM"]
-    assert numpy.isclose(numpy.mean(data_psi, axis=1)[0], data_psi_elem[0])
+    assert numpy.isclose(numpy.mean(data_psi, axis=1)[0, 0], data_psi_elem[0])
 
-    helpers.write_read(meshio.med_io.write, meshio.med_io.read, mesh, 1.0e-15)
+    helpers.write_read(meshio._med.write, meshio._med.read, mesh, 1.0e-15)

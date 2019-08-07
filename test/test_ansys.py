@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-#
 import pytest
 
-import meshio
-
 import helpers
+import meshio
 
 
 @pytest.mark.parametrize(
@@ -21,7 +18,7 @@ import helpers
 @pytest.mark.parametrize("write_binary", [False, True])
 def test(mesh, write_binary):
     def writer(*args, **kwargs):
-        return meshio.ansys_io.write(*args, write_binary=write_binary, **kwargs)
+        return meshio._ansys.write(*args, write_binary=write_binary, **kwargs)
 
-    helpers.write_read(writer, meshio.ansys_io.read, mesh, 1.0e-15)
+    helpers.write_read(writer, meshio._ansys.read, mesh, 1.0e-15)
     return

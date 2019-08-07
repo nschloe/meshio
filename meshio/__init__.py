@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
-#
-from __future__ import print_function
-
-from .__about__ import __version__, __author__, __author_email__, __website__
-
-from . import cli
-from .helpers import read, write, write_points_cells
-from .mesh import Mesh
-from .xdmf_io import XdmfTimeSeriesReader, XdmfTimeSeriesWriter
-
+from . import _cli
+from .__about__ import __author__, __author_email__, __version__, __website__
+from ._helpers import read, write, write_points_cells
+from ._mesh import Mesh
+from ._xdmf import XdmfTimeSeriesReader, XdmfTimeSeriesWriter
 
 __all__ = [
-    "cli",
+    "_cli",
     "read",
     "write",
     "write_points_cells",

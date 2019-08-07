@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-#
 import numpy
 
-from meshio.vtk_io import vtk_to_meshio_type
 from meshio import Mesh
+from meshio.vtk_io import vtk_to_meshio_type
 
 
 def read(filetype, filename):

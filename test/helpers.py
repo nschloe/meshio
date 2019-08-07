@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
-#
 import copy
-import hashlib
 import os
-import pathlib
-import shutil
 import string
 import tempfile
 
 import numpy
-import requests
 
 import meshio
 
@@ -255,11 +249,11 @@ def add_node_sets(mesh):
     return mesh2
 
 
-def write_read(writer, reader, input_mesh, atol):
+def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     """Write and read a file, and make sure the data is the same as before.
     """
     with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = os.path.join(temp_dir, "test.dat")
+        filepath = os.path.join(temp_dir, "test" + extension)
         writer(filepath, input_mesh)
         mesh = reader(filepath)
 
@@ -300,36 +294,7 @@ def generic_io(filename):
     with tempfile.TemporaryDirectory() as temp_dir:
         filepath = os.path.join(temp_dir, filename)
         meshio.write_points_cells(filepath, tri_mesh.points, tri_mesh.cells)
-        out_mesh = meshio.helpers.read(filepath)
+        out_mesh = meshio.read(filepath)
         assert (abs(out_mesh.points - tri_mesh.points) < 1.0e-15).all()
         assert (tri_mesh.cells["triangle"] == out_mesh.cells["triangle"]).all()
     return
-
-
-def download(name, md5):
-
-    filename = os.path.join("/tmp", name)
-    if not os.path.exists(filename):
-        print("Downloading {}...".format(name))
-        url = "https://nschloe.github.io/meshio/"
-        print(url + name)
-        r = requests.get(url + name, stream=True)
-        if not r.ok:
-            raise RuntimeError(
-                "Download error ({}, return code {}).".format(r.url, r.status_code)
-            )
-
-        pathlib.Path(os.path.dirname(filename)).mkdir(parents=True, exist_ok=True)
-
-        # save the mesh in /tmp
-        with open(filename, "wb") as f:
-            r.raw.decode_content = True
-            shutil.copyfileobj(r.raw, f)
-
-    # check MD5
-    file_md5 = hashlib.md5(open(filename, "rb").read()).hexdigest()
-
-    if file_md5 != md5:
-        raise RuntimeError("Checksums not matching ({} != {}).".format(file_md5, md5))
-
-    return filename
