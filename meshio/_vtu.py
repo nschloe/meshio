@@ -340,12 +340,10 @@ def read(filename):
 
 
 def _chunk_it(array, n):
-    out = []
     k = 0
     while k * n < len(array):
-        out.append(array[k * n : (k + 1) * n])
+        yield array[k * n : (k + 1) * n]
         k += 1
-    return out
 
 
 def write(filename, mesh, write_binary=True, pretty_xml=True):
@@ -398,11 +396,15 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
             da.set("format", "binary")
             max_block_size = 32768
             data_bytes = data.tostring()
-            blocks = _chunk_it(data_bytes, max_block_size)
-            num_blocks = len(blocks)
-            last_block_size = len(blocks[-1])
 
-            compressed_blocks = [zlib.compress(block) for block in blocks]
+            # round up
+            num_blocks = -int(-len(data_bytes) // max_block_size)
+            last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
+
+            compressed_blocks = [
+                zlib.compress(block) for block in _chunk_it(data_bytes, max_block_size)
+            ]
+
             # collect header
             header = numpy.array(
                 [num_blocks, max_block_size, last_block_size]
