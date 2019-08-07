@@ -32,7 +32,7 @@ def read_write(plot=False):
     mesh = generate_mesh()
 
     formats = [
-        "abaqus",
+        # "abaqus",
         # "ansys-ascii",
         "ansys-binary",
         "exodus",

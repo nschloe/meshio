@@ -8,7 +8,6 @@ Check out
 for something like a specification.
 """
 import logging
-import re
 from ctypes import c_double, c_float
 
 import numpy
@@ -19,43 +18,10 @@ from ._mesh import Mesh
 def read(filename):
     with open(filename) as f:
         mesh = read_buffer(f)
-
     return mesh
 
 
-class _ItemReader:
-    def __init__(self, file, delimiter=r"\s+"):
-        # Items can be separated by any whitespace, including new lines.
-        self._re_delimiter = re.compile(delimiter, re.MULTILINE)
-        self._file = file
-        self._line = []
-        self._line_ptr = 0
-
-    def next_items(self, n):
-        """Returns the next n items.
-
-        Throws StopIteration when there is not enough data to return n items.
-        """
-        items = []
-        while len(items) < n:
-            if self._line_ptr >= len(self._line):
-                # Load the next line.
-                line = next(self._file).strip()
-                # Skip all comment and empty lines.
-                while not line or line[0] == "#":
-                    line = next(self._file).strip()
-                self._line = self._re_delimiter.split(line)
-                self._line_ptr = 0
-            n_read = min(n - len(items), len(self._line) - self._line_ptr)
-            items.extend(self._line[self._line_ptr : self._line_ptr + n_read])
-            self._line_ptr += n_read
-        return items
-
-    def next_item(self):
-        return self.next_items(1)[0]
-
-
-def read_buffer(file):
+def read_buffer(f):
     dim = 0
     cells = {}
     point_data = {}
@@ -70,57 +36,59 @@ def read_buffer(file):
         "Hexaedra": ("hexahedron", 8),  # Dobrzynski
     }
 
-    reader = _ItemReader(file)
-
     while True:
-        try:
-            keyword = reader.next_item()
-        except StopIteration:
+        line = f.readline()
+        if not line:
+            # EOF
             break
 
-        assert keyword.isalpha()
+        line = line.strip()
+        if len(line) == 0 or line[0] == "#":
+            continue
 
-        if keyword == "MeshVersionFormatted":
-            version = reader.next_item()
+        items = line.split()
+
+        assert items[0].isalpha()
+
+        if items[0] == "MeshVersionFormatted":
+            version = items[1]
             dtype = {"1": c_float, "2": c_double}[version]
-        elif keyword == "Dimension":
-            dim = int(reader.next_item())
-        elif keyword == "Vertices":
+        elif items[0] == "Dimension":
+            dim = int(items[1])
+        elif items[0] == "Vertices":
             assert dim > 0
-            # The first value is the number of nodes
-            num_verts = int(reader.next_item())
-            points = numpy.empty((num_verts, dim), dtype=dtype)
-            point_data["medit:ref"] = numpy.empty(num_verts, dtype=int)
-            for k in range(num_verts):
-                points[k] = numpy.array(reader.next_items(dim), dtype=dtype)
-                point_data["medit:ref"][k] = reader.next_item()
-        elif keyword in meshio_from_medit:
-            meshio_name, num = meshio_from_medit[keyword]
+            num_verts = int(f.readline())
+            out = numpy.fromfile(
+                f, count=num_verts * (dim + 1), dtype=dtype, sep=" "
+            ).reshape(num_verts, dim + 1)
+            points = out[:, :dim]
+            point_data["medit:ref"] = out[:, dim].astype(int)
+        elif items[0] in meshio_from_medit:
+            meshio_name, points_per_cell = meshio_from_medit[items[0]]
             # The first value is the number of elements
-            num_cells = int(reader.next_item())
-            cell_data[meshio_name] = {"medit:ref": numpy.empty(num_cells, dtype=int)}
-            cells1 = numpy.empty((num_cells, num), dtype=int)
-            for k in range(num_cells):
-                data = numpy.array(reader.next_items(num + 1), dtype=int)
-                cells1[k] = data[:-1]
-                cell_data[meshio_name]["medit:ref"][k] = data[-1]
+            num_cells = int(f.readline())
 
-            # adapt 0-base
-            cells[meshio_name] = cells1 - 1
-        elif keyword == "Normals":
+            out = numpy.fromfile(
+                f, count=num_cells * (points_per_cell + 1), dtype=int, sep=" "
+            ).reshape(num_cells, points_per_cell + 1)
+
+            # adapt for 0-base
+            cells[meshio_name] = out[:, :points_per_cell] - 1
+            cell_data[meshio_name] = {"medit:ref": out[:, -1]}
+        elif items[0] == "Normals":
             # those are just discarded
-            num_normals = int(reader.next_item())
-            normals = numpy.empty((num_normals, dim), dtype=dtype)
-            for k in range(num_normals):
-                normals[k] = numpy.array(reader.next_items(dim), dtype=dtype)
-        elif keyword == "NormalAtVertices":
+            num_normals = int(f.readline())
+            numpy.fromfile(f, count=num_normals * dim, dtype=dtype, sep=" ").reshape(
+                num_normals, dim
+            )
+        elif items[0] == "NormalAtVertices":
             # those are just discarded
-            num_normal_at_vertices = int(reader.next_item())
-            normal_at_vertices = numpy.empty((num_normal_at_vertices, 2), dtype=int)
-            for k in range(num_normals):
-                normal_at_vertices[k] = numpy.array(reader.next_items(2), dtype=int)
+            num_normal_at_vertices = int(f.readline())
+            numpy.fromfile(
+                f, count=num_normal_at_vertices * 2, dtype=int, sep=" "
+            ).reshape(num_normal_at_vertices, 2)
         else:
-            assert keyword == "End", "Unknown keyword '{}'.".format(keyword)
+            assert items[0] == "End", "Unknown keyword '{}'.".format(items[0])
 
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
