@@ -29,21 +29,15 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     # Translate it into the cells dictionary.
     # `connectivity` is a one-dimensional vector with
     # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
-
-    # Collect types into bins.
-    # See <https://stackoverflow.com/q/47310359/353337> for better
-    # alternatives.
-    uniques = numpy.unique(types)
-    bins = {u: numpy.where(types == u)[0] for u in uniques}
-
     assert len(offsets) == len(types)
 
     cells = {}
     cell_data = {}
-    for tpe, b in bins.items():
-        meshio_type = vtk_to_meshio_type[tpe]
+    for vtk_type in numpy.unique(types):
+        meshio_type = vtk_to_meshio_type[vtk_type]
         n = num_nodes_per_cell[meshio_type]
         # The offsets point to the _end_ of the indices
+        b = types == vtk_type
         indices = numpy.add.outer(offsets[b], numpy.arange(-n, 0, dtype=offsets.dtype))
         cells[meshio_type] = connectivity[indices]
         cell_data[meshio_type] = {key: value[b] for key, value in cell_data_raw.items()}
@@ -444,9 +438,8 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
         cls = ET.SubElement(piece, "Cells")
 
         # create connectivity, offset, type arrays
-        connectivity = numpy.concatenate(
-            [numpy.concatenate(v) for v in mesh.cells.values()]
-        )
+        connectivity = numpy.concatenate([v.reshape(-1) for v in mesh.cells.values()])
+
         # offset (points to the first element of the next cell)
         offsets = [
             v.shape[1] * numpy.arange(1, v.shape[0] + 1) for v in mesh.cells.values()
