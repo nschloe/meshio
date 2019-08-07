@@ -1,6 +1,9 @@
 """
 I/O for KratosMultiphysics's mdpa format, cf.
 <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
+
+The MDPA format is unsuitable for fast consumption, this is why:
+<https://github.com/KratosMultiphysics/Kratos/issues/5365>.
 """
 import logging
 
@@ -96,7 +99,9 @@ def read(filename):
 
 
 def _read_nodes(f, is_ascii, data_size):
-    # The first line is the number of nodes
+    # Count the number of nodes. This is _extremely_ ugly; we first read the _entire_
+    # file and see when we meet "End Nodes".
+    # <https://github.com/KratosMultiphysics/Kratos/issues/5365>
     pos = f.tell()
     lines = f.readlines()
     num_nodes = 0
