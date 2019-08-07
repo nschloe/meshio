@@ -1,3 +1,6 @@
+import os
+
+import numpy
 import pytest
 
 import helpers
@@ -22,3 +25,16 @@ import meshio
 def test(mesh):
     helpers.write_read(meshio._nastran.write, meshio._nastran.read, mesh, 1.0e-15)
     return
+
+
+def test_reference_file():
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "nastran", "cylinder.fem")
+    mesh = meshio.read(filename)
+
+    # Points
+    assert numpy.isclose(mesh.points.sum(), 16.5316866)
+
+    # Cells
+    ref_num_cells = {"pyramid": 18, "quad": 18, "line": 17, "tetra": 63, "triangle": 4}
+    assert {k: len(v) for k, v in mesh.cells.items()} == ref_num_cells
