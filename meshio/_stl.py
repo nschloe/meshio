@@ -29,6 +29,29 @@ def read_buffer(f):
     return _read_binary(f)
 
 
+# numpy.loadtxt is super slow
+# Code adapted from <https://stackoverflow.com/a/8964779/353337>.
+def iter_loadtxt(
+    infile, delimiter=" ", skiprows=0, comments=["#"], dtype=float, usecols=None
+):
+    def iter_func():
+        for _ in range(skiprows):
+            next(infile)
+        for line in infile:
+            line = line.decode("utf-8").strip()
+            if line.startswith(comments):
+                continue
+            items = line.split(delimiter)
+            usecols_ = range(len(items)) if usecols is None else usecols
+            for idx in usecols_:
+                yield dtype(items[idx])
+        iter_loadtxt.rowlength = len(line) if usecols is None else len(usecols)
+
+    data = numpy.fromiter(iter_func(), dtype=dtype)
+    data = data.reshape((-1, iter_loadtxt.rowlength))
+    return data
+
+
 def _read_ascii(f):
     # The file has the form
     # ```
@@ -50,26 +73,28 @@ def _read_ascii(f):
     # <https://stackoverflow.com/a/18260092/353337>.
     # import pandas
     # data = pandas.read_csv(
-    #         f,
-    #         skiprows=lambda row: row == 0 or (row-1)%7 in [0, 1, 5, 6],
-    #         skipfooter=1,
-    #         usecols=(1, 2, 3),
-    #         )
+    #     f,
+    #     skiprows=lambda row: row == 0 or (row - 1) % 7 in [0, 1, 5, 6],
+    #     skipfooter=1,
+    #     usecols=(1, 2, 3),
+    # )
 
-    data = numpy.loadtxt(
+    # numpy.loadtxt is super slow
+    # data = numpy.loadtxt(
+    #     f,
+    #     comments=["solid", "facet", "outer loop", "endloop", "endfacet", "endsolid"],
+    #     usecols=(1, 2, 3),
+    # )
+    data = iter_loadtxt(
         f,
-        comments=["solid", "facet", "outer loop", "endloop", "endfacet", "endsolid"],
+        comments=("solid", "facet", "outer loop", "endloop", "endfacet", "endsolid"),
         usecols=(1, 2, 3),
     )
 
     assert data.shape[0] % 3 == 0
 
     facets = numpy.split(data, data.shape[0] // 3)
-
-    # Now, all facets contain the point coordinate. Try to identify individual
-    # points and build the data arrays.
     points, cells = data_from_facets(facets)
-
     return Mesh(points, cells)
 
 
