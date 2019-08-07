@@ -88,6 +88,7 @@ def read_write(plot=False):
         ax[0].set_xticklabels(formats[idx], rotation=90)
         ax[0].set_ylabel("time (s)")
         ax[0].set_title("write")
+        ax[0].grid()
 
         idx = np.argsort(elapsed_read)
         ax[1].bar(range(len(formats)), elapsed_read[idx], align="center")
@@ -95,6 +96,7 @@ def read_write(plot=False):
         ax[1].set_xticklabels(formats[idx], rotation=90)
         ax[1].set_ylabel("time (s)")
         ax[1].set_title("read")
+        ax[1].grid()
 
         fig.tight_layout()
         fig.savefig("performance.png")
