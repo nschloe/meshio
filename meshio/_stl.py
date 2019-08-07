@@ -91,18 +91,22 @@ def data_from_facets(facets):
 
 def _read_binary(f):
     # read the first uint32 byte to get the number of triangles
-    data = numpy.frombuffer(f.read(4), dtype=numpy.uint32)
-    num_triangles = data[0]
+    num_triangles = numpy.fromfile(f, count=1, dtype=numpy.uint32)[0]
 
-    facets = []
-    for _ in range(num_triangles):
-        # discard the normal
-        f.read(12)
-        facets.append(numpy.frombuffer(f.read(36), dtype=numpy.float32).reshape(-1, 3))
-        # discard the attribute byte count
-        f.read(2)
+    # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet), and 1
+    # int16 (attribute count)
+    out = numpy.fromfile(
+        f,
+        count=num_triangles,
+        dtype=numpy.dtype(
+            [("normal", "f4", (3,)), ("facet", "f4", (3, 3)), ("attr count", "i2")]
+        ),
+    )
+    # discard normals, attribute count
+    facets = out["facet"]
+    assert numpy.all(out["attr count"] == 0)
 
-    points, cells = data_from_facets(numpy.array(facets))
+    points, cells = data_from_facets(facets)
     return Mesh(points, cells)
 
 
