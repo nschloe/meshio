@@ -12,6 +12,7 @@ from ._common import num_nodes_per_cell
 from ._mesh import Mesh
 
 nastran_to_meshio_type = {
+    "CELAS1": "vertex",
     "CBEAM": "line",
     "CBUSH": "line",
     "CBUSH1D": "line",
