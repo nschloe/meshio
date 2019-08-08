@@ -1,5 +1,5 @@
 """
-I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2), cf.
+I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2+), cf.
 <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 """
 import logging
