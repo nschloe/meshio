@@ -179,12 +179,11 @@ def _write_ascii(filename, points, cells):
             #   vertex 267.689 232.646 15.7283
             #  endloop
             # endfacet
-            fh.write("facet normal {} {} {}\n".format(*normal).encode("utf-8"))
-            fh.write(" outer loop\n".encode("utf-8"))
+            out = ["facet normal {} {} {}".format(*normal), " outer loop"]
             for pt in local_pts:
-                fh.write("  vertex {} {} {}\n".format(*pt).encode("utf-8"))
-            fh.write(" endloop\n".encode("utf-8"))
-            fh.write("endfacet\n".encode("utf-8"))
+                out += ["  vertex {} {} {}".format(*pt)]
+            out += [" endloop", "endfacet"]
+            fh.write(("\n".join(out) + "\n").encode("utf-8"))
 
         fh.write("endsolid\n".encode("utf-8"))
 

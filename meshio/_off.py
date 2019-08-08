@@ -66,14 +66,22 @@ def write(filename, mesh):
         fh.write(b"# Created by meshio\n\n")
 
         # counts
-        c = "{} {} {}\n\n".format(mesh.points.shape[0], len(tri), 0)
+        c = "{} {} {}\n\n".format(mesh.points.shape[0], tri.shape[0], 0)
         fh.write(c.encode("utf-8"))
 
         # vertices
-        numpy.savetxt(fh, mesh.points, "%r")
+        # numpy.savetxt(fh, mesh.points, "%r")  # slower
+        out = mesh.points
+        fmt = " ".join(["{}"] * out.shape[1])
+        out = "\n".join([fmt.format(*row) for row in out]) + "\n"
+        fh.write(out.encode("utf-8"))
 
         # triangles
-        data_with_label = numpy.c_[tri.shape[1] * numpy.ones(tri.shape[0]), tri]
-        numpy.savetxt(fh, data_with_label, "%d  %d %d %d")
+        out = numpy.column_stack([numpy.full(tri.shape[0], tri.shape[1]), tri])
+        # savetxt is slower
+        # numpy.savetxt(fh, out, "%d  %d %d %d")
+        fmt = " ".join(["{}"] * out.shape[1])
+        out = "\n".join([fmt.format(*row) for row in out]) + "\n"
+        fh.write(out.encode("utf-8"))
 
     return
