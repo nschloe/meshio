@@ -105,39 +105,40 @@ def read_buffer(f):
     cell_data = {}
     point_data = {}
 
+    line = f.readline()
     while True:
-        line = f.readline()
         if not line:
             # EOF
             break
 
         # Comments
         if line.startswith("**"):
+            line = f.readline()
             continue
 
         keyword = line.strip("*").upper()
         if keyword.startswith("NODE"):
-            points, point_gids = _read_nodes(f)
+            points, point_gids, line = _read_nodes(f)
         elif keyword.startswith("ELEMENT"):
-            key, idx = _read_cells(f, keyword, point_gids)
+            key, idx, line = _read_cells(f, keyword, point_gids)
             cells[key] = idx
         elif keyword.startswith("NSET"):
             params_map = get_param_map(keyword, required_keys=["NSET"])
-            setids = read_set(f, params_map)
+            setids, line = read_set(f, params_map)
             name = params_map["NSET"]
             if name not in nsets:
                 nsets[name] = []
             nsets[name].append(setids)
         elif keyword.startswith("ELSET"):
             params_map = get_param_map(keyword, required_keys=["ELSET"])
-            setids = read_set(f, params_map)
+            setids, line = read_set(f, params_map)
             name = params_map["ELSET"]
             if name not in elsets:
                 elsets[name] = []
             elsets[name].append(setids)
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
-            pass
+            line = f.readline()
 
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
@@ -149,7 +150,6 @@ def _read_nodes(f):
     point_gids = {}
     index = 0
     while True:
-        last_pos = f.tell()
         line = f.readline()
         if line.startswith("*"):
             break
@@ -159,8 +159,7 @@ def _read_nodes(f):
         points.append([float(xx) for xx in x])
         index += 1
 
-    f.seek(last_pos)
-    return numpy.array(points, dtype=float), point_gids
+    return numpy.array(points, dtype=float), point_gids, line
 
 
 def _read_cells(f, line0, point_gids):
@@ -175,7 +174,6 @@ def _read_cells(f, line0, point_gids):
 
     cells, idx = [], []
     while True:
-        last_pos = f.tell()
         line = f.readline()
         if line.startswith("*") or line == "":
             break
@@ -185,8 +183,7 @@ def _read_cells(f, line0, point_gids):
         if not line.endswith(","):
             cells.append(idx)
             idx = []
-    f.seek(last_pos)
-    return cell_type, numpy.array(cells)
+    return cell_type, numpy.array(cells), line
 
 
 def get_param_map(word, required_keys=None):
@@ -231,12 +228,10 @@ def get_param_map(word, required_keys=None):
 def read_set(f, params_map):
     set_ids = []
     while True:
-        last_pos = f.tell()
         line = f.readline()
         if line.startswith("*"):
             break
         set_ids += [int(k) for k in line.strip().strip(",").split(",")]
-    f.seek(last_pos)
 
     if "generate" in params_map:
         assert len(set_ids) == 3, set_ids
@@ -247,7 +242,7 @@ def read_set(f, params_map):
         except ValueError:
             print(set_ids)
             raise
-    return set_ids
+    return set_ids, line
 
 
 def write(filename, mesh):
