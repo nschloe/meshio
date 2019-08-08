@@ -2,30 +2,14 @@ import tempfile
 import time
 
 import meshio
+import meshzoo
 
 
 def generate_mesh():
     """Generates a fairly large mesh.
     """
-    import pygmsh
-
-    geom = pygmsh.built_in.Geometry()
-
-    geom.add_circle(
-        [0.0, 0.0, 0.0],
-        1.0,
-        5.0e-3,
-        # 1.0e-2,
-        num_sections=4,
-        # If compound==False, the section borders have to be points of the
-        # discretization. If using a compound circle, they don't; gmsh can
-        # choose by itself where to point the circle points.
-        # compound=True,
-    )
-    mesh = pygmsh.generate_mesh(geom)
-    for key in ["vertex", "line"]:  # some formats do not treat 0d/1d elements
-        mesh.cells.pop(key, None)
-    return mesh
+    points, cells = meshzoo.rectangle(nx=300, ny=300)
+    return meshio.Mesh(points, {"triangle": cells})
 
 
 def read_write(plot=False):
@@ -33,12 +17,14 @@ def read_write(plot=False):
 
     formats = [
         "abaqus",
-        # "ansys-ascii",
+        "ansys-ascii",
         "ansys-binary",
         "exodus",
-        # "dolfin-xml",
-        # "gmsh2-ascii",
+        "dolfin-xml",
+        "gmsh2-ascii",
         "gmsh2-binary",
+        "gmsh4-ascii",
+        "gmsh4-binary",
         "mdpa",
         "med",
         "medit",
@@ -46,11 +32,11 @@ def read_write(plot=False):
         "nastran",
         "off",
         "permas",
-        # "stl-ascii",
+        "stl-ascii",
         "stl-binary",
-        # "vtk-ascii",
+        "vtk-ascii",
         "vtk-binary",
-        # "vtu-ascii",
+        "vtu-ascii",
         "vtu-binary",
         "xdmf",
     ]
@@ -88,6 +74,7 @@ def read_write(plot=False):
         ax[0].set_xticklabels(formats[idx], rotation=90)
         ax[0].set_ylabel("time (s)")
         ax[0].set_title("write")
+        ax[0].grid()
 
         idx = np.argsort(elapsed_read)
         ax[1].bar(range(len(formats)), elapsed_read[idx], align="center")
@@ -95,6 +82,7 @@ def read_write(plot=False):
         ax[1].set_xticklabels(formats[idx], rotation=90)
         ax[1].set_ylabel("time (s)")
         ax[1].set_title("read")
+        ax[1].grid()
 
         fig.tight_layout()
         fig.savefig("performance.png")
