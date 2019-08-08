@@ -2,7 +2,8 @@
 I/O for FLAC3D format.
 """
 
-import logging, time
+import logging
+import time
 import numpy as np
 from .__about__ import __version__ as version
 from ._mesh import Mesh
