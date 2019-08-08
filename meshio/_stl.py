@@ -179,10 +179,7 @@ def _write_ascii(filename, points, cells):
             #   vertex 267.689 232.646 15.7283
             #  endloop
             # endfacet
-            out = [
-                "facet normal {} {} {}".format(*normal),
-                " outer loop"
-            ]
+            out = ["facet normal {} {} {}".format(*normal), " outer loop"]
             for pt in local_pts:
                 out += ["  vertex {} {} {}".format(*pt)]
             out += [" endloop", "endfacet"]
