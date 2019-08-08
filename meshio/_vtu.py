@@ -408,6 +408,7 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
             ).decode()
         else:
             da.set("format", "ascii")
+            # This join() operations is the bottleneck for the write
             da.text = "\n".join(map(fmt.format, data.reshape(-1)))
         return
 
