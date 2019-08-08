@@ -24,8 +24,8 @@ def _read_mesh(filename):
             continue
 
         if elem.tag == "dolfin":
-            # Don't be too strict with the assertion. Some meshe files don't
-            # have the proper tags.
+            # Don't be too strict with the assertion. Some mesh files don't have the
+            # proper tags.
             # assert elem.attrib['nsmap'] \
             #     == '{\'dolfin\': \'https://fenicsproject.org/\'}'
             pass

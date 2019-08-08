@@ -23,6 +23,8 @@ def read_write(plot=False):
         "dolfin-xml",
         "gmsh2-ascii",
         "gmsh2-binary",
+        "gmsh4-ascii",
+        "gmsh4-binary",
         "mdpa",
         "med",
         "medit",
