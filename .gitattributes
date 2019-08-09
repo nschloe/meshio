@@ -4,3 +4,4 @@
 *.msh filter=lfs diff=lfs merge=lfs -text
 *.vtk filter=lfs diff=lfs merge=lfs -text
 *.fem filter=lfs diff=lfs merge=lfs -text
+*.f3grid filter=lfs diff=lfs merge=lfs -text
