@@ -102,6 +102,18 @@ class XdmfReader(object):
         # `[()]` gives a numpy.ndarray
         return f[()]
 
+    def read_information(self, c_data):
+        from lxml import etree as ET
+
+        field_data = {}
+        root = ET.fromstring(c_data)
+        for child in root:
+            str_tag = child.attrib["key"]
+            dim = int(child.attrib["dim"])
+            num_tag = int(child.text)
+            field_data[str_tag] = numpy.array([num_tag, dim])
+        return field_data
+
     def read_xdmf2(self, root):
         domains = list(root)
         assert len(domains) == 1
@@ -141,6 +153,11 @@ class XdmfReader(object):
                 data_items = list(c)
                 assert len(data_items) == 1
                 points = self.read_data_item(data_items[0])
+
+            elif c.tag == "Information":
+                c_data = c.text
+                assert c_data
+                field_data = self.read_information(c_data)
 
             else:
                 assert c.tag == "Attribute", "Unknown section '{}'.".format(c.tag)
@@ -224,6 +241,11 @@ class XdmfReader(object):
                 data_item = data_items[0]
                 points = self.read_data_item(data_item)
 
+            elif c.tag == "Information":
+                c_data = c.text
+                assert c_data
+                field_data = self.read_information(c_data)
+
             else:
                 assert c.tag == "Attribute", "Unknown section '{}'.".format(c.tag)
 
@@ -278,8 +300,12 @@ class XdmfWriter(object):
 
         domain = ET.SubElement(xdmf_file, "Domain")
         grid = ET.SubElement(domain, "Grid", Name="Grid")
+        information = ET.SubElement(
+            grid, "Information", Name="Information", Value=str(len(mesh.field_data))
+        )
 
         self.points(grid, mesh.points)
+        self.field_data(mesh.field_data, information)
         self.cells(mesh.cells, grid)
         self.point_data(mesh.point_data, grid)
         self.cell_data(mesh.cell_data, grid)
@@ -458,6 +484,16 @@ class XdmfWriter(object):
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(data)
+        return
+
+    def field_data(self, field_data, information):
+        from lxml import etree as ET
+
+        info = ET.Element("main")
+        for name, data in field_data.items():
+            data_item = ET.SubElement(info, "map", key=name, dim=str(data[1]))
+            data_item.text = str(data[0])
+        information.text = ET.CDATA(ET.tostring(info))
         return
 
 

@@ -75,5 +75,36 @@ def test_time_series():
     return
 
 
+def test_information_xdmf():
+    mesh_out = meshio.Mesh(
+        numpy.array(
+            [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
+        )
+        / 3,
+        {"triangle": numpy.array([[0, 1, 2], [0, 2, 3]])},
+        field_data={
+            "bottom": numpy.array([1, 1]),
+            "right": numpy.array([2, 1]),
+            "top": numpy.array([3, 1]),
+            "left": numpy.array([4, 1]),
+        },
+    )
+    # write the data
+    points, cells, field_data = mesh_out.points, mesh_out.cells, mesh_out.field_data
+
+    meshio.write(
+        "mesh.xdmf",
+        meshio.Mesh(
+            points=points, cells={"triangle": cells["triangle"]}, field_data=field_data
+        ),
+    )
+
+    # read it back in
+    mesh_in = meshio.read("mesh.xdmf")
+
+    assert len(mesh_in.field_data) == len(mesh_out.field_data)
+    return
+
+
 if __name__ == "__main__":
     test_time_series()
