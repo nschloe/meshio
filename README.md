@@ -19,6 +19,7 @@ meshio can read and write all of the following and smoothly converts between the
  * [ANSYS msh](http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
  * [DOLFIN XML](http://manpages.ubuntu.com/manpages/wily/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
+ * [FLAC3D](https://www.itascacg.com/software/flac3d)
  * [H5M](https://www.mcs.anl.gov/~fathom/moab-docs/h5mmain.html)
  * [Kratos/MDPA](https://github.com/KratosMultiphysics/Kratos/wiki/Input-data)
  * [Medit](https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html)
