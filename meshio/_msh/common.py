@@ -189,7 +189,10 @@ def _write_data(fh, tag, name, data, write_binary):
     fh.write("{}\n".format(data.shape[0]).encode("utf-8"))
     # actually write the data
     if write_binary:
-        dtype = [("index", c_int), ("data", c_double, num_components)]
+        if num_components == 1:
+            dtype = [("index", c_int), ("data", c_double)]
+        else:
+            dtype = [("index", c_int), ("data", c_double, num_components)]
         tmp = numpy.empty(len(data), dtype=dtype)
         tmp["index"] = 1 + numpy.arange(len(data))
         tmp["data"] = data

@@ -29,6 +29,29 @@ def read_buffer(f):
     return _read_binary(f)
 
 
+# numpy.loadtxt is super slow
+# Code adapted from <https://stackoverflow.com/a/8964779/353337>.
+def iter_loadtxt(
+    infile, delimiter=" ", skiprows=0, comments=["#"], dtype=float, usecols=None
+):
+    def iter_func():
+        for _ in range(skiprows):
+            next(infile)
+        for line in infile:
+            line = line.decode("utf-8").strip()
+            if line.startswith(comments):
+                continue
+            items = line.split(delimiter)
+            usecols_ = range(len(items)) if usecols is None else usecols
+            for idx in usecols_:
+                yield dtype(items[idx])
+        iter_loadtxt.rowlength = len(line) if usecols is None else len(usecols)
+
+    data = numpy.fromiter(iter_func(), dtype=dtype)
+    data = data.reshape((-1, iter_loadtxt.rowlength))
+    return data
+
+
 def _read_ascii(f):
     # The file has the form
     # ```
@@ -50,26 +73,28 @@ def _read_ascii(f):
     # <https://stackoverflow.com/a/18260092/353337>.
     # import pandas
     # data = pandas.read_csv(
-    #         f,
-    #         skiprows=lambda row: row == 0 or (row-1)%7 in [0, 1, 5, 6],
-    #         skipfooter=1,
-    #         usecols=(1, 2, 3),
-    #         )
+    #     f,
+    #     skiprows=lambda row: row == 0 or (row - 1) % 7 in [0, 1, 5, 6],
+    #     skipfooter=1,
+    #     usecols=(1, 2, 3),
+    # )
 
-    data = numpy.loadtxt(
+    # numpy.loadtxt is super slow
+    # data = numpy.loadtxt(
+    #     f,
+    #     comments=["solid", "facet", "outer loop", "endloop", "endfacet", "endsolid"],
+    #     usecols=(1, 2, 3),
+    # )
+    data = iter_loadtxt(
         f,
-        comments=["solid", "facet", "outer loop", "endloop", "endfacet", "endsolid"],
+        comments=("solid", "facet", "outer loop", "endloop", "endfacet", "endsolid"),
         usecols=(1, 2, 3),
     )
 
     assert data.shape[0] % 3 == 0
 
     facets = numpy.split(data, data.shape[0] // 3)
-
-    # Now, all facets contain the point coordinate. Try to identify individual
-    # points and build the data arrays.
     points, cells = data_from_facets(facets)
-
     return Mesh(points, cells)
 
 
@@ -91,18 +116,22 @@ def data_from_facets(facets):
 
 def _read_binary(f):
     # read the first uint32 byte to get the number of triangles
-    data = numpy.frombuffer(f.read(4), dtype=numpy.uint32)
-    num_triangles = data[0]
+    num_triangles = numpy.fromfile(f, count=1, dtype=numpy.uint32)[0]
 
-    facets = []
-    for _ in range(num_triangles):
-        # discard the normal
-        f.read(12)
-        facets.append(numpy.frombuffer(f.read(36), dtype=numpy.float32).reshape(-1, 3))
-        # discard the attribute byte count
-        f.read(2)
+    # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet), and 1
+    # int16 (attribute count)
+    out = numpy.fromfile(
+        f,
+        count=num_triangles,
+        dtype=numpy.dtype(
+            [("normal", "f4", (3,)), ("facet", "f4", (3, 3)), ("attr count", "i2")]
+        ),
+    )
+    # discard normals, attribute count
+    facets = out["facet"]
+    assert numpy.all(out["attr count"] == 0)
 
-    points, cells = data_from_facets(numpy.array(facets))
+    points, cells = data_from_facets(facets)
     return Mesh(points, cells)
 
 
@@ -150,12 +179,11 @@ def _write_ascii(filename, points, cells):
             #   vertex 267.689 232.646 15.7283
             #  endloop
             # endfacet
-            fh.write("facet normal {} {} {}\n".format(*normal).encode("utf-8"))
-            fh.write(" outer loop\n".encode("utf-8"))
+            out = ["facet normal {} {} {}".format(*normal), " outer loop"]
             for pt in local_pts:
-                fh.write("  vertex {} {} {}\n".format(*pt).encode("utf-8"))
-            fh.write(" endloop\n".encode("utf-8"))
-            fh.write("endfacet\n".encode("utf-8"))
+                out += ["  vertex {} {} {}".format(*pt)]
+            out += [" endloop", "endfacet"]
+            fh.write(("\n".join(out) + "\n").encode("utf-8"))
 
         fh.write("endsolid\n".encode("utf-8"))
 

@@ -678,27 +678,23 @@ def _write_cells(f, cells, write_binary):
     total_num_idx += total_num_cells
     f.write("CELLS {} {}\n".format(total_num_cells, total_num_idx).encode("utf-8"))
     if write_binary:
-        for key in cells:
-            n = cells[key].shape[1]
-            d = numpy.column_stack([numpy.full(len(cells[key]), n), cells[key]]).astype(
+        for c in cells.values():
+            n = c.shape[1]
+            d = numpy.column_stack([numpy.full(c.shape[0], n), c]).astype(
                 numpy.dtype(">i4")
             )
             f.write(d.tostring())
-        if write_binary:
-            f.write("\n".encode("utf-8"))
+        f.write("\n".encode("utf-8"))
     else:
         # ascii
-        for key in cells:
-            n = cells[key].shape[1]
-            for cell in cells[key]:
-                f.write(
-                    (
-                        " ".join(
-                            ["{}".format(idx) for idx in numpy.concatenate([[n], cell])]
-                        )
-                        + "\n"
-                    ).encode("utf-8")
-                )
+        for c in cells.values():
+            n = c.shape[1]
+            # prepend a column with the value n
+            out = numpy.column_stack([numpy.full(c.shape[0], n), c])
+            fmt = " ".join(["{}"] * out.shape[1])
+            # join them all together as strings
+            out = "\n".join([fmt.format(*row) for row in out]) + "\n"
+            f.write(out.encode("utf-8"))
 
     # write cell types
     f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
