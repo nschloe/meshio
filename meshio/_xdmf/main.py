@@ -154,6 +154,11 @@ class XdmfReader(object):
                 assert len(data_items) == 1
                 points = self.read_data_item(data_items[0])
 
+            elif c.tag == "Information":
+                c_data = c.text
+                assert c_data
+                field_data = self.read_information(c_data)
+
             else:
                 assert c.tag == "Attribute", "Unknown section '{}'.".format(c.tag)
 
