@@ -12,6 +12,7 @@ jobs:
     - uses: actions/checkout@v1
     - name: Lint with flake8
       run: |
+        pip install --upgrade pip
         pip install flake8
         flake8 .
     - name: Lint with black
@@ -32,6 +33,7 @@ jobs:
         git lfs pull
     - name: Install package
       run: |
+        pip install --upgrade pip
         pip install .[all]
     - name: Test with pytest
       run: |
