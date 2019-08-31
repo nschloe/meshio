@@ -1,0 +1,41 @@
+name: build
+
+on: [push]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-python@v1
+      with:
+        python-version: "3.x"
+    - uses: actions/checkout@v1
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        flake8 .
+    - name: Lint with black
+      run: |
+        pip install black
+        black --check .
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-python@v1
+      with:
+        python-version: "3.x"
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        sudo apt-get install -y git git-lfs python3-h5py python3-netcdf4 python3-lxml
+        git lfs pull
+    - name: Install package
+      run: |
+        pip install .
+    - name: Test with pytest
+      run: |
+        pip install pytest pytest-cov
+        pytest --cov meshio
+    - name: Submit to codecov
+      run: bash <(curl -s https://codecov.io/bash) -R ~/work
