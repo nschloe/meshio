@@ -32,7 +32,7 @@ jobs:
         git lfs pull
     - name: Install package
       run: |
-        pip install .
+        pip install .[all]
     - name: Test with pytest
       run: |
         pip install pytest pytest-cov
