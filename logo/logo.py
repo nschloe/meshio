@@ -5,8 +5,7 @@ import optimesh
 import pygmsh
 
 
-def create_logo():
-
+def _old_logo():
     geom = pygmsh.opencascade.Geometry(
         characteristic_length_min=0.5, characteristic_length_max=0.5
     )
@@ -30,20 +29,20 @@ def create_logo():
     return X, cells
 
 
-def create_logo2():
+def create_logo2(y=0.0):
     geom = pygmsh.built_in.Geometry()
 
-    lcar = 0.1
+    lcar = 0.15
 
     arrow1 = geom.add_polygon(
         [
-            [0.10, 0.7, 0.0],
-            [0.35, 0.5, 0.0],
-            [0.35, 0.6, 0.0],
-            [0.8, 0.6, 0.0],
-            [0.8, 0.8, 0.0],
-            [0.35, 0.8, 0.0],
-            [0.35, 0.9, 0.0],
+            [0.10, 0.70 - y, 0.0],
+            [0.35, 0.60 - y, 0.0],
+            [0.35, 0.65 - y, 0.0],
+            [0.80, 0.65 - y, 0.0],
+            [0.80, 0.75 - y, 0.0],
+            [0.35, 0.75 - y, 0.0],
+            [0.35, 0.80 - y, 0.0],
         ],
         lcar=lcar,
         make_surface=False,
@@ -51,13 +50,13 @@ def create_logo2():
 
     arrow2 = geom.add_polygon(
         [
-            [0.89, 0.3, 0.0],
-            [0.65, 0.5, 0.0],
-            [0.65, 0.4, 0.0],
-            [0.20, 0.4, 0.0],
-            [0.20, 0.2, 0.0],
-            [0.65, 0.2, 0.0],
-            [0.65, 0.1, 0.0],
+            [0.90, 0.30 + y, 0.0],
+            [0.65, 0.40 + y, 0.0],
+            [0.65, 0.35 + y, 0.0],
+            [0.20, 0.35 + y, 0.0],
+            [0.20, 0.25 + y, 0.0],
+            [0.65, 0.25 + y, 0.0],
+            [0.65, 0.20 + y, 0.0],
         ],
         lcar=lcar,
         make_surface=False,
@@ -79,7 +78,7 @@ def create_logo2():
 
 
 if __name__ == "__main__":
-    X, cells = create_logo2()
+    X, cells = create_logo2(y=0.08)
 
     meshio.write_points_cells("logo.svg", X, {"triangle": cells})
 
