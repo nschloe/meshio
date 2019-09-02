@@ -143,7 +143,7 @@ def _read_cells(f, line0, point_gids):
     while True:
         last_pos = f.tell()
         line = f.readline()
-#       if line.startswith("$") or line == "":
+        #       if line.startswith("$") or line == "":
         if line.startswith("$"):
             break
         line = line.strip()
