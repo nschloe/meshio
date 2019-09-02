@@ -6,6 +6,8 @@ import pytest
 import helpers
 import meshio
 
+h5py = pytest.importorskip("h5py")
+
 
 @pytest.mark.parametrize(
     "mesh",
