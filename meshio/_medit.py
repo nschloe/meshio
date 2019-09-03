@@ -139,9 +139,9 @@ def write(filename, mesh):
             fh.write("{}\n".format(medit_name).encode("utf-8"))
             fh.write("{}\n".format(len(data)).encode("utf-8"))
 
-            if "medit:ref" in mesh.cell_data[key]:
+            if key in mesh.cell_data and "medit:ref" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["medit:ref"]
-            elif "gmsh:physical" in mesh.cell_data[key]:
+            elif key in mesh.cell_data and "gmsh:physical" in mesh.cell_data[key]:
                 # Translating gmsh data to medit is an important case, so treat it
                 # explicitly here.
                 labels = mesh.cell_data[key]["gmsh:physical"]
