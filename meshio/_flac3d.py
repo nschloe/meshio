@@ -4,10 +4,11 @@ I/O for FLAC3D format.
 
 import logging
 import time
+
 import numpy as np
+
 from .__about__ import __version__ as version
 from ._mesh import Mesh
-
 
 flac3d_to_meshio_type = {
     "T4": "tetra",
