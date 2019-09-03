@@ -106,9 +106,13 @@ def write(filename, mesh):
         # vertices
         fh.write(b"\nVertices\n")
         fh.write("{}\n".format(n).encode("utf-8"))
-        try:
+        if "medit:ref" in mesh.point_data:
             labels = mesh.point_data["medit:ref"]
-        except KeyError:
+        elif "gmsh:physical" in mesh.point_data:
+            # Translating gmsh data to medit is an important case, so treat it
+            # explicitly here.
+            labels = mesh.point_data["gmsh:physical"]
+        else:
             labels = numpy.ones(n, dtype=int)
         data = numpy.c_[mesh.points, labels]
         fmt = " ".join(["%r"] * d) + " %d"
@@ -134,10 +138,16 @@ def write(filename, mesh):
             fh.write(b"\n")
             fh.write("{}\n".format(medit_name).encode("utf-8"))
             fh.write("{}\n".format(len(data)).encode("utf-8"))
-            try:
+
+            if "medit:ref" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["medit:ref"]
-            except KeyError:
+            elif "gmsh:physical" in mesh.cell_data[key]:
+                # Translating gmsh data to medit is an important case, so treat it
+                # explicitly here.
+                labels = mesh.cell_data[key]["gmsh:physical"]
+            else:
                 labels = numpy.ones(len(data), dtype=int)
+
             # adapt 1-base
             data_with_label = numpy.c_[data + 1, labels]
             fmt = " ".join(["%d"] * (num + 1))
