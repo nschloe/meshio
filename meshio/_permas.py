@@ -1,79 +1,222 @@
 """
-I/O for PERMAS dat format
+I/O for PERMAS dat files.
 """
-import gzip
 import logging
-import re
 
 import numpy
 
-from .__about__ import __version__, __website__
+from .__about__ import __version__
 from ._mesh import Mesh
+
+permas_to_meshio_type = {
+    "PLOT1": "vertex",
+    "PLOTL2": "line",
+    "FLA2": "line",
+    "FLA3": "line3",
+    "PLOTL3": "line3",
+    "BECOS": "line",
+    "BECOC": "line",
+    "BETAC": "line",
+    "BECOP": "line",
+    "BETOP": "line",
+    "BEAM2": "line",
+    "FSCPIPE2": "line",
+    "LOADA4": "quad",
+    "PLOTA4": "quad",
+    "QUAD4": "quad",
+    "QUAD4S": "quad",
+    "QUAMS4": "quad",
+    "SHELL4": "quad",
+    "PLOTA8": "quad8",
+    "LOADA8": "quad8",
+    "QUAMS8": "quad8",
+    "PLOTA9": "quad9",
+    "LOADA9": "quad9",
+    "QUAMS9": "quad9",
+    "PLOTA3": "triangle",
+    "SHELL3": "triangle",
+    "TRIA3": "triangle",
+    "TRIA3K": "triangle",
+    "TRIA3S": "triangle",
+    "TRIMS3": "triangle",
+    "LOADA6": "triangle6",
+    "TRIMS6": "triangle6",
+    "HEXE8": "hexahedron",
+    "HEXEFO8": "hexahedron",
+    "HEXE20": "hexahedron20",
+    "HEXE27": "hexahedron27",
+    "TET4": "tetra",
+    "TET10": "tetra10",
+    "PYRA5": "pyramid",
+    "PENTA6": "wedge",
+}
+meshio_to_permas_type = {v: k for k, v in permas_to_meshio_type.items()}
 
 
 def read(filename):
-    """Reads a (compressed) PERMAS dato or post file.
+    """Reads a PERMAS dat file.
     """
-    # The format is specified at
-    # <http://www.intes.de>.
+    with open(filename, "r") as f:
+        out = read_buffer(f)
+    return out
 
+
+def read_buffer(f):
+    # Initialize the optional data fields
     cells = {}
-    meshio_to_permas_type = {
-        "vertex": (1, "PLOT1"),
-        "line": (2, "PLOTL2"),
-        "triangle": (3, "TRIA3"),
-        "quad": (4, "QUAD4"),
-        "tetra": (4, "TET4"),
-        "hexahedron": (8, "HEXE8"),
-        "wedge": (6, "PENTA6"),
-        "pyramid": (5, "PYRA5"),
+    nsets = {}
+    elsets = {}
+    field_data = {}
+    cell_data = {}
+    point_data = {}
+
+    while True:
+        line = f.readline()
+        if not line:
+            # EOF
+            break
+
+        # Comments
+        if line.startswith("!"):
+            continue
+
+        keyword = line.strip("$").upper()
+        if keyword.startswith("COOR"):
+            points, point_gids = _read_nodes(f)
+        elif keyword.startswith("ELEMENT"):
+            key, idx = _read_cells(f, keyword, point_gids)
+            cells[key] = idx
+        elif keyword.startswith("NSET"):
+            params_map = get_param_map(keyword, required_keys=["NSET"])
+            setids = read_set(f, params_map)
+            name = params_map["NSET"]
+            if name not in nsets:
+                nsets[name] = []
+            nsets[name].append(setids)
+        elif keyword.startswith("ESET"):
+            params_map = get_param_map(keyword, required_keys=["ESET"])
+            setids = read_set(f, params_map)
+            name = params_map["ESET"]
+            if name not in elsets:
+                elsets[name] = []
+            elsets[name].append(setids)
+        else:
+            # There are just too many PERMAS keywords to explicitly skip them.
+            pass
+
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+    )
+
+
+def _read_nodes(f):
+    points = []
+    point_gids = {}
+    index = 0
+    while True:
+        last_pos = f.tell()
+        line = f.readline()
+        if line.startswith("!"):
+            break
+        if line.startswith("$"):
+            break
+        entries = line.strip().split(" ")
+        gid, x = entries[0], entries[1:]
+        point_gids[int(gid)] = index
+        points.append([float(xx) for xx in x])
+        index += 1
+
+    f.seek(last_pos)
+    return numpy.array(points, dtype=float), point_gids
+
+
+def _read_cells(f, line0, point_gids):
+    sline = line0.split(" ")[1:]
+    etype_sline = sline[0]
+    assert "TYPE" in etype_sline, etype_sline
+    etype = etype_sline.split("=")[1].strip()
+    assert etype in permas_to_meshio_type, "Element type not available: {}".format(
+        etype
+    )
+    cell_type = permas_to_meshio_type[etype]
+    cells, idx = [], []
+    while True:
+        last_pos = f.tell()
+        line = f.readline()
+        if line.startswith("$") or line == "":
+            break
+        line = line.strip()
+        # the first item is just a running index
+        idx += [point_gids[int(k)] for k in filter(None, line.split(" ")[1:])]
+        if not line.endswith("!"):
+            cells.append(idx)
+            idx = []
+    f.seek(last_pos)
+    return cell_type, numpy.array(cells)
+
+
+def get_param_map(word, required_keys=None):
+    """
+    get the optional arguments on a line
+
+    Example
+    -------
+    >>> iline = 0
+    >>> word = 'elset,instance=dummy2,generate'
+    >>> params = get_param_map(iline, word, required_keys=['instance'])
+    params = {
+        'elset' : None,
+        'instance' : 'dummy2,
+        'generate' : None,
     }
+    """
+    if required_keys is None:
+        required_keys = []
+    words = word.split(",")
+    param_map = {}
+    for wordi in words:
+        if "=" not in wordi:
+            key = wordi.strip()
+            value = None
+        else:
+            sword = wordi.split("=")
+            assert len(sword) == 2, sword
+            key = sword[0].strip()
+            value = sword[1].strip()
+        param_map[key] = value
 
-    opener = gzip.open if filename.endswith(".gz") else open
+    msg = ""
+    for key in required_keys:
+        if key not in param_map:
+            msg += "%r not found in %r\n" % (key, word)
+    if msg:
+        raise RuntimeError(msg)
+    return param_map
 
-    with opener(filename, "rb") as f:
-        while True:
-            line = f.readline().decode("utf-8")
-            if not line or re.search("\\$END STRUCTURE", line):
-                break
-            for meshio_type, permas_ele in meshio_to_permas_type.items():
-                num_nodes = permas_ele[0]
-                permas_type = permas_ele[1]
 
-                if re.search("\\$ELEMENT TYPE = {}".format(permas_type), line):
-                    while True:
-                        line = f.readline().decode("utf-8")
-                        if not line or line.startswith("!"):
-                            break
-                        data = numpy.array(line.split(), dtype=int)
-                        if meshio_type in cells:
-                            cells[meshio_type].append(data[-num_nodes:])
-                        else:
-                            cells[meshio_type] = [data[-num_nodes:]]
+def read_set(f, params_map):
+    set_ids = []
+    while True:
+        last_pos = f.tell()
+        line = f.readline()
+        if line.startswith("$"):
+            break
+        set_ids += [int(k) for k in line.strip().strip(" ").split(" ")]
+    f.seek(last_pos)
 
-            if re.search("\\$COOR", line):
-                points = []
-                while True:
-                    line = f.readline().decode("utf-8")
-                    if not line or line.startswith("!"):
-                        break
-                    for r in numpy.array(line.split(), dtype=float)[1:]:
-                        points.append(r)
-
-    points = numpy.array(points)
-    points = numpy.reshape(points, newshape=(len(points) // 3, 3))
-    for key in cells:
-        # Subtract one to account for the fact that python indices
-        # are 0-based.
-        cells[key] = numpy.array(cells[key], dtype=int) - 1
-
-    return Mesh(points, cells)
+    if "generate" in params_map:
+        assert len(set_ids) == 3, set_ids
+        set_ids = numpy.arange(set_ids[0], set_ids[1], set_ids[2])
+    else:
+        try:
+            set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
+        except ValueError:
+            print(set_ids)
+            raise
+    return set_ids
 
 
 def write(filename, mesh):
-    """Writes PERMAS dat files, cf.
-    http://www.intes.de # PERMAS-ASCII-file-format
-    """
     if mesh.points.shape[1] == 2:
         logging.warning(
             "PERMAS requires 3D points, but 2D points given. "
@@ -83,135 +226,22 @@ def write(filename, mesh):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    opener = gzip.open if filename.endswith(".gz") else open
-
-    with opener(filename, "wb") as fh:
-        fh.write(
-            "\n".join(
-                [
-                    "!",
-                    "! File written by meshio version {}".format(__version__),
-                    "! Further information available at {}".format(__website__),
-                    "!",
-                    "$ENTER COMPONENT NAME = DFLT_COMP DOFTYPE = DISP MATH",
-                    "    $SITUATION NAME = REAL_MODES",
-                    "        DFLT_COMP SYSTEM = NSV CONSTRAINTS = SPCVAR_1 ! LOADING = LOADVAR_1",
-                    "    $END SITUATION" "!",
-                    "!",
-                    "    $STRUCTURE",
-                    "!" "\n",
-                ]
-            ).encode("utf-8")
-        )
-
-        # Write nodes
-        fh.write("        $COOR NSET = ALL_NODES\n".encode("utf-8"))
+    with open(filename, "wt") as f:
+        f.write("!PERMAS DataFile Version 17.0\n")
+        f.write("!written by meshio v{}\n".format(__version__))
+        f.write("$ENTER COMPONENT NAME=DFLT_COMP\n")
+        f.write("$STRUCTURE\n")
+        f.write("$COOR\n")
         for k, x in enumerate(mesh.points):
-            fh.write(
-                "        {:8d} {:+.15f} {:+.15f} {:+.15f}\n".format(
-                    k + 1, x[0], x[1], x[2]
-                ).encode("utf-8")
-            )
-
-        meshio_to_permas_type = {
-            "vertex": (1, "PLOT1"),
-            "line": (2, "PLOTL2"),
-            "triangle": (3, "TRIA3"),
-            "quad": (4, "QUAD4"),
-            "tetra": (4, "TET4"),
-            "hexahedron": (8, "HEXE8"),
-            "wedge": (6, "PENTA6"),
-            "pyramid": (5, "PYRA5"),
-        }
-        #
-        # Avoid non-unique element numbers in case of multiple element types by
-        # num_ele !!!
-        #
-        num_ele = 0
-
-        for meshio_type, cell in mesh.cells.items():
-            numcells, num_local_nodes = cell.shape
-            permas_type = meshio_to_permas_type[meshio_type]
-            fh.write("!\n".encode("utf-8"))
-            fh.write(
-                "        $ELEMENT TYPE = {} ESET = {}\n".format(
-                    permas_type[1], permas_type[1]
-                ).encode("utf-8")
-            )
-            for k, c in enumerate(cell):
-                form = "        {:8d} " + " ".join(num_local_nodes * ["{:8d}"]) + "\n"
-                fh.write(form.format(k + num_ele + 1, *(c + 1)).encode("utf-8"))
-            num_ele += numcells
-
-        fh.write("!\n".encode("utf-8"))
-        fh.write("    $END STRUCTURE\n".encode("utf-8"))
-        fh.write("!\n".encode("utf-8"))
-        elem_3D = ["HEXE8", "TET4", "PENTA6", "PYRA5"]
-        elem_2D = ["TRIA3", "QUAD4"]
-        elem_1D = ["PLOT1", "PLOTL2"]
-        fh.write("    $SYSTEM NAME = NSV\n".encode("utf-8"))
-        fh.write("!\n".encode("utf-8"))
-        fh.write("        $ELPROP\n".encode("utf-8"))
-        for meshio_type, cell in mesh.cells.items():
-            permas_type = meshio_to_permas_type[meshio_type]
-            if permas_type[1] in elem_3D:
-                fh.write(
-                    "            {} MATERIAL = DUMMY_MATERIAL\n".format(
-                        permas_type[1]
-                    ).encode("utf-8")
-                )
-            elif permas_type[1] in elem_2D:
-                fh.write(
-                    (
-                        12 * " "
-                        + "{} GEODAT = GD_{} MATERIAL = DUMMY_MATERIAL\n".format(
-                            permas_type[1], permas_type[1]
-                        )
-                    ).encode("utf-8")
-                )
-            else:
-                assert permas_type[1] in elem_1D
-        fh.write("!\n".encode("utf-8"))
-        fh.write("        $GEODAT SHELL  CONT = THICK  NODES = ALL\n".encode("utf-8"))
-        for meshio_type, cell in mesh.cells.items():
-            permas_type = meshio_to_permas_type[meshio_type]
-            if permas_type[1] in elem_2D:
-                fh.write(
-                    (12 * " " + "GD_{} 1.0\n".format(permas_type[1])).encode("utf-8")
-                )
-        fh.write(
-            """!
-!
-    $END SYSTEM
-!
-    $CONSTRAINTS NAME = SPCVAR_1
-    $END CONSTRAINTS
-!
-    $LOADING NAME = LOADVAR_1
-    $END LOADING
-!
-$EXIT COMPONENT
-!
-$ENTER MATERIAL
-!
-    $MATERIAL NAME = DUMMY_MATERIAL TYPE = ISO
-!
-        $ELASTIC  GENERAL  INPUT = DATA
-            2.0E+05 0.3
-!
-        $DENSITY  GENERAL  INPUT = DATA
-            7.8E-09
-!
-        $THERMEXP  GENERAL  INPUT = DATA
-            1.2E-05
-!
-    $END MATERIAL
-!
-$EXIT MATERIAL
-!
-$FIN
-""".encode(
-                "utf-8"
-            )
-        )
-    return
+            f.write("{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]))
+        eid = 0
+        for cell_type, node_idcs in mesh.cells.items():
+            f.write("!\n")
+            f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_type] + "\n")
+            for row in node_idcs:
+                eid += 1
+                nids_strs = (str(nid + 1) for nid in row.tolist())
+                f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
+        f.write("$END STRUCTURE\n")
+        f.write("$EXIT COMPONENT\n")
+        f.write("$FIN\n")
