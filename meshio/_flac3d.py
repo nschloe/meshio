@@ -1,7 +1,6 @@
 """
 I/O for FLAC3D format.
 """
-
 import logging
 import time
 
