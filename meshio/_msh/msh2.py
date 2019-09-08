@@ -314,7 +314,7 @@ def write(filename, mesh, write_binary=True):
             tag_data[cell_type] = {}
             other_data[cell_type] = {}
             for key, data in a.items():
-                if key in ["gmsh:physical", "gmsh:geometrical"]:
+                if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
                     tag_data[cell_type][key] = data.astype(c_int)
                 else:
                     other_data[cell_type][key] = data
@@ -361,7 +361,7 @@ def _write_elements(fh, cells, tag_data, write_binary):
     consecutive_index = 0
     for cell_type, node_idcs in cells.items():
         tags = []
-        for key in ["gmsh:physical", "gmsh:geometrical"]:
+        for key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
             try:
                 tags.append(tag_data[cell_type][key])
             except KeyError:
