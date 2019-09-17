@@ -235,6 +235,7 @@ def write(filename, mesh):
         for k, x in enumerate(mesh.points):
             f.write("{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]))
         eid = 0
+        tria6_order = [0, 3, 1, 4, 2, 5]
         tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]
         for cell_type, node_idcs in mesh.cells.items():
             f.write("!\n")
@@ -244,6 +245,13 @@ def write(filename, mesh):
                     eid += 1
                     mylist = row.tolist()
                     mylist = [mylist[i] for i in tet10_order]
+                    nids_strs = (str(nid + 1) for nid in mylist)
+                    f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
+            elif cell_type == "triangle6":
+                for row in node_idcs:
+                    eid += 1
+                    mylist = row.tolist()
+                    mylist = [mylist[i] for i in tria6_order]
                     nids_strs = (str(nid + 1) for nid in mylist)
                     f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
             else:
