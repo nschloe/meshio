@@ -235,11 +235,11 @@ def write(filename, mesh):
         for k, x in enumerate(mesh.points):
             f.write("{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]))
         eid = 0
-        tet10_order = [0,4,1,5,2,6,7,8,9,3]
+        tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]
         for cell_type, node_idcs in mesh.cells.items():
             f.write("!\n")
             f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_type] + "\n")
-            if cell_type=='tetra10':
+            if cell_type == "tetra10":
                 for row in node_idcs:
                     eid += 1
                     mylist = row.tolist()
