@@ -237,6 +237,7 @@ def write(filename, mesh):
         eid = 0
         tria6_order = [0, 3, 1, 4, 2, 5]
         tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]
+        quad9_order = [0, 4, 1, 7, 8, 5, 3, 6, 2]
         for cell_type, node_idcs in mesh.cells.items():
             f.write("!\n")
             f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_type] + "\n")
@@ -252,6 +253,13 @@ def write(filename, mesh):
                     eid += 1
                     mylist = row.tolist()
                     mylist = [mylist[i] for i in tria6_order]
+                    nids_strs = (str(nid + 1) for nid in mylist)
+                    f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
+            elif cell_type == "quad9":
+                for row in node_idcs:
+                    eid += 1
+                    mylist = row.tolist()
+                    mylist = [mylist[i] for i in quad9_order]
                     nids_strs = (str(nid + 1) for nid in mylist)
                     f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
             else:
