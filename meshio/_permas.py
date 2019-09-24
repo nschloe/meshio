@@ -235,13 +235,38 @@ def write(filename, mesh):
         for k, x in enumerate(mesh.points):
             f.write("{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]))
         eid = 0
+        tria6_order = [0, 3, 1, 4, 2, 5]
+        tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]
+        quad9_order = [0, 4, 1, 7, 8, 5, 3, 6, 2]
         for cell_type, node_idcs in mesh.cells.items():
             f.write("!\n")
             f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_type] + "\n")
-            for row in node_idcs:
-                eid += 1
-                nids_strs = (str(nid + 1) for nid in row.tolist())
-                f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
+            if cell_type == "tetra10":
+                for row in node_idcs:
+                    eid += 1
+                    mylist = row.tolist()
+                    mylist = [mylist[i] for i in tet10_order]
+                    nids_strs = (str(nid + 1) for nid in mylist)
+                    f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
+            elif cell_type == "triangle6":
+                for row in node_idcs:
+                    eid += 1
+                    mylist = row.tolist()
+                    mylist = [mylist[i] for i in tria6_order]
+                    nids_strs = (str(nid + 1) for nid in mylist)
+                    f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
+            elif cell_type == "quad9":
+                for row in node_idcs:
+                    eid += 1
+                    mylist = row.tolist()
+                    mylist = [mylist[i] for i in quad9_order]
+                    nids_strs = (str(nid + 1) for nid in mylist)
+                    f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
+            else:
+                for row in node_idcs:
+                    eid += 1
+                    nids_strs = (str(nid + 1) for nid in row.tolist())
+                    f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
         f.write("$END STRUCTURE\n")
         f.write("$EXIT COMPONENT\n")
         f.write("$FIN\n")
