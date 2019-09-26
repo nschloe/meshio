@@ -1,4 +1,4 @@
-name: build
+name: ci
 
 on: [push]
 
@@ -39,5 +39,5 @@ jobs:
       run: |
         pip install pytest pytest-cov
         pytest --cov meshio
-    - name: Submit to codecov
-      run: bash <(curl -s https://codecov.io/bash) -R ~/work
+    # - name: Submit to codecov
+    #   run: bash <(curl -s https://codecov.io/bash) -R ~/work
