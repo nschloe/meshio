@@ -27,10 +27,11 @@ jobs:
       with:
         python-version: "3.x"
     - uses: actions/checkout@v1
+      with:
+        lfs: true
     - name: Install dependencies
       run: |
-        sudo apt-get install -y git git-lfs python3-h5py python3-netcdf4 python3-lxml
-        git lfs pull
+        sudo apt-get install -y python3-h5py python3-netcdf4 python3-lxml
     - name: Install package
       run: |
         pip install --upgrade pip

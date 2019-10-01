@@ -178,9 +178,10 @@ def _read_cells(f, line0, point_gids):
         if line.startswith("*") or line == "":
             break
         line = line.strip()
-        idx += [point_gids[int(k)] for k in filter(None, line.split(","))]
+        idx += [int(k) for k in filter(None, line.split(","))]
         if not line.endswith(","):
-            cells.append(idx[1:])  # the first item is just a running index
+            # the first item is just a running index
+            cells.append([point_gids[k] for k in idx[1:]])
             idx = []
     return cell_type, numpy.array(cells), line
 
