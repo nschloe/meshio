@@ -29,7 +29,7 @@ def read(filename):
     return XdmfReader(filename).read()
 
 
-class XdmfReader(object):
+class XdmfReader:
     def __init__(self, filename):
         self.filename = filename
         return
@@ -52,7 +52,7 @@ class XdmfReader(object):
 
         return self.read_xdmf3(root)
 
-    def read_data_item(self, data_item):
+    def _read_data_item(self, data_item):
         import h5py
 
         dims = [int(d) for d in data_item.attrib["Dimensions"].split()]
@@ -142,7 +142,7 @@ class XdmfReader(object):
                 data_items = list(c)
                 assert len(data_items) == 1
                 meshio_type = xdmf_to_meshio_type[c.attrib["TopologyType"]]
-                cells[meshio_type] = self.read_data_item(data_items[0])
+                cells[meshio_type] = self._read_data_item(data_items[0])
 
             elif c.tag == "Geometry":
                 try:
@@ -152,7 +152,7 @@ class XdmfReader(object):
                     pass
                 data_items = list(c)
                 assert len(data_items) == 1
-                points = self.read_data_item(data_items[0])
+                points = self._read_data_item(data_items[0])
 
             elif c.tag == "Information":
                 c_data = c.text
@@ -168,7 +168,7 @@ class XdmfReader(object):
                 data_items = list(c)
                 assert len(data_items) == 1
 
-                data = self.read_data_item(data_items[0])
+                data = self._read_data_item(data_items[0])
 
                 name = c.attrib["Name"]
                 if c.attrib["Center"] == "Node":
@@ -212,7 +212,7 @@ class XdmfReader(object):
                 assert len(data_items) == 1
                 data_item = data_items[0]
 
-                data = self.read_data_item(data_item)
+                data = self._read_data_item(data_item)
 
                 # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
                 # Allow both.
@@ -239,7 +239,7 @@ class XdmfReader(object):
                 data_items = list(c)
                 assert len(data_items) == 1
                 data_item = data_items[0]
-                points = self.read_data_item(data_item)
+                points = self._read_data_item(data_item)
 
             elif c.tag == "Information":
                 c_data = c.text
@@ -257,7 +257,7 @@ class XdmfReader(object):
                 assert len(data_items) == 1
                 data_item = data_items[0]
 
-                data = self.read_data_item(data_item)
+                data = self._read_data_item(data_item)
 
                 name = c.attrib["Name"]
                 if c.attrib["Center"] == "Node":
@@ -277,7 +277,7 @@ class XdmfReader(object):
         )
 
 
-class XdmfWriter(object):
+class XdmfWriter:
     def __init__(self, filename, mesh, pretty_xml=True, data_format="HDF"):
         from lxml import etree as ET
 
