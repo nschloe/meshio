@@ -87,17 +87,17 @@ For both input and output, you can optionally specify the exact `file_format`
 The [XDMF format](http://www.xdmf.org/index.php/XDMF_Model_and_Format) supports time
 series with a shared mesh. You can write times series data using meshio with
 ```python
-writer = meshio.XdmfTimeSeriesWriter(filename)
-writer.write_points_cells(points, cells)
-for t in [0.0, 0.1, 0.21]:
-    writer.write_data(t, point_data={"phi": data})
+with meshio.XdmfTimeSeriesWriter(filename) as writer:
+    writer.write_points_cells(points, cells)
+    for t in [0.0, 0.1, 0.21]:
+        writer.write_data(t, point_data={"phi": data})
 ```
 and read it with
 ```python
-reader = meshio.XdmfTimeSeriesReader(filename)
-points, cells = reader.read_points_cells()
-for k in range(reader.num_steps):
-    t, point_data, cell_data = reader.read_data(k)
+with meshio.XdmfTimeSeriesReader(filename) as reader:
+    points, cells = reader.read_points_cells()
+    for k in range(reader.num_steps):
+        t, point_data, cell_data = reader.read_data(k)
 ```
 
 ### Installation

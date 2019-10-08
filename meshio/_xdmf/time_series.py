@@ -62,7 +62,15 @@ class XdmfTimeSeriesReader:
         self.collection = list(collection_grid)
         self.num_steps = len(self.collection)
         self.cells = None
-        return
+        self.hdf5_files = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        # Those files are opened in _read_data_item()
+        for f in self.hdf5_files.values():
+            f.close()
 
     def read_points_cells(self):
         grid = self.mesh_grid
@@ -76,7 +84,7 @@ class XdmfTimeSeriesReader:
                 assert len(data_items) == 1
                 data_item = data_items[0]
 
-                data = self.read_data_item(data_item)
+                data = self._read_data_item(data_item)
 
                 # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
                 # Allow both.
@@ -103,7 +111,7 @@ class XdmfTimeSeriesReader:
                 data_items = list(c)
                 assert len(data_items) == 1
                 data_item = data_items[0]
-                points = self.read_data_item(data_item)
+                points = self._read_data_item(data_item)
 
         self.cells = cells
         return points, cells
@@ -122,7 +130,7 @@ class XdmfTimeSeriesReader:
 
                 assert len(list(c)) == 1
                 data_item = list(c)[0]
-                data = self.read_data_item(data_item)
+                data = self._read_data_item(data_item)
 
                 if c.attrib["Center"] == "Node":
                     point_data[name] = data
@@ -139,13 +147,11 @@ class XdmfTimeSeriesReader:
 
         return t, point_data, cell_data
 
-    def read_data_item(self, data_item):
-        import h5py
-
+    def _read_data_item(self, data_item):
         dims = [int(d) for d in data_item.attrib["Dimensions"].split()]
 
-        # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files
-        # out there use both keys interchangeably.
+        # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files out there
+        # use both keys interchangeably.
         if "DataType" in data_item.attrib:
             assert "NumberType" not in data_item.attrib
             data_type = data_item.attrib["DataType"]
@@ -181,7 +187,13 @@ class XdmfTimeSeriesReader:
         # The HDF5 file path is given with respect to the XDMF (XML) file.
         full_hdf5_path = os.path.join(os.path.dirname(self.filename), filename)
 
-        f = h5py.File(full_hdf5_path, "r")
+        if full_hdf5_path in self.hdf5_files:
+            f = self.hdf5_files[full_hdf5_path]
+        else:
+            import h5py
+            f = h5py.File(full_hdf5_path, "r")
+            self.hdf5_files[full_hdf5_path] = f
+
         assert h5path[0] == "/"
 
         for key in h5path[1:].split("/"):
@@ -204,12 +216,6 @@ class XdmfTimeSeriesWriter:
         self.data_counter = 0
         self.pretty_xml = pretty_xml
 
-        if data_format == "HDF":
-            import h5py
-
-            self.h5_filename = os.path.splitext(self.filename)[0] + ".h5"
-            self.h5_file = h5py.File(self.h5_filename, "w")
-
         self.xdmf_file = ET.Element("Xdmf", Version="3.0")
 
         self.domain = ET.SubElement(self.xdmf_file, "Domain")
@@ -225,7 +231,16 @@ class XdmfTimeSeriesWriter:
 
         self.has_mesh = False
         self.mesh_name = None
-        return
+
+    def __enter__(self):
+        if self.data_format == "HDF":
+            import h5py
+            self.h5_filename = os.path.splitext(self.filename)[0] + ".h5"
+            self.h5_file = h5py.File(self.h5_filename, "w")
+        return self
+
+    def __exit__(self, *args):
+        self.h5_file.close()
 
     def write_points_cells(self, points, cells):
         # <Grid Name="mesh" GridType="Uniform">
@@ -247,7 +262,6 @@ class XdmfTimeSeriesWriter:
         self.has_mesh = True
 
         write_xml(self.filename, self.xdmf_file, self.pretty_xml)
-        return
 
     def write_data(self, t, point_data=None, cell_data=None):
         # <Grid>
@@ -273,7 +287,6 @@ class XdmfTimeSeriesWriter:
             self.cell_data(cell_data, grid)
 
         write_xml(self.filename, self.xdmf_file, self.pretty_xml)
-        return
 
     def numpy_to_xml_string(self, data):
         if self.data_format == "XML":
@@ -318,7 +331,6 @@ class XdmfTimeSeriesWriter:
             Precision=prec,
         )
         data_item.text = self.numpy_to_xml_string(points)
-        return
 
     def cells(self, cells, grid):
         from lxml import etree as ET
@@ -379,7 +391,6 @@ class XdmfTimeSeriesWriter:
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(cd)
-        return
 
     def point_data(self, point_data, grid):
         from lxml import etree as ET
@@ -397,7 +408,6 @@ class XdmfTimeSeriesWriter:
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(data)
-        return
 
     def cell_data(self, cell_data, grid):
         from lxml import etree as ET
@@ -418,4 +428,3 @@ class XdmfTimeSeriesWriter:
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(data)
-        return
