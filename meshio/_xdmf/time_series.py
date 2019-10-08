@@ -191,6 +191,7 @@ class XdmfTimeSeriesReader:
             f = self.hdf5_files[full_hdf5_path]
         else:
             import h5py
+
             f = h5py.File(full_hdf5_path, "r")
             self.hdf5_files[full_hdf5_path] = f
 
@@ -235,6 +236,7 @@ class XdmfTimeSeriesWriter:
     def __enter__(self):
         if self.data_format == "HDF":
             import h5py
+
             self.h5_filename = os.path.splitext(self.filename)[0] + ".h5"
             self.h5_file = h5py.File(self.h5_filename, "w")
         return self
