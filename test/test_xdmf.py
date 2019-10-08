@@ -54,14 +54,16 @@ def test_time_series():
     # write the data
     filename = "out.xdmf"
 
-    writer = meshio.XdmfTimeSeriesWriter(filename)
-    writer.write_points_cells(helpers.tri_mesh_2d.points, helpers.tri_mesh_2d.cells)
-    n = helpers.tri_mesh_2d.points.shape[0]
+    with meshio.XdmfTimeSeriesWriter(filename) as writer:
+        writer.write_points_cells(helpers.tri_mesh_2d.points, helpers.tri_mesh_2d.cells)
+        n = helpers.tri_mesh_2d.points.shape[0]
 
-    times = numpy.linspace(0.0, 1.0, 5)
-    point_data = [{"phi": numpy.full(n, t)} for t in times]
-    for t, pd in zip(times, point_data):
-        writer.write_data(t, point_data=pd, cell_data={"triangle": {"a": [3.0, 4.2]}})
+        times = numpy.linspace(0.0, 1.0, 5)
+        point_data = [{"phi": numpy.full(n, t)} for t in times]
+        for t, pd in zip(times, point_data):
+            writer.write_data(
+                t, point_data=pd, cell_data={"triangle": {"a": [3.0, 4.2]}}
+            )
 
     # read it back in
     reader = meshio.XdmfTimeSeriesReader(filename)

@@ -20,7 +20,7 @@ except ImportError:
     from io import BytesIO
 
 
-class XdmfTimeSeriesReader(object):
+class XdmfTimeSeriesReader:
     def __init__(self, filename):
         from lxml import etree as ET
 
@@ -190,7 +190,7 @@ class XdmfTimeSeriesReader(object):
         return f[()]
 
 
-class XdmfTimeSeriesWriter(object):
+class XdmfTimeSeriesWriter:
     def __init__(self, filename, pretty_xml=True, data_format="HDF"):
         from lxml import etree as ET
 

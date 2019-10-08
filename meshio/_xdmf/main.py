@@ -29,7 +29,7 @@ def read(filename):
     return XdmfReader(filename).read()
 
 
-class XdmfReader(object):
+class XdmfReader:
     def __init__(self, filename):
         self.filename = filename
         return
@@ -277,7 +277,7 @@ class XdmfReader(object):
         )
 
 
-class XdmfWriter(object):
+class XdmfWriter:
     def __init__(self, filename, mesh, pretty_xml=True, data_format="HDF"):
         from lxml import etree as ET
 

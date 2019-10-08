@@ -106,7 +106,7 @@ vtu_to_numpy_type = {
 numpy_to_vtu_type = {v: k for k, v in vtu_to_numpy_type.items()}
 
 
-class VtuReader(object):
+class VtuReader:
     """Helper class for reading VTU files. Some properties are global to the
     file (e.g., byte_order), and instead of passing around these parameters,
     make them properties of this class.

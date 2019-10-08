@@ -1,7 +1,7 @@
 import numpy
 
 
-class Mesh(object):
+class Mesh:
     def __init__(
         self,
         points,

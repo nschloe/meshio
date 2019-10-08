@@ -142,7 +142,7 @@ vtk_sections = [
 ]
 
 
-class Info(object):
+class Info:
     """Info Container for the VTK reader."""
 
     def __init__(self):
