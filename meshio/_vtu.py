@@ -107,9 +107,9 @@ numpy_to_vtu_type = {v: k for k, v in vtu_to_numpy_type.items()}
 
 
 class VtuReader:
-    """Helper class for reading VTU files. Some properties are global to the
-    file (e.g., byte_order), and instead of passing around these parameters,
-    make them properties of this class.
+    """Helper class for reading VTU files. Some properties are global to the file (e.g.,
+    byte_order), and instead of passing around these parameters, make them properties of
+    this class.
     """
 
     def __init__(self, filename):
@@ -257,6 +257,10 @@ class VtuReader:
     def read_binary(self, data, data_type):
         # first read the the block size; it determines the size of the header
         dtype = vtu_to_numpy_type[self.header_type]
+        if self.byte_order is not None:
+            dtype = dtype.newbyteorder(
+                "<" if self.byte_order == "LittleEndian" else ">"
+            )
         num_bytes_per_item = numpy.dtype(dtype).itemsize
         num_chars = num_bytes_to_num_base64_chars(num_bytes_per_item)
         byte_string = base64.b64decode(data[:num_chars])[:num_bytes_per_item]
@@ -277,6 +281,10 @@ class VtuReader:
         # Read the block data
         byte_array = base64.b64decode(data[num_header_chars:])
         dtype = vtu_to_numpy_type[data_type]
+        if self.byte_order is not None:
+            dtype = dtype.newbyteorder(
+                "<" if self.byte_order == "LittleEndian" else ">"
+            )
         num_bytes_per_item = numpy.dtype(dtype).itemsize
 
         byte_offsets = numpy.empty(block_sizes.shape[0] + 1, dtype=block_sizes.dtype)
@@ -356,8 +364,8 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
         "VTKFile",
         type="UnstructuredGrid",
         version="0.1",
-        # Use the native endianness. Not strictly necessary, but this
-        # simplifies things a bit.
+        # Use the native endianness. Not strictly necessary, but this simplifies things
+        # a bit.
         byte_order=("LittleEndian" if sys.byteorder == "little" else "BigEndian"),
         header_type=header_type,
         compressor="vtkZLibDataCompressor",
