@@ -26,7 +26,7 @@ numpy_to_ply_dtype = {numpy.dtype(v): k for k, v in ply_to_numpy_dtype.items()}
 
 
 def read(filename):
-    with open(filename) as f:
+    with open(filename, "rb") as f:
         mesh = read_buffer(f)
     return mesh
 
@@ -34,7 +34,7 @@ def read(filename):
 def _fast_forward(f):
     # fast forward to the next significant line
     while True:
-        line = f.readline().strip()
+        line = f.readline().decode("utf-8").strip()
         if line and line[:7] != "comment":
             break
     return line
@@ -42,7 +42,7 @@ def _fast_forward(f):
 
 def read_buffer(f):
     # assert that the first line reads `ply`
-    line = f.readline()
+    line = f.readline().decode("utf-8")
     assert line.strip() == "ply"
 
     line = _fast_forward(f)
@@ -96,7 +96,7 @@ def read_buffer(f):
 
     # the faces must be read line-by-line
     for k in range(num_faces):
-        line = f.readline().strip()
+        line = f.readline().decode("utf-8").strip()
         data = line.split()
         if k == 0:
             # initialize the cell data arrays
