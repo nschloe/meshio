@@ -15,8 +15,11 @@ ply_to_numpy_dtype = {
     "short": numpy.int16,
     "ushort": numpy.uint16,
     "int": numpy.int32,
+    "int32": numpy.int32,
     "uint": numpy.uint32,
+    "uint8": numpy.uint8,
     "float": numpy.float32,
+    "float32": numpy.float32,
     "double": numpy.float64,
 }
 numpy_to_ply_dtype = {numpy.dtype(v): k for k, v in ply_to_numpy_dtype.items()}
