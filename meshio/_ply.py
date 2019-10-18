@@ -53,21 +53,18 @@ def read_buffer(f):
     num_verts = int(m.groups()[0])
 
     # fast forward to the next significant line
+    formats = []
+    point_data_names = []
     line = _fast_forward(f)
-    m = re.match("property (.+) x", line)
-    format_x = m.groups()[0]
-    #
-    line = _fast_forward(f)
-    m = re.match("property (.+) y", line)
-    format_y = m.groups()[0]
-    #
-    line = _fast_forward(f)
-    m = re.match("property (.+) z", line)
-    format_z = m.groups()[0]
-    assert format_x == format_y == format_z
-    dtype_verts = ply_to_numpy_dtype[format_x]
+    while line[:8] == "property":
+        m = re.match("property (.+) (.+)", line)
+        formats.append(m.groups()[0])
+        point_data_names.append(m.groups()[1])
+        line = _fast_forward(f)
+    # assert that all formats are the same
+    assert all(formats[0] == fmt for fmt in formats)
+    dtype_verts = ply_to_numpy_dtype[formats[0]]
 
-    line = _fast_forward(f)
     m = re.match("element face (\\d+)", line)
     num_faces = int(m.groups()[0])
 
@@ -86,9 +83,17 @@ def read_buffer(f):
     assert line == "end_header"
 
     # Now read the data
-    verts = numpy.fromfile(f, dtype=dtype_verts, count=3 * num_verts, sep=" ").reshape(
-        num_verts, 3
+    point_data = numpy.fromfile(f, dtype=dtype_verts, count=len(point_data_names) * num_verts, sep=" ").reshape(
+        num_verts, len(point_data_names)
     )
+    assert point_data_names[0] == "x"
+    assert point_data_names[1] == "y"
+    k = 3 if point_data_names[2] == "z" else 2
+    verts = point_data[:, :k]
+    point_data = {
+        name: data
+        for name, data in zip(point_data_names[k:], point_data.T[k:])
+    }
 
     # the faces must be read line-by-line
     for k in range(num_faces):
@@ -116,7 +121,7 @@ def read_buffer(f):
 
     cell_data = {"triangle": cell_data}
 
-    return Mesh(verts, cells, cell_data=cell_data)
+    return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
 
 def write(filename, mesh):
