@@ -76,13 +76,13 @@ def read_buffer(f):
     # read property lists
     line = _fast_forward(f)
     cell_data_names = []
-    dtypes = []
+    cell_dtypes = []
     while line != "end_header":
         m = re.match("property list (.+) (.+) (.+)", line)
         types = m.groups()[:2]
         name = m.groups()[2]
         cell_data_names.append(name)
-        dtypes.append(ply_to_numpy_dtype[types[1]])
+        cell_dtypes.append(tuple(types))
         line = _fast_forward(f)
 
     assert line == "end_header"
@@ -90,12 +90,14 @@ def read_buffer(f):
     ply_to_numpy_dtype_string = {
         "uchar": "i1",
         "uint8": "u1",
+        "int32": "i4",
         "float": "f4",
         "float32": "f4",
         "double": "f8",
     }
 
     if is_binary:
+        # read point data
         dtype = [
             (name, endianness + ply_to_numpy_dtype_string[fmt])
             for name, fmt in zip(point_data_names, formats)
@@ -107,6 +109,32 @@ def read_buffer(f):
             for name in point_data_names
             if name not in ["x", "y", "z"]
         }
+        # read cell data
+        triangles = []
+        quads = []
+        for _ in range(num_faces):
+            for dtypes in cell_dtypes:
+                dtype = endianness + ply_to_numpy_dtype_string[dtypes[0]]
+                count = numpy.fromfile(f, count=1, dtype=dtype)[0]
+                dtype = endianness + ply_to_numpy_dtype_string[dtypes[1]]
+                data = numpy.fromfile(f, count=count, dtype=dtype)
+                if count == 3:
+                    triangles.append(data)
+                else:
+                    assert count == 4
+                    quads.append(data)
+
+        triangles = numpy.array(triangles)
+        quads = numpy.array(quads)
+
+        cells = {}
+        if len(triangles) > 0:
+            cells["triangle"] = triangles
+        if len(quads) > 0:
+            cells["quads"] = quads
+
+        cell_data = {}
+
     else:
         assert point_data_names[0] == "x"
         assert point_data_names[1] == "y"
@@ -124,31 +152,32 @@ def read_buffer(f):
         k = 3 if point_data_names[2] == "z" else 2
         verts = point_data[:, :k]
 
-    # the faces must be read line-by-line
-    for k in range(num_faces):
-        line = f.readline().decode("utf-8").strip()
-        data = line.split()
-        if k == 0:
-            # initialize the cell data arrays
-            n = []
+        # the faces must be read line-by-line
+        for k in range(num_faces):
+            line = f.readline().decode("utf-8").strip()
+            data = line.split()
+            if k == 0:
+                # initialize the cell data arrays
+                n = []
+                i = 0
+                cell_data = {}
+                for name, dtype in zip(cell_data_names, cell_dtypes):
+                    n = int(data[i])
+                    cell_data[name] = numpy.empty((num_faces, n), dtype=dtype[1])
+                    i += n + 1
+
             i = 0
-            cell_data = {}
-            for name, dtype in zip(cell_data_names, dtypes):
+            for name, dtype in zip(cell_data_names, cell_dtypes):
                 n = int(data[i])
-                cell_data[name] = numpy.empty((num_faces, n), dtype=dtype)
+                dtype = ply_to_numpy_dtype[dtype[1]]
+                cell_data[name][k] = [dtype(data[j]) for j in range(i + 1, i + n + 1)]
                 i += n + 1
 
-        i = 0
-        for name, dtype in zip(cell_data_names, dtypes):
-            n = int(data[i])
-            cell_data[name][k] = [dtype(data[j]) for j in range(i + 1, i + n + 1)]
-            i += n + 1
+        assert cell_data["vertex_indices"].shape[1] == 3
+        cells = {"triangle": cell_data["vertex_indices"]}
+        cell_data.pop("vertex_indices", None)
 
-    assert cell_data["vertex_indices"].shape[1] == 3
-    cells = {"triangle": cell_data["vertex_indices"]}
-    cell_data.pop("vertex_indices", None)
-
-    cell_data = {"triangle": cell_data}
+        cell_data = {"triangle": cell_data}
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
