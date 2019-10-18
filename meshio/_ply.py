@@ -3,12 +3,23 @@ I/O for the PLY format, cf.
 <https://en.wikipedia.org/wiki/PLY_(file_format)>.
 <https://web.archive.org/web/20161221115231/http://www.cs.virginia.edu/~gfx/Courses/2001/Advanced.spring.01/plylib/Ply.txt>.
 """
-import logging
 import re
+import warnings
 
 import numpy
 
 from ._mesh import Mesh
+
+# Reference dtypes
+ply_to_numpy_dtype = {
+    "short": numpy.int16,
+    "ushort": numpy.uint16,
+    "int": numpy.int32,
+    "uint": numpy.uint32,
+    "float": numpy.float32,
+    "double": numpy.float64,
+}
+numpy_to_ply_dtype = {numpy.dtype(v): k for k, v in ply_to_numpy_dtype.items()}
 
 
 def read(filename):
@@ -38,16 +49,6 @@ def read_buffer(f):
     m = re.match("element vertex (\\d+)", line)
     num_verts = int(m.groups()[0])
 
-    # Reference dtypes
-    dtype_table = {
-        "short": numpy.int16,
-        "ushort": numpy.uint16,
-        "int": numpy.int32,
-        "uint": numpy.uint32,
-        "float": numpy.float32,
-        "double": numpy.float64,
-    }
-
     # fast forward to the next significant line
     line = _fast_forward(f)
     m = re.match("property (.+) x", line)
@@ -61,7 +62,7 @@ def read_buffer(f):
     m = re.match("property (.+) z", line)
     format_z = m.groups()[0]
     assert format_x == format_y == format_z
-    dtype_verts = dtype_table[format_x]
+    dtype_verts = ply_to_numpy_dtype[format_x]
 
     line = _fast_forward(f)
     m = re.match("element face (\\d+)", line)
@@ -76,7 +77,7 @@ def read_buffer(f):
         types = m.groups()[:2]
         name = m.groups()[2]
         cell_data_names.append(name)
-        dtypes.append(dtype_table[types[1]])
+        dtypes.append(ply_to_numpy_dtype[types[1]])
         line = _fast_forward(f)
 
     assert line == "end_header"
@@ -116,27 +117,36 @@ def read_buffer(f):
 
 
 def write(filename, mesh):
-    if mesh.points.shape[1] == 2:
-        logging.warning(
-            "OFF requires 3D points, but 2D points given. "
-            "Appending 0 third component."
-        )
-        mesh.points = numpy.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
-        )
-
     for key in mesh.cells:
         assert key in ["triangle"], "Can only deal with triangular faces"
 
     tri = mesh.cells["triangle"]
 
     with open(filename, "wb") as fh:
-        fh.write(b"OFF\n")
-        fh.write(b"# Created by meshio\n\n")
+        fh.write(b"ply\n")
+        fh.write(b"comment Created by meshio\n")
+        fh.write(b"format ascii 1.0\n")
 
         # counts
-        c = "{} {} {}\n\n".format(mesh.points.shape[0], tri.shape[0], 0)
-        fh.write(c.encode("utf-8"))
+        fh.write("element vertex {:d}\n".format(mesh.points.shape[0]).encode("utf-8"))
+        #
+        dim_names = ["x", "y", "z"]
+        type_name = {
+            numpy.dtype(numpy.float64): "double"
+        }[mesh.points.dtype]
+        for k in range(mesh.points.shape[1]):
+            fh.write("property {} {}\n".format(type_name, dim_names[k]).encode("utf-8"))
+
+        fh.write("element face {:d}\n".format(mesh.cells["triangle"].shape[0]).encode("utf-8"))
+
+        if mesh.cells["triangle"].dtype == numpy.int64:
+            warnings.warn("PLY doesn't support 64-bit integers. Casting down to 32-bit.")
+            mesh.cells["triangle"] = mesh.cells["triangle"].astype(numpy.int32)
+
+        ply_type = numpy_to_ply_dtype[mesh.cells["triangle"].dtype]
+        fh.write("property list uint8 {} vertex_indices\n".format(ply_type).encode("utf-8"))
+        # TODO other cell data
+        fh.write(b"end_header\n")
 
         # vertices
         # numpy.savetxt(fh, mesh.points, "%r")  # slower
