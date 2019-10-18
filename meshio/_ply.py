@@ -42,11 +42,19 @@ def _fast_forward(f):
 
 def read_buffer(f):
     # assert that the first line reads `ply`
-    line = f.readline().decode("utf-8")
-    assert line.strip() == "ply"
+    line = f.readline().decode("utf-8").strip()
+    assert line == "ply"
 
     line = _fast_forward(f)
-    assert line == "format ascii 1.0"
+    if line == "format ascii 1.0":
+        is_binary = False
+    elif line == "format binary_big_endian 1.0":
+        is_binary = True
+        endianness = ">"
+    else:
+        assert line == "format binary_little_endian 1.0"
+        is_binary = True
+        endianness = "<"
 
     line = _fast_forward(f)
     m = re.match("element vertex (\\d+)", line)
@@ -61,9 +69,6 @@ def read_buffer(f):
         formats.append(m.groups()[0])
         point_data_names.append(m.groups()[1])
         line = _fast_forward(f)
-    # assert that all formats are the same
-    assert all(formats[0] == fmt for fmt in formats)
-    dtype_verts = ply_to_numpy_dtype[formats[0]]
 
     m = re.match("element face (\\d+)", line)
     num_faces = int(m.groups()[0])
@@ -82,17 +87,42 @@ def read_buffer(f):
 
     assert line == "end_header"
 
-    # Now read the data
-    point_data = numpy.fromfile(
-        f, dtype=dtype_verts, count=len(point_data_names) * num_verts, sep=" "
-    ).reshape(num_verts, len(point_data_names))
-    assert point_data_names[0] == "x"
-    assert point_data_names[1] == "y"
-    k = 3 if point_data_names[2] == "z" else 2
-    verts = point_data[:, :k]
-    point_data = {
-        name: data for name, data in zip(point_data_names[k:], point_data.T[k:])
+    ply_to_numpy_dtype_string = {
+        "uchar": "i1",
+        "uint8": "u1",
+        "float": "f4",
+        "float32": "f4",
+        "double": "f8",
     }
+
+    if is_binary:
+        dtype = [
+            (name, endianness + ply_to_numpy_dtype_string[fmt])
+            for name, fmt in zip(point_data_names, formats)
+        ]
+        point_data = numpy.fromfile(f, count=num_verts, dtype=dtype)
+        verts = numpy.column_stack([point_data["x"], point_data["y"], point_data["z"]])
+        point_data = {
+            name: point_data[name]
+            for name in point_data_names
+            if name not in ["x", "y", "z"]
+        }
+    else:
+        assert point_data_names[0] == "x"
+        assert point_data_names[1] == "y"
+        k = 3 if point_data_names[2] == "z" else 2
+        # assert that all formats are the same
+        assert all(formats[0] == fmt for fmt in formats)
+        dtype_verts = ply_to_numpy_dtype[formats[0]]
+        # Now read the data
+        point_data = numpy.fromfile(
+            f, dtype=dtype_verts, count=len(point_data_names) * num_verts, sep=" "
+        ).reshape(num_verts, len(point_data_names))
+
+        assert point_data_names[0] == "x"
+        assert point_data_names[1] == "y"
+        k = 3 if point_data_names[2] == "z" else 2
+        verts = point_data[:, :k]
 
     # the faces must be read line-by-line
     for k in range(num_faces):
