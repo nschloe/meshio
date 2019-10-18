@@ -131,20 +131,26 @@ def write(filename, mesh):
         fh.write("element vertex {:d}\n".format(mesh.points.shape[0]).encode("utf-8"))
         #
         dim_names = ["x", "y", "z"]
-        type_name = {
-            numpy.dtype(numpy.float64): "double"
-        }[mesh.points.dtype]
+        type_name = {numpy.dtype(numpy.float64): "double"}[mesh.points.dtype]
         for k in range(mesh.points.shape[1]):
             fh.write("property {} {}\n".format(type_name, dim_names[k]).encode("utf-8"))
 
-        fh.write("element face {:d}\n".format(mesh.cells["triangle"].shape[0]).encode("utf-8"))
+        fh.write(
+            "element face {:d}\n".format(mesh.cells["triangle"].shape[0]).encode(
+                "utf-8"
+            )
+        )
 
         if mesh.cells["triangle"].dtype == numpy.int64:
-            warnings.warn("PLY doesn't support 64-bit integers. Casting down to 32-bit.")
+            warnings.warn(
+                "PLY doesn't support 64-bit integers. Casting down to 32-bit."
+            )
             mesh.cells["triangle"] = mesh.cells["triangle"].astype(numpy.int32)
 
         ply_type = numpy_to_ply_dtype[mesh.cells["triangle"].dtype]
-        fh.write("property list uint8 {} vertex_indices\n".format(ply_type).encode("utf-8"))
+        fh.write(
+            "property list uint8 {} vertex_indices\n".format(ply_type).encode("utf-8")
+        )
         # TODO other cell data
         fh.write(b"end_header\n")
 
