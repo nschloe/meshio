@@ -83,16 +83,15 @@ def read_buffer(f):
     assert line == "end_header"
 
     # Now read the data
-    point_data = numpy.fromfile(f, dtype=dtype_verts, count=len(point_data_names) * num_verts, sep=" ").reshape(
-        num_verts, len(point_data_names)
-    )
+    point_data = numpy.fromfile(
+        f, dtype=dtype_verts, count=len(point_data_names) * num_verts, sep=" "
+    ).reshape(num_verts, len(point_data_names))
     assert point_data_names[0] == "x"
     assert point_data_names[1] == "y"
     k = 3 if point_data_names[2] == "z" else 2
     verts = point_data[:, :k]
     point_data = {
-        name: data
-        for name, data in zip(point_data_names[k:], point_data.T[k:])
+        name: data for name, data in zip(point_data_names[k:], point_data.T[k:])
     }
 
     # the faces must be read line-by-line
