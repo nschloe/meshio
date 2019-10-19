@@ -259,7 +259,7 @@ def _read_periodic(f):
     return periodic
 
 
-def write(filename, mesh, write_binary=True):
+def write(filename, mesh, binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
@@ -272,7 +272,7 @@ def write(filename, mesh, write_binary=True):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    if write_binary:
+    if binary:
         for key, value in mesh.cells.items():
             if value.dtype != c_int:
                 logging.warning(
@@ -291,14 +291,14 @@ def write(filename, mesh, write_binary=True):
         ]
 
     with open(filename, "wb") as fh:
-        mode_idx = 1 if write_binary else 0
+        mode_idx = 1 if binary else 0
         size_of_double = 8
         fh.write(
             ("$MeshFormat\n2.2 {} {}\n".format(mode_idx, size_of_double)).encode(
                 "utf-8"
             )
         )
-        if write_binary:
+        if binary:
             fh.write(struct.pack("i", 1))
             fh.write("\n".encode("utf-8"))
         fh.write("$EndMeshFormat\n".encode("utf-8"))
@@ -319,23 +319,23 @@ def write(filename, mesh, write_binary=True):
                 else:
                     other_data[cell_type][key] = data
 
-        _write_nodes(fh, mesh.points, write_binary)
-        _write_elements(fh, cells, tag_data, write_binary)
+        _write_nodes(fh, mesh.points, binary)
+        _write_elements(fh, cells, tag_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic)
         for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodeData", name, dat, write_binary)
+            _write_data(fh, "NodeData", name, dat, binary)
         cell_data_raw = raw_from_cell_data(other_data)
         for name, dat in cell_data_raw.items():
-            _write_data(fh, "ElementData", name, dat, write_binary)
+            _write_data(fh, "ElementData", name, dat, binary)
 
     return
 
 
-def _write_nodes(fh, points, write_binary):
+def _write_nodes(fh, points, binary):
     fh.write("$Nodes\n".encode("utf-8"))
     fh.write("{}\n".format(len(points)).encode("utf-8"))
-    if write_binary:
+    if binary:
         dtype = [("index", c_int), ("x", c_double, (3,))]
         tmp = numpy.empty(len(points), dtype=dtype)
         tmp["index"] = 1 + numpy.arange(len(points))
@@ -351,7 +351,7 @@ def _write_nodes(fh, points, write_binary):
     return
 
 
-def _write_elements(fh, cells, tag_data, write_binary):
+def _write_elements(fh, cells, tag_data, binary):
     # write elements
     fh.write("$Elements\n".encode("utf-8"))
     # count all cells
@@ -371,7 +371,7 @@ def _write_elements(fh, cells, tag_data, write_binary):
         if len(fcd) == 0:
             fcd = numpy.empty((len(node_idcs), 0), dtype=c_int)
 
-        if write_binary:
+        if binary:
             # header
             fh.write(struct.pack("i", _meshio_to_gmsh_type[cell_type]))
             fh.write(struct.pack("i", node_idcs.shape[0]))
@@ -400,7 +400,7 @@ def _write_elements(fh, cells, tag_data, write_binary):
                 )
 
         consecutive_index += len(node_idcs)
-    if write_binary:
+    if binary:
         fh.write("\n".encode("utf-8"))
     fh.write("$EndElements\n".encode("utf-8"))
     return

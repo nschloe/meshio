@@ -594,7 +594,7 @@ def translate_cells(data, types, cell_data_raw):
     return cells, cell_data
 
 
-def write(filename, mesh, write_binary=True):
+def write(filename, mesh, binary=True):
     def pad(array):
         return numpy.pad(array, ((0, 0), (0, 1)), "constant")
 
@@ -624,43 +624,43 @@ def write(filename, mesh, write_binary=True):
                     )
                     mesh.cell_data[t][name] = pad(mesh.cell_data[t][name])
 
-    if not write_binary:
+    if not binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
 
     with open(filename, "wb") as f:
         f.write("# vtk DataFile Version 4.2\n".encode("utf-8"))
         f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
-        f.write(("BINARY\n" if write_binary else "ASCII\n").encode("utf-8"))
+        f.write(("BINARY\n" if binary else "ASCII\n").encode("utf-8"))
         f.write("DATASET UNSTRUCTURED_GRID\n".encode("utf-8"))
 
         # write points and cells
-        _write_points(f, mesh.points, write_binary)
-        _write_cells(f, mesh.cells, write_binary)
+        _write_points(f, mesh.points, binary)
+        _write_cells(f, mesh.cells, binary)
 
         # write point data
         if mesh.point_data:
             num_points = mesh.points.shape[0]
             f.write("POINT_DATA {}\n".format(num_points).encode("utf-8"))
-            _write_field_data(f, mesh.point_data, write_binary)
+            _write_field_data(f, mesh.point_data, binary)
 
         # write cell data
         if mesh.cell_data:
             total_num_cells = sum([len(c) for c in mesh.cells.values()])
             cell_data_raw = raw_from_cell_data(mesh.cell_data)
             f.write("CELL_DATA {}\n".format(total_num_cells).encode("utf-8"))
-            _write_field_data(f, cell_data_raw, write_binary)
+            _write_field_data(f, cell_data_raw, binary)
 
     return
 
 
-def _write_points(f, points, write_binary):
+def _write_points(f, points, binary):
     f.write(
         "POINTS {} {}\n".format(
             len(points), numpy_to_vtk_dtype[points.dtype.name]
         ).encode("utf-8")
     )
 
-    if write_binary:
+    if binary:
         # Binary data must be big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         points.astype(points.dtype.newbyteorder(">")).tofile(f, sep="")
@@ -671,13 +671,13 @@ def _write_points(f, points, write_binary):
     return
 
 
-def _write_cells(f, cells, write_binary):
+def _write_cells(f, cells, binary):
     total_num_cells = sum([len(c) for c in cells.values()])
     total_num_idx = sum([numpy.prod(c.shape) for c in cells.values()])
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
     f.write("CELLS {} {}\n".format(total_num_cells, total_num_idx).encode("utf-8"))
-    if write_binary:
+    if binary:
         for c in cells.values():
             n = c.shape[1]
             d = numpy.column_stack([numpy.full(c.shape[0], n), c]).astype(
@@ -698,7 +698,7 @@ def _write_cells(f, cells, write_binary):
 
     # write cell types
     f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
-    if write_binary:
+    if binary:
         for key in cells:
             if key[:7] == "polygon":
                 d = numpy.full(len(cells[key]), meshio_to_vtk_type[key[:7]]).astype(
@@ -722,7 +722,7 @@ def _write_cells(f, cells, write_binary):
     return
 
 
-def _write_field_data(f, data, write_binary):
+def _write_field_data(f, data, binary):
     f.write(("FIELD FieldData {}\n".format(len(data))).encode("utf-8"))
     for name, values in data.items():
         if len(values.shape) == 1:
@@ -749,7 +749,7 @@ def _write_field_data(f, data, write_binary):
                 )
             ).encode("utf-8")
         )
-        if write_binary:
+        if binary:
             values.astype(values.dtype.newbyteorder(">")).tofile(f, sep="")
         else:
             # ascii

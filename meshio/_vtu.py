@@ -343,10 +343,10 @@ def _chunk_it(array, n):
         k += 1
 
 
-def write(filename, mesh, write_binary=True, pretty_xml=True):
+def write(filename, mesh, binary=True, pretty_xml=True):
     from lxml import etree as ET
 
-    if not write_binary:
+    if not binary:
         logging.warning("VTU ASCII files are only meant for debugging.")
 
     if mesh.points.shape[1] == 2:
@@ -389,7 +389,7 @@ def write(filename, mesh, write_binary=True, pretty_xml=True):
         )
         if len(data.shape) == 2:
             da.set("NumberOfComponents", "{}".format(data.shape[1]))
-        if write_binary:
+        if binary:
             da.set("format", "binary")
             max_block_size = 32768
             data_bytes = data.tostring()

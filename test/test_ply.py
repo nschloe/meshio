@@ -11,18 +11,16 @@ import meshio
     "mesh",
     [
         helpers.tri_mesh,
-        helpers.quad_mesh,
-        helpers.tri_quad_mesh,
-        helpers.add_point_data(helpers.tri_mesh, 1),
-        # helpers.add_point_data(helpers.tri_mesh, 3),
-        # helpers.add_point_data(helpers.tri_mesh, 9),
+        # helpers.quad_mesh,
+        # helpers.tri_quad_mesh,
+        # helpers.add_point_data(helpers.tri_mesh, 1),
         # helpers.add_cell_data(helpers.tri_mesh, 1),
         # helpers.add_cell_data(helpers.tri_mesh, 3),
         # helpers.add_cell_data(helpers.tri_mesh, 9),
     ],
 )
 # @pytest.mark.parametrize("binary", [False, True])
-def test_ply(mesh, binary=False):
+def test_ply(mesh, binary=True):
     def writer(*args, **kwargs):
         return meshio._ply.write(*args, binary=binary, **kwargs)
 

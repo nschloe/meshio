@@ -358,7 +358,7 @@ def read(filename):
     )
 
 
-def write(filename, mesh, write_binary=True):
+def write(filename, mesh, binary=True):
     with open(filename, "wb") as fh:
         # header
         fh.write(('(1 "meshio {}")\n'.format(__version__)).encode("utf8"))
@@ -381,7 +381,7 @@ def write(filename, mesh, write_binary=True):
         fh.write(("(12 (0 1 {:x} 0))\n".format(total_num_cells)).encode("utf8"))
 
         # Write nodes
-        key = "3010" if write_binary else "10"
+        key = "3010" if binary else "10"
         fh.write(
             (
                 "({} (1 {:x} {:x} 1 {:x})(\n".format(
@@ -389,7 +389,7 @@ def write(filename, mesh, write_binary=True):
                 )
             ).encode("utf8")
         )
-        if write_binary:
+        if binary:
             fh.write(mesh.points.tostring())
             fh.write("\n)".encode("utf8"))
             fh.write("End of Binary Section 3010)\n".encode("utf8"))
@@ -413,7 +413,7 @@ def write(filename, mesh, write_binary=True):
             numpy.dtype("int64"): "3012",
         }
         for cell_type, values in mesh.cells.items():
-            key = binary_dtypes[values.dtype] if write_binary else "12"
+            key = binary_dtypes[values.dtype] if binary else "12"
             last_index = first_index + len(values) - 1
             fh.write(
                 (
@@ -422,7 +422,7 @@ def write(filename, mesh, write_binary=True):
                     )
                 ).encode("utf8")
             )
-            if write_binary:
+            if binary:
                 fh.write((values + first_node_index).tostring())
                 fh.write("\n)".encode("utf8"))
                 fh.write(("End of Binary Section {})\n".format(key)).encode("utf8"))

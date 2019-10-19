@@ -133,7 +133,7 @@ def _read_binary(f):
     return Mesh(points, cells)
 
 
-def write(filename, mesh, write_binary=False):
+def write(filename, mesh, binary=False):
     assert (
         len(mesh.cells.keys()) == 1 and list(mesh.cells.keys())[0] == "triangle"
     ), "STL can only write triangle cells."
@@ -147,8 +147,8 @@ def write(filename, mesh, write_binary=False):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    if write_binary:
-        _write_binary(filename, mesh.points, mesh.cells)
+    if binary:
+        _binary(filename, mesh.points, mesh.cells)
     else:
         _write_ascii(filename, mesh.points, mesh.cells)
 
@@ -188,7 +188,7 @@ def _write_ascii(filename, points, cells):
     return
 
 
-def _write_binary(filename, points, cells):
+def _binary(filename, points, cells):
     pts = points[cells["triangle"]]
     normals = _compute_normals(pts)
 

@@ -215,6 +215,7 @@ def _read_binary(
         for name in point_data_names
         if name not in ["x", "y", "z"]
     }
+
     # read cell data
     triangles = []
     quads = []
@@ -224,6 +225,7 @@ def _read_binary(
             count = numpy.fromfile(f, count=1, dtype=dtype)[0]
             dtype = endianness + ply_to_numpy_dtype_string[dtypes[1]]
             data = numpy.fromfile(f, count=count, dtype=dtype)
+            print(count, data)
             if count == 3:
                 triangles.append(data)
             else:
