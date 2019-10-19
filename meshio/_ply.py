@@ -268,6 +268,9 @@ def write(filename, mesh, binary=True):
         type_name = {numpy.dtype(numpy.float64): "double"}[mesh.points.dtype]
         for k in range(mesh.points.shape[1]):
             fh.write("property {} {}\n".format(type_name, dim_names[k]).encode("utf-8"))
+        for key, value in mesh.point_data.items():
+            assert mesh.points.dtype == value.dtype
+            fh.write("property {} {}\n".format(type_name, key).encode("utf-8"))
 
         num_cells = 0
         if "triangle" in mesh.cells:
@@ -322,7 +325,7 @@ def write(filename, mesh, binary=True):
         else:
             # vertices
             # numpy.savetxt(fh, mesh.points, "%r")  # slower
-            out = mesh.points
+            out = numpy.column_stack([mesh.points] + list(mesh.point_data.values()))
             fmt = " ".join(["{}"] * out.shape[1])
             out = "\n".join([fmt.format(*row) for row in out]) + "\n"
             fh.write(out.encode("utf-8"))
