@@ -7,20 +7,20 @@ import helpers
 import meshio
 
 
-@pytest.mark.parametrize("mesh", [
-    helpers.tri_mesh,
-    helpers.quad_mesh,
-    helpers.tri_quad_mesh,
-    # helpers.add_point_data(helpers.tri_mesh, 1),
-    # helpers.add_point_data(helpers.tri_mesh, 3),
-    # helpers.add_point_data(helpers.tri_mesh, 9),
-    # helpers.add_cell_data(helpers.tri_mesh, 1),
-    # helpers.add_cell_data(helpers.tri_mesh, 3),
-    # helpers.add_cell_data(helpers.tri_mesh, 9),
-    # helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
-    # helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
-    # helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
-])
+@pytest.mark.parametrize(
+    "mesh",
+    [
+        helpers.tri_mesh,
+        helpers.quad_mesh,
+        helpers.tri_quad_mesh,
+        helpers.add_point_data(helpers.tri_mesh, 1),
+        # helpers.add_point_data(helpers.tri_mesh, 3),
+        # helpers.add_point_data(helpers.tri_mesh, 9),
+        # helpers.add_cell_data(helpers.tri_mesh, 1),
+        # helpers.add_cell_data(helpers.tri_mesh, 3),
+        # helpers.add_cell_data(helpers.tri_mesh, 9),
+    ],
+)
 # @pytest.mark.parametrize("binary", [False, True])
 def test_ply(mesh, binary=False):
     def writer(*args, **kwargs):

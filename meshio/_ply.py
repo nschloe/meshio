@@ -88,6 +88,104 @@ def read_buffer(f):
 
     assert line == "end_header"
 
+    if is_binary:
+        verts, cells, point_data, cell_data = _read_binary(
+            f,
+            endianness,
+            point_data_names,
+            formats,
+            num_verts,
+            num_cells,
+            cell_data_names,
+            cell_dtypes,
+        )
+    else:
+        verts, cells, point_data, cell_data = _read_ascii(
+            f,
+            point_data_names,
+            formats,
+            num_verts,
+            num_cells,
+            cell_data_names,
+            cell_dtypes,
+        )
+
+    return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
+
+
+def _read_ascii(
+    f, point_data_names, formats, num_verts, num_cells, cell_data_names, cell_dtypes
+):
+    assert point_data_names[0] == "x"
+    assert point_data_names[1] == "y"
+    k = 3 if point_data_names[2] == "z" else 2
+    # assert that all formats are the same
+    assert all(formats[0] == fmt for fmt in formats)
+    dtype_verts = ply_to_numpy_dtype[formats[0]]
+    # Now read the data
+    point_data = numpy.fromfile(
+        f, dtype=dtype_verts, count=len(point_data_names) * num_verts, sep=" "
+    ).reshape(num_verts, len(point_data_names))
+
+    assert point_data_names[0] == "x"
+    assert point_data_names[1] == "y"
+    k = 3 if point_data_names[2] == "z" else 2
+    verts = point_data[:, :k]
+
+    # the faces must be read line-by-line
+    triangles = []
+    quads = []
+    for k in range(num_cells):
+        line = f.readline().decode("utf-8").strip()
+        data = line.split()
+        if k == 0:
+            # initialize the cell data arrays
+            n = []
+            i = 0
+            cell_data = {}
+            for name, dtype in zip(cell_data_names, cell_dtypes):
+                n = int(data[i])
+                if name != "vertex_indices":
+                    cell_data[name] = []
+                i += n + 1
+
+        i = 0
+        for name, dtype in zip(cell_data_names, cell_dtypes):
+            n = int(data[i])
+            dtype = ply_to_numpy_dtype[dtype[1]]
+            data = [dtype(data[j]) for j in range(i + 1, i + n + 1)]
+            if name == "vertex_indices":
+                if n == 3:
+                    triangles.append(data)
+                else:
+                    assert n == 4
+                    quads.append(data)
+            else:
+                cell_data[name].append(data)
+            i += n + 1
+
+    cells = {}
+    if len(triangles) > 0:
+        cells["triangle"] = numpy.array(triangles)
+        # cell_data = {"triangle": cell_data}
+
+    if len(quads) > 0:
+        cells["quad"] = numpy.array(quads)
+        # cell_data = {"quad": cell_data}
+
+    return verts, cells, point_data, cell_data
+
+
+def _read_binary(
+    f,
+    endianness,
+    point_data_names,
+    formats,
+    num_verts,
+    num_cells,
+    cell_data_names,
+    cell_dtypes,
+):
     ply_to_numpy_dtype_string = {
         "uchar": "i1",
         "uint8": "u1",
@@ -97,104 +195,44 @@ def read_buffer(f):
         "double": "f8",
     }
 
-    if is_binary:
-        # read point data
-        dtype = [
-            (name, endianness + ply_to_numpy_dtype_string[fmt])
-            for name, fmt in zip(point_data_names, formats)
-        ]
-        point_data = numpy.fromfile(f, count=num_verts, dtype=dtype)
-        verts = numpy.column_stack([point_data["x"], point_data["y"], point_data["z"]])
-        point_data = {
-            name: point_data[name]
-            for name in point_data_names
-            if name not in ["x", "y", "z"]
-        }
-        # read cell data
-        triangles = []
-        quads = []
-        for _ in range(num_cells):
-            for dtypes in cell_dtypes:
-                dtype = endianness + ply_to_numpy_dtype_string[dtypes[0]]
-                count = numpy.fromfile(f, count=1, dtype=dtype)[0]
-                dtype = endianness + ply_to_numpy_dtype_string[dtypes[1]]
-                data = numpy.fromfile(f, count=count, dtype=dtype)
-                if count == 3:
-                    triangles.append(data)
-                else:
-                    assert count == 4
-                    quads.append(data)
+    # read point data
+    dtype = [
+        (name, endianness + ply_to_numpy_dtype_string[fmt])
+        for name, fmt in zip(point_data_names, formats)
+    ]
+    point_data = numpy.fromfile(f, count=num_verts, dtype=dtype)
+    verts = numpy.column_stack([point_data["x"], point_data["y"], point_data["z"]])
+    point_data = {
+        name: point_data[name]
+        for name in point_data_names
+        if name not in ["x", "y", "z"]
+    }
+    # read cell data
+    triangles = []
+    quads = []
+    for _ in range(num_cells):
+        for dtypes in cell_dtypes:
+            dtype = endianness + ply_to_numpy_dtype_string[dtypes[0]]
+            count = numpy.fromfile(f, count=1, dtype=dtype)[0]
+            dtype = endianness + ply_to_numpy_dtype_string[dtypes[1]]
+            data = numpy.fromfile(f, count=count, dtype=dtype)
+            if count == 3:
+                triangles.append(data)
+            else:
+                assert count == 4
+                quads.append(data)
 
-        triangles = numpy.array(triangles)
-        quads = numpy.array(quads)
+    triangles = numpy.array(triangles)
+    quads = numpy.array(quads)
 
-        cells = {}
-        if len(triangles) > 0:
-            cells["triangle"] = triangles
-        if len(quads) > 0:
-            cells["quads"] = quads
+    cells = {}
+    if len(triangles) > 0:
+        cells["triangle"] = triangles
+    if len(quads) > 0:
+        cells["quads"] = quads
 
-        cell_data = {}
-
-    else:
-        assert point_data_names[0] == "x"
-        assert point_data_names[1] == "y"
-        k = 3 if point_data_names[2] == "z" else 2
-        # assert that all formats are the same
-        assert all(formats[0] == fmt for fmt in formats)
-        dtype_verts = ply_to_numpy_dtype[formats[0]]
-        # Now read the data
-        point_data = numpy.fromfile(
-            f, dtype=dtype_verts, count=len(point_data_names) * num_verts, sep=" "
-        ).reshape(num_verts, len(point_data_names))
-
-        assert point_data_names[0] == "x"
-        assert point_data_names[1] == "y"
-        k = 3 if point_data_names[2] == "z" else 2
-        verts = point_data[:, :k]
-
-        # the faces must be read line-by-line
-        triangles = []
-        quads = []
-        for k in range(num_cells):
-            line = f.readline().decode("utf-8").strip()
-            data = line.split()
-            if k == 0:
-                # initialize the cell data arrays
-                n = []
-                i = 0
-                cell_data = {}
-                for name, dtype in zip(cell_data_names, cell_dtypes):
-                    n = int(data[i])
-                    if name != "vertex_indices":
-                        cell_data[name] = []
-                    i += n + 1
-
-            i = 0
-            for name, dtype in zip(cell_data_names, cell_dtypes):
-                n = int(data[i])
-                dtype = ply_to_numpy_dtype[dtype[1]]
-                data = [dtype(data[j]) for j in range(i + 1, i + n + 1)]
-                if name == "vertex_indices":
-                    if n == 3:
-                        triangles.append(data)
-                    else:
-                        assert n == 4
-                        quads.append(data)
-                else:
-                    cell_data[name].append(data)
-                i += n + 1
-
-        cells = {}
-        if len(triangles) > 0:
-            cells["triangle"] = numpy.array(triangles)
-            # cell_data = {"triangle": cell_data}
-
-        if len(quads) > 0:
-            cells["quad"] = numpy.array(quads)
-            # cell_data = {"quad": cell_data}
-
-    return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
+    cell_data = {}
+    return verts, cells, point_data, cell_data
 
 
 def write(filename, mesh, binary=True):

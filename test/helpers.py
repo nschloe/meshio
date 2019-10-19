@@ -273,6 +273,12 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     for cell_type, data in input_mesh.cells.items():
         assert numpy.allclose(data, mesh.cells[cell_type])
 
+    print(input_mesh.points)
+    print(input_mesh.point_data)
+    print()
+    print(mesh.points)
+    print(mesh.point_data)
+
     for key in input_mesh.point_data.keys():
         assert numpy.allclose(
             input_mesh.point_data[key], mesh.point_data[key], atol=atol, rtol=0.0
