@@ -387,9 +387,7 @@ def _write_nodes(fh, points, binary=False):
     return
 
 
-def _write_elements_and_conditions(
-    fh, cells, tag_data, binary=False, dimension=2
-):
+def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=2):
     assert not binary
     # write elements
     entity = "Elements"
