@@ -373,9 +373,9 @@ def cell_data_from_raw(cells, cell_data_raw):
     return cell_data
 
 
-def _write_nodes(fh, points, write_binary=False):
+def _write_nodes(fh, points, binary=False):
     fh.write("Begin Nodes\n".encode("utf-8"))
-    assert not write_binary
+    assert not binary
 
     for k, x in enumerate(points):
         fh.write(
@@ -387,10 +387,8 @@ def _write_nodes(fh, points, write_binary=False):
     return
 
 
-def _write_elements_and_conditions(
-    fh, cells, tag_data, write_binary=False, dimension=2
-):
-    assert not write_binary
+def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=2):
+    assert not binary
     # write elements
     entity = "Elements"
     dimension_name = str(dimension) + "D"
@@ -448,8 +446,8 @@ def _write_elements_and_conditions(
     return
 
 
-def _write_data(fh, tag, name, data, write_binary):
-    assert not write_binary
+def _write_data(fh, tag, name, data, binary):
+    assert not binary
     fh.write(("Begin " + tag + " " + name + "\n\n").encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
@@ -473,11 +471,11 @@ def _write_data(fh, tag, name, data, write_binary):
     return
 
 
-def write(filename, mesh, write_binary=False):
+def write(filename, mesh, binary=False):
     """Writes mdpa files, cf.
     <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
     """
-    assert not write_binary
+    assert not binary
     if mesh.points.shape[1] == 2:
         logging.warning(
             "mdpa requires 3D points, but 2D points given. "
@@ -557,10 +555,10 @@ def write(filename, mesh, write_binary=False):
                 break
 
         # We identify the entities
-        _write_nodes(fh, mesh.points, write_binary)
-        _write_elements_and_conditions(fh, cells, tag_data, write_binary, dimension)
+        _write_nodes(fh, mesh.points, binary)
+        _write_elements_and_conditions(fh, cells, tag_data, binary, dimension)
         for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodalData", name, dat, write_binary)
+            _write_data(fh, "NodalData", name, dat, binary)
         cell_data_raw = raw_from_cell_data(other_data)
         for (
             name,
@@ -568,6 +566,6 @@ def write(filename, mesh, write_binary=False):
         ) in (
             cell_data_raw.items()
         ):  # NOTE: We will assume always when writing that the components are elements (for now)
-            _write_data(fh, "ElementalData", name, dat, write_binary)
+            _write_data(fh, "ElementalData", name, dat, binary)
 
     return

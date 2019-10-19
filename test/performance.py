@@ -32,6 +32,8 @@ def read_write(plot=False):
         "nastran",
         "off",
         "permas",
+        "ply-ascii",
+        "ply-binary",
         "stl-ascii",
         "stl-binary",
         "vtk-ascii",

@@ -29,10 +29,10 @@ test_set = [
 
 
 @pytest.mark.parametrize("mesh", test_set)
-@pytest.mark.parametrize("write_binary", [True, False])
-def test(mesh, write_binary):
+@pytest.mark.parametrize("binary", [True, False])
+def test(mesh, binary):
     def writer(*args, **kwargs):
-        return meshio._vtk.write(*args, write_binary=write_binary, **kwargs)
+        return meshio._vtk.write(*args, binary=binary, **kwargs)
 
     helpers.write_read(writer, meshio._vtk.read, mesh, 1.0e-15)
     return
@@ -48,8 +48,8 @@ def test_generic_io():
 @pytest.mark.parametrize(
     "filename, ref_sum, ref_num_cells", [("rbc_001.vtk", 0.00031280518, 996)]
 )
-@pytest.mark.parametrize("write_binary", [False, True])
-def test_reference_file(filename, ref_sum, ref_num_cells, write_binary):
+@pytest.mark.parametrize("binary", [False, True])
+def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     this_dir = os.path.dirname(os.path.abspath(__file__))
     filename = os.path.join(this_dir, "meshes", "vtk", filename)
 
@@ -58,7 +58,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, write_binary):
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * ref_sum
     assert len(mesh.cells["triangle"]) == ref_num_cells
-    writer = partial(meshio._vtk.write, write_binary=write_binary)
+    writer = partial(meshio._vtk.write, binary=binary)
     helpers.write_read(writer, meshio._vtk.read, mesh, 1.0e-15)
     return
 
@@ -86,4 +86,4 @@ def test_structured(filename, ref_cells, ref_num_cells, ref_num_pnt):
 
 
 if __name__ == "__main__":
-    test(helpers.tri_mesh, write_binary=True)
+    test(helpers.tri_mesh, binary=True)

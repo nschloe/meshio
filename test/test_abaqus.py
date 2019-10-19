@@ -33,8 +33,8 @@ def test(mesh):
     "filename, ref_sum, ref_num_cells",
     [("abaqus_mesh_ex.inp", -68501.914611293, 3492), ("UUea.inp", 4950.0, 50)],
 )
-@pytest.mark.parametrize("write_binary", [False, True])
-def test_reference_file(filename, ref_sum, ref_num_cells, write_binary):
+@pytest.mark.parametrize("binary", [False, True])
+def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     this_dir = os.path.dirname(os.path.abspath(__file__))
     filename = os.path.join(this_dir, "meshes", "abaqus", filename)
     mesh = meshio.read(filename)

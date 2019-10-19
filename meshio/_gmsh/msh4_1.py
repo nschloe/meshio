@@ -271,14 +271,14 @@ def _read_periodic(f, is_ascii, data_size):
     return periodic
 
 
-def write(filename, mesh, write_binary=True):
+def write(filename, mesh, binary=True):
     # logging.warning("Writing MSH4.1 unimplemented, falling back on MSH2")
-    # write2(filename, mesh, write_binary=write_binary)
-    write4_1(filename, mesh, write_binary=write_binary)
+    # write2(filename, mesh, binary=binary)
+    write4_1(filename, mesh, binary=binary)
     return
 
 
-def write4_1(filename, mesh, write_binary=True):
+def write4_1(filename, mesh, binary=True):
     """Writes msh files, cf.
     <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
     """
@@ -291,7 +291,7 @@ def write4_1(filename, mesh, write_binary=True):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    if write_binary:
+    if binary:
         for key, value in mesh.cells.items():
             if value.dtype != c_int:
                 logging.warning(
@@ -309,11 +309,11 @@ def write4_1(filename, mesh, write_binary=True):
         ]
 
     with open(filename, "wb") as fh:
-        file_type = 1 if write_binary else 0
+        file_type = 1 if binary else 0
         data_size = c_size_t.itemsize
         fh.write("$MeshFormat\n".encode("utf-8"))
         fh.write("4.1 {} {}\n".format(file_type, data_size).encode("utf-8"))
-        if write_binary:
+        if binary:
             fh.write(struct.pack("i", 1))
             fh.write("\n".encode("utf-8"))
         fh.write("$EndMeshFormat\n".encode("utf-8"))
@@ -321,19 +321,19 @@ def write4_1(filename, mesh, write_binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        _write_entities(fh, cells, write_binary)
-        _write_nodes(fh, mesh.points, write_binary)
-        _write_elements(fh, cells, write_binary)
+        _write_entities(fh, cells, binary)
+        _write_nodes(fh, mesh.points, binary)
+        _write_elements(fh, cells, binary)
         if mesh.gmsh_periodic is not None:
-            _write_periodic(fh, mesh.gmsh_periodic, write_binary)
+            _write_periodic(fh, mesh.gmsh_periodic, binary)
         for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodeData", name, dat, write_binary)
+            _write_data(fh, "NodeData", name, dat, binary)
         cell_data_raw = raw_from_cell_data(mesh.cell_data)
         for name, dat in cell_data_raw.items():
-            _write_data(fh, "ElementData", name, dat, write_binary)
+            _write_data(fh, "ElementData", name, dat, binary)
 
 
-def _write_entities(fh, cells, write_binary):
+def _write_entities(fh, cells, binary):
     """write the $Entities block
 
     specified as
@@ -366,7 +366,7 @@ def _write_entities(fh, cells, write_binary):
     return
 
 
-def _write_nodes(fh, points, write_binary):
+def _write_nodes(fh, points, binary):
     fh.write("$Nodes\n".encode("utf-8"))
 
     # TODO not sure what dimEntity is supposed to say
@@ -394,7 +394,7 @@ def _write_nodes(fh, points, write_binary):
     max_tag = n
     entity_tag = 0
     is_parametric = 0
-    if write_binary:
+    if binary:
         if points.dtype != c_double:
             logging.warning(
                 "Binary Gmsh needs c_double points (got %s). Converting.", points.dtype
@@ -427,7 +427,7 @@ def _write_nodes(fh, points, write_binary):
     return
 
 
-def _write_elements(fh, cells, write_binary):
+def _write_elements(fh, cells, binary):
     """write the $Elements block
 
     $Elements
@@ -445,7 +445,7 @@ def _write_elements(fh, cells, write_binary):
     num_blocks = len(cells)
     min_element_tag = 1
     max_element_tag = total_num_cells
-    if write_binary:
+    if binary:
         fh.write(
             numpy.array(
                 [num_blocks, total_num_cells, min_element_tag, max_element_tag],
@@ -513,7 +513,7 @@ def _write_elements(fh, cells, write_binary):
     return
 
 
-def _write_periodic(fh, periodic, write_binary):
+def _write_periodic(fh, periodic, binary):
     """write the $Periodic block
 
     specified as
@@ -532,7 +532,7 @@ def _write_periodic(fh, periodic, write_binary):
 
     def tofile(fh, value, dtype, **kwargs):
         ary = numpy.array(value, dtype=dtype)
-        if write_binary:
+        if binary:
             ary.tofile(fh)
         else:
             ary = numpy.atleast_2d(ary)
@@ -554,7 +554,7 @@ def _write_periodic(fh, periodic, write_binary):
         slave_master = slave_master + 1  # Add one, Gmsh is 1-based
         tofile(fh, len(slave_master), c_size_t)
         tofile(fh, slave_master, c_size_t)
-    if write_binary:
+    if binary:
         fh.write("\n".encode("utf-8"))
     fh.write("$EndPeriodic\n".encode("utf-8"))
 

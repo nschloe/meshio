@@ -268,7 +268,7 @@ def _read_periodic(f, is_ascii):
     return periodic
 
 
-def write(filename, mesh, write_binary=True):
+def write(filename, mesh, binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
@@ -281,7 +281,7 @@ def write(filename, mesh, write_binary=True):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    if write_binary:
+    if binary:
         for key, value in mesh.cells.items():
             if value.dtype != c_int:
                 logging.warning(
@@ -301,14 +301,14 @@ def write(filename, mesh, write_binary=True):
         ]
 
     with open(filename, "wb") as fh:
-        mode_idx = 1 if write_binary else 0
+        mode_idx = 1 if binary else 0
         size_of_double = 8
         fh.write(
             ("$MeshFormat\n4.0 {} {}\n".format(mode_idx, size_of_double)).encode(
                 "utf-8"
             )
         )
-        if write_binary:
+        if binary:
             fh.write(struct.pack("i", 1))
             fh.write("\n".encode("utf-8"))
         fh.write("$EndMeshFormat\n".encode("utf-8"))
@@ -316,27 +316,27 @@ def write(filename, mesh, write_binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        _write_nodes(fh, mesh.points, write_binary)
-        _write_elements(fh, cells, write_binary)
+        _write_nodes(fh, mesh.points, binary)
+        _write_elements(fh, cells, binary)
         if mesh.gmsh_periodic is not None:
-            _write_periodic(fh, mesh.gmsh_periodic, write_binary)
+            _write_periodic(fh, mesh.gmsh_periodic, binary)
         for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodeData", name, dat, write_binary)
+            _write_data(fh, "NodeData", name, dat, binary)
         cell_data_raw = raw_from_cell_data(mesh.cell_data)
         for name, dat in cell_data_raw.items():
-            _write_data(fh, "ElementData", name, dat, write_binary)
+            _write_data(fh, "ElementData", name, dat, binary)
 
     return
 
 
-def _write_nodes(fh, points, write_binary):
+def _write_nodes(fh, points, binary):
     fh.write("$Nodes\n".encode("utf-8"))
 
     # TODO not sure what dimEntity is supposed to say
     dim_entity = 0
     type_node = 0
 
-    if write_binary:
+    if binary:
         # write all points as one big block
         # numEntityBlocks(unsigned long) numNodes(unsigned long)
         # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
@@ -372,12 +372,12 @@ def _write_nodes(fh, points, write_binary):
     return
 
 
-def _write_elements(fh, cells, write_binary):
-    # TODO respect write_binary
+def _write_elements(fh, cells, binary):
+    # TODO respect binary
     # write elements
     fh.write("$Elements\n".encode("utf-8"))
 
-    if write_binary:
+    if binary:
         total_num_cells = sum([data.shape[0] for _, data in cells.items()])
         fh.write(numpy.array([len(cells), total_num_cells], dtype=c_ulong).tostring())
 
@@ -440,10 +440,10 @@ def _write_elements(fh, cells, write_binary):
     return
 
 
-def _write_periodic(fh, periodic, write_binary):
+def _write_periodic(fh, periodic, binary):
     def tofile(fh, value, dtype, **kwargs):
         ary = numpy.array(value, dtype=dtype)
-        if write_binary:
+        if binary:
             ary.tofile(fh)
         else:
             ary = numpy.atleast_2d(ary)
@@ -463,7 +463,7 @@ def _write_periodic(fh, periodic, write_binary):
         slave_master = slave_master + 1  # Add one, Gmsh is 1-based
         tofile(fh, len(slave_master), c_int)
         tofile(fh, slave_master, c_int)
-    if write_binary:
+    if binary:
         fh.write("\n".encode("utf-8"))
     fh.write("$EndPeriodic\n".encode("utf-8"))
 

@@ -25,12 +25,12 @@ test_set = [
 
 
 @pytest.mark.parametrize("mesh", test_set)
-@pytest.mark.parametrize("write_binary", [False, True])
-def test(mesh, write_binary):
+@pytest.mark.parametrize("binary", [False, True])
+def test(mesh, binary):
     def writer(*args, **kwargs):
         return meshio._vtu.write(
             *args,
-            write_binary=write_binary,
+            binary=binary,
             # don't use pretty xml to increase test coverage
             pretty_xml=False,
             **kwargs,
@@ -38,7 +38,7 @@ def test(mesh, write_binary):
 
     # ASCII files are only meant for debugging, VTK stores only 11 digits
     # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
-    tol = 1.0e-15 if write_binary else 1.0e-11
+    tol = 1.0e-15 if binary else 1.0e-11
     helpers.write_read(writer, meshio._vtu.read, mesh, tol)
     return
 
@@ -51,4 +51,4 @@ def test_generic_io():
 
 
 if __name__ == "__main__":
-    test(helpers.tet10_mesh, write_binary=False)
+    test(helpers.tet10_mesh, binary=False)
