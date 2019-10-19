@@ -231,17 +231,13 @@ def _read_binary(
                 assert count == 4
                 quads.append(data)
 
-    triangles = numpy.array(triangles)
-    quads = numpy.array(quads)
-
     cells = {}
     if len(triangles) > 0:
-        cells["triangle"] = triangles
+        cells["triangle"] = numpy.array(triangles)
     if len(quads) > 0:
-        cells["quads"] = quads
+        cells["quad"] = numpy.array(quads)
 
-    cell_data = {}
-    return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
+    return Mesh(verts, cells, point_data=point_data, cell_data={})
 
 
 def write(filename, mesh, binary=True):
@@ -312,8 +308,9 @@ def write(filename, mesh, binary=True):
         fh.write(b"end_header\n")
 
         if binary:
-            # vertices
-            fh.write(mesh.points.tostring())
+            # points and point_data
+            out = numpy.column_stack([mesh.points] + list(mesh.point_data.values()))
+            fh.write(out.tostring())
 
             # cells
             for key in ["triangle", "quad"]:
