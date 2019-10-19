@@ -28,7 +28,7 @@ meshio can read and write all of the following and smoothly converts between the
  * [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats) (versions 2 and 4)
  * [OFF](https://segeval.cs.princeton.edu/public/off_format.html)
  * [PERMAS](https://www.intes.de)
- * [PLY](https://en.wikipedia.org/wiki/PLY_(file_format)<Paste>)
+ * [PLY](https://en.wikipedia.org/wiki/PLY_(file_format))
  * [STL](https://en.wikipedia.org/wiki/STL_(file_format))
  * [TetGen .node/.ele](https://wias-berlin.de/software/tetgen/fformats.html)
  * [SVG](https://www.w3.org/TR/SVG/) (2D only, output only)
