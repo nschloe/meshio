@@ -16,7 +16,7 @@ jobs:
     steps:
       # <https://stackoverflow.com/a/44333806/353337>
       - run: DEBIAN_FRONTEND=noninteractive sudo apt-get install tzdata
-      - run: sudo apt-get install -y git git-lfs python3-h5py python3-netcdf4 python3-lxml
+      - run: sudo apt-get install -y git git-lfs python3-h5py python3-netcdf4 python3-lxml python3-numpy
       - run: pip3 install -U pytest pytest-cov --user
       - checkout
       - run: git lfs pull
