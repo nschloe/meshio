@@ -62,12 +62,12 @@ def read_buffer(f):
     num_verts = int(m.groups()[0])
 
     # fast forward to the next significant line
-    formats = []
+    point_data_formats = []
     point_data_names = []
     line = _fast_forward(f)
     while line[:8] == "property":
         m = re.match("property (.+) (.+)", line)
-        formats.append(m.groups()[0])
+        point_data_formats.append(m.groups()[0])
         point_data_names.append(m.groups()[1])
         line = _fast_forward(f)
 
@@ -89,48 +89,56 @@ def read_buffer(f):
     assert line == "end_header"
 
     if is_binary:
-        verts, cells, point_data, cell_data = _read_binary(
+        mesh = _read_binary(
             f,
             endianness,
             point_data_names,
-            formats,
+            point_data_formats,
             num_verts,
             num_cells,
             cell_data_names,
             cell_dtypes,
         )
     else:
-        verts, cells, point_data, cell_data = _read_ascii(
+        mesh = _read_ascii(
             f,
             point_data_names,
-            formats,
+            point_data_formats,
             num_verts,
             num_cells,
             cell_data_names,
             cell_dtypes,
         )
 
-    return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
+    return mesh
 
 
 def _read_ascii(
-    f, point_data_names, formats, num_verts, num_cells, cell_data_names, cell_dtypes
+    f,
+    point_data_names,
+    point_data_formats,
+    num_verts,
+    num_cells,
+    cell_data_names,
+    cell_dtypes,
 ):
-    assert point_data_names[0] == "x"
-    assert point_data_names[1] == "y"
-    k = 3 if point_data_names[2] == "z" else 2
     # assert that all formats are the same
-    assert all(formats[0] == fmt for fmt in formats)
-    dtype_verts = ply_to_numpy_dtype[formats[0]]
+    assert all(point_data_formats[0] == fmt for fmt in point_data_formats)
+    dtype_verts = ply_to_numpy_dtype[point_data_formats[0]]
     # Now read the data
     point_data = numpy.fromfile(
         f, dtype=dtype_verts, count=len(point_data_names) * num_verts, sep=" "
     ).reshape(num_verts, len(point_data_names))
 
+    # split off coordinate data and additional point data
     assert point_data_names[0] == "x"
     assert point_data_names[1] == "y"
     k = 3 if point_data_names[2] == "z" else 2
     verts = point_data[:, :k]
+    #
+    point_data = {
+        name: data for name, data in zip(point_data_names[k:], point_data[:, k:].T)
+    }
 
     # the faces must be read line-by-line
     triangles = []
@@ -173,7 +181,7 @@ def _read_ascii(
         cells["quad"] = numpy.array(quads)
         # cell_data = {"quad": cell_data}
 
-    return verts, cells, point_data, cell_data
+    return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
 
 def _read_binary(
@@ -232,7 +240,7 @@ def _read_binary(
         cells["quads"] = quads
 
     cell_data = {}
-    return verts, cells, point_data, cell_data
+    return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
 
 def write(filename, mesh, binary=True):
