@@ -72,7 +72,7 @@ def read_buffer(f):
         line = _fast_forward(f)
 
     m = re.match("element face (\\d+)", line)
-    num_faces = int(m.groups()[0])
+    num_cells = int(m.groups()[0])
 
     # read property lists
     line = _fast_forward(f)
@@ -113,7 +113,7 @@ def read_buffer(f):
         # read cell data
         triangles = []
         quads = []
-        for _ in range(num_faces):
+        for _ in range(num_cells):
             for dtypes in cell_dtypes:
                 dtype = endianness + ply_to_numpy_dtype_string[dtypes[0]]
                 count = numpy.fromfile(f, count=1, dtype=dtype)[0]
@@ -154,7 +154,9 @@ def read_buffer(f):
         verts = point_data[:, :k]
 
         # the faces must be read line-by-line
-        for k in range(num_faces):
+        triangles = []
+        quads = []
+        for k in range(num_cells):
             line = f.readline().decode("utf-8").strip()
             data = line.split()
             if k == 0:
@@ -164,24 +166,33 @@ def read_buffer(f):
                 cell_data = {}
                 for name, dtype in zip(cell_data_names, cell_dtypes):
                     n = int(data[i])
-                    cell_data[name] = numpy.empty((num_faces, n), dtype=dtype[1])
+                    if name != "vertex_indices":
+                        cell_data[name] = []
                     i += n + 1
 
             i = 0
             for name, dtype in zip(cell_data_names, cell_dtypes):
                 n = int(data[i])
                 dtype = ply_to_numpy_dtype[dtype[1]]
-                cell_data[name][k] = [dtype(data[j]) for j in range(i + 1, i + n + 1)]
+                data = [dtype(data[j]) for j in range(i + 1, i + n + 1)]
+                if name == "vertex_indices":
+                    if n == 3:
+                        triangles.append(data)
+                    else:
+                        assert n == 4
+                        quads.append(data)
+                else:
+                    cell_data[name].append(data)
                 i += n + 1
 
-        if cell_data["vertex_indices"].shape[1] == 3:
-            cells = {"triangle": cell_data["vertex_indices"]}
-            cell_data = {"triangle": cell_data}
-        else:
-            assert cell_data["vertex_indices"].shape[1] == 4
-            cells = {"quad": cell_data["vertex_indices"]}
-            cell_data = {"quad": cell_data}
-        cell_data.pop("vertex_indices", None)
+        cells = {}
+        if len(triangles) > 0:
+            cells["triangle"] = numpy.array(triangles)
+            # cell_data = {"triangle": cell_data}
+
+        if len(quads) > 0:
+            cells["quad"] = numpy.array(quads)
+            # cell_data = {"quad": cell_data}
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
