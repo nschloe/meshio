@@ -263,6 +263,7 @@ _writer_map = {
     "dolfin-xml": (_dolfin, (), {}),
     "off": (_off, (), {}),
     "permas": (_permas, (), {}),
+    "ply": (_ply, (), {}),
     "stl-ascii": (_stl, (), {"write_binary": False}),
     "stl-binary": (_stl, (), {"write_binary": True}),
     "tetgen": (_tetgen, (), {}),

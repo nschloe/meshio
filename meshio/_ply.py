@@ -4,6 +4,7 @@ I/O for the PLY format, cf.
 <https://web.archive.org/web/20161221115231/http://www.cs.virginia.edu/~gfx/Courses/2001/Advanced.spring.01/plylib/Ply.txt>.
 """
 import re
+import sys
 import warnings
 
 import numpy
@@ -173,25 +174,35 @@ def read_buffer(f):
                 cell_data[name][k] = [dtype(data[j]) for j in range(i + 1, i + n + 1)]
                 i += n + 1
 
-        assert cell_data["vertex_indices"].shape[1] == 3
-        cells = {"triangle": cell_data["vertex_indices"]}
+        if cell_data["vertex_indices"].shape[1] == 3:
+            cells = {"triangle": cell_data["vertex_indices"]}
+            cell_data = {"triangle": cell_data}
+        else:
+            assert cell_data["vertex_indices"].shape[1] == 4
+            cells = {"quad": cell_data["vertex_indices"]}
+            cell_data = {"quad": cell_data}
         cell_data.pop("vertex_indices", None)
-
-        cell_data = {"triangle": cell_data}
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
 
-def write(filename, mesh):
+def write(filename, mesh, binary=True):
     for key in mesh.cells:
-        assert key in ["triangle"], "Can only deal with triangular faces"
-
-    tri = mesh.cells["triangle"]
+        assert key in [
+            "triangle",
+            "quad",
+        ], "Can only deal with triangular and quadrilateral faces"
 
     with open(filename, "wb") as fh:
         fh.write(b"ply\n")
         fh.write(b"comment Created by meshio\n")
-        fh.write(b"format ascii 1.0\n")
+
+        if binary:
+            fh.write(
+                "format binary_{}_endian 1.0\n".format(sys.byteorder).encode("utf-8")
+            )
+        else:
+            fh.write(b"format ascii 1.0\n")
 
         # counts
         fh.write("element vertex {:d}\n".format(mesh.points.shape[0]).encode("utf-8"))
@@ -201,38 +212,74 @@ def write(filename, mesh):
         for k in range(mesh.points.shape[1]):
             fh.write("property {} {}\n".format(type_name, dim_names[k]).encode("utf-8"))
 
-        fh.write(
-            "element face {:d}\n".format(mesh.cells["triangle"].shape[0]).encode(
-                "utf-8"
-            )
-        )
+        num_cells = 0
+        if "triangle" in mesh.cells:
+            num_cells += mesh.cells["triangle"].shape[0]
+        if "quad" in mesh.cells:
+            num_cells += mesh.cells["quad"].shape[0]
+        fh.write("element face {:d}\n".format(num_cells).encode("utf-8"))
 
-        if mesh.cells["triangle"].dtype == numpy.int64:
+        # possibly cast down to int32
+        cells = mesh.cells
+        has_cast = False
+        for key in mesh.cells:
+            if mesh.cells[key].dtype == numpy.int64:
+                has_cast = True
+                cells[key] = mesh.cells[key].astype(numpy.int32)
+
+        if has_cast:
             warnings.warn(
                 "PLY doesn't support 64-bit integers. Casting down to 32-bit."
             )
-            mesh.cells["triangle"] = mesh.cells["triangle"].astype(numpy.int32)
 
-        ply_type = numpy_to_ply_dtype[mesh.cells["triangle"].dtype]
+        # TODO use uint8 for cell count
+
+        # assert that all cell dtypes are equal
+        cell_dtype = None
+        for cell in cells.values():
+            if cell_dtype is None:
+                cell_dtype = cell.dtype
+            assert cell.dtype == cell_dtype
+
+        ply_type = numpy_to_ply_dtype[cell_dtype]
         fh.write(
-            "property list uint8 {} vertex_indices\n".format(ply_type).encode("utf-8")
+            "property list {} {} vertex_indices\n".format(ply_type, ply_type).encode(
+                "utf-8"
+            )
         )
         # TODO other cell data
         fh.write(b"end_header\n")
 
-        # vertices
-        # numpy.savetxt(fh, mesh.points, "%r")  # slower
-        out = mesh.points
-        fmt = " ".join(["{}"] * out.shape[1])
-        out = "\n".join([fmt.format(*row) for row in out]) + "\n"
-        fh.write(out.encode("utf-8"))
+        if binary:
+            # vertices
+            fh.write(mesh.points.tostring())
 
-        # triangles
-        out = numpy.column_stack([numpy.full(tri.shape[0], tri.shape[1]), tri])
-        # savetxt is slower
-        # numpy.savetxt(fh, out, "%d  %d %d %d")
-        fmt = " ".join(["{}"] * out.shape[1])
-        out = "\n".join([fmt.format(*row) for row in out]) + "\n"
-        fh.write(out.encode("utf-8"))
+            # cells
+            for key in ["triangle", "quad"]:
+                if key not in cells:
+                    continue
+                dat = cells[key]
+                # prepend with count
+                out = numpy.column_stack([numpy.full(dat.shape[0], dat.shape[1]), dat])
+                fh.write(out.tostring())
+        else:
+            # vertices
+            # numpy.savetxt(fh, mesh.points, "%r")  # slower
+            out = mesh.points
+            fmt = " ".join(["{}"] * out.shape[1])
+            out = "\n".join([fmt.format(*row) for row in out]) + "\n"
+            fh.write(out.encode("utf-8"))
+
+            # cells
+            for key in ["triangle", "quad"]:
+                if key not in cells:
+                    continue
+                dat = cells[key]
+                out = numpy.column_stack([numpy.full(dat.shape[0], dat.shape[1]), dat])
+                # savetxt is slower
+                # numpy.savetxt(fh, out, "%d  %d %d %d")
+                fmt = " ".join(["{}"] * out.shape[1])
+                out = "\n".join([fmt.format(*row) for row in out]) + "\n"
+                fh.write(out.encode("utf-8"))
 
     return

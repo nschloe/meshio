@@ -7,12 +7,14 @@ import helpers
 import meshio
 
 
-@pytest.mark.parametrize("mesh", [helpers.tri_mesh])
-def test_ply(mesh):
+@pytest.mark.parametrize("mesh", [helpers.tri_mesh, helpers.quad_mesh])
+# @pytest.mark.parametrize("binary", [False, True])
+def test_ply(mesh, binary=False):
     def writer(*args, **kwargs):
-        return meshio._ply.write(*args, **kwargs)
+        return meshio._ply.write(*args, binary=binary, **kwargs)
 
-    mesh.cells["triangle"] = mesh.cells["triangle"].astype(numpy.int32)
+    for key in mesh.cells:
+        mesh.cells[key] = mesh.cells[key].astype(numpy.int32)
 
     helpers.write_read(writer, meshio._ply.read, mesh, 1.0e-12)
     return
