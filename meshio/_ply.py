@@ -225,7 +225,6 @@ def _read_binary(
             count = numpy.fromfile(f, count=1, dtype=dtype)[0]
             dtype = endianness + ply_to_numpy_dtype_string[dtypes[1]]
             data = numpy.fromfile(f, count=count, dtype=dtype)
-            print(count, data)
             if count == 3:
                 triangles.append(data)
             else:
@@ -322,7 +321,8 @@ def write(filename, mesh, binary=True):
                     continue
                 dat = cells[key]
                 # prepend with count
-                out = numpy.column_stack([numpy.full(dat.shape[0], dat.shape[1]), dat])
+                count = numpy.full(dat.shape[0], dat.shape[1], dtype=dat.dtype)
+                out = numpy.column_stack([count, dat])
                 fh.write(out.tostring())
         else:
             # vertices
