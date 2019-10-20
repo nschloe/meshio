@@ -8,16 +8,7 @@ import meshio
 
 
 @pytest.mark.parametrize(
-    "mesh",
-    [
-        helpers.tri_mesh,
-        # helpers.quad_mesh,
-        # helpers.tri_quad_mesh,
-        # helpers.add_point_data(helpers.tri_mesh, 1),
-        # helpers.add_cell_data(helpers.tri_mesh, 1),
-        # helpers.add_cell_data(helpers.tri_mesh, 3),
-        # helpers.add_cell_data(helpers.tri_mesh, 9),
-    ],
+    "mesh", [helpers.tri_mesh, helpers.quad_mesh, helpers.tri_quad_mesh]
 )
 def test_ply(mesh):
     def writer(*args, **kwargs):
@@ -31,8 +22,7 @@ def test_ply(mesh):
 
 
 @pytest.mark.parametrize(
-    "filename, ref_sum, ref_num_cells",
-    [("elephav.obj", 3.678372172450000e+05, 1148)],
+    "filename, ref_sum, ref_num_cells", [("elephav.obj", 3.678372172450000e05, 1148)]
 )
 def test_reference_file(filename, ref_sum, ref_num_cells):
     this_dir = os.path.dirname(os.path.abspath(__file__))
