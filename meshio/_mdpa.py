@@ -331,17 +331,18 @@ def read_buffer(f):
     # Reverting to the original position
     f.seek(pos)
     # Read data
-    while False:  # TODO: To implement
-        line = f.readline().decode("utf-8")
-        if not line:
-            # EOF
-            break
-        # elif "NodalData" in environ and cells_prepared:
-        # _read_data(f, "NodalData", point_data, data_size, is_ascii)
-        # elif "Begin ElementalData" in environ:
-        # _read_data(f, "ElementalData", cell_data_raw, data_size, is_ascii)
-        # elif "Begin ConditionalData" in environ:
-        # _read_data(f, "ConditionalData", cell_data_raw, data_size, is_ascii)
+    # TODO: To implement
+    # while False:
+    #     line = f.readline().decode("utf-8")
+    #     if not line:
+    #         # EOF
+    #         break
+    #     # elif "NodalData" in environ and cells_prepared:
+    #     # _read_data(f, "NodalData", point_data, data_size, is_ascii)
+    #     # elif "Begin ElementalData" in environ:
+    #     # _read_data(f, "ElementalData", cell_data_raw, data_size, is_ascii)
+    #     # elif "Begin ConditionalData" in environ:
+    #     # _read_data(f, "ConditionalData", cell_data_raw, data_size, is_ascii)
 
     if has_additional_tag_data:
         logging.warning("The file contains tag data that couldn't be processed.")
