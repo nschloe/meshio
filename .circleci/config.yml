@@ -3,7 +3,7 @@ version: 2
 jobs:
   lint:
     docker:
-      - image: circleci/python:3
+      - image: circleci/python:3.7
     steps:
       - checkout
       - run: pip3 install -U black flake8 --user
@@ -12,11 +12,11 @@ jobs:
   build:
     working_directory: ~/work
     docker:
-      - image: circleci/python:3
+      - image: circleci/python:3.7
     steps:
       # <https://stackoverflow.com/a/44333806/353337>
       - run: DEBIAN_FRONTEND=noninteractive sudo apt-get install tzdata
-      - run: sudo apt-get install -y git git-lfs python3-h5py python3-netcdf4 python3-lxml python3-numpy
+      - run: sudo apt-get install -y git git-lfs python3-h5py python3-netcdf4 python3-lxml
       - run: pip3 install -U pytest pytest-cov --user
       - checkout
       - run: git lfs pull
