@@ -322,7 +322,7 @@ def write4_1(filename, mesh, binary=True):
             _write_physical_names(fh, mesh.field_data)
 
         _write_entities(fh, cells, binary)
-        _write_nodes(fh, mesh.points, binary)
+        _write_nodes(fh, mesh.points, mesh.cells, binary)
         _write_elements(fh, cells, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, binary)
@@ -366,11 +366,15 @@ def _write_entities(fh, cells, binary):
     return
 
 
-def _write_nodes(fh, points, binary):
+def _write_nodes(fh, points, cells, binary):
     fh.write("$Nodes\n".encode("utf-8"))
 
-    # TODO not sure what dimEntity is supposed to say
-    dim_entity = 2
+    # The entity_dim and entity_tag in the $Elements section must correspond to an
+    # entity_dim and entity_tag array in the $Nodes section.
+    # TODO Not sure what to do if there are multiple element types present.
+    assert len(cells) == 1, "Can only deal with one cell type for now"
+    dim_entity = _geometric_dimension[list(cells.keys())[0]]
+    entity_tag = 0
 
     # write all points as one big block
     #
@@ -392,7 +396,6 @@ def _write_nodes(fh, points, binary):
     num_blocks = 1
     min_tag = 1
     max_tag = n
-    entity_tag = 0
     is_parametric = 0
     if binary:
         if points.dtype != c_double:
