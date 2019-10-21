@@ -38,7 +38,7 @@ def test(mesh, binary):
 
     # ASCII files are only meant for debugging, VTK stores only 11 digits
     # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
-    tol = 1.0e-15 if binary else 1.0e-11
+    tol = 1.0e-15 if binary else 1.0e-10
     helpers.write_read(writer, meshio._vtu.read, mesh, tol)
     return
 

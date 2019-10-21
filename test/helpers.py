@@ -201,14 +201,12 @@ polygon_mesh = meshio.Mesh(
 )
 
 
-def add_point_data(mesh, dim, num_tags=2):
-    numpy.random.seed(0)
+def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=numpy.float):
+    numpy.random.seed(seed)
     mesh2 = copy.deepcopy(mesh)
 
-    if dim == 1:
-        data = [numpy.random.rand(len(mesh.points)) for _ in range(num_tags)]
-    else:
-        data = [numpy.random.rand(len(mesh.points), dim) for _ in range(num_tags)]
+    shape = (len(mesh.points),) if dim == 1 else (len(mesh.points), dim)
+    data = [(100 * numpy.random.rand(*shape)).astype(dtype) for _ in range(num_tags)]
 
     mesh2.point_data = {string.ascii_lowercase[k]: d for k, d in enumerate(data)}
     return mesh2
