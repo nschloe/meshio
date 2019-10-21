@@ -206,10 +206,7 @@ def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=numpy.float):
     mesh2 = copy.deepcopy(mesh)
 
     shape = (len(mesh.points),) if dim == 1 else (len(mesh.points), dim)
-    data = [
-        (100 * numpy.random.rand(*shape)).astype(dtype)
-        for _ in range(num_tags)
-    ]
+    data = [(100 * numpy.random.rand(*shape)).astype(dtype) for _ in range(num_tags)]
 
     mesh2.point_data = {string.ascii_lowercase[k]: d for k, d in enumerate(data)}
     return mesh2
