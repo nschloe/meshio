@@ -16,7 +16,9 @@ ply_to_numpy_dtype = {
     "short": numpy.int16,
     "ushort": numpy.uint16,
     "int": numpy.int32,
+    "int8": numpy.int8,
     "int32": numpy.int32,
+    "int64": numpy.int64,
     "uint": numpy.uint32,
     "uint8": numpy.uint8,
     "float": numpy.float32,
@@ -123,21 +125,32 @@ def _read_ascii(
     cell_dtypes,
 ):
     # assert that all formats are the same
-    assert all(point_data_formats[0] == fmt for fmt in point_data_formats)
-    dtype_verts = ply_to_numpy_dtype[point_data_formats[0]]
     # Now read the data
-    point_data = numpy.fromfile(
-        f, dtype=dtype_verts, count=len(point_data_names) * num_verts, sep=" "
-    ).reshape(num_verts, len(point_data_names))
+    dtype = numpy.dtype(
+        [
+            (name, ply_to_numpy_dtype[fmt])
+            for name, fmt in zip(point_data_names, point_data_formats)
+        ]
+    )
+    pd = numpy.genfromtxt(f, max_rows=num_verts, dtype=dtype)
 
     # split off coordinate data and additional point data
-    assert point_data_names[0] == "x"
-    assert point_data_names[1] == "y"
-    k = 3 if point_data_names[2] == "z" else 2
-    verts = point_data[:, :k]
-    #
+    verts = []
+    k = 0
+    if point_data_names[0] == "x":
+        verts.append(pd["x"])
+        k += 1
+    if point_data_names[1] == "y":
+        verts.append(pd["y"])
+        k += 1
+    if point_data_names[2] == "z":
+        verts.append(pd["z"])
+        k += 1
+    verts = numpy.column_stack(verts)
+
     point_data = {
-        name: data for name, data in zip(point_data_names[k:], point_data[:, k:].T)
+        point_data_names[i]: pd[point_data_names[i]]
+        for i in range(k, len(point_data_names))
     }
 
     # the faces must be read line-by-line
@@ -197,7 +210,9 @@ def _read_binary(
     ply_to_numpy_dtype_string = {
         "uchar": "i1",
         "uint8": "u1",
+        "int8": "i1",
         "int32": "i4",
+        "int64": "i8",
         "float": "f4",
         "float32": "f4",
         "double": "f8",
@@ -262,11 +277,17 @@ def write(filename, mesh, binary=True):
         fh.write("element vertex {:d}\n".format(mesh.points.shape[0]).encode("utf-8"))
         #
         dim_names = ["x", "y", "z"]
-        type_name = {numpy.dtype(numpy.float64): "double"}[mesh.points.dtype]
+        type_name_table = {
+            numpy.dtype(numpy.int8): "int8",
+            numpy.dtype(numpy.int64): "int64",
+            numpy.dtype(numpy.float32): "float",
+            numpy.dtype(numpy.float64): "double",
+        }
         for k in range(mesh.points.shape[1]):
+            type_name = type_name_table[mesh.points.dtype]
             fh.write("property {} {}\n".format(type_name, dim_names[k]).encode("utf-8"))
         for key, value in mesh.point_data.items():
-            assert mesh.points.dtype == value.dtype
+            type_name = type_name_table[value.dtype]
             fh.write("property {} {}\n".format(type_name, key).encode("utf-8"))
 
         num_cells = 0
@@ -324,8 +345,11 @@ def write(filename, mesh, binary=True):
         else:
             # vertices
             # numpy.savetxt(fh, mesh.points, "%r")  # slower
-            out = numpy.column_stack([mesh.points] + list(mesh.point_data.values()))
-            fmt = " ".join(["{}"] * out.shape[1])
+            # out = numpy.column_stack([mesh.points] + list(mesh.point_data.values()))
+            out = numpy.rec.fromarrays(
+                [coord for coord in mesh.points.T] + list(mesh.point_data.values())
+            )
+            fmt = " ".join(["{}"] * len(out[0]))
             out = "\n".join([fmt.format(*row) for row in out]) + "\n"
             fh.write(out.encode("utf-8"))
 
