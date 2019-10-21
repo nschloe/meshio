@@ -330,7 +330,9 @@ def write(filename, mesh, binary=True):
 
         if binary:
             # points and point_data
-            out = numpy.column_stack([mesh.points] + list(mesh.point_data.values()))
+            out = numpy.rec.fromarrays(
+                [coord for coord in mesh.points.T] + list(mesh.point_data.values())
+            )
             fh.write(out.tostring())
 
             # cells

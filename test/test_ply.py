@@ -22,8 +22,6 @@ import meshio
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_ply(mesh, binary):
-    print(mesh.point_data)
-
     def writer(*args, **kwargs):
         return meshio._ply.write(*args, binary=binary, **kwargs)
 
