@@ -42,14 +42,6 @@ class XdmfTimeSeriesReader:
 
         grids = list(self.domain)
 
-        # find the uniform grid
-        self.mesh_grid = None
-        for g in grids:
-            if g.attrib["GridType"] == "Uniform":
-                self.mesh_grid = g
-        assert self.mesh_grid is not None, "Couldn't find the mesh grid"
-        assert self.mesh_grid.tag == "Grid"
-
         # find the collection grid
         collection_grid = None
         for g in grids:
@@ -58,11 +50,29 @@ class XdmfTimeSeriesReader:
         assert collection_grid is not None, "Couldn't find the mesh grid"
         assert collection_grid.tag == "Grid"
         assert collection_grid.attrib["CollectionType"] == "Temporal"
+
         # get the collection at once
         self.collection = list(collection_grid)
         self.num_steps = len(self.collection)
         self.cells = None
         self.hdf5_files = {}
+
+        # find the uniform grid
+        self.mesh_grid = None
+        for g in grids:
+            if g.attrib["GridType"] == "Uniform":
+                self.mesh_grid = g
+        # if not found, take the first uniform grid in the collection grid
+        if self.mesh_grid is None:
+            for g in self.collection:
+                try:
+                    if g.attrib["GridType"] == "Uniform":
+                        self.mesh_grid = g
+                        break
+                except KeyError:
+                    continue
+        assert self.mesh_grid is not None, "Couldn't find the mesh grid"
+        assert self.mesh_grid.tag == "Grid"
 
     def __enter__(self):
         return self
