@@ -3,7 +3,7 @@
   <p align="center">I/O for mesh files.</p>
 </p>
 
-![gh-actions](https://github.com/nschloe/meshio/workflows/ci/badge.svg)
+[![gh-actions](https://github.com/nschloe/meshio/workflows/ci/badge.svg)](https://github.com/nschloe/meshio/actions)
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/meshio.svg?style=flat-square)](https://codecov.io/gh/nschloe/meshio)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg?style=flat-square)](https://pypi.org/project/meshio)
