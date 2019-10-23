@@ -86,8 +86,8 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
 
 
 def _read_cells(f, line):
-    # If the line is self-contained, it is merely a declaration of the total
-    # number of points.
+    # If the line is self-contained, it is merely a declaration of the total number of
+    # points.
     if line.count("(") == line.count(")"):
         return None, None
 
@@ -97,7 +97,12 @@ def _read_cells(f, line):
     first_index = a[1]
     last_index = a[2]
     num_cells = last_index - first_index + 1
+    zone_type = a[3]
     element_type = a[4]
+
+    if zone_type == 0:
+        # dead zone
+        return None, None
 
     element_type_to_key_num_nodes = {
         0: ("mixed", None),
@@ -126,27 +131,36 @@ def _read_cells(f, line):
                 _skip_to(f, ")")
                 return None, None
 
-    assert key != "mixed"
-
-    # read cell data
-    if out.group(1) == "":
-        # ASCII cells
-        data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
-        for k in range(num_cells):
-            line = f.readline().decode("utf-8")
-            dat = line.split()
-            assert len(dat) == num_nodes_per_cell
-            data[k] = [int(d, 16) for d in dat]
+    if key == "mixed":
+        # From <http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
+        #
+        # > If a zone is of mixed type (element-type=0), it will have a body that
+        # > lists the element type of each cell.
+        #
+        # No idea where the information other than the element types is stored
+        # though. Skip for now.
+        data = None
     else:
-        # binary cells
-        if out.group(1) == "20":
-            dtype = numpy.int32
+        # read cell data
+        if out.group(1) == "":
+            # ASCII cells
+            data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
+            for k in range(num_cells):
+                line = f.readline().decode("utf-8")
+                dat = line.split()
+                assert len(dat) == num_nodes_per_cell
+                data[k] = [int(d, 16) for d in dat]
         else:
-            assert out.group(1) == "30"
-            dtype = numpy.int64
-        shape = (num_cells, num_nodes_per_cell)
-        count = shape[0] * shape[1]
-        data = numpy.fromfile(f, count=count, dtype=dtype).reshape(shape)
+            assert key != "mixed", "Cannot read mixed cells in binary mode yet"
+            # binary cells
+            if out.group(1) == "20":
+                dtype = numpy.int32
+            else:
+                assert out.group(1) == "30"
+                dtype = numpy.int64
+            shape = (num_cells, num_nodes_per_cell)
+            count = shape[0] * shape[1]
+            data = numpy.fromfile(f, count=count, dtype=dtype).reshape(shape)
 
     # make sure that the data set is properly closed
     _skip_close(f, 2)
@@ -189,11 +203,10 @@ def _read_faces(f, line):
     if out.group(1) == "":
         # ASCII
         if key == "mixed":
-            # From
-            # <http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
-            # > If the face zone is of mixed type (element-type =
-            # > 0), the body of the section will include the face
-            # > type and will appear as follows
+            # From <http://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
+            #
+            # > If the face zone is of mixed type (element-type = > 0), the body of the
+            # > section will include the face type and will appear as follows
             # >
             # > type v0 v1 v2 c0 c1
             # >
@@ -241,7 +254,7 @@ def _read_faces(f, line):
             assert out.group(1) == "30"
             dtype = numpy.int64
 
-        assert key != "mixed"
+        assert key != "mixed", "Mixed element type for binary faces not supported yet"
 
         # Read cell data.
         # The body of a regular face section contains the grid
