@@ -231,20 +231,29 @@ def _read_binary(
         if name not in ["x", "y", "z"]
     }
 
-    # read cell data
+    # Convert strings to proper numpy dtypes
+    dt = [
+        (
+            endianness + ply_to_numpy_dtype_string[dtypes[0]],
+            endianness + ply_to_numpy_dtype_string[dtypes[1]],
+        )
+        for dtypes in cell_dtypes
+    ]
+
+    # read cell data -- this part is really slow
     triangles = []
     quads = []
     for _ in range(num_cells):
-        for dtypes in cell_dtypes:
-            dtype = endianness + ply_to_numpy_dtype_string[dtypes[0]]
-            count = numpy.fromfile(f, count=1, dtype=dtype)[0]
-            dtype = endianness + ply_to_numpy_dtype_string[dtypes[1]]
-            data = numpy.fromfile(f, count=count, dtype=dtype)
-            if count == 3:
-                triangles.append(data)
-            else:
-                assert count == 4
-                quads.append(data)
+        count = numpy.fromfile(f, count=1, dtype=dt[0][0])[0]
+        data = numpy.fromfile(f, count=count, dtype=dt[0][1])
+        if count == 3:
+            triangles.append(data)
+        else:
+            assert count == 4
+            quads.append(data)
+        # cell data
+        for dtypes in dt[1:]:
+            pass
 
     cells = {}
     if len(triangles) > 0:
