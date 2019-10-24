@@ -23,6 +23,7 @@ meshio_to_med_type = {
     "hexahedron": "HE8",
 }
 med_to_meshio_type = {v: k for k, v in meshio_to_med_type.items()}
+numpy_void_str = numpy.string_("")
 
 
 def read(filename):
@@ -211,13 +212,13 @@ def write(filename, mesh, add_global_ids=True):
     med_mesh.attrs.create("DIM", mesh.points.shape[1])  # mesh dimension
     med_mesh.attrs.create("ESP", mesh.points.shape[1])  # spatial dimension
     med_mesh.attrs.create("REP", 0)  # cartesian coordinate system (repère in french)
-    med_mesh.attrs.create("UNT", b"")  # time unit
-    med_mesh.attrs.create("UNI", b"")  # spatial unit
+    med_mesh.attrs.create("UNT", numpy_void_str)  # time unit
+    med_mesh.attrs.create("UNI", numpy_void_str)  # spatial unit
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
     med_mesh.attrs.create(
-        "NOM", _component_names(mesh.points.shape[1]).encode("ascii")
+        "NOM", numpy.string_(_component_names(mesh.points.shape[1]))
     )  # component names
-    med_mesh.attrs.create("DES", b"Mesh created with meshio")
+    med_mesh.attrs.create("DES", numpy.string_("Mesh created with meshio"))
     med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
 
     # Time-step
@@ -233,7 +234,7 @@ def write(filename, mesh, add_global_ids=True):
     nodes_group.attrs.create("CGT", 1)
     nodes_group.attrs.create("CGS", 1)
     profile = "MED_NO_PROFILE_INTERNAL"
-    nodes_group.attrs.create("PFL", profile.encode("ascii"))
+    nodes_group.attrs.create("PFL", numpy.string_(profile))
     coo = nodes_group.create_dataset("COO", data=mesh.points.flatten(order="F"))
     coo.attrs.create("CGT", 1)
     coo.attrs.create("NBR", len(mesh.points))
@@ -252,7 +253,7 @@ def write(filename, mesh, add_global_ids=True):
         med_cells = cells_group.create_group(med_type)
         med_cells.attrs.create("CGT", 1)
         med_cells.attrs.create("CGS", 1)
-        med_cells.attrs.create("PFL", profile.encode("ascii"))
+        med_cells.attrs.create("PFL", numpy.string_(profile))
         nod = med_cells.create_dataset("NOD", data=cells.flatten(order="F") + 1)
         nod.attrs.create("CGT", 1)
         nod.attrs.create("NBR", len(cells))
@@ -329,13 +330,13 @@ def _write_data(fields, mesh_name, profile, name, supp, data, med_type=None):
     # Field
     try:  # a same MED field may contain fields of different natures
         field = fields.create_group(name)
-        field.attrs.create("MAI", mesh_name.encode("ascii"))
+        field.attrs.create("MAI", numpy.string_(mesh_name))
         field.attrs.create("TYP", 6)  # MED_FLOAT64
-        field.attrs.create("UNI", b"")  # physical unit
-        field.attrs.create("UNT", b"")  # time unit
+        field.attrs.create("UNI", numpy_void_str)  # physical unit
+        field.attrs.create("UNT", numpy_void_str)  # time unit
         n_components = 1 if data.ndim == 1 else data.shape[-1]
         field.attrs.create("NCO", n_components)  # number of components
-        field.attrs.create("NOM", _component_names(n_components).encode("ascii"))
+        field.attrs.create("NOM", numpy.string_(_component_names(n_components)))
 
         # Time-step
         step = "0000000000000000000100000000000000000001"
@@ -359,15 +360,15 @@ def _write_data(fields, mesh_name, profile, name, supp, data, med_type=None):
     else:  # 'ELEM' with only 1 Gauss points!
         typ = time_step.create_group("MAI." + med_type)
 
-    typ.attrs.create("GAU", b"")  # no associated Gauss points
-    typ.attrs.create("PFL", profile.encode("ascii"))
+    typ.attrs.create("GAU", numpy_void_str)  # no associated Gauss points
+    typ.attrs.create("PFL", numpy.string_(profile))
     profile = typ.create_group(profile)
     profile.attrs.create("NBR", len(data))  # number of data
     if supp == "ELNO":
         profile.attrs.create("NGA", data.shape[1])
     else:
         profile.attrs.create("NGA", 1)
-    profile.attrs.create("GAU", b"")
+    profile.attrs.create("GAU", numpy_void_str)
 
     # Dataset
     profile.create_dataset("CO", data=data.flatten(order="F"))
