@@ -233,11 +233,7 @@ def read_set(f, params_map):
             break
         if line.startswith("*"):
             break
-        try:
-            set_ids += [int(k) for k in line.strip().strip(",").split(",")]
-        except ValueError:
-            print(set_ids)
-            raise
+        set_ids += [int(k) for k in line.strip().strip(",").split(",")]
 
     if "generate" in params_map:
         assert len(set_ids) == 3, set_ids
