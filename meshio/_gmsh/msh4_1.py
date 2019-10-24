@@ -210,7 +210,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         itags[point_tags] = numpy.arange(len(point_tags))
 
     # Note that the first column in the data array is the element tag; discard it.
-    data = [(physical_tag, tpe, itags[d[:, 1:] - 1]) for physical_tag, tpe, d in data]
+    data = [(physical_tag, tpe, d[:, 1:] - 1) for physical_tag, tpe, d in data]
 
     cells = {}
     for physical_tag, key, values in data:
