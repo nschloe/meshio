@@ -229,9 +229,14 @@ def read_set(f, params_map):
     set_ids = []
     while True:
         line = f.readline()
+        if not line:
+            break
         if line.startswith("*"):
             break
-        set_ids += [int(k) for k in line.strip().strip(",").split(",")]
+        try:
+            set_ids += [int(k) for k in line.strip().strip(",").split(",")]
+        except:
+            pass
 
     if "generate" in params_map:
         assert len(set_ids) == 3, set_ids
