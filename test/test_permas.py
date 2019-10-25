@@ -6,7 +6,16 @@ import meshio
 
 @pytest.mark.parametrize(
     "mesh",
-    [helpers.tri_mesh, helpers.quad_mesh, helpers.tri_quad_mesh, helpers.tet_mesh],
+    [
+        helpers.tri_mesh,
+        helpers.triangle6_mesh,
+        helpers.quad_mesh,
+        helpers.quad8_mesh,
+        helpers.tri_quad_mesh,
+        helpers.tet_mesh,
+        helpers.tet10_mesh,
+        helpers.hex_mesh,
+    ],
 )
 def test_io(mesh):
     helpers.write_read(meshio._permas.write, meshio._permas.read, mesh, 1.0e-15)
