@@ -141,25 +141,22 @@ def _read_nodes(f, is_ascii, data_size):
         assert parametric == 0, "parametric nodes not implemented"
         num_nodes = int(fromfile(f, c_size_t, 1)[0])
 
-        # nodeTag(size_t) (* numNodes)
-
-        # Note that 'tags can be "sparse", i.e., do not have to
-        # constitute a continuous list of numbers (the format even
-        # allows them to not be ordered)'
-        # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
-        # Following https://github.com/nschloe/meshio/issues/388, we
-        # read the tags and populate the points array accordingly,
-        # thereby preserving the order of indices of nodes/points.
-
+        # From <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>:
+        # > [...] tags can be "sparse", i.e., do not have to constitute a continuous
+        # > list of numbers (the format even allows them to not be ordered).
+        #
+        # Following https://github.com/nschloe/meshio/issues/388, we read the tags and
+        # populate the points array accordingly, thereby preserving the order of indices
+        # of nodes/points.
         ixx = slice(idx, idx + num_nodes)
         tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
 
+        # Store the point densely and in the order in which they appear in the file.
         # x(double) y(double) z(double) (* numNodes)
-        points[tags[ixx]] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
+        points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
         idx += num_nodes
 
     if not is_ascii:
-
         line = f.readline().decode("utf-8")
         assert line == "\n"
 
@@ -177,7 +174,6 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     num_entity_blocks, total_num_elements, min_ele_tag, max_ele_tag = fromfile(
         f, c_size_t, 4
     )
-    is_dense = min_ele_tag == 1 and max_ele_tag == total_num_elements
 
     data = []
     cell_data = {}
@@ -202,15 +198,14 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndElements"
 
-    if is_dense:
-        itags = point_tags
-    else:
-        m = numpy.max(point_tags + 1)
-        itags = -numpy.ones(m, dtype=int)
-        itags[point_tags] = numpy.arange(len(point_tags))
+    # Inverse point tags
+    inv_tags = numpy.full(numpy.max(point_tags) + 1, -1, dtype=int)
+    inv_tags[point_tags] = numpy.arange(len(point_tags))
 
     # Note that the first column in the data array is the element tag; discard it.
-    data = [(physical_tag, tpe, itags[d[:, 1:] - 1]) for physical_tag, tpe, d in data]
+    data = [
+        (physical_tag, tpe, inv_tags[d[:, 1:] - 1]) for physical_tag, tpe, d in data
+    ]
 
     cells = {}
     for physical_tag, key, values in data:
