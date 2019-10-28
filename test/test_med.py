@@ -21,6 +21,7 @@ h5py = pytest.importorskip("h5py")
         helpers.tet_mesh,
         helpers.tet10_mesh,
         helpers.hex_mesh,
+        helpers.hex20_mesh,
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 2),
         helpers.add_point_data(helpers.tri_mesh, 3),
