@@ -14,6 +14,7 @@ from .__about__ import __version__
 from ._mesh import Mesh
 
 exodus_to_meshio_type = {
+    "SPHERE": "vertex",
     # curves
     "BEAM": "line",
     "BEAM2": "line",
