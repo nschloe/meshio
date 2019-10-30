@@ -9,7 +9,7 @@ from .__about__ import __version__
 from ._mesh import Mesh
 
 abaqus_to_meshio_type = {
-    # trusss
+    # trusses
     "T2D2": "line",
     "T2D2H": "line",
     "T2D3": "line3",
@@ -192,9 +192,8 @@ def get_param_map(word, required_keys=None):
 
     Example
     -------
-    >>> iline = 0
     >>> word = 'elset,instance=dummy2,generate'
-    >>> params = get_param_map(iline, word, required_keys=['instance'])
+    >>> params = get_param_map(word, required_keys=['instance'])
     params = {
         'elset' : None,
         'instance' : 'dummy2,
