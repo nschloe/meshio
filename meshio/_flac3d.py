@@ -160,13 +160,14 @@ def _translate_cells(zones, zgroups, count):
     return cells, cell_data, field_data
 
 
-def write(filename, mesh):
+def write(filename, mesh, zone_data="flac3d:zone"):
     """
     Write FLAC3D f3grid grid file (only ASCII).
     """
     assert any(
         cell_type in meshio_only for cell_type in mesh.cells.keys()
     ), "FLAC3D format only supports 'tetra', 'pyramid', 'wedge' and 'hexahedron'."
+    assert isinstance(zone_data, str)
 
     if mesh.points.shape[1] == 2:
         logging.warning(
@@ -183,7 +184,7 @@ def write(filename, mesh):
         f.write("* ZONES\n")
         _write_cells(f, mesh.points, mesh.cells)
         f.write("* ZONE GROUPS\n")
-        _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
+        _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data, zone_data)
 
 
 def _write_points(f, points):
@@ -236,14 +237,14 @@ def _translate_zones(points, cells):
     return zones, meshio_types
 
 
-def _write_cell_data(f, cells, cell_data, field_data):
+def _write_cell_data(f, cells, cell_data, field_data, zone_data):
     """
     Write zone groups.
     """
-    zgroups = _translate_zgroups(cells, cell_data)
+    zgroups = _translate_zgroups(cells, cell_data, zone_data)
     group_names = {k: k for k in zgroups.keys()}
     cond = all(
-        ["flac3d:zone" in v.keys() for k, v in cell_data.items() if k in meshio_only]
+        [zone_data in v.keys() for k, v in cell_data.items() if k in meshio_only]
     )
     if cell_data and cond:
         if field_data:
@@ -255,13 +256,13 @@ def _write_cell_data(f, cells, cell_data, field_data):
         _write_zgroup(f, v)
 
 
-def _translate_zgroups(cells, cell_data):
+def _translate_zgroups(cells, cell_data, zone_data):
     """
     Convert meshio cell_data to FLAC3D zone groups. 'flac3d:zone' keyword
     in cell_data is used to assign zone groups.
     """
     cond = all(
-        ["flac3d:zone" in v.keys() for k, v in cell_data.items() if k in meshio_only]
+        [zone_data in v.keys() for k, v in cell_data.items() if k in meshio_only]
     )
     if cell_data and cond:
         # Make sure that mapper is in the same order as how zones were written
@@ -272,8 +273,7 @@ def _translate_zgroups(cells, cell_data):
                     {
                         i: z
                         for i, z in zip(
-                            np.arange(imap, imap + len(v)) + 1,
-                            cell_data[k]["flac3d:zone"],
+                            np.arange(imap, imap + len(v)) + 1, cell_data[k][zone_data],
                         )
                     }
                 )
@@ -285,8 +285,9 @@ def _translate_zgroups(cells, cell_data):
         return zgroups
     else:
         logging.warning(
-            "Keyword 'flac3d:zone' not found in cell_data. "
-            "All cells assumed in the same zone group."
+            "Keyword '{}' not found in cell_data. All cells assumed in the same zone group.".format(
+                zone_data
+            )
         )
         n_cells = sum([len(v) for k, v in cells.items() if k in meshio_only])
         return {1: np.arange(1, n_cells + 1).tolist()}

@@ -298,5 +298,5 @@ _writer_map = {
     "mdpa": (_mdpa, (), {}),
     "svg": (_svg, (), {}),
     "nastran": (_nastran, (), {}),
-    "flac3d": (_flac3d, (), {}),
+    "flac3d": (_flac3d, (), {"zone_data": "flac3d:zone"}),
 }
