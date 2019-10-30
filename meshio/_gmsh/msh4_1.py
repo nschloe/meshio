@@ -106,12 +106,12 @@ def _read_entities(f, is_ascii, data_size):
 
     for d, n in enumerate(number):
         for _ in range(n):
-            tag, = fromfile(f, c_int, 1)
+            (tag,) = fromfile(f, c_int, 1)
             fromfile(f, c_double, 3 if d == 0 else 6)  # discard bounding-box
-            num_physicals, = fromfile(f, c_size_t, 1)
+            (num_physicals,) = fromfile(f, c_size_t, 1)
             physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
-                num_BREP_, = fromfile(f, c_size_t, 1)
+                (num_BREP_,) = fromfile(f, c_size_t, 1)
                 fromfile(f, c_int, num_BREP_)
 
     if not is_ascii:
@@ -181,7 +181,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     for k in range(num_entity_blocks):
         # entityDim(int) entityTag(int) elementType(int) numElements(size_t)
         dim_entity, tag_entity, type_ele = fromfile(f, c_int, 3)
-        num_ele, = fromfile(f, c_size_t, 1)
+        (num_ele,) = fromfile(f, c_size_t, 1)
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
         d = fromfile(f, c_size_t, int(num_ele * (1 + num_nodes_per_ele))).reshape(

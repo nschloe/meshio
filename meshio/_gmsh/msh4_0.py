@@ -175,7 +175,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     for k in range(num_entity_blocks):
         # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
         tag_entity, dim_entity, type_ele = fromfile(f, c_int, 3)
-        num_ele, = fromfile(f, c_ulong, 1)
+        (num_ele,) = fromfile(f, c_ulong, 1)
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
         d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape(
