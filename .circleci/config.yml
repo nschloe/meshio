@@ -25,8 +25,8 @@ jobs:
       - run:
           command: pytest --cov meshio
           working_directory: test/
-      # submit to codecov
-      # - run: bash <(curl -s https://codecov.io/bash)
+      submit to codecov
+      - run: bash <(curl -s https://codecov.io/bash)
 
 workflows:
   version: 2
