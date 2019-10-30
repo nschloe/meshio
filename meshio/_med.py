@@ -7,6 +7,7 @@ import numpy
 from ._common import num_nodes_per_cell
 from ._mesh import Mesh
 
+# https://docs.salome-platform.org/5/med/dev/med__outils_8hxx.html
 # https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {
     "vertex": "PO1",
@@ -18,9 +19,12 @@ meshio_to_med_type = {
     "quad8": "QU8",
     "tetra": "TE4",
     "tetra10": "T10",
+    "hexahedron": "HE8",
+    "hexahedron20": "H20",
     "pyramid": "PY5",
     "pyramid13": "P13",
-    "hexahedron": "HE8",
+    "wedge": "PE6",
+    "wedge15": "P15",
 }
 med_to_meshio_type = {v: k for k, v in meshio_to_med_type.items()}
 numpy_void_str = numpy.string_("")

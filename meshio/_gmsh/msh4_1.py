@@ -106,12 +106,12 @@ def _read_entities(f, is_ascii, data_size):
 
     for d, n in enumerate(number):
         for _ in range(n):
-            tag, = fromfile(f, c_int, 1)
+            (tag,) = fromfile(f, c_int, 1)
             fromfile(f, c_double, 3 if d == 0 else 6)  # discard bounding-box
-            num_physicals, = fromfile(f, c_size_t, 1)
+            (num_physicals,) = fromfile(f, c_size_t, 1)
             physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
-                num_BREP_, = fromfile(f, c_size_t, 1)
+                (num_BREP_,) = fromfile(f, c_size_t, 1)
                 fromfile(f, c_int, num_BREP_)
 
     if not is_ascii:
@@ -141,25 +141,22 @@ def _read_nodes(f, is_ascii, data_size):
         assert parametric == 0, "parametric nodes not implemented"
         num_nodes = int(fromfile(f, c_size_t, 1)[0])
 
-        # nodeTag(size_t) (* numNodes)
-
-        # Note that 'tags can be "sparse", i.e., do not have to
-        # constitute a continuous list of numbers (the format even
-        # allows them to not be ordered)'
-        # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
-        # Following https://github.com/nschloe/meshio/issues/388, we
-        # read the tags and populate the points array accordingly,
-        # thereby preserving the order of indices of nodes/points.
-
+        # From <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>:
+        # > [...] tags can be "sparse", i.e., do not have to constitute a continuous
+        # > list of numbers (the format even allows them to not be ordered).
+        #
+        # Following https://github.com/nschloe/meshio/issues/388, we read the tags and
+        # populate the points array accordingly, thereby preserving the order of indices
+        # of nodes/points.
         ixx = slice(idx, idx + num_nodes)
         tags[ixx] = fromfile(f, c_size_t, num_nodes) - 1
 
+        # Store the point densely and in the order in which they appear in the file.
         # x(double) y(double) z(double) (* numNodes)
-        points[tags[ixx]] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
+        points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
         idx += num_nodes
 
     if not is_ascii:
-
         line = f.readline().decode("utf-8")
         assert line == "\n"
 
@@ -177,7 +174,6 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     num_entity_blocks, total_num_elements, min_ele_tag, max_ele_tag = fromfile(
         f, c_size_t, 4
     )
-    is_dense = min_ele_tag == 1 and max_ele_tag == total_num_elements
 
     data = []
     cell_data = {}
@@ -185,7 +181,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     for k in range(num_entity_blocks):
         # entityDim(int) entityTag(int) elementType(int) numElements(size_t)
         dim_entity, tag_entity, type_ele = fromfile(f, c_int, 3)
-        num_ele, = fromfile(f, c_size_t, 1)
+        (num_ele,) = fromfile(f, c_size_t, 1)
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
         d = fromfile(f, c_size_t, int(num_ele * (1 + num_nodes_per_ele))).reshape(
@@ -202,15 +198,14 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     line = f.readline().decode("utf-8")
     assert line.strip() == "$EndElements"
 
-    if is_dense:
-        itags = point_tags
-    else:
-        m = numpy.max(point_tags + 1)
-        itags = -numpy.ones(m, dtype=int)
-        itags[point_tags] = numpy.arange(len(point_tags))
+    # Inverse point tags
+    inv_tags = numpy.full(numpy.max(point_tags) + 1, -1, dtype=int)
+    inv_tags[point_tags] = numpy.arange(len(point_tags))
 
     # Note that the first column in the data array is the element tag; discard it.
-    data = [(physical_tag, tpe, d[:, 1:] - 1) for physical_tag, tpe, d in data]
+    data = [
+        (physical_tag, tpe, inv_tags[d[:, 1:] - 1]) for physical_tag, tpe, d in data
+    ]
 
     cells = {}
     for physical_tag, key, values in data:

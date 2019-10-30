@@ -115,16 +115,16 @@ class VtuReader:
     def __init__(self, filename):
         from lxml import etree as ET
 
-        # libxml2 and with it lxml have a safety net for memory overflows; see,
-        # e.g., <https://stackoverflow.com/q/33828728/353337>.
+        # libxml2 and with it lxml have a safety net for memory overflows; see, e.g.,
+        # <https://stackoverflow.com/q/33828728/353337>.
         # This causes the error
         # ```
         # cannot parse large files and instead throws the exception
         #
         # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
         # ```
-        # Setting huge_tree=True removes the limit. Another alternative would
-        # be to use Python's native xml parser to avoid this error,
+        # Setting huge_tree=True removes the limit. Another alternative would be to use
+        # Python's native xml parser to avoid this error,
         # import xml.etree.cElementTree as ET
         parser = ET.XMLParser(remove_comments=True, huge_tree=True)
         tree = ET.parse(filename, parser)
