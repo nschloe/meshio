@@ -164,8 +164,9 @@ def write(filename, mesh):
     """
     Write FLAC3D f3grid grid file (only ASCII).
     """
-    assert any(cell_type in meshio_only for cell_type in mesh.cells.keys()), \
-        "FLAC3D format only supports 'tetra', 'pyramid', 'wedge' and 'hexahedron'."
+    assert any(
+        cell_type in meshio_only for cell_type in mesh.cells.keys()
+    ), "FLAC3D format only supports 'tetra', 'pyramid', 'wedge' and 'hexahedron'."
 
     if mesh.points.shape[1] == 2:
         logging.warning(
@@ -197,29 +198,42 @@ def _write_cells(f, points, cells):
     """
     Write zones.
     """
-    i = 0
-    for k, v in cells.items():
-        if k in meshio_only:
-            flac_type = meshio_to_flac3d_type[k]
-            for corner in v:
-                i += 1
-                zone = _translate_zone(points, corner, k)
-                zone_str = " ".join([str(z + 1) for z in zone])
-                f.write("Z {} {} {}\n".format(flac_type, i, zone_str))
+    zones, meshio_types = _translate_zones(points, cells)
+    for i, (zone, meshio_type) in enumerate(zip(zones, meshio_types)):
+        zone_str = " ".join([str(z + 1) for z in zone])
+        f.write(
+            "Z {} {} {}\n".format(meshio_to_flac3d_type[meshio_type], i + 1, zone_str)
+        )
 
 
-def _translate_zone(points, corner, meshio_type):
+def _translate_zones(points, cells):
     """
-    Reorder meshio cell to FLAC3D zone. Four first points must form a
-    right-handed coordinate system. Check if first guess is good,
-    otherwise use second guess.
+    Reorder meshio cells to FLAC3D zones. Four first points must form a
+    right-handed coordinate system (outward normal vectors). Reorder corner
+    points according to sign of cosine angles (not normalized).
     """
-    zone = corner[meshio_to_flac3d_order[meshio_type]]
-    p = points[zone]
-    vol = np.dot(np.cross(p[1] - p[0], p[2] - p[0]), p[3] - p[0])
-    if vol < 0.0:
-        zone = corner[meshio_to_flac3d_order_2[meshio_type]]
-    return zone
+    # Calculate cosine angles
+    meshio_types = [k for k in cells.keys() if k in meshio_only]
+    corners = [v for k, v in cells.items() if k in meshio_only]
+    tmp = [
+        corner[:, meshio_to_flac3d_order[k][:4]]
+        for k, corner in zip(meshio_types, corners)
+    ]
+    p0, p1, p2, p3 = points[np.concatenate(tmp).T]
+    angles = (np.cross(p1 - p0, p2 - p0) * (p3 - p0)).sum(axis=1)
+
+    # Reorder corner points
+    meshio_types = [
+        kk for k, v in cells.items() for kk in [k] * len(v) if k in meshio_only
+    ]
+    corners = [c for corner in corners for c in corner]
+    zones = [
+        corner[meshio_to_flac3d_order[k]]
+        if angle > 0.0
+        else corner[meshio_to_flac3d_order_2[k]]
+        for corner, k, angle in zip(corners, meshio_types, angles)
+    ]
+    return zones, meshio_types
 
 
 def _write_cell_data(f, cells, cell_data, field_data):
@@ -228,7 +242,9 @@ def _write_cell_data(f, cells, cell_data, field_data):
     """
     zgroups = _translate_zgroups(cells, cell_data)
     group_names = {k: k for k in zgroups.keys()}
-    cond = all(["flac3d:zone" in v.keys() for k, v in cell_data.items() if k in meshio_only])
+    cond = all(
+        ["flac3d:zone" in v.keys() for k, v in cell_data.items() if k in meshio_only]
+    )
     if cell_data and cond:
         if field_data:
             group_names.update({v[0]: k for k, v in field_data.items() if v[1] == 3})
@@ -243,16 +259,24 @@ def _translate_zgroups(cells, cell_data):
     """
     Convert meshio cell_data to FLAC3D zone groups. 'flac3d:zone' keyword
     in cell_data is used to assign zone groups.
-    """ 
-    cond = all(["flac3d:zone" in v.keys() for k, v in cell_data.items() if k in meshio_only])
+    """
+    cond = all(
+        ["flac3d:zone" in v.keys() for k, v in cell_data.items() if k in meshio_only]
+    )
     if cell_data and cond:
         # Make sure that mapper is in the same order as how zones were written
         mapper, imap = {}, 0
         for k, v in cells.items():
             if k in meshio_only:
-                mapper.update({i: z for i, z in zip(
-                    np.arange(imap, imap + len(v)) + 1, cell_data[k]["flac3d:zone"]
-                )})
+                mapper.update(
+                    {
+                        i: z
+                        for i, z in zip(
+                            np.arange(imap, imap + len(v)) + 1,
+                            cell_data[k]["flac3d:zone"],
+                        )
+                    }
+                )
                 imap += len(v)
 
         zgroups = {k: [] for k in sorted(set([v for v in mapper.values()]))}
