@@ -24,10 +24,11 @@ class Mesh:
         return
 
     def __repr__(self):
-        lines = []
-        lines.append("<meshio mesh object>")
-        lines.append("  Number of points: {}".format(len(self.points)))
-        lines.append("  Number of elements:")
+        lines = [
+            "<meshio mesh object>",
+            "  Number of points: {}".format(len(self.points)),
+            "  Number of elements:",
+        ]
         for tpe, elems in self.cells.items():
             lines.append("    {}: {}".format(tpe, len(elems)))
 
