@@ -260,28 +260,27 @@ def _translate_zgroups(cells, cell_data, field_data):
     Convert meshio cell_data to FLAC3D zone groups.
     """
     n_cells = sum([len(v) for k, v in cells.items() if k in meshio_only])
-    zone_data = np.zeros(n_cells, dtype = np.int32)
+    zone_data = np.zeros(n_cells, dtype=np.int32)
     idx = 0
     for k, v in cells.items():
         if k in meshio_only:
             if k in cell_data.keys():
                 for kk, vv in cell_data[k].items():
                     if kk in meshio_data:
-                        zone_data[idx:idx+len(vv)] = vv
+                        zone_data[idx : idx + len(vv)] = vv
                 idx += len(v)
 
     zgroups = {}
     for zid, i in enumerate(zone_data):
         if i in zgroups.keys():
-            zgroups[i].append(zid+1)
+            zgroups[i].append(zid + 1)
         else:
-            zgroups[i] = [ zid+1 ]
+            zgroups[i] = [zid + 1]
 
     labels = {k: k for k in zgroups.keys()}
     labels[0] = "None"
     if field_data:
         labels.update({v[0]: k for k, v in field_data.items() if v[1] == 3})
-
     return zgroups, labels
 
 
