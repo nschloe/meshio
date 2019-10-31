@@ -219,9 +219,9 @@ def _translate_zones(points, cells):
     """
     Reorder meshio cells to FLAC3D zones. Four first points must form a
     right-handed coordinate system (outward normal vectors). Reorder corner
-    points according to sign of cosine angles (not normalized).
+    points according to sign of scalar triple products.
     """
-    # Calculate cosine angles
+    # Calculate scalar triple products
     meshio_types = [k for k in cells.keys() if k in meshio_only]
     corners = [v for k, v in cells.items() if k in meshio_only]
     tmp = [
