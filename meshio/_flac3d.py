@@ -9,12 +9,21 @@ import numpy as np
 from .__about__ import __version__ as version
 from ._mesh import Mesh
 
+
 meshio_only = {
     "tetra",
     "pyramid",
     "wedge",
     "hexahedron",
 }
+
+
+meshio_data = {
+    "flac3d:zone",
+    "gmsh:physical",
+    "medit:ref",
+}
+
 
 flac3d_to_meshio_type = {
     "T4": "tetra",
@@ -160,14 +169,13 @@ def _translate_cells(zones, zgroups, count):
     return cells, cell_data, field_data
 
 
-def write(filename, mesh, zone_data="flac3d:zone"):
+def write(filename, mesh):
     """
     Write FLAC3D f3grid grid file (only ASCII).
     """
     assert any(
         cell_type in meshio_only for cell_type in mesh.cells.keys()
     ), "FLAC3D format only supports 'tetra', 'pyramid', 'wedge' and 'hexahedron'."
-    assert isinstance(zone_data, str)
 
     if mesh.points.shape[1] == 2:
         logging.warning(
@@ -184,7 +192,7 @@ def write(filename, mesh, zone_data="flac3d:zone"):
         f.write("* ZONES\n")
         _write_cells(f, mesh.points, mesh.cells)
         f.write("* ZONE GROUPS\n")
-        _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data, zone_data)
+        _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
 
 
 def _write_points(f, points):
@@ -237,60 +245,44 @@ def _translate_zones(points, cells):
     return zones, meshio_types
 
 
-def _write_cell_data(f, cells, cell_data, field_data, zone_data):
+def _write_cell_data(f, cells, cell_data, field_data):
     """
     Write zone groups.
     """
-    zgroups = _translate_zgroups(cells, cell_data, zone_data)
-    group_names = {k: k for k in zgroups.keys()}
-    cond = all(
-        [zone_data in v.keys() for k, v in cell_data.items() if k in meshio_only]
-    )
-    if cell_data and cond:
-        if field_data:
-            group_names.update({v[0]: k for k, v in field_data.items() if v[1] == 3})
-    else:
-        group_names[1] = "noname"
+    zgroups, labels = _translate_zgroups(cells, cell_data, field_data)
     for k, v in zgroups.items():
-        f.write("ZGROUP '{}'\n".format(group_names[k]))
+        f.write("ZGROUP '{}'\n".format(labels[k]))
         _write_zgroup(f, v)
 
 
-def _translate_zgroups(cells, cell_data, zone_data):
+def _translate_zgroups(cells, cell_data, field_data):
     """
-    Convert meshio cell_data to FLAC3D zone groups. 'flac3d:zone' keyword
-    in cell_data is used to assign zone groups.
+    Convert meshio cell_data to FLAC3D zone groups.
     """
-    cond = all(
-        [zone_data in v.keys() for k, v in cell_data.items() if k in meshio_only]
-    )
-    if cell_data and cond:
-        # Make sure that mapper is in the same order as how zones were written
-        mapper, imap = {}, 0
-        for k, v in cells.items():
-            if k in meshio_only:
-                mapper.update(
-                    {
-                        i: z
-                        for i, z in zip(
-                            np.arange(imap, imap + len(v)) + 1, cell_data[k][zone_data],
-                        )
-                    }
-                )
-                imap += len(v)
+    n_cells = sum([len(v) for k, v in cells.items() if k in meshio_only])
+    zone_data = np.zeros(n_cells, dtype = np.int32)
+    idx = 0
+    for k, v in cells.items():
+        if k in meshio_only:
+            if k in cell_data.keys():
+                for kk, vv in cell_data[k].items():
+                    if kk in meshio_data:
+                        zone_data[idx:idx+len(vv)] = vv
+                idx += len(v)
 
-        zgroups = {k: [] for k in sorted(set([v for v in mapper.values()]))}
-        for k, v in mapper.items():
-            zgroups[v].append(k)
-        return zgroups
-    else:
-        logging.warning(
-            "Keyword '{}' not found in cell_data. All cells assumed in the same zone group.".format(
-                zone_data
-            )
-        )
-        n_cells = sum([len(v) for k, v in cells.items() if k in meshio_only])
-        return {1: np.arange(1, n_cells + 1).tolist()}
+    zgroups = {}
+    for zid, i in enumerate(zone_data):
+        if i in zgroups.keys():
+            zgroups[i].append(zid+1)
+        else:
+            zgroups[i] = [ zid+1 ]
+
+    labels = {k: k for k in zgroups.keys()}
+    labels[0] = "None"
+    if field_data:
+        labels.update({v[0]: k for k, v in field_data.items() if v[1] == 3})
+
+    return zgroups, labels
 
 
 def _write_zgroup(f, data, ncol=20):
