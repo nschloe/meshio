@@ -277,7 +277,7 @@ def _translate_zgroups(cells, cell_data, field_data):
         else:
             zgroups[i] = [zid + 1]
 
-    labels = {k: k for k in zgroups.keys()}
+    labels = {k: str(k) for k in zgroups.keys()}
     labels[0] = "None"
     if field_data:
         labels.update({v[0]: k for k, v in field_data.items() if v[1] == 3})
