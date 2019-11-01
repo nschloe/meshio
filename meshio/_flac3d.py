@@ -229,7 +229,7 @@ def _translate_zones(points, cells):
         for k, corner in zip(meshio_types, corners)
     ]
     p0, p1, p2, p3 = points[np.concatenate(tmp).T]
-    angles = (np.cross(p1 - p0, p2 - p0) * (p3 - p0)).sum(axis=1)
+    dets = (np.cross(p1 - p0, p2 - p0) * (p3 - p0)).sum(axis=1)
 
     # Reorder corner points
     meshio_types = [
@@ -238,9 +238,9 @@ def _translate_zones(points, cells):
     corners = [c for corner in corners for c in corner]
     zones = [
         corner[meshio_to_flac3d_order[k]]
-        if angle > 0.0
+        if det > 0.0
         else corner[meshio_to_flac3d_order_2[k]]
-        for corner, k, angle in zip(corners, meshio_types, angles)
+        for corner, k, det in zip(corners, meshio_types, dets)
     ]
     return zones, meshio_types
 
