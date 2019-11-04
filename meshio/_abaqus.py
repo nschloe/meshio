@@ -141,7 +141,13 @@ def read_buffer(f):
             line = f.readline()
 
     return Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        field_data=field_data,
+        cell_sets=elsets,
+        point_sets=nsets,
     )
 
 
