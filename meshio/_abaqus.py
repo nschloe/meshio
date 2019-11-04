@@ -116,20 +116,20 @@ def read_buffer(f):
             line = f.readline()
             continue
 
-        keyword = line.strip("*").upper()
-        if keyword.startswith("NODE"):
+        keyword = line.strip("*")
+        if keyword.upper().startswith("NODE"):
             points, point_gids, line = _read_nodes(f)
-        elif keyword.startswith("ELEMENT"):
+        elif keyword.upper().startswith("ELEMENT"):
             key, idx, line = _read_cells(f, keyword, point_gids)
             cells[key] = idx
-        elif keyword.startswith("NSET"):
+        elif keyword.upper().startswith("NSET"):
             params_map = get_param_map(keyword, required_keys=["NSET"])
             setids, line = read_set(f, params_map)
             name = params_map["NSET"]
             if name not in nsets:
                 nsets[name] = []
             nsets[name].append(setids)
-        elif keyword.startswith("ELSET"):
+        elif keyword.upper().startswith("ELSET"):
             params_map = get_param_map(keyword, required_keys=["ELSET"])
             setids, line = read_set(f, params_map)
             name = params_map["ELSET"]
@@ -164,7 +164,7 @@ def _read_nodes(f):
 
 def _read_cells(f, line0, point_gids):
     sline = line0.split(",")[1:]
-    etype_sline = sline[0]
+    etype_sline = sline[0].upper()
     assert "TYPE" in etype_sline, etype_sline
     etype = etype_sline.split("=")[1].strip()
     assert etype in abaqus_to_meshio_type, "Element type not available: {}".format(
@@ -211,7 +211,7 @@ def get_param_map(word, required_keys=None):
         else:
             sword = wordi.split("=")
             assert len(sword) == 2, sword
-            key = sword[0].strip()
+            key = sword[0].strip().upper()
             value = sword[1].strip()
         param_map[key] = value
 
