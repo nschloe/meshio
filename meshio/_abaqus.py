@@ -228,9 +228,7 @@ def read_set(f, params_map):
     set_ids = []
     while True:
         line = f.readline()
-        if not line:
-            break
-        if line.startswith("*"):
+        if not line or line.startswith("*"):
             break
         set_ids += [int(k) for k in line.strip().strip(",").split(",")]
 
