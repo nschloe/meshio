@@ -340,7 +340,9 @@ class XdmfWriter:
     def points(self, grid, points):
         from lxml import etree as ET
 
-        if points.shape[1] == 2:
+        if points.shape[1] == 1:
+            geometry_type = "X"
+        elif points.shape[1] == 2:
             geometry_type = "XY"
         else:
             assert points.shape[1] == 3
