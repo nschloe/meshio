@@ -53,9 +53,9 @@ def read_buffer(f):
 
     cells = {}
     if len(triangle) > 0:
-        cells["triangle"] = triangle
+        cells["triangle"] = triangle - 1
     if len(quad) > 0:
-        cells["quad"] = quad
+        cells["quad"] = quad - 1
 
     return Mesh(numpy.array(points), cells)
 
@@ -75,8 +75,8 @@ def write(filename, mesh):
             f.write("v {} {} {}\n".format(p[0], p[1], p[2]))
         if "triangle" in mesh.cells:
             for c in mesh.cells["triangle"]:
-                f.write("f {} {} {}\n".format(*c))
+                f.write("f {} {} {}\n".format(*(c + 1)))
         if "quad" in mesh.cells:
             for c in mesh.cells["quad"]:
-                f.write("f {} {} {} {}\n".format(*c))
+                f.write("f {} {} {} {}\n".format(*(c + 1)))
     return

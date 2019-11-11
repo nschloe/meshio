@@ -9,7 +9,6 @@ import numpy as np
 from .__about__ import __version__ as version
 from ._mesh import Mesh
 
-
 meshio_only = {
     "tetra",
     "pyramid",

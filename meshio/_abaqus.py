@@ -1,8 +1,6 @@
 """
 I/O for Abaqus inp files.
 """
-import logging
-
 import numpy
 
 from .__about__ import __version__
@@ -246,26 +244,21 @@ def read_set(f, params_map):
     return set_ids, line
 
 
-def write(filename, mesh):
-    if mesh.points.shape[1] == 2:
-        logging.warning(
-            "Abaqus requires 3D points, but 2D points given. "
-            "Appending 0 third component."
-        )
-        mesh.points = numpy.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
-        )
-
+def write(filename, mesh, translate_cell_names=True):
     with open(filename, "wt") as f:
         f.write("*Heading\n")
-        f.write(" Abaqus DataFile Version 6.14\n")
+        f.write("Abaqus DataFile Version 6.14\n")
         f.write("written by meshio v{}\n".format(__version__))
         f.write("*Node\n")
+        fmt = ", ".join(["{}"] + ["{!r}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):
-            f.write("{}, {!r}, {!r}, {!r}\n".format(k + 1, x[0], x[1], x[2]))
+            f.write(fmt.format(k + 1, *x))
         eid = 0
         for cell_type, node_idcs in mesh.cells.items():
-            f.write("*Element,type=" + meshio_to_abaqus_type[cell_type] + "\n")
+            name = (
+                meshio_to_abaqus_type[cell_type] if translate_cell_names else cell_type
+            )
+            f.write("*Element,type=" + name + "\n")
             for row in node_idcs:
                 eid += 1
                 nids_strs = (str(nid + 1) for nid in row.tolist())
