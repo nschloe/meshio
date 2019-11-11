@@ -622,6 +622,7 @@ def write(filename, mesh, binary=True):
     if mesh.cell_data:
         cell_data = {}
         for t, data in mesh.cell_data.items():
+            cell_data[t] = {}
             for name, values in data.items():
                 if len(values.shape) == 2 and values.shape[1] == 2:
                     logging.warning(
