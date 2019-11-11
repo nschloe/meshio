@@ -1,3 +1,5 @@
+import numpy
+
 from . import (
     _abaqus,
     _ansys,
@@ -217,6 +219,8 @@ def write_points_cells(
     file_format=None,
     **kwargs
 ):
+    points = numpy.asarray(points)
+    cells = {key: numpy.asarray(value) for key, value in cells.items()}
     mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
@@ -240,8 +244,12 @@ def write(filename, mesh, file_format=None, **kwargs):
     for key, value in mesh.cells.items():
         if key[:7] == "polygon":
             assert value.shape[1] == int(key[7:])
-        else:
+        elif key in num_nodes_per_cell:
             assert value.shape[1] == num_nodes_per_cell[key]
+        else:
+            # we allow custom keys <https://github.com/nschloe/meshio/issues/501> and
+            # cannot check those
+            pass
 
     try:
         interface, args, default_kwargs = _writer_map[file_format]
