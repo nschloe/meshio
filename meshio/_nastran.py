@@ -137,14 +137,16 @@ def write(filename, mesh):
             "Nastran requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = numpy.hstack([mesh.points, numpy.zeros((len(mesh.points), 1))])
+        points = numpy.hstack([mesh.points, numpy.zeros((len(mesh.points), 1))])
+    else:
+        points = mesh.points
 
     with open(filename, "w") as f:
         f.write("$ Nastran file written by meshio v{}\n".format(__version__))
         f.write("BEGIN BULK\n")
 
         # Points
-        for point_id, x in enumerate(mesh.points):
+        for point_id, x in enumerate(points):
             f.write(
                 "GRID, {:d},, {:.15e}, {:.15e}, {:.15e}\n".format(
                     point_id + 1, x[0], x[1], x[2]
