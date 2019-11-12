@@ -137,7 +137,7 @@ def write(filename, mesh):
             "Nastran requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        points = numpy.hstack([mesh.points, numpy.zeros((len(mesh.points), 1))])
+        points = numpy.column_stack([mesh.points, numpy.zeros(mesh.points.shape[0])])
     else:
         points = mesh.points
 
