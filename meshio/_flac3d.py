@@ -1,10 +1,9 @@
 """
 I/O for FLAC3D format.
 """
-import logging
 import time
 
-import numpy as np
+import numpy
 
 from .__about__ import __version__ as version
 from ._mesh import Mesh
@@ -95,7 +94,10 @@ def read_buffer(f):
 
     cells, cell_data, field_data = _translate_cells(zones, zgroups, count)
     return Mesh(
-        points=np.array(points), cells=cells, cell_data=cell_data, field_data=field_data
+        points=numpy.array(points),
+        cells=cells,
+        cell_data=cell_data,
+        field_data=field_data,
     )
 
 
@@ -150,20 +152,20 @@ def _translate_cells(zones, zgroups, count):
     """
     meshio_types = [k for k in meshio_to_flac3d_type.keys() if count[k]]
     cells = {k: [] for k in meshio_types}
-    cell_data = {k: np.zeros(count[k]) for k in meshio_types}
+    cell_data = {k: numpy.zeros(count[k]) for k in meshio_types}
     field_data = {}
 
     for v in zones.values():
         cells[v["meshio_type"]].append(v["cell"])
 
     for zid, (k, v) in enumerate(zgroups.items()):
-        field_data[k] = np.array([zid + 1, 3])
+        field_data[k] = numpy.array([zid + 1, 3])
         for i in v:
             mid = zones[i]["meshio_id"]
             mt = zones[i]["meshio_type"]
             cell_data[mt][mid] = zid + 1
 
-    cells = {k: np.array(v) for k, v in cells.items()}
+    cells = {k: numpy.array(v) for k, v in cells.items()}
     cell_data = {k: {"flac3d:zone": v} for k, v in cell_data.items()}
     return cells, cell_data, field_data
 
@@ -175,13 +177,6 @@ def write(filename, mesh):
     assert any(
         cell_type in meshio_only for cell_type in mesh.cells.keys()
     ), "FLAC3D format only supports 'tetra', 'pyramid', 'wedge' and 'hexahedron'."
-
-    if mesh.points.shape[1] == 2:
-        logging.warning(
-            "FLAC3D requires 3D points, but 2D points given. "
-            "Appending 0 third component."
-        )
-        mesh.points = np.hstack([mesh.points, np.zeros((len(mesh.points), 1))])
 
     with open(filename, "w") as f:
         f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
@@ -227,8 +222,8 @@ def _translate_zones(points, cells):
         corner[:, meshio_to_flac3d_order[k][:4]]
         for k, corner in zip(meshio_types, corners)
     ]
-    p0, p1, p2, p3 = points[np.concatenate(tmp).T]
-    dets = (np.cross(p1 - p0, p2 - p0) * (p3 - p0)).sum(axis=1)
+    p0, p1, p2, p3 = points[numpy.concatenate(tmp).T]
+    dets = (numpy.cross(p1 - p0, p2 - p0) * (p3 - p0)).sum(axis=1)
 
     # Reorder corner points
     meshio_types = [
@@ -259,7 +254,7 @@ def _translate_zgroups(cells, cell_data, field_data):
     Convert meshio cell_data to FLAC3D zone groups.
     """
     n_cells = sum([len(v) for k, v in cells.items() if k in meshio_only])
-    zone_data = np.zeros(n_cells, dtype=np.int32)
+    zone_data = numpy.zeros(n_cells, dtype=numpy.int32)
     idx = 0
     for k, v in cells.items():
         if k in meshio_only:
@@ -288,7 +283,7 @@ def _write_zgroup(f, data, ncol=20):
     Write zone group data.
     """
     nrow = len(data) // ncol
-    lines = np.reshape(data[: nrow * ncol], (nrow, ncol)).tolist()
+    lines = numpy.reshape(data[: nrow * ncol], (nrow, ncol)).tolist()
     if data[nrow * ncol :]:
         lines.append(data[nrow * ncol :])
     for line in lines:

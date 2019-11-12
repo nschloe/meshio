@@ -250,6 +250,8 @@ def add_node_sets(mesh):
 def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     """Write and read a file, and make sure the data is the same as before.
     """
+    in_mesh = copy.deepcopy(input_mesh)
+
     with tempfile.TemporaryDirectory() as temp_dir:
         filepath = os.path.join(temp_dir, "test" + extension)
         writer(filepath, input_mesh)
@@ -260,13 +262,14 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     for cell_type, data in input_mesh.cells.items():
         assert mesh.cells[cell_type].flags["WRITEABLE"]
 
+    # assert that the input mesh hasn't changed at all
+    assert numpy.allclose(in_mesh.points, input_mesh.points, atol=atol, rtol=0.0)
+
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
     # Use allclose.
-
-    # We cannot compare the exact rows here since the order of the points might
-    # have changes. Just compare the sums
-    assert numpy.allclose(input_mesh.points, mesh.points, atol=atol, rtol=0.0)
+    n = in_mesh.points.shape[1]
+    assert numpy.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
 
     for cell_type, data in input_mesh.cells.items():
         assert numpy.allclose(data, mesh.cells[cell_type])

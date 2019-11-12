@@ -8,6 +8,7 @@ import helpers
 import meshio
 
 test_set = [
+    helpers.tri_mesh_2d,
     helpers.tri_mesh,
     helpers.triangle6_mesh,
     helpers.quad_mesh,
@@ -35,14 +36,12 @@ def test(mesh, binary):
         return meshio._vtk.write(*args, binary=binary, **kwargs)
 
     helpers.write_read(writer, meshio._vtk.read, mesh, 1.0e-15)
-    return
 
 
 def test_generic_io():
     helpers.generic_io("test.vtk")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.vtk")
-    return
 
 
 @pytest.mark.parametrize(
@@ -60,7 +59,6 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     assert len(mesh.cells["triangle"]) == ref_num_cells
     writer = partial(meshio._vtk.write, binary=binary)
     helpers.write_read(writer, meshio._vtk.read, mesh, 1.0e-15)
-    return
 
 
 @pytest.mark.parametrize(
