@@ -603,7 +603,9 @@ def write(filename, mesh, binary=True):
             "VTK requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = pad(mesh.points)
+        points = pad(mesh.points)
+    else:
+        points = mesh.points
 
     if mesh.point_data:
         for name, values in mesh.point_data.items():
@@ -634,7 +636,7 @@ def write(filename, mesh, binary=True):
         f.write("DATASET UNSTRUCTURED_GRID\n".encode("utf-8"))
 
         # write points and cells
-        _write_points(f, mesh.points, binary)
+        _write_points(f, points, binary)
         _write_cells(f, mesh.cells, binary)
 
         # write point data
