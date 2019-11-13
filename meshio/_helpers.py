@@ -3,6 +3,7 @@ import numpy
 from . import (
     _abaqus,
     _ansys,
+    _cgns,
     _dolfin,
     _exodus,
     _flac3d,
@@ -29,6 +30,7 @@ from ._mesh import Mesh
 input_filetypes = [
     "abaqus",
     "ansys",
+    "cgns",
     "dolfin-xml",
     "exodus",
     "flac3d",
@@ -57,6 +59,7 @@ output_filetypes = [
     "abaqus",
     "ansys-ascii",
     "ansys-binary",
+    "cgns",
     "dolfin-xml",
     "exodus",
     "flac3d",
@@ -90,6 +93,7 @@ output_filetypes = [
 
 _extension_to_filetype = {
     ".bdf": "nastran",
+    ".cgns": "cgns",
     ".e": "exodus",
     ".ex2": "exodus",
     ".exo": "exodus",
@@ -157,6 +161,7 @@ def read(filename, file_format=None):
         "ansys": _ansys,
         "ansys-ascii": _ansys,
         "ansys-binary": _ansys,
+        "cgns": _cgns,
         #
         "gmsh": _gmsh,
         "gmsh-ascii": _gmsh,
@@ -307,4 +312,5 @@ _writer_map = {
     "svg": (_svg, (), {}),
     "nastran": (_nastran, (), {}),
     "flac3d": (_flac3d, (), {}),
+    "cgns": (_cgns, (), {}),
 }

@@ -17,6 +17,7 @@ meshio can read and write all of the following and smoothly converts between the
 
  * [Abaqus](http://abaqus.software.polimi.it/v6.14/index.html)
  * [ANSYS msh](https://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf)
+ * [CGNS](https://cgns.github.io/)
  * [DOLFIN XML](https://manpages.ubuntu.com/manpages/disco/man1/dolfin-convert.1.html)
  * [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm)
  * [FLAC3D](https://www.itascacg.com/software/flac3d)
