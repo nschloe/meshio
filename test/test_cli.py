@@ -13,7 +13,11 @@ def test_cli():
 
     outfile = tempfile.NamedTemporaryFile().name
 
-    meshio._cli.main(
+    meshio._cli.info(
+        [infile, "--input-format", "gmsh-ascii",]
+    )
+
+    meshio._cli.convert(
         [
             infile,
             outfile,
