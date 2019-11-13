@@ -78,6 +78,7 @@ def read_buffer(f):
     data line of a ZGROUP section.
     """
     points = []
+    point_ids = {}
     zones = {}
     zgroups = {}
     count = {k: 0 for k in meshio_to_flac3d_type.keys()}
@@ -87,9 +88,9 @@ def read_buffer(f):
         if line.startswith("ZGROUP"):
             _read_zgroup(f, line, zgroups)
         elif line.startswith("G"):
-            _read_point(line, points)
+            _read_point(line, points, point_ids)
         elif line.startswith("Z"):
-            _read_cell(line, zones, count)
+            _read_cell(line, zones, count, point_ids)
         line = f.readline()
 
     cells, cell_data, field_data = _translate_cells(zones, zgroups, count)
@@ -101,21 +102,22 @@ def read_buffer(f):
     )
 
 
-def _read_point(line, points):
+def _read_point(line, points, point_ids):
     """
     Read point coordinates.
     """
     line = line.rstrip().split()
     points.append([float(l) for l in line[2:]])
+    point_ids[int(line[1])] = len(point_ids)
 
 
-def _read_cell(line, zones, count):
+def _read_cell(line, zones, count, point_ids):
     """
     Read cell corners.
     """
     line = line.rstrip().split()
     meshio_type = flac3d_to_meshio_type[line[1]]
-    cell = [int(l) - 1 for l in line[3:]]
+    cell = [point_ids[int(l)] for l in line[3:]]
     if line[1] == "B7":
         cell.append(cell[-1])
     zones[int(line[2])] = {
