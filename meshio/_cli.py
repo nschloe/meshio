@@ -1,6 +1,7 @@
 """
 Convert a mesh file to another.
 """
+import argparse
 import sys
 
 import numpy
@@ -23,9 +24,9 @@ def _get_version_text():
     )
 
 
-def main(argv=None):
+def convert(argv=None):
     # Parse command line arguments.
-    parser = _get_parser()
+    parser = _get_convert_parser()
     args = parser.parse_args(argv)
 
     # read mesh data
@@ -50,10 +51,7 @@ def main(argv=None):
     return
 
 
-def _get_parser():
-    """Parse input options."""
-    import argparse
-
+def _get_convert_parser():
     parser = argparse.ArgumentParser(
         description=("Convert between mesh formats."),
         formatter_class=argparse.RawTextHelpFormatter,
@@ -93,6 +91,62 @@ def _get_parser():
         "-z",
         action="store_true",
         help="remove third (z) dimension if all points are 0",
+    )
+
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="version",
+        version=_get_version_text(),
+        help="display version information",
+    )
+
+    return parser
+
+
+def info(argv=None):
+    # Parse command line arguments.
+    parser = _get_info_parser()
+    args = parser.parse_args(argv)
+
+    # read mesh data
+    mesh = read(args.infile, file_format=args.input_format)
+    print(mesh)
+
+    # check if the cell arrays are consistent with the points
+    is_consistent = True
+    for cells in mesh.cells.values():
+        if numpy.any(cells > mesh.points.shape[0]):
+            print("\nATTENTION: Inconsistent mesh. Cells refer to nonexistent points.")
+            is_consistent = False
+            break
+
+    # check if there are redundant points
+    if is_consistent:
+        point_is_used = numpy.zeros(mesh.points.shape[0], dtype=bool)
+        for cells in mesh.cells.values():
+            point_is_used[cells] = True
+        if numpy.any(~point_is_used):
+            print("ATTENTION: Some points are not part of any cell.")
+
+    return
+
+
+def _get_info_parser():
+    parser = argparse.ArgumentParser(
+        description=("Print file info."),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    parser.add_argument("infile", type=str, help="mesh file to be read from")
+
+    parser.add_argument(
+        "--input-format",
+        "-i",
+        type=str,
+        choices=input_filetypes,
+        help="input file format",
+        default=None,
     )
 
     parser.add_argument(

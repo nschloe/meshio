@@ -43,5 +43,8 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering",
     ],
-    entry_points={"console_scripts": ["meshio-convert = meshio._cli:main"]},
+    entry_points={"console_scripts": [
+        "meshio-convert = meshio._cli:convert",
+        "meshio-info = meshio._cli:info",
+        ]},
 )
