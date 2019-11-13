@@ -83,12 +83,15 @@ def read_buffer(f):
     zgroups = {}
     count = {k: 0 for k in meshio_to_flac3d_type.keys()}
 
+    index = 0
     line = f.readline()
     while line:
         if line.startswith("ZGROUP"):
             _read_zgroup(f, line, zgroups)
         elif line.startswith("G"):
-            _read_point(line, points, point_ids)
+            pid = _read_point(line, points)
+            point_ids[pid] = index
+            index += 1
         elif line.startswith("Z"):
             _read_cell(line, zones, count, point_ids)
         line = f.readline()
@@ -102,13 +105,13 @@ def read_buffer(f):
     )
 
 
-def _read_point(line, points, point_ids):
+def _read_point(line, points):
     """
     Read point coordinates.
     """
     line = line.rstrip().split()
     points.append([float(l) for l in line[2:]])
-    point_ids[int(line[1])] = len(point_ids)
+    return int(line[1])
 
 
 def _read_cell(line, zones, count, point_ids):
