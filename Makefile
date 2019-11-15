@@ -8,6 +8,8 @@ tag:
 	@echo "Tagging v$(VERSION)..."
 	git tag v$(VERSION)
 	git push --tags
+	# Always create a github "release" right after tagging so it appears on zenodo
+	curl -H "Authorization: token `cat $(HOME)/.github-access-token`" -d '{"tag_name": "$(VERSION)"}' https://api.github.com/repos/nschloe/meshio/releases
 
 upload: setup.py
 	# Make sure we're on the master branch
