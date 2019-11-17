@@ -11,8 +11,8 @@ import meshio
 
 def read(filename):
     """
-	Read the mesh in PLOT3D Format from filename.
-	"""
+    Read the mesh in PLOT3D Format from filename.
+    """
     with open(filename, "r") as p3dfile:
         first_line = p3dfile.readline().rstrip("\n").split()
         n = len(first_line)
@@ -63,8 +63,8 @@ def read(filename):
 
 def write(filename, mesh):
     """
-	Write the mesh to filename in PLOT3D format
-	"""
+    Write the mesh to filename in PLOT3D format
+    """
     points = mesh.points
     imax = np.unique(points[:, 0]).size
     jmax = np.unique(points[:, 1]).size
