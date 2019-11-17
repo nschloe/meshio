@@ -134,9 +134,12 @@ def _read_binary(f):
 
 
 def write(filename, mesh, binary=False):
-    assert (
-        len(mesh.cells.keys()) == 1 and list(mesh.cells.keys())[0] == "triangle"
-    ), "STL can only write triangle cells."
+    assert "triangle" in mesh.cells, "STL can only write triangle cells."
+    if len(mesh.cells) > 1:
+        keys = set(mesh.cells.keys()).remove("triangle")
+        logging.warning(
+            "STL can only write triangle cells. Discarding {}.".format(", ".join(keys))
+        )
 
     if mesh.points.shape[1] == 2:
         logging.warning(
@@ -151,8 +154,6 @@ def write(filename, mesh, binary=False):
         _binary(filename, mesh.points, mesh.cells)
     else:
         _write_ascii(filename, mesh.points, mesh.cells)
-
-    return
 
 
 def _compute_normals(pts):
@@ -185,8 +186,6 @@ def _write_ascii(filename, points, cells):
 
         fh.write("endsolid\n".encode("utf-8"))
 
-    return
-
 
 def _binary(filename, points, cells):
     pts = points[cells["triangle"]]
@@ -203,5 +202,3 @@ def _binary(filename, points, cells):
             fh.write(normal.astype(numpy.float32))
             fh.write(pt.astype(numpy.float32))
             fh.write(numpy.uint16(0))
-
-    return
