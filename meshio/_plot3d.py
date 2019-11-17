@@ -55,8 +55,6 @@ def read(filename):
 		cells_ = np.array(cells_, dtype=np.int32)
 		cells = {'hexahedron': cells_}
 		
-		for row in cells_:
-			print(row)
 		return Mesh(pts, cells)
 
 
