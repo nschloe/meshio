@@ -83,11 +83,11 @@ def write(filename, mesh):
 
 def test_plot3d():
     # Test write to p3d
-    mesh = meshio.read("../test/meshes/cavity.vtk")
+    mesh = meshio.read("../test/meshes/vtk/cavity.vtk")
     write("../test/meshes/cavity.p3d", mesh)
     # test read p3d mesh file
-    mesh = read("../test/meshes/naca0018_2d.p3d")
-    meshio.write("../test/meshes/naca0018_2d.vtk", mesh)
+    mesh = read("../test/meshes/p3d/naca0018_2d.p3d")
+    meshio.write("../test/meshes/vtk/naca0018_2d.vtk", mesh)
 
 
 if __name__ == "__main__":
