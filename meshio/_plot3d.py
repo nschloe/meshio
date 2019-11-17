@@ -68,10 +68,10 @@ def write(filename, mesh):
     points = mesh.points
     imax = np.unique(points[:, 0]).size
     jmax = np.unique(points[:, 1]).size
-    kmax = np.unique(points[:, 2]).size
     _2d = True if kmax == 1 else False
     with open(filename, "w") as p3dfile:
         if not _2d:
+            kmax = np.unique(points[:, 2]).size
             print(imax, jmax, kmax, file=p3dfile)
             for value in points.flatten(order="F"):
                 print(value, file=p3dfile)
