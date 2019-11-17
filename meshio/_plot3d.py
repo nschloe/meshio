@@ -68,7 +68,7 @@ def write(filename, mesh):
     points = mesh.points
     imax = np.unique(points[:, 0]).size
     jmax = np.unique(points[:, 1]).size
-    _2d = True if kmax == 1 else False
+    _2d = True if points.shape[1] == 2 else False
     with open(filename, "w") as p3dfile:
         if not _2d:
             kmax = np.unique(points[:, 2]).size
