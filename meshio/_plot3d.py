@@ -1,7 +1,7 @@
 """
 PLOT3D format is for structured grids only
-For more info, check out: PLOT3D User's Manual, chapter 8: Data File Formats
-Author: Samir OUCHENE
+For more info, check out: PLOT3D User's Manual, chapter 8: Data File Formats:
+https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19900013774_1990013774.pdf
 """
 
 import numpy as np
