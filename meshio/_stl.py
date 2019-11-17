@@ -134,9 +134,14 @@ def _read_binary(f):
 
 
 def write(filename, mesh, binary=False):
-    assert "triangle" in mesh.cells, "STL can only write triangle cells."
+    assert (
+        "triangle" in mesh.cells
+    ), "STL can only write triangle cells (not {}).".format(
+        ", ".join(list(mesh.cells.keys()))
+    )
     if len(mesh.cells) > 1:
-        keys = set(mesh.cells.keys()).remove("triangle")
+        keys = set(mesh.cells.keys())
+        keys.remove("triangle")
         logging.warning(
             "STL can only write triangle cells. Discarding {}.".format(", ".join(keys))
         )
