@@ -82,7 +82,7 @@ def test_plot3d():
 	mesh = meshio.read('../test/meshes/cavity.vtk')
 	write('../test/meshes/cavity.p3d', mesh)
 	# test read p3d mesh file
-	mesh = read('../test/meshes/naca0018_2d.p3d'
+	mesh = read('../test/meshes/naca0018_2d.p3d')
 	meshio.write('../test/meshes/naca0018_2d.vtk', mesh)
 
 if __name__ == '__main__':
