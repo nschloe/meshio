@@ -87,7 +87,7 @@ def read_write(plot=False):
         ax[1].grid()
 
         fig.tight_layout()
-        fig.savefig("performance.png")
+        fig.savefig("performance.svg", transparent=True, bbox_inches="tight")
 
 
 if __name__ == "__main__":
