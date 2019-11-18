@@ -103,6 +103,14 @@ with meshio.XdmfTimeSeriesReader(filename) as reader:
         t, point_data, cell_data = reader.read_data(k)
 ```
 
+### Performance comparison
+
+<img alt="performance" src="https://nschloe.github.io/meshio/performance.svg" width="90%">
+
+Some mesh formats are more suitable for I/O than others. Here you find an overview of
+how fast the meshio routines are for a certain mesh with about 100k nodes.
+
+
 ### Installation
 
 meshio is [available from the Python Package Index](https://pypi.org/project/meshio/),
@@ -115,7 +123,7 @@ to install.
 Additional dependencies (`netcdf4`, `h5py` and `lxml`) are required for some of the
 output formats and can be pulled in by
 ```
-pip install -U meshio[all]
+pip install meshio[all] --user
 ```
 
 ### Testing
