@@ -132,3 +132,20 @@ def translate_mixed_cells(data):
         cells[meshio_type] = data[indices]
 
     return cells
+
+
+def attribute_type(data):
+    # <http://www.xdmf.org/index.php/XDMF_Model_and_Format#Attribute>
+    if len(data.shape) == 1 or (len(data.shape) == 2 and data.shape[1] == 1):
+        return "Scalar"
+    elif len(data.shape) == 2 and data.shape[1] in [2, 3]:
+        return "Vector"
+    elif (len(data.shape) == 2 and data.shape[1] == 9) or (
+        len(data.shape) == 3 and data.shape[1] == 3 and data.shape[2] == 3
+    ):
+        return "Tensor"
+    elif len(data.shape) == 2 and data.shape[1] == 6:
+        return "Tensor6"
+
+    assert len(data.shape) == 3
+    return "Matrix"
