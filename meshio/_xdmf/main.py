@@ -10,6 +10,7 @@ from .._common import cell_data_from_raw, write_xml
 from .._mesh import Mesh
 from .._vtk import raw_from_cell_data
 from .common import (
+    attribute_type,
     dtype_to_format_string,
     meshio_to_xdmf_type,
     meshio_type_to_xdmf_index,
@@ -423,22 +424,6 @@ class XdmfWriter:
             data_item.text = self.numpy_to_xml_string(cd)
         return
 
-    def _attribute_type(self, data):
-        # <http://www.xdmf.org/index.php/XDMF_Model_and_Format#Attribute>
-        if len(data.shape) == 1 or (len(data.shape) == 2 and data.shape[1] == 1):
-            return "Scalar"
-        elif len(data.shape) == 2 and data.shape[1] in [2, 3]:
-            return "Vector"
-        elif (len(data.shape) == 2 and data.shape[1] == 9) or (
-            len(data.shape) == 3 and data.shape[1] == 3 and data.shape[2] == 3
-        ):
-            return "Tensor"
-        elif len(data.shape) == 2 and data.shape[1] == 6:
-            return "Tensor6"
-
-        assert len(data.shape) == 3
-        return "Matrix"
-
     def point_data(self, point_data, grid):
         from lxml import etree as ET
 
@@ -447,7 +432,7 @@ class XdmfWriter:
                 grid,
                 "Attribute",
                 Name=name,
-                AttributeType=self._attribute_type(data),
+                AttributeType=attribute_type(data),
                 Center="Node",
             )
             dt, prec = numpy_to_xdmf_dtype[data.dtype.name]
@@ -472,7 +457,7 @@ class XdmfWriter:
                 grid,
                 "Attribute",
                 Name=name,
-                AttributeType=self._attribute_type(data),
+                AttributeType=attribute_type(data),
                 Center="Cell",
             )
             dt, prec = numpy_to_xdmf_dtype[data.dtype.name]

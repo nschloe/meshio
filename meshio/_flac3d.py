@@ -8,19 +8,10 @@ import numpy
 from .__about__ import __version__ as version
 from ._mesh import Mesh
 
-meshio_only = {
-    "tetra",
-    "pyramid",
-    "wedge",
-    "hexahedron",
-}
+meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
 
 
-meshio_data = {
-    "flac3d:zone",
-    "gmsh:physical",
-    "medit:ref",
-}
+meshio_data = {"flac3d:zone", "gmsh:physical", "medit:ref"}
 
 
 flac3d_to_meshio_type = {

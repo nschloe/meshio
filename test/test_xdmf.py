@@ -59,7 +59,13 @@ def test_time_series():
         n = helpers.tri_mesh_2d.points.shape[0]
 
         times = numpy.linspace(0.0, 1.0, 5)
-        point_data = [{"phi": numpy.full(n, t)} for t in times]
+        point_data = [
+            {
+                "phi": numpy.full(n, t),
+                "u": numpy.full(helpers.tri_mesh_2d.points.shape, t),
+            }
+            for t in times
+        ]
         for t, pd in zip(times, point_data):
             writer.write_data(
                 t, point_data=pd, cell_data={"triangle": {"a": [3.0, 4.2]}}
