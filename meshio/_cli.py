@@ -134,7 +134,7 @@ def info(argv=None):
 
 def _get_info_parser():
     parser = argparse.ArgumentParser(
-        description=("Print mesh info."), formatter_class=argparse.RawTextHelpFormatter,
+        description=("Print mesh info."), formatter_class=argparse.RawTextHelpFormatter
     )
 
     parser.add_argument("infile", type=str, help="mesh file to be read from")

@@ -409,9 +409,13 @@ class XdmfTimeSeriesWriter:
         from lxml import etree as ET
 
         for name, data in point_data.items():
-            att = ET.SubElement(grid, "Attribute", Name=name,
-                                AttributeType=attribute_type(data),
-                                Center="Node")
+            att = ET.SubElement(
+                grid,
+                "Attribute",
+                Name=name,
+                AttributeType=attribute_type(data),
+                Center="Node",
+            )
             dt, prec = numpy_to_xdmf_dtype[data.dtype.name]
             dim = " ".join([str(s) for s in data.shape])
             data_item = ET.SubElement(
@@ -430,9 +434,11 @@ class XdmfTimeSeriesWriter:
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(
-                grid, "Attribute", Name=name,
+                grid,
+                "Attribute",
+                Name=name,
                 AttributeType=attribute_type(data),
-                Center="Cell"
+                Center="Cell",
             )
             dt, prec = numpy_to_xdmf_dtype[data.dtype.name]
             dim = " ".join([str(s) for s in data.shape])
