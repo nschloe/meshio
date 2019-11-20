@@ -30,8 +30,7 @@ def test(mesh):
 
 
 @pytest.mark.parametrize(
-    "filename, ref_sum, ref_num_cells",
-    [("abaqus_mesh_ex.inp", -68501.914611293, 3492), ("UUea.inp", 4950.0, 50)],
+    "filename, ref_sum, ref_num_cells", [("UUea.inp", 4950.0, 50)],
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_reference_file(filename, ref_sum, ref_num_cells, binary):
