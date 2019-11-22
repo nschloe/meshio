@@ -1,4 +1,3 @@
-import codecs
 import os
 
 from setuptools import find_packages, setup
@@ -11,7 +10,7 @@ with open(os.path.join(base_dir, "meshio", "__about__.py"), "rb") as f:
 
 
 def read(fname):
-    return codecs.open(os.path.join(base_dir, fname), encoding="utf-8").read()
+    return open(os.path.join(base_dir, fname), encoding="utf-8").read()
 
 
 setup(
