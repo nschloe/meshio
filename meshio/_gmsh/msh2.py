@@ -129,20 +129,20 @@ def _read_cells(f, cells, is_ascii):
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {}
     for key in cell_tags:
-        output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
+        physical = []
+        geometrical = []
+        # output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
         for item in cell_tags[key]:
             if len(item) > 0:
-                output_cell_tags[key]["gmsh:physical"].append(item[0])
+                physical.append(item[0])
             if len(item) > 1:
-                output_cell_tags[key]["gmsh:geometrical"].append(item[1])
+                geometrical.append(item[1])
             if len(item) > 2:
                 has_additional_tag_data = True
-        output_cell_tags[key]["gmsh:physical"] = numpy.array(
-            output_cell_tags[key]["gmsh:physical"], dtype=int
-        )
-        output_cell_tags[key]["gmsh:geometrical"] = numpy.array(
-            output_cell_tags[key]["gmsh:geometrical"], dtype=int
-        )
+        if len(physical) > 0:
+            output_cell_tags[key]["gmsh:physical"] = numpy.array(physical)
+        if len(geometrical) > 0:
+            output_cell_tags[key]["gmsh:geometrical"] = numpy.array(geometrical)
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     if "tetra10" in cells:
