@@ -139,6 +139,7 @@ def _read_cells(f, cells, is_ascii):
                 geometrical.append(item[1])
             if len(item) > 2:
                 has_additional_tag_data = True
+        output_cell_tags[key] = {}
         if len(physical) > 0:
             output_cell_tags[key]["gmsh:physical"] = numpy.array(physical)
         if len(geometrical) > 0:
