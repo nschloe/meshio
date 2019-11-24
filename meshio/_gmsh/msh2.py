@@ -97,11 +97,11 @@ def _read_nodes(f, is_ascii, data_size):
         data = numpy.fromfile(f, count=num_nodes, dtype=dtype)
         assert (data["index"] == range(1, num_nodes + 1)).all()
         points = numpy.ascontiguousarray(data["x"])
-        line = f.readline().decode("utf-8")
-        assert line == "\n"
 
+    # Fast forward to $EndNodes
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndNodes"
+    while line.strip() != "$EndNodes":
+        line = f.readline().decode("utf-8")
     return points
 
 
@@ -116,8 +116,10 @@ def _read_cells(f, cells, is_ascii):
     else:
         _read_cells_binary(f, cells, cell_tags, total_num_cells)
 
+    # Fast forward to $EndElements
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndElements"
+    while line.strip() != "$EndElements":
+        line = f.readline().decode("utf-8")
 
     # Subtract one to account for the fact that python indices are
     # 0-based.
@@ -127,20 +129,21 @@ def _read_cells(f, cells, is_ascii):
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {}
     for key in cell_tags:
-        output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
+        physical = []
+        geometrical = []
+        # output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
         for item in cell_tags[key]:
             if len(item) > 0:
-                output_cell_tags[key]["gmsh:physical"].append(item[0])
+                physical.append(item[0])
             if len(item) > 1:
-                output_cell_tags[key]["gmsh:geometrical"].append(item[1])
+                geometrical.append(item[1])
             if len(item) > 2:
                 has_additional_tag_data = True
-        output_cell_tags[key]["gmsh:physical"] = numpy.array(
-            output_cell_tags[key]["gmsh:physical"], dtype=int
-        )
-        output_cell_tags[key]["gmsh:geometrical"] = numpy.array(
-            output_cell_tags[key]["gmsh:geometrical"], dtype=int
-        )
+        output_cell_tags[key] = {}
+        if len(physical) > 0:
+            output_cell_tags[key]["gmsh:physical"] = numpy.array(physical)
+        if len(geometrical) > 0:
+            output_cell_tags[key]["gmsh:geometrical"] = numpy.array(geometrical)
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     if "tetra10" in cells:
@@ -226,10 +229,6 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells):
     # collect cell tags
     for key in cell_tags:
         cell_tags[key] = numpy.vstack(cell_tags[key])
-
-    line = f.readline().decode("utf-8")
-    assert line == "\n"
-    return
 
 
 def _read_periodic(f):

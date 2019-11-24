@@ -69,14 +69,14 @@ def _read_header(f):
     is_ascii = str_list[1] == "0"
     data_size = int(str_list[2])
     if not is_ascii:
-        # The next line is the integer 1 in bytes. Useful for checking
-        # endianness. Just assert that we get 1 here.
+        # The next line is the integer 1 in bytes. Useful for checking endianness.
+        # Just assert that we get 1 here.
         one = f.read(struct.calcsize("i"))
         assert struct.unpack("i", one)[0] == 1
-        line = f.readline().decode("utf-8")
-        assert line == "\n"
+    # Fast forward to $EndMeshFormat
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndMeshFormat"
+    while line.strip() != "$EndMeshFormat":
+        line = f.readline().decode("utf-8")
     return fmt_version, data_size, is_ascii
 
 

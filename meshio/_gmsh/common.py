@@ -50,11 +50,11 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
         data = numpy.fromfile(f, count=num_items, dtype=dtype)
         assert (data["index"] == range(1, num_items + 1)).all()
         data = numpy.ascontiguousarray(data["values"])
-        line = f.readline().decode("utf-8")
-        assert line == "\n"
 
+    # fast forward to $End{tag}
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$End{}".format(tag)
+    while line.strip() != "$End{}".format(tag):
+        line = f.readline().decode("utf-8")
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.
