@@ -3,6 +3,7 @@ I/O for the STL format, cf.
 <https://en.wikipedia.org/wiki/STL_(file_format)>.
 """
 import logging
+import os
 
 import numpy
 
@@ -11,20 +12,29 @@ from ._mesh import Mesh
 
 def read(filename):
     with open(filename, "rb") as f:
-        out = read_buffer(f)
+        # Checking if the file is ASCII format is normally done by checking if the
+        # first 5 characters of the header is "solid".
+        # ```
+        # header = f.read(80).decode("utf-8")
+        # ```
+        # Unfortunately, there are mesh files out there which are binary and still put
+        # "solid" there.
+        # A suggested alternative is to do as if the file is binary, read the
+        # num_triangles and see if it matches the file size
+        # (https://stackoverflow.com/a/7394842/353337).
+        f.read(80)
+        num_triangles = numpy.fromfile(f, count=1, dtype=numpy.uint32)[0]
+        # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet), and 1
+        # int16 (attribute count), 50 bytes in total
+        is_binary = 84 + num_triangles * 50 == os.path.getsize(filename)
+        if is_binary:
+            out = _read_binary(f, num_triangles)
+        else:
+            # skip header
+            f.seek(0)
+            f.readline()
+            out = _read_ascii(f)
     return out
-
-
-def read_buffer(f):
-    data = numpy.frombuffer(f.read(5), dtype=numpy.uint8)
-    if "".join([chr(item) for item in data]) == "solid":
-        # read until the end of the line
-        f.readline()
-        return _read_ascii(f)
-
-    # binary: read and discard 75 more bytes
-    f.read(75)
-    return _read_binary(f)
 
 
 # numpy.loadtxt is super slow
@@ -112,10 +122,7 @@ def data_from_facets(facets):
     return points, cells
 
 
-def _read_binary(f):
-    # read the first uint32 byte to get the number of triangles
-    num_triangles = numpy.fromfile(f, count=1, dtype=numpy.uint32)[0]
-
+def _read_binary(f, num_triangles):
     # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet), and 1
     # int16 (attribute count)
     out = numpy.fromfile(
