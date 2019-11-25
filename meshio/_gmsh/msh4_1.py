@@ -217,25 +217,27 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     ]
 
     cells = {}
-    for physical_tag, key, values in data:
+    for physical_tags, key, values in data:
+        start_idx = 0
         if key in cells:
+            start_idx = len(cells[key])
             cells[key] = numpy.concatenate([cells[key], values])
-            if physical_tag:
-                if key not in cell_data:
-                    cell_data[key] = {}
-                cell_data[key]["gmsh:physical"] = numpy.concatenate(
-                    [
-                        cell_data[key]["gmsh:physical"],
-                        physical_tag[0] * numpy.ones(len(values), int),
-                    ]
-                )
         else:
             cells[key] = values
-            if physical_tag:
-                if key not in cell_data:
-                    cell_data[key] = {}
-                cell_data[key]["gmsh:physical"] = physical_tag[0] * numpy.ones(
-                    len(values), int
+        end_idx = start_idx + len(values)
+        if physical_tags:
+            if key not in cell_data:
+                cell_data[key] = {}
+                cell_data[key]["gmsh:physical"] = {}
+            for physical_tag in physical_tags:
+                if not physical_tag in cell_data[key]["gmsh:physical"]:
+                    cell_data[key]["gmsh:physical"][physical_tag] = numpy.array([], dtype=int)
+
+                cell_data[key]["gmsh:physical"][physical_tag] = numpy.concatenate(
+                    [
+                        cell_data[key]["gmsh:physical"][physical_tag],
+                        numpy.array(range(start_idx, end_idx), dtype=int)
+                    ]
                 )
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
