@@ -207,7 +207,7 @@ def _determine_solid_2nd(f, cell_type):
             cell_type = "tetra10"
         elif cell_type == "pyramid":
             cell_type = "pyramid13"
-    else:
+    elif element_lines == 3:
         if cell_type == "wedge":
             cell_type = "wedge15"
         elif cell_type == "hexahedron":
