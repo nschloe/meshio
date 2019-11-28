@@ -7,9 +7,9 @@ import re
 
 import numpy
 
-from ._files import open_file
 from .__about__ import __version__
 from ._exceptions import ReadError, WriteError
+from ._files import open_file
 from ._mesh import Mesh
 
 

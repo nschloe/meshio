@@ -3,9 +3,9 @@ I/O for Abaqus inp files.
 """
 import numpy
 
-from ._files import open_file
 from .__about__ import __version__
 from ._exceptions import ReadError
+from ._files import open_file
 from ._mesh import Mesh
 
 abaqus_to_meshio_type = {

@@ -9,9 +9,9 @@ import logging
 
 import numpy
 
-from ._files import open_file
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
+from ._files import open_file
 from ._mesh import Mesh
 from ._vtk import raw_from_cell_data
 

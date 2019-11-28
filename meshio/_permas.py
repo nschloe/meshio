@@ -5,9 +5,9 @@ import logging
 
 import numpy
 
-from ._files import open_file
 from .__about__ import __version__
 from ._exceptions import ReadError
+from ._files import open_file
 from ._mesh import Mesh
 
 permas_to_meshio_type = {

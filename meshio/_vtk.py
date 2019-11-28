@@ -6,10 +6,10 @@ from functools import reduce
 
 import numpy
 
-from ._files import open_file
 from .__about__ import __version__
 from ._common import raw_from_cell_data
 from ._exceptions import ReadError, WriteError
+from ._files import open_file
 from ._mesh import Mesh
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
