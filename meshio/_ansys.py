@@ -7,6 +7,7 @@ import re
 
 import numpy
 
+from meshio._files import open_file
 from .__about__ import __version__
 from ._mesh import Mesh
 
@@ -288,7 +289,7 @@ def read(filename):
     last_point_index = None
 
     # read file in binary mode since some data might be binary
-    with open(filename, "rb") as f:
+    with open_file(filename, "rb") as f:
         while True:
             line = f.readline().decode("utf-8")
             if not line:
@@ -372,7 +373,7 @@ def read(filename):
 
 
 def write(filename, mesh, binary=True):
-    with open(filename, "wb") as fh:
+    with open_file(filename, "wb") as fh:
         # header
         fh.write(('(1 "meshio {}")\n'.format(__version__)).encode("utf8"))
 

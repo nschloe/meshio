@@ -6,12 +6,13 @@ import datetime
 
 import numpy
 
+from meshio._files import open_file
 from .__about__ import __version__
 from ._mesh import Mesh
 
 
 def read(filename):
-    with open(filename, "r") as f:
+    with open_file(filename, "r") as f:
         mesh = read_buffer(f)
     return mesh
 
@@ -65,7 +66,7 @@ def write(filename, mesh):
         "triangle" in mesh.cells or "quad" in mesh.cells
     ), "Wavefront .obj files can only contain triangle or quad cells."
 
-    with open(filename, "w") as f:
+    with open_file(filename, "w") as f:
         f.write(
             "# Created by meshio v{}, {}\n".format(
                 __version__, datetime.datetime.now().isoformat()

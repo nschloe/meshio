@@ -9,6 +9,7 @@ import logging
 
 import numpy
 
+from meshio._files import open_file
 from ._common import num_nodes_per_cell
 from ._mesh import Mesh
 from ._vtk import raw_from_cell_data
@@ -93,7 +94,7 @@ def read(filename):
     # if (have_kratos is True): # TODO: Implement natively
     # pass
     # else:
-    with open(filename, "rb") as f:
+    with open_file(filename, "rb") as f:
         mesh = read_buffer(f)
     return mesh
 
@@ -526,7 +527,7 @@ def write(filename, mesh, binary=False):
             ],
         ]
 
-    with open(filename, "wb") as fh:
+    with open_file(filename, "wb") as fh:
         # Write some additional info
         fh.write(("Begin ModelPartData\n").encode("utf-8"))
         fh.write(("//  VARIABLE_NAME value\n").encode("utf-8"))

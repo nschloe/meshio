@@ -5,6 +5,7 @@ import logging
 
 import numpy
 
+from meshio._files import open_file
 from .__about__ import __version__
 from ._mesh import Mesh
 
@@ -56,7 +57,7 @@ meshio_to_permas_type = {v: k for k, v in permas_to_meshio_type.items()}
 def read(filename):
     """Reads a PERMAS dat file.
     """
-    with open(filename, "r") as f:
+    with open_file(filename, "r") as f:
         out = read_buffer(f)
     return out
 
@@ -226,7 +227,7 @@ def write(filename, mesh):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    with open(filename, "wt") as f:
+    with open_file(filename, "wt") as f:
         f.write("!PERMAS DataFile Version 17.0\n")
         f.write("!written by meshio v{}\n".format(__version__))
         f.write("$ENTER COMPONENT NAME=DFLT_COMP\n")

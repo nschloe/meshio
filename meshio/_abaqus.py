@@ -3,6 +3,7 @@ I/O for Abaqus inp files.
 """
 import numpy
 
+from meshio._files import open_file
 from .__about__ import __version__
 from ._mesh import Mesh
 
@@ -89,7 +90,7 @@ meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 def read(filename):
     """Reads a Abaqus inp file.
     """
-    with open(filename, "r") as f:
+    with open_file(filename, "r") as f:
         out = read_buffer(f)
     return out
 
@@ -245,7 +246,7 @@ def read_set(f, params_map):
 
 
 def write(filename, mesh, translate_cell_names=True):
-    with open(filename, "wt") as f:
+    with open_file(filename, "wt") as f:
         f.write("*Heading\n")
         f.write("Abaqus DataFile Version 6.14\n")
         f.write("written by meshio v{}\n".format(__version__))
