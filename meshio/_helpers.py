@@ -253,12 +253,12 @@ def write(filename, mesh, file_format=None, **kwargs):
     :type point_data: dict
     """
     if is_buffer(filename, "r"):
-        assert (
-            file_format is not None
-        ), "File format must be supplied if `filename` is a buffer"
-        assert (
-            file_format != "tetgen"
-        ), "tetgen format is spread across multiple files, and so cannot be written to a buffer"
+        if file_format is None:
+            raise WriteError("File format must be supplied if `filename` is a buffer")
+        if file_format == "tetgen":
+            raise WriteError(
+                "tetgen format is spread across multiple files, and so cannot be written to a buffer"
+            )
     else:
         path = pathlib.Path(filename)
         if not file_format:
