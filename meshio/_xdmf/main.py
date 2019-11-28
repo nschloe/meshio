@@ -383,8 +383,16 @@ class XdmfWriter:
         data_item.text = self.numpy_to_xml_string(points)
         return
 
-    def cells(self, cells, grid):
+    def cells(self, cells_in, grid):
         from lxml import etree as ET
+
+        # Lines translate to Polylines, and one needs to specify the exact
+        # number of nodes. Hence, prepend 2 (without mutating argument).
+
+        cells = {
+            k: (numpy.insert(cells_in[k], 0, 2, axis=1) if k == "line" else cells_in[k])
+            for k in cells_in
+        }
 
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
@@ -416,13 +424,7 @@ class XdmfWriter:
                 NumberOfElements=str(total_num_cells),
             )
             total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
-            dim = total_num_cell_items + total_num_cells
-            # Lines translate to Polylines, and one needs to specify the exact
-            # number of nodes. Hence, prepend 2.
-            if "line" in cells:
-                cells["line"] = numpy.insert(cells["line"], 0, 2, axis=1)
-                dim += len(cells["line"])
-            dim = str(dim)
+            dim = str(total_num_cell_items + total_num_cells)
             cd = numpy.concatenate(
                 [
                     # prepend column with xdmf type index
