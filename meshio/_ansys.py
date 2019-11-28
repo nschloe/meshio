@@ -7,10 +7,11 @@ import re
 
 import numpy
 
-from .__about__ import __version__
-from ._exceptions import ReadError, WriteError
-from ._files import open_file
-from ._mesh import Mesh
+from meshio.__about__ import __version__
+from meshio._filetypes import register_reader, register_writer, revpartial
+from meshio._exceptions import ReadError, WriteError
+from meshio._files import open_file
+from meshio._mesh import Mesh
 
 
 def _skip_to(f, char):
@@ -465,3 +466,11 @@ def write(filename, mesh, binary=True):
             first_index = last_index + 1
 
     return
+
+
+register_reader("ansys", read, ".inp")
+register_reader("ansys-ascii", read)
+register_reader("ansys-binary", read)
+
+register_writer("ansys-ascii", revpartial(write, binary=False))
+register_writer("ansys-binary", revpartial(write, binary=True))

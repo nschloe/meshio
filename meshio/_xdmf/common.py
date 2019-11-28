@@ -1,6 +1,6 @@
 import numpy
 
-from .._exceptions import ReadError
+from meshio._exceptions import ReadError
 
 numpy_to_xdmf_dtype = {
     "int32": ("Int", "4"),

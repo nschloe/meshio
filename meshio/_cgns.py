@@ -5,8 +5,9 @@ TODO link to specification?
 """
 import numpy
 
-from ._exceptions import ReadError
-from ._mesh import Mesh
+from meshio._filetypes import register_reader, register_writer
+from meshio._exceptions import ReadError
+from meshio._mesh import Mesh
 
 
 def read(filename):
@@ -60,3 +61,7 @@ def write(filename, mesh):
     conn = elems.create_group("ElementConnectivity")
     conn.create_dataset(" data", data=mesh.cells["tetra"].reshape(-1) + 1)
     return
+
+
+register_writer("cgns", write, ".cgns")
+register_reader("cgns", read, ".cgns")

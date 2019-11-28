@@ -3,8 +3,8 @@ import shlex
 
 import numpy
 
-from .._common import num_nodes_per_cell  # noqa F401
-from .._exceptions import ReadError, WriteError
+from meshio._common import num_nodes_per_cell  # noqa F401
+from meshio._exceptions import ReadError, WriteError
 
 c_int = numpy.dtype("i")
 c_double = numpy.dtype("d")

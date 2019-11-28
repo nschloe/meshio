@@ -6,8 +6,9 @@ from datetime import datetime
 
 import numpy
 
-from . import __about__
-from ._mesh import Mesh
+from meshio._filetypes import register_reader, register_writer
+from meshio import __about__
+from meshio._mesh import Mesh
 
 # def _int_to_bool_list(num):
 #     # From <https://stackoverflow.com/a/33608387/353337>.
@@ -231,3 +232,7 @@ def write(filename, mesh, add_global_ids=True):
     # set max_id
     tstt.attrs.create("max_id", global_id, dtype="u8")
     return
+
+
+register_reader("moab", read, ".h5m")
+register_writer("moab", write, ".h5m")

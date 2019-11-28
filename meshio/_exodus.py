@@ -10,6 +10,7 @@ import warnings
 
 import numpy
 
+from ._filetypes import register_writer, register_reader
 from .__about__ import __version__
 from ._exceptions import ReadError
 from ._mesh import Mesh
@@ -372,3 +373,7 @@ def write(filename, mesh):
 
     rootgrp.close()
     return
+
+
+register_reader("exodus", read, ".e", ".ex2", ".exo")
+register_writer("exodus", write, ".e", ".ex2", "exo")

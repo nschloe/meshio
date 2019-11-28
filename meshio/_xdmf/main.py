@@ -7,10 +7,11 @@ from io import BytesIO
 
 import numpy
 
-from .._common import cell_data_from_raw, write_xml
-from .._exceptions import ReadError, WriteError
-from .._mesh import Mesh
-from .._vtk import raw_from_cell_data
+from meshio._filetypes import register_reader, register_writer, revpartial
+from meshio._common import cell_data_from_raw, write_xml
+from meshio._exceptions import ReadError, WriteError
+from meshio._mesh import Mesh
+from meshio._vtk import raw_from_cell_data
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -507,3 +508,14 @@ class XdmfWriter:
 def write(*args, **kwargs):
     XdmfWriter(*args, **kwargs)
     return
+
+
+register_reader("xdmf", read, ".xmf", ".xdmf")
+register_writer("xdmf", write, ".xdmf", ".xdmf3")
+register_writer("xdmf3", write)
+register_writer("xdmf-binary", revpartial(write, data_format="Binary"))
+register_writer("xdmf3-binary", revpartial(write, data_format="Binary"))
+register_writer("xdmf-hdf", revpartial(write, data_format="HDF"))
+register_writer("xdmf3-hdf", revpartial(write, data_format="HDF"))
+register_writer("xdmf-xml", revpartial(write, data_format="XML"))
+register_writer("xdmf3-xml", revpartial(write, data_format="XML"))
