@@ -9,6 +9,7 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data
 from .._mesh import Mesh
+from .._exceptions import ReadError, WriteError
 from .common import (
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
@@ -40,7 +41,8 @@ def read_buffer(f, is_ascii, data_size):
         if not line:
             # EOF
             break
-        assert line[0] == "$"
+        if line[0] != "$":
+            raise ReadError()
         environ = line[1:].strip()
 
         if environ == "PhysicalNames":
@@ -70,7 +72,8 @@ def read_buffer(f, is_ascii, data_size):
         if key not in cell_data:
             cell_data[key] = {}
         for name, item_list in tag_dict.items():
-            assert name not in cell_data[key]
+            if name in cell_data[key]:
+                raise ReadError()
             cell_data[key][name] = item_list
 
     return Mesh(
@@ -95,7 +98,8 @@ def _read_nodes(f, is_ascii, data_size):
         # binary
         dtype = [("index", c_int), ("x", c_double, (3,))]
         data = numpy.fromfile(f, count=num_nodes, dtype=dtype)
-        assert (data["index"] == range(1, num_nodes + 1)).all()
+        if not (data["index"] == range(1, num_nodes + 1)).all():
+            raise ReadError()
         points = numpy.ascontiguousarray(data["x"])
 
     # Fast forward to $EndNodes
@@ -254,7 +258,8 @@ def _read_periodic(f):
         slave_master -= 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndPeriodic"
+    if line.strip() != "$EndPeriodic":
+        raise ReadError()
     return periodic
 
 
@@ -379,7 +384,8 @@ def _write_elements(fh, cells, tag_data, binary):
             a = numpy.arange(len(node_idcs), dtype=c_int)[:, numpy.newaxis]
             a += 1 + consecutive_index
             array = numpy.hstack([a, fcd, node_idcs + 1])
-            assert array.dtype == c_int
+            if array.dtype != c_int:
+                raise WriteError()
             fh.write(array.tostring())
         else:
             form = (

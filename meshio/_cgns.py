@@ -7,6 +7,8 @@ import numpy
 
 from ._mesh import Mesh
 
+from ._exceptions import ReadError
+
 
 def read(filename):
     import h5py
@@ -24,7 +26,8 @@ def read(filename):
     cells = numpy.array(data).reshape(idx_max, -1) - 1
 
     # TODO how to distinguish cell types?
-    assert cells.shape[1] == 4
+    if cells.shape[1] != 4:
+        raise ReadError("Can only read tetrahedra.")
     cells = {"tetra": cells}
 
     return Mesh(points, cells)

@@ -3,6 +3,8 @@ from .__about__ import __author__, __author_email__, __version__, __website__
 from ._helpers import read, write, write_points_cells
 from ._mesh import Mesh
 from ._xdmf import XdmfTimeSeriesReader, XdmfTimeSeriesWriter
+from ._exceptions import ReadError
+from ._exceptions import WriteError
 
 __all__ = [
     "_cli",

@@ -10,6 +10,7 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data
 from .._mesh import Mesh
+from .._exceptions import ReadError, WriteError
 from .common import (
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
@@ -41,7 +42,8 @@ def read_buffer(f, is_ascii, data_size):
         if not line:
             # EOF
             break
-        assert line[0] == "$"
+        if line[0] != "$":
+            raise ReadError
         environ = line[1:].strip()
 
         if environ == "PhysicalNames":
@@ -108,9 +110,11 @@ def _read_entities(f, is_ascii, data_size):
                 fromfile(f, c_int, num_BREP)
     if not is_ascii:
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
     line = f.readline().decode("utf-8").strip()
-    assert line == "$EndEntities"
+    if line != "$EndEntities":
+        raise ReadError()
     return physical_tags
 
 
@@ -155,10 +159,12 @@ def _read_nodes(f, is_ascii, data_size):
         points = numpy.concatenate(points)
 
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
 
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndNodes"
+    if line.strip() != "$EndNodes":
+        raise ReadError()
 
     return points, tags
 
@@ -188,9 +194,11 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
 
     if not is_ascii:
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndElements"
+    if line.strip() != "$EndElements":
+        raise ReadError()
 
     # The msh4 elements array refers to the nodes by their tag, not the index. All other
     # mesh formats use the index, which is far more efficient, too. Hence,
@@ -262,9 +270,11 @@ def _read_periodic(f, is_ascii):
         periodic.append([edim, (stag, mtag), affine, slave_master])
     if not is_ascii:
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndPeriodic"
+    if line.strip() != "$EndPeriodic":
+        raise ReadError()
     return periodic
 
 
@@ -396,7 +406,8 @@ def _write_elements(fh, cells, binary):
             )
             fh.write(numpy.array([node_idcs.shape[0]], dtype=c_ulong).tostring())
 
-            assert node_idcs.dtype == c_int
+            if node_idcs.dtype != c_int:
+                raise WriteError()
             data = numpy.column_stack(
                 [
                     numpy.arange(

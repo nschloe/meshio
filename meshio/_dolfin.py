@@ -9,6 +9,7 @@ import re
 import numpy
 
 from ._mesh import Mesh
+from ._exceptions import ReadError, WriteError
 
 
 def _read_mesh(filename):
@@ -83,15 +84,18 @@ def _read_cell_data(filename, cell_type):
         root = tree.getroot()
 
         mesh_functions = list(root)
-        assert len(mesh_functions) == 1
+        if len(mesh_functions) != 1:
+            raise ReadError("Can only handle one mesh function")
         mesh_function = mesh_functions[0]
 
-        assert mesh_function.tag == "mesh_function"
+        if mesh_function.tag != "mesh_function":
+            raise ReadError()
         size = int(mesh_function.attrib["size"])
         dtype = dolfin_type_to_numpy_type[mesh_function.attrib["type"]]
         data = numpy.empty(size, dtype=dtype)
         for child in mesh_function:
-            assert child.tag == "entity"
+            if child.tag != "entity":
+                raise ReadError()
             idx = int(child.attrib["index"])
             data[idx] = child.attrib["value"]
 
@@ -125,7 +129,9 @@ def _write_mesh(filename, points, cell_type, cells):
         )
 
     dim = points.shape[1]
-    assert dim in [2, 3]
+    if dim not in [2, 3]:
+        raise WriteError("Can only write dimension 2, 3, got {}.".format(dim))
+
     coord_names = ["x", "y"]
     if dim == 3:
         coord_names += ["z"]
@@ -169,7 +175,7 @@ def _numpy_type_to_dolfin_type(dtype):
             if numpy.issubdtype(dtype, numpy_type):
                 return key
 
-    assert False, "Could not convert NumPy data type to DOLFIN data type."
+    raise WriteError("Could not convert NumPy data type to DOLFIN data type.")
     return None
 
 
@@ -199,12 +205,13 @@ def write(filename, mesh):
 
     if "tetra" in mesh.cells:
         cell_type = "tetra"
+    elif "triangle" in mesh.cells:
+        cell_type = "triangle"
     else:
-        assert "triangle" in mesh.cells, (
-            "Dolfin's _legacy_ format only supports triangles or tetrahedra. "
+        raise WriteError(
+            "Dolfin's _legacy_ format only supports triangles and tetrahedra. "
             "Consider using XDMF instead."
         )
-        cell_type = "triangle"
 
     _write_mesh(filename, mesh.points, cell_type, mesh.cells)
 

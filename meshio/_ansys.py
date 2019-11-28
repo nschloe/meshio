@@ -9,6 +9,7 @@ import numpy
 
 from .__about__ import __version__
 from ._mesh import Mesh
+from ._exceptions import ReadError, WriteError
 
 
 def _skip_to(f, char):
@@ -38,14 +39,17 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
     out = re.match("\\s*\\(\\s*(|20|30)10\\s*\\(([^\\)]*)\\).*", line)
     a = [int(num, 16) for num in out.group(2).split()]
 
-    assert len(a) > 4
+    if len(a) <= 4:
+        raise ReadError()
+
     first_point_index = a[1]
     # store the very first point index
     if first_point_index_overall is None:
         first_point_index_overall = first_point_index
     # make sure that point arrays are subsequent
     if last_point_index is not None:
-        assert last_point_index + 1 == first_point_index
+        if last_point_index + 1 != first_point_index:
+            raise ReadError()
     last_point_index = a[2]
     num_points = last_point_index - first_point_index + 1
     dim = a[4]
@@ -65,7 +69,8 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
             while line.strip() == "":
                 line = f.readline().decode("utf-8")
             dat = line.split()
-            assert len(dat) == dim
+            if len(dat) != dim:
+                raise ReadError()
             for d in range(dim):
                 pts[k][d] = float(dat[d])
     else:
@@ -73,7 +78,8 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
         if out.group(1) == "20":
             dtype = numpy.float32
         else:
-            assert out.group(1) == "30"
+            if out.group(1) != "30":
+                ReadError("Expected keys '20' or '30', got {}.".format(out.group(1)))
             dtype = numpy.float64
         # read point data
         pts = numpy.fromfile(f, count=dim * num_points, dtype=dtype).reshape(
@@ -93,7 +99,8 @@ def _read_cells(f, line):
 
     out = re.match("\\s*\\(\\s*(|20|30)12\\s*\\(([^\\)]+)\\).*", line)
     a = [int(num, 16) for num in out.group(2).split()]
-    assert len(a) > 4
+    if len(a) <= 4:
+        raise ReadError()
     first_index = a[1]
     last_index = a[2]
     num_cells = last_index - first_index + 1
@@ -148,15 +155,20 @@ def _read_cells(f, line):
             for k in range(num_cells):
                 line = f.readline().decode("utf-8")
                 dat = line.split()
-                assert len(dat) == num_nodes_per_cell
+                if len(dat) != num_nodes_per_cell:
+                    raise ReadError()
                 data[k] = [int(d, 16) for d in dat]
         else:
-            assert key != "mixed", "Cannot read mixed cells in binary mode yet"
+            if key == "mixed":
+                raise ReadError("Cannot read mixed cells in binary mode yet")
             # binary cells
             if out.group(1) == "20":
                 dtype = numpy.int32
             else:
-                assert out.group(1) == "30"
+                if out.group(1) != "30":
+                    ReadError(
+                        "Expected keys '20' or '30', got {}.".format(out.group(1))
+                    )
                 dtype = numpy.int64
             shape = (num_cells, num_nodes_per_cell)
             count = shape[0] * shape[1]
@@ -179,7 +191,8 @@ def _read_faces(f, line):
     out = re.match("\\s*\\(\\s*(|20|30)13\\s*\\(([^\\)]+)\\).*", line)
     a = [int(num, 16) for num in out.group(2).split()]
 
-    assert len(a) > 4
+    if len(a) <= 4:
+        raise ReadError()
     first_index = a[1]
     last_index = a[2]
     num_cells = last_index - first_index + 1
@@ -216,11 +229,13 @@ def _read_faces(f, line):
                     line = f.readline().decode("utf-8")
                 dat = line.split()
                 type_index = int(dat[0], 16)
-                assert type_index != 0
+                if type_index == 0:
+                    raise ReadError()
                 type_string, num_nodes_per_cell = element_type_to_key_num_nodes[
                     type_index
                 ]
-                assert len(dat) == num_nodes_per_cell + 3
+                if len(dat) != num_nodes_per_cell + 3:
+                    raise ReadError()
 
                 if type_string not in data:
                     data[type_string] = []
@@ -237,13 +252,13 @@ def _read_faces(f, line):
             for k in range(num_cells):
                 line = f.readline().decode("utf-8")
                 dat = line.split()
-                # The body of a regular face section contains the
-                # grid connectivity, and each line appears as
-                # follows:
+                # The body of a regular face section contains the grid connectivity, and
+                # each line appears as follows:
                 #   n0 n1 n2 cr cl
-                # where n* are the defining nodes (vertices) of the
-                # face, and c* are the adjacent cells.
-                assert len(dat) == num_nodes_per_cell + 2
+                # where n* are the defining nodes (vertices) of the face, and c* are the
+                # adjacent cells.
+                if len(dat) != num_nodes_per_cell + 2:
+                    raise ReadError()
                 data[k] = [int(d, 16) for d in dat[:num_nodes_per_cell]]
             data = {key: data}
     else:
@@ -251,10 +266,12 @@ def _read_faces(f, line):
         if out.group(1) == "20":
             dtype = numpy.int32
         else:
-            assert out.group(1) == "30"
+            if out.group(1) != "30":
+                ReadError("Expected keys '20' or '30', got {}.".format(out.group(1)))
             dtype = numpy.int64
 
-        assert key != "mixed", "Mixed element type for binary faces not supported yet"
+        if key == "mixed":
+            raise ReadError("Mixed element type for binary faces not supported yet")
 
         # Read cell data.
         # The body of a regular face section contains the grid
@@ -300,7 +317,8 @@ def read(filename):
             # expect the line to have the form
             #  (<index> [...]
             out = re.match("\\s*\\(\\s*([0-9]+).*", line)
-            assert out
+            if not out:
+                raise ReadError()
             index = out.group(1)
 
             if index == "0":
@@ -378,7 +396,8 @@ def write(filename, mesh, binary=True):
 
         # dimension
         dim = mesh.points.shape[1]
-        assert dim in [2, 3]
+        if dim not in [2, 3]:
+            raise WriteError("Can only write dimension 2, 3, got {}.".format(dim))
         fh.write(("(2 {})\n".format(dim)).encode("utf8"))
 
         # total number of nodes
