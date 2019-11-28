@@ -5,10 +5,10 @@ import logging
 
 import numpy
 
-from meshio._filetypes import register_reader, register_writer
 from meshio.__about__ import __version__
 from meshio._exceptions import ReadError
 from meshio._files import open_file
+from meshio._filetypes import register_reader, register_writer
 from meshio._mesh import Mesh
 
 permas_to_meshio_type = {

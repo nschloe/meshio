@@ -6,11 +6,11 @@ from functools import reduce
 
 import numpy
 
-from meshio._filetypes import register_reader, register_writer, revpartial
 from meshio.__about__ import __version__
 from meshio._common import raw_from_cell_data
 from meshio._exceptions import ReadError, WriteError
 from meshio._files import open_file
+from meshio._filetypes import register_reader, register_writer, revpartial
 from meshio._mesh import Mesh
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html

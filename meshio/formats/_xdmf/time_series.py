@@ -5,6 +5,7 @@ import numpy
 from meshio._common import cell_data_from_raw, write_xml
 from meshio._exceptions import ReadError, WriteError
 from meshio.formats._vtk import raw_from_cell_data
+
 from .common import (
     attribute_type,
     dtype_to_format_string,

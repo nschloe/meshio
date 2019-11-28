@@ -7,11 +7,12 @@ from io import BytesIO
 
 import numpy
 
-from meshio._filetypes import register_reader, register_writer, revpartial
 from meshio._common import cell_data_from_raw, write_xml
 from meshio._exceptions import ReadError, WriteError
+from meshio._filetypes import register_reader, register_writer, revpartial
 from meshio._mesh import Mesh
 from meshio.formats._vtk import raw_from_cell_data
+
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -511,12 +512,14 @@ def write(*args, **kwargs):
 def register():
     try:
         import lxml
+
         has_lxml = True
     except ImportError:
         has_lxml = False
 
     try:
         import h5py
+
         has_h5py = True
     except ImportError:
         has_h5py = False

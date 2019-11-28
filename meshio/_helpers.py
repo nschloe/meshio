@@ -2,10 +2,10 @@ import pathlib
 
 import numpy
 
-from ._filetypes import get_writer, get_reader
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
+from ._filetypes import get_reader, get_writer
 from ._mesh import Mesh
 
 

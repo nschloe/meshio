@@ -1,7 +1,8 @@
 import struct
 
-from meshio._filetypes import register_writer, register_reader, revpartial
 from meshio._exceptions import ReadError
+from meshio._filetypes import register_reader, register_writer, revpartial
+
 from . import msh2, msh4_0, msh4_1
 
 _readers = {"2": msh2, "4": msh4_0, "4.0": msh4_0, "4.1": msh4_1}
@@ -105,8 +106,16 @@ def write(filename, mesh, fmt_version, binary=True):
 
 def register():
     register_reader("gmsh", read, ".msh")
-    for suffix in ["-ascii", "-binary", "2", "2-ascii", "2-binary", "4", "4-ascii",
-                   "4-binary"]:
+    for suffix in [
+        "-ascii",
+        "-binary",
+        "2",
+        "2-ascii",
+        "2-binary",
+        "4",
+        "4-ascii",
+        "4-binary",
+    ]:
         register_reader("gmsh" + suffix, read)
     register_writer("gmsh2-ascii", revpartial(write, "2", binary=False))
     register_writer("gmsh2-binary", revpartial(write, "2", binary=True))

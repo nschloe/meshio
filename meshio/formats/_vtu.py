@@ -8,11 +8,12 @@ import zlib
 
 import numpy
 
-from meshio._filetypes import register_writer, register_reader, revpartial
 from meshio.__about__ import __version__
 from meshio._common import num_nodes_per_cell, write_xml
 from meshio._exceptions import ReadError
+from meshio._filetypes import register_reader, register_writer, revpartial
 from meshio._mesh import Mesh
+
 from ._vtk import meshio_to_vtk_type, raw_from_cell_data, vtk_to_meshio_type
 
 

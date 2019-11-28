@@ -55,9 +55,9 @@ def get_reader(name_or_ext):
     raise ReadError(
         "Name or extension not found. "
         "For reading, valid names are \n\t{}\nand extensions\n\t{}".format(
-            "\n\t".join(sorted(_name_to_reader)),
-            "\n\t".join(sorted(_ext_to_reader)),
-        ))
+            "\n\t".join(sorted(_name_to_reader)), "\n\t".join(sorted(_ext_to_reader)),
+        )
+    )
 
 
 def get_writer(name_or_ext):
@@ -79,8 +79,7 @@ def get_writer(name_or_ext):
     raise WriteError(
         "Name or extension not found. "
         "For writing, valid names are \n\t{}\nand extensions are\n\t{}".format(
-            "\n\t".join(sorted(_name_to_writer)),
-            "\n\t".join(sorted(_ext_to_writer)),
+            "\n\t".join(sorted(_name_to_writer)), "\n\t".join(sorted(_ext_to_writer)),
         )
     )
 
@@ -94,4 +93,5 @@ def revpartial(func, *args, **kwargs):
     def newfunc(*fargs, **fkeywords):
         newkeywords = {**kwargs, **fkeywords}
         return func(*fargs, *args, **newkeywords)
+
     return newfunc

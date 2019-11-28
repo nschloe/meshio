@@ -7,8 +7,8 @@ import sys
 import numpy
 
 from .__about__ import __copyright__, __version__
-from ._helpers import read, write
 from ._filetypes import _name_to_reader, _name_to_writer
+from ._helpers import read, write
 
 
 def _get_version_text():

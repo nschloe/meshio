@@ -6,8 +6,8 @@ from datetime import datetime
 
 import numpy
 
-from meshio._filetypes import register_reader, register_writer
 from meshio import __about__
+from meshio._filetypes import register_reader, register_writer
 from meshio._mesh import Mesh
 
 # def _int_to_bool_list(num):

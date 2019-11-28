@@ -1,7 +1,7 @@
 import numpy
 
-from meshio._filetypes import register_writer
 from meshio._exceptions import WriteError
+from meshio._filetypes import register_writer
 
 
 def write(filename, mesh):

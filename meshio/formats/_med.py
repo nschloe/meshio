@@ -6,9 +6,9 @@ import logging
 
 import numpy
 
-from meshio._filetypes import register_reader, register_writer
 from meshio._common import num_nodes_per_cell
 from meshio._exceptions import ReadError
+from meshio._filetypes import register_reader, register_writer
 from meshio._mesh import Mesh
 
 # https://docs.salome-platform.org/5/med/dev/med__outils_8hxx.html

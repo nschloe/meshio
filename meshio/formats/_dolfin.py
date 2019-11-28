@@ -8,8 +8,8 @@ import re
 
 import numpy
 
-from meshio._filetypes import register_reader, register_writer
 from meshio._exceptions import ReadError, WriteError
+from meshio._filetypes import register_reader, register_writer
 from meshio._mesh import Mesh
 
 

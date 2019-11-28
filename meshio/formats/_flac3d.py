@@ -5,10 +5,10 @@ import time
 
 import numpy
 
-from meshio._filetypes import register_reader, register_writer
 from meshio.__about__ import __version__ as version
 from meshio._exceptions import WriteError
 from meshio._files import open_file
+from meshio._filetypes import register_reader, register_writer
 from meshio._mesh import Mesh
 
 meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}

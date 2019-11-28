@@ -150,8 +150,8 @@ conda install -c conda-forge meshio
 1. Implement a reader function with the signature `(filename: typing.Union[str, os.PathLike, typing.IO]) -> meshio.Mesh`
 2. Implement a writer function with the signature `(filename: typing.Union[str, os.PathLike, typing.IO], mesh: meshio.Mesh, *args, **kwargs) -> None`
 3. Use the `register_reader` and `register_writer` functions in `meshio/_filetypes.py` to associate these functions with a format name and extension(s)
-4. Ensure that these functions are called on import (see modules in the `meshio.formats` subpackage for examples)
-5. Write tests for these functions 
+4. Ensure that these registration functions are called on import (see the `meshio.formats` subpackage for examples)
+5. Write tests for the reader and writer functions
 
 ### Testing
 
