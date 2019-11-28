@@ -7,7 +7,8 @@ import os
 
 import numpy
 
-from meshio._files import open_file
+from ._files import open_file
+from ._exceptions import ReadError, WriteError
 from ._mesh import Mesh
 
 
@@ -100,7 +101,8 @@ def _read_ascii(f):
         usecols=(1, 2, 3),
     )
 
-    assert data.shape[0] % 3 == 0
+    if data.shape[0] % 3 != 0:
+        raise ReadError()
 
     facets = numpy.split(data, data.shape[0] // 3)
     points, cells = data_from_facets(facets)
@@ -135,18 +137,20 @@ def _read_binary(f, num_triangles):
     )
     # discard normals, attribute count
     facets = out["facet"]
-    assert numpy.all(out["attr count"] == 0)
+    if not numpy.all(out["attr count"] == 0):
+        raise ReadError()
 
     points, cells = data_from_facets(facets)
     return Mesh(points, cells)
 
 
 def write(filename, mesh, binary=False):
-    assert (
-        "triangle" in mesh.cells
-    ), "STL can only write triangle cells (not {}).".format(
-        ", ".join(list(mesh.cells.keys()))
-    )
+    if "triangle" not in mesh.cells:
+        raise WriteError(
+            "STL can only write triangle cells (not {}).".format(
+                ", ".join(list(mesh.cells.keys()))
+            )
+        )
     if len(mesh.cells) > 1:
         keys = set(mesh.cells.keys())
         keys.remove("triangle")

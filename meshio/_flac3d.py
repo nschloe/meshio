@@ -7,6 +7,7 @@ import numpy
 
 from meshio._files import open_file
 from .__about__ import __version__ as version
+from ._exceptions import WriteError
 from ._mesh import Mesh
 
 meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
@@ -171,9 +172,10 @@ def write(filename, mesh):
     """
     Write FLAC3D f3grid grid file (only ASCII).
     """
-    assert any(
-        cell_type in meshio_only for cell_type in mesh.cells.keys()
-    ), "FLAC3D format only supports 'tetra', 'pyramid', 'wedge' and 'hexahedron'."
+    if not any(cell_type in meshio_only for cell_type in mesh.cells.keys()):
+        raise WriteError(
+            "FLAC3D format only supports 'tetra', 'pyramid', 'wedge', and 'hexahedron'."
+        )
 
     with open_file(filename, "w") as f:
         f.write("* FLAC3D grid produced by meshio v{}\n".format(version))

@@ -9,6 +9,7 @@ import numpy
 from meshio._files import open_file
 from .__about__ import __version__
 from ._common import raw_from_cell_data
+from ._exceptions import ReadError, WriteError
 from ._mesh import Mesh
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
@@ -183,9 +184,8 @@ def read_buffer(f):
     f.readline()
 
     data_type = f.readline().decode("utf-8").strip().upper()
-    assert data_type in ["ASCII", "BINARY"], "Unknown VTK data type '{}'.".format(
-        data_type
-    )
+    if data_type not in ["ASCII", "BINARY"]:
+        raise ReadError("Unknown VTK data type '{}'.".format(data_type))
     info.is_ascii = data_type == "ASCII"
 
     while True:
@@ -225,11 +225,12 @@ def _read_section(f, info):
     elif info.section == "DATASET":
         info.active = "DATASET"
         info.dataset["type"] = info.split[1].upper()
-        assert (
-            info.dataset["type"] in vtk_dataset_types
-        ), "Only VTK '{}' supported (not {}).".format(
-            "', '".join(vtk_dataset_types), info.dataset["type"]
-        )
+        if info.dataset["type"] not in vtk_dataset_types:
+            raise ReadError(
+                "Only VTK '{}' supported (not {}).".format(
+                    "', '".join(vtk_dataset_types), info.dataset["type"]
+                )
+            )
 
     elif info.section == "POINTS":
         info.active = "POINTS"
@@ -281,26 +282,30 @@ def _read_subsection(f, info):
                 d[info.section] = list(map(int, info.split[1:]))
             else:
                 d[info.section] = list(map(float, info.split[1:]))
-            assert (
-                len(d[info.section]) == 3
-            ), "Wrong number of info in section '{}'. Need 3, got {}.".format(
-                info.section, len(d[info.section])
-            )
+            if len(d[info.section]) != 3:
+                raise ReadError(
+                    "Wrong number of info in section '{}'. Need 3, got {}.".format(
+                        info.section, len(d[info.section])
+                    )
+                )
     elif info.section == "SCALARS":
         d.update(_read_scalar_field(f, info.num_items, info.split, info.is_ascii))
     elif info.section == "VECTORS":
         d.update(_read_field(f, info.num_items, info.split, [3], info.is_ascii))
     elif info.section == "TENSORS":
         d.update(_read_field(f, info.num_items, info.split, [3, 3], info.is_ascii))
-    else:
-        assert info.section == "FIELD", "Unknown section '{}'.".format(info.section)
+    elif info.section == "FIELD":
         d.update(_read_fields(f, int(info.split[2]), info.is_ascii))
+    else:
+        raise ReadError("Unknown section '{}'.".format(info.section))
 
 
 def _check_mesh(info):
     if info.dataset["type"] == "UNSTRUCTURED_GRID":
-        assert info.c is not None, "Required section CELLS not found."
-        assert info.ct is not None, "Required section CELL_TYPES not found."
+        if info.c is None:
+            raise ReadError("Required section CELLS not found.")
+        if info.ct is None:
+            raise ReadError("Required section CELL_TYPES not found.")
     elif info.dataset["type"] == "STRUCTURED_POINTS":
         dim = info.dataset["DIMENSIONS"]
         ori = info.dataset["ORIGIN"]
@@ -394,7 +399,8 @@ def _read_coords(f, data_type, is_ascii, num_points):
         dtype = dtype.newbyteorder(">")
         coords = numpy.fromfile(f, count=num_points, dtype=dtype)
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
 
     return coords
 
@@ -409,7 +415,8 @@ def _read_points(f, data_type, is_ascii, num_points):
         dtype = dtype.newbyteorder(">")
         points = numpy.fromfile(f, count=num_points * 3, dtype=dtype)
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
 
     return points.reshape((num_points, 3))
 
@@ -420,7 +427,8 @@ def _read_cells(f, is_ascii, num_items):
     else:
         c = numpy.fromfile(f, count=num_items, dtype=">i4")
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
 
     return c
 
@@ -433,7 +441,8 @@ def _read_cell_types(f, is_ascii, num_items):
         ct = numpy.fromfile(f, count=int(num_items), dtype=">i4")
         line = f.readline().decode("utf-8")
         # Sometimes, there's no newline at the end
-        assert line.strip() == ""
+        if line.strip() != "":
+            raise ReadError()
     return ct
 
 
@@ -447,11 +456,13 @@ def _read_scalar_field(f, num_data, split, is_ascii):
 
     # The standard says:
     # > The parameter numComp must range between (1,4) inclusive; [...]
-    assert 0 < num_comp < 5
+    if not (0 < num_comp < 5):
+        raise ReadError("The parameter numComp must range between (1,4) inclusive")
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
     lt, _ = f.readline().decode("utf-8").split()
-    assert lt.upper() == "LOOKUP_TABLE"
+    if lt.upper() != "LOOKUP_TABLE":
+        raise ReadError()
 
     if is_ascii:
         data = numpy.fromfile(f, count=num_data, sep=" ", dtype=dtype)
@@ -461,7 +472,8 @@ def _read_scalar_field(f, num_data, split, is_ascii):
         dtype = dtype.newbyteorder(">")
         data = numpy.fromfile(f, count=num_data, dtype=dtype)
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
 
     return {data_name: data}
 
@@ -482,7 +494,8 @@ def _read_field(f, num_data, split, shape, is_ascii):
         dtype = dtype.newbyteorder(">")
         data = numpy.fromfile(f, count=k * num_data, dtype=dtype)
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
 
     data = data.reshape(-1, *shape)
     return {data_name: data}
@@ -509,7 +522,8 @@ def _read_fields(f, num_fields, is_ascii):
             dtype = dtype.newbyteorder(">")
             dat = numpy.fromfile(f, count=shape0 * shape1, dtype=dtype)
             line = f.readline().decode("utf-8")
-            assert line == "\n"
+            if line != "\n":
+                raise ReadError()
 
         if shape0 != 1:
             dat = dat.reshape((shape1, shape0))
@@ -560,7 +574,8 @@ def translate_cells(data, types, cell_data_raw):
             numnodes[idx] = vtk_type_to_numnodes[tpe]
         offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
 
-    assert numpy.all(numnodes == data[offsets])
+    if not numpy.all(numnodes == data[offsets]):
+        raise ReadError()
 
     cells = {}
     cell_data = {}
@@ -585,7 +600,8 @@ def translate_cells(data, types, cell_data_raw):
         for tpe, b in bins.items():
             meshio_type = vtk_to_meshio_type[tpe]
             n = data[offsets[b[0]]]
-            assert (data[offsets[b]] == n).all()
+            if not (data[offsets[b]] == n).all():
+                raise ReadError()
             indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
             cells[meshio_type] = data[indices]
             cell_data[meshio_type] = {
@@ -732,15 +748,15 @@ def _write_field_data(f, data, binary):
             num_tuples = values.shape[0]
             num_components = 1
         else:
-            assert (
-                len(values.shape) == 2
-            ), "Only one and two-dimensional field data supported."
+            if len(values.shape) != 2:
+                raise WriteError("Only one- and two-dimensional field data supported.")
             num_tuples = values.shape[0]
             num_components = values.shape[1]
 
-        assert (
-            " " not in name
-        ), 'VTK doesn\'t support spaces in field names ("{}").'.format(name)
+        if " " in name:
+            raise WriteError(
+                "VTK doesn't support spaces in field names ('{}').".format(name)
+            )
 
         f.write(
             (

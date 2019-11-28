@@ -1,5 +1,6 @@
 import struct
 
+from .._exceptions import ReadError
 from . import msh2, msh4_0, msh4_1
 
 _readers = {"2": msh2, "4": msh4_0, "4.0": msh4_0, "4.1": msh4_1}
@@ -26,7 +27,8 @@ def read_buffer(f):
             line = f.readline().decode("utf-8").strip()
         line = f.readline().decode("utf-8").strip()
 
-    assert line == "$MeshFormat"
+    if line != "$MeshFormat":
+        raise ReadError()
     fmt_version, data_size, is_ascii = _read_header(f)
 
     try:
@@ -65,14 +67,16 @@ def _read_header(f):
     # into its components.
     str_list = list(filter(None, line.split()))
     fmt_version = str_list[0]
-    assert str_list[1] in ["0", "1"]
+    if str_list[1] not in ["0", "1"]:
+        raise ReadError()
     is_ascii = str_list[1] == "0"
     data_size = int(str_list[2])
     if not is_ascii:
         # The next line is the integer 1 in bytes. Useful for checking endianness.
         # Just assert that we get 1 here.
         one = f.read(struct.calcsize("i"))
-        assert struct.unpack("i", one)[0] == 1
+        if struct.unpack("i", one)[0] != 1:
+            raise ReadError()
     # Fast forward to $EndMeshFormat
     line = f.readline().decode("utf-8")
     while line.strip() != "$EndMeshFormat":

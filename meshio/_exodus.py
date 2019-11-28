@@ -11,6 +11,7 @@ import warnings
 import numpy
 
 from .__about__ import __version__
+from ._exceptions import ReadError
 from ._mesh import Mesh
 
 exodus_to_meshio_type = {
@@ -242,7 +243,8 @@ def categorize(names):
 
         k += 1
 
-    assert all(is_accounted_for)
+    if not all(is_accounted_for):
+        raise ReadError()
     return single, double, triple
 
 

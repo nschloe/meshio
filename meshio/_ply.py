@@ -9,7 +9,8 @@ import warnings
 
 import numpy
 
-from meshio._files import open_file
+from ._files import open_file
+from ._exceptions import ReadError, WriteError
 from ._mesh import Mesh
 
 # Reference dtypes
@@ -47,7 +48,8 @@ def _fast_forward(f):
 def read_buffer(f):
     # assert that the first line reads `ply`
     line = f.readline().decode("utf-8").strip()
-    assert line == "ply"
+    if line != "ply":
+        raise ReadError()
 
     line = _fast_forward(f)
     if line == "format ascii 1.0":
@@ -56,7 +58,8 @@ def read_buffer(f):
         is_binary = True
         endianness = ">"
     else:
-        assert line == "format binary_little_endian 1.0"
+        if line != "format binary_little_endian 1.0":
+            raise ReadError()
         is_binary = True
         endianness = "<"
 
@@ -89,7 +92,8 @@ def read_buffer(f):
         cell_dtypes.append(tuple(types))
         line = _fast_forward(f)
 
-    assert line == "end_header"
+    if line != "end_header":
+        raise ReadError()
 
     if is_binary:
         mesh = _read_binary(
@@ -180,7 +184,8 @@ def _read_ascii(
                 if n == 3:
                     triangles.append(data)
                 else:
-                    assert n == 4
+                    if n != 4:
+                        raise ReadError()
                     quads.append(data)
             else:
                 cell_data[name].append(data)
@@ -255,7 +260,8 @@ def _read_binary(
         if count == 3:
             triangles.append(data)
         else:
-            assert count == 4
+            if count != 4:
+                raise ReadError()
             quads.append(data)
         # cell data
         for dtypes in dt[1:]:
@@ -270,12 +276,13 @@ def _read_binary(
     return Mesh(verts, cells, point_data=point_data, cell_data={})
 
 
-def write(filename, mesh, binary=True):
+def write(filename, mesh, binary=True):  # noqa: C901
     for key in mesh.cells:
-        assert key in [
+        if key not in [
             "triangle",
             "quad",
-        ], "Can only deal with triangular and quadrilateral faces"
+        ]:
+            raise WriteError("Can only deal with triangular and quadrilateral faces")
 
     with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")
@@ -332,7 +339,8 @@ def write(filename, mesh, binary=True):
         for cell in cells.values():
             if cell_dtype is None:
                 cell_dtype = cell.dtype
-            assert cell.dtype == cell_dtype
+            if cell.dtype != cell_dtype:
+                raise WriteError()
 
         ply_type = numpy_to_ply_dtype[cell_dtype]
         fh.write(
