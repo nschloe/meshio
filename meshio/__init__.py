@@ -4,7 +4,7 @@ from ._exceptions import ReadError, WriteError
 from ._filetypes import register_reader, register_writer
 from ._helpers import read, write, write_points_cells
 from ._mesh import Mesh
-from .formats import *
+from .formats import *  # noqa
 from .formats._xdmf import XdmfTimeSeriesReader, XdmfTimeSeriesWriter
 
 __all__ = [

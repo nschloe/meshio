@@ -4,7 +4,6 @@ CGNS <https://cgns.github.io/>
 TODO link to specification?
 """
 import logging
-import warnings
 
 import numpy
 
@@ -68,7 +67,7 @@ def write(filename, mesh):
 
 def register():
     try:
-        import h5py
+        import h5py  # noqa: F401
     except ImportError:
         logging.getLogger(__name__).warn(
             "h5py is not installed; cgns format unavailable"

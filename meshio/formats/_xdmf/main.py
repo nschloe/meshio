@@ -511,14 +511,14 @@ def write(*args, **kwargs):
 
 def register():
     try:
-        import lxml
+        import lxml  # noqa: F401
 
         has_lxml = True
     except ImportError:
         has_lxml = False
 
     try:
-        import h5py
+        import h5py  # noqa: F401
 
         has_h5py = True
     except ImportError:

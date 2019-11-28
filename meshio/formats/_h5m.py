@@ -236,7 +236,7 @@ def write(filename, mesh, add_global_ids=True):
 
 def register():
     try:
-        import h5py
+        import h5py  # noqa: F401
     except ImportError:
         logging.getLogger(__name__).warn("h5py not installed; moab format unavailable")
     else:

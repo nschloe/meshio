@@ -378,7 +378,7 @@ def write(filename, mesh):
 
 def register():
     try:
-        import netCDF4
+        import netCDF4  # noqa: F401
     except ImportError:
         logging.getLogger(__name__).warn(
             "netCDF4 not installed; exodus format unavailable"
