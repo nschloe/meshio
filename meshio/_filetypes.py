@@ -72,7 +72,7 @@ def get_writer(name_or_ext):
     for suffix in reversed(Path(name_or_ext).suffixes):
         ext = suffix + ext
         try:
-            return _ext_to_reader[ext]
+            return _ext_to_writer[ext]
         except KeyError:
             pass
 

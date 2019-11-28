@@ -3,30 +3,6 @@ import pathlib
 import numpy
 
 from ._filetypes import get_writer, get_reader
-from . import (
-    _abaqus,
-    _ansys,
-    _cgns,
-    _dolfin,
-    _exodus,
-    _flac3d,
-    _gmsh,
-    _h5m,
-    _mdpa,
-    _med,
-    _medit,
-    _nastran,
-    _obj,
-    _off,
-    _permas,
-    _ply,
-    _stl,
-    _svg,
-    _tetgen,
-    _vtk,
-    _vtu,
-    _xdmf,
-)
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer

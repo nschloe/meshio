@@ -7,7 +7,8 @@ import sys
 import numpy
 
 from .__about__ import __copyright__, __version__
-from ._helpers import input_filetypes, output_filetypes, read, write
+from ._helpers import read, write
+from ._filetypes import _name_to_reader, _name_to_writer
 
 
 def _get_version_text():
@@ -63,7 +64,7 @@ def _get_convert_parser():
         "--input-format",
         "-i",
         type=str,
-        choices=input_filetypes,
+        choices=sorted(_name_to_reader),
         help="input file format",
         default=None,
     )
@@ -72,7 +73,7 @@ def _get_convert_parser():
         "--output-format",
         "-o",
         type=str,
-        choices=output_filetypes,
+        choices=sorted(_name_to_writer),
         help="output file format",
         default=None,
     )
@@ -143,7 +144,7 @@ def _get_info_parser():
         "--input-format",
         "-i",
         type=str,
-        choices=input_filetypes,
+        choices=sorted(_name_to_reader),
         help="input file format",
         default=None,
     )
