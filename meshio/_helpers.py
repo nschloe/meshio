@@ -27,6 +27,11 @@ from . import (
 from ._common import num_nodes_per_cell
 from ._mesh import Mesh
 
+try:
+    from os import PathLike
+except ImportError:
+    PathLike = str
+
 input_filetypes = [
     "abaqus",
     "ansys",
@@ -151,7 +156,7 @@ def read(filename, file_format=None):
     :returns mesh{2,3}d: The mesh data.
     """
     # https://stackoverflow.com/q/4843173/353337
-    assert isinstance(filename, str)
+    assert isinstance(filename, (str, PathLike))
 
     if not file_format:
         # deduce file format from extension
