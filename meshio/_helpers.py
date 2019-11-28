@@ -1,3 +1,5 @@
+import pathlib
+
 import numpy
 
 from . import (
@@ -125,12 +127,10 @@ _extension_to_filetype = {
 }
 
 
-def _filetype_from_filename(filename):
-    suffixes = [".{}".format(ext) for ext in filename.split(".")[1:]]
+def _filetype_from_path(path):
     ext = ""
-
     out = None
-    for suffix in reversed(suffixes):
+    for suffix in reversed(path.suffixes):
         ext = suffix + ext
         if ext in _extension_to_filetype:
             out = _extension_to_filetype[ext]
@@ -138,24 +138,23 @@ def _filetype_from_filename(filename):
     assert out is not None, "Could not deduce file format from extension '{}'.".format(
         ext
     )
-
     return out
 
 
 def read(filename, file_format=None):
     """Reads an unstructured mesh with added data.
 
-    :param filenames: The files to read from.
+    :param filenames: The files/PathLikes to read from.
     :type filenames: str
 
     :returns mesh{2,3}d: The mesh data.
     """
-    # https://stackoverflow.com/q/4843173/353337
-    assert isinstance(filename, str)
+    path = pathlib.Path(filename)
+    assert path.exists(), "File {} not found.".format(filename)
 
     if not file_format:
         # deduce file format from extension
-        file_format = _filetype_from_filename(filename)
+        file_format = _filetype_from_path(path)
 
     format_to_reader = {
         "ansys": _ansys,
@@ -241,9 +240,10 @@ def write(filename, mesh, file_format=None, **kwargs):
     :params point_data: Named additional point data to write to the file.
     :type point_data: dict
     """
+    path = pathlib.Path(filename)
     if not file_format:
         # deduce file format from extension
-        file_format = _filetype_from_filename(filename)
+        file_format = _filetype_from_path(path)
 
     # check cells for sanity
     for key, value in mesh.cells.items():

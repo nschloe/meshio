@@ -1,4 +1,5 @@
 import os
+import pathlib
 from functools import partial
 
 import numpy
@@ -81,6 +82,11 @@ def test_structured(filename, ref_cells, ref_num_cells, ref_num_pnt):
     assert ref_cells in mesh.cells
     assert len(mesh.cells[ref_cells]) == ref_num_cells
     assert len(mesh.points) == ref_num_pnt
+
+
+def test_pathlike():
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    meshio.read(pathlib.Path(this_dir, "meshes", "vtk", "rbc_001.vtk"))
 
 
 if __name__ == "__main__":
