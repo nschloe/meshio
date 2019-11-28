@@ -53,7 +53,10 @@ In Python, simply do
 ```python
 import meshio
 
-mesh = meshio.read(filename)  # optionally specify file_format
+mesh = meshio.read(
+    filename,  # string, os.PathLike, or a buffer/open file
+    file_format="stl"  # optional if filename is a path; inferred from extension
+)
 # mesh.points, mesh.cells, ...
 ```
 to read a mesh. To write, do
@@ -81,10 +84,20 @@ meshio.write_points_cells(
 or explicitly create a mesh object for writing
 ```python
 mesh = meshio.Mesh(points, cells)
-meshio.write("foo.vtk", mesh)
+meshio.write(
+    "foo.vtk",  # str, os.PathLike, or buffer/ open file
+    mesh,
+    # file_format="vtk",  # optional if first argument is a path; inferred from extension
+)
 ```
 For both input and output, you can optionally specify the exact `file_format`
 (in case you would like to enforce ASCII over binary VTK, for example).
+
+Reading and writing can also be handled directly by the `Mesh` object:
+```python
+m = meshio.Mesh.from_file(filename, "vtk")  # same arguments as meshio.read
+m.to_file("foo.vtk")  # same arguments as meshio.write, besides `mesh`
+```
 
 #### Time series
 
