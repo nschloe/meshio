@@ -12,6 +12,7 @@ from ctypes import c_double, c_float
 
 import numpy
 
+from ._filetypes import register_reader, register_writer
 from ._exceptions import ReadError
 from ._files import open_file
 from ._mesh import Mesh
@@ -163,3 +164,7 @@ def write(filename, mesh):
         fh.write(b"\nEnd\n")
 
     return
+
+
+register_reader("medit", read, ".mesh")
+register_writer("medit", write, ".mesh")

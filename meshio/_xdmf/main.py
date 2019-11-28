@@ -7,11 +7,11 @@ from io import BytesIO
 
 import numpy
 
-from meshio._filetypes import register_reader, register_writer, revpartial
-from meshio._common import cell_data_from_raw, write_xml
-from meshio._exceptions import ReadError, WriteError
-from meshio._mesh import Mesh
-from meshio._vtk import raw_from_cell_data
+from .._filetypes import register_reader, register_writer, revpartial
+from .._common import cell_data_from_raw, write_xml
+from .._exceptions import ReadError, WriteError
+from .._mesh import Mesh
+from .._vtk import raw_from_cell_data
 from .common import (
     attribute_type,
     dtype_to_format_string,

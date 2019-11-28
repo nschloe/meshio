@@ -9,6 +9,7 @@ import warnings
 
 import numpy
 
+from ._filetypes import register_reader, register_writer, revpartial
 from ._exceptions import ReadError, WriteError
 from ._files import open_file
 from ._mesh import Mesh
@@ -391,3 +392,11 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 fh.write(out.encode("utf-8"))
 
     return
+
+
+register_reader("ply", read, ".ply")
+register_reader("ply-ascii", read)
+register_reader("ply-binary", read)
+
+register_writer("ply-ascii", revpartial(write, binary=False))
+register_writer("ply-binary", revpartial(write, binary=True))

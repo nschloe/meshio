@@ -7,6 +7,7 @@ import os
 
 import numpy
 
+from ._filetypes import register_reader, register_writer
 from .__about__ import __version__
 from ._exceptions import ReadError, WriteError
 from ._mesh import Mesh
@@ -109,3 +110,7 @@ def write(filename, mesh):
             fh.write("{} {} {} {} {}\n".format(k, tet[0], tet[1], tet[2], tet[3]))
 
     return
+
+
+register_reader("tetgen", read, ".node", ".ele")
+register_writer("tetgen", write, ".node", ".ele")

@@ -6,6 +6,7 @@ from functools import reduce
 
 import numpy
 
+from ._filetypes import register_reader, register_writer, revpartial
 from .__about__ import __version__
 from ._common import raw_from_cell_data
 from ._exceptions import ReadError, WriteError
@@ -776,3 +777,11 @@ def _write_field_data(f, data, binary):
             # numpy.savetxt(f, points)
         f.write("\n".encode("utf-8"))
     return
+
+
+register_reader("vtk", read, ".vtk")
+register_reader("vtk-ascii", read)
+register_reader("vtk-binary", read)
+
+register_writer("vtk-binary", revpartial(write, binary=True), ".vtk")
+register_writer("vtk-ascii", revpartial(write, binary=False))

@@ -5,6 +5,7 @@ import logging
 
 import numpy
 
+from ._filetypes import register_reader, register_writer
 from .__about__ import __version__
 from ._exceptions import ReadError
 from ._files import open_file
@@ -274,3 +275,7 @@ def write(filename, mesh):
         f.write("$END STRUCTURE\n")
         f.write("$EXIT COMPONENT\n")
         f.write("$FIN\n")
+
+
+register_reader("permas", read, ".post", ".post.gz", ".dato", ".dato.gz")
+register_writer("permas", write, ".post", ".post.gz", ".dato", ".dato.gz")

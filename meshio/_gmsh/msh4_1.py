@@ -8,9 +8,9 @@ from functools import partial
 
 import numpy
 
-from meshio._common import cell_data_from_raw, raw_from_cell_data
-from meshio._exceptions import ReadError, WriteError
-from meshio._mesh import Mesh
+from .._common import cell_data_from_raw, raw_from_cell_data
+from .._exceptions import ReadError, WriteError
+from .._mesh import Mesh
 from .common import (
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,

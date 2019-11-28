@@ -6,6 +6,7 @@ import datetime
 
 import numpy
 
+from ._filetypes import register_reader, register_writer
 from .__about__ import __version__
 from ._exceptions import WriteError
 from ._files import open_file
@@ -83,3 +84,7 @@ def write(filename, mesh):
             for c in mesh.cells["quad"]:
                 f.write("f {} {} {} {}\n".format(*(c + 1)))
     return
+
+
+register_reader("obj", read, ".obj")
+register_writer("obj", write, ".obj")

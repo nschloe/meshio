@@ -3,11 +3,11 @@ I/O for Abaqus inp files.
 """
 import numpy
 
-from meshio._filetypes import register_reader, register_writer
-from meshio.__about__ import __version__
-from meshio._exceptions import ReadError
-from meshio._files import open_file
-from meshio._mesh import Mesh
+from ._filetypes import register_reader, register_writer
+from .__about__ import __version__
+from ._exceptions import ReadError
+from ._files import open_file
+from ._mesh import Mesh
 
 abaqus_to_meshio_type = {
     # trusses

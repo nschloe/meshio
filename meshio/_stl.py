@@ -7,6 +7,7 @@ import os
 
 import numpy
 
+from ._filetypes import register_reader, register_writer, revpartial
 from ._exceptions import ReadError, WriteError
 from ._files import open_file
 from ._mesh import Mesh
@@ -219,3 +220,11 @@ def _binary(filename, points, cells):
             fh.write(normal.astype(numpy.float32))
             fh.write(pt.astype(numpy.float32))
             fh.write(numpy.uint16(0))
+
+
+register_reader("stl", read, ".stl")
+register_reader("stl-ascii", read)
+register_reader("stl-binary", read)
+
+register_writer("stl-ascii", revpartial(write, binary=False))
+register_writer("stl-binary", revpartial(write, binary=True))

@@ -8,6 +8,7 @@ import re
 
 import numpy
 
+from ._filetypes import register_reader, register_writer
 from ._exceptions import ReadError, WriteError
 from ._mesh import Mesh
 
@@ -221,3 +222,7 @@ def write(filename, mesh):
             dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
             _write_cell_data(cell_data_filename, dim, numpy.array(data))
     return
+
+
+register_reader("dolfin-xml", read, ".xml")
+register_writer("dolfin-xml", write, ".xml")

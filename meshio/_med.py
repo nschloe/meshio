@@ -4,6 +4,7 @@ I/O for MED/Salome, cf.
 """
 import numpy
 
+from ._filetypes import register_reader, register_writer
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError
 from ._mesh import Mesh
@@ -417,3 +418,7 @@ def _write_families(fm_group, tags):
         for i in range(len(name)):
             name_80 = name[i] + "\x00" * (80 - len(name[i]))  # make name 80 characters
             dataset[i] = [ord(x) for x in name_80]
+
+
+register_reader("med", read, ".med")
+register_writer("med", write, ".med")

@@ -8,6 +8,7 @@ import zlib
 
 import numpy
 
+from ._filetypes import register_writer, register_reader, revpartial
 from .__about__ import __version__
 from ._common import num_nodes_per_cell, write_xml
 from ._exceptions import ReadError
@@ -490,3 +491,11 @@ def write(filename, mesh, binary=True, pretty_xml=True):
 
     write_xml(filename, vtk_file, pretty_xml)
     return
+
+
+register_reader("vtu", read, ".vtu")
+register_reader("vtu-binary", read)
+register_reader("vtu-ascii", read)
+
+register_writer("vtu-binary", revpartial(write, binary=True), ".vtu")
+register_writer("vtu-ascii", revpartial(write, binary=False))

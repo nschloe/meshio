@@ -1,7 +1,7 @@
 import struct
 
-from meshio._filetypes import register_writer, register_reader, revpartial
-from meshio._exceptions import ReadError
+from .._filetypes import register_writer, register_reader, revpartial
+from .._exceptions import ReadError
 from . import msh2, msh4_0, msh4_1
 
 _readers = {"2": msh2, "4": msh4_0, "4.0": msh4_0, "4.1": msh4_1}

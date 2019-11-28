@@ -7,11 +7,11 @@ import re
 
 import numpy
 
-from meshio.__about__ import __version__
-from meshio._filetypes import register_reader, register_writer, revpartial
-from meshio._exceptions import ReadError, WriteError
-from meshio._files import open_file
-from meshio._mesh import Mesh
+from .__about__ import __version__
+from ._filetypes import register_reader, register_writer, revpartial
+from ._exceptions import ReadError, WriteError
+from ._files import open_file
+from ._mesh import Mesh
 
 
 def _skip_to(f, char):

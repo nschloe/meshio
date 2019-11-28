@@ -9,6 +9,7 @@ import logging
 
 import numpy
 
+from ._filetypes import register_reader, register_writer
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import open_file
@@ -579,3 +580,7 @@ def write(filename, mesh, binary=False):
             _write_data(fh, "ElementalData", name, dat, binary)
 
     return
+
+
+register_reader("mdpa", read, ".mdpa")
+register_writer("mdpa", write, ".mdpa")

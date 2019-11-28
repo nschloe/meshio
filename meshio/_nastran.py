@@ -7,6 +7,7 @@ import logging
 
 import numpy
 
+from ._filetypes import register_reader, register_writer
 from .__about__ import __version__
 from ._common import num_nodes_per_cell
 from ._files import open_file
@@ -214,3 +215,7 @@ def _determine_solid_2nd(f, cell_type):
         elif cell_type == "hexahedron":
             cell_type = "hexahedron20"
     return cell_type
+
+
+register_reader("nastran", read, ".bdf", ".fem", ".nas")
+register_writer("nastran", write, ".bdf", ".fem", ".nas")

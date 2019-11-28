@@ -7,6 +7,7 @@ import logging
 
 import numpy
 
+from ._filetypes import register_writer, register_reader
 from ._exceptions import ReadError, WriteError
 from ._files import open_file
 from ._mesh import Mesh
@@ -88,4 +89,6 @@ def write(filename, mesh):
         out = "\n".join([fmt.format(*row) for row in out]) + "\n"
         fh.write(out.encode("utf-8"))
 
-    return
+
+register_reader("off", read, ".off")
+register_writer("off", write, ".off")
