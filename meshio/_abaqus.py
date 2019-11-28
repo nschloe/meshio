@@ -4,8 +4,8 @@ I/O for Abaqus inp files.
 import numpy
 
 from .__about__ import __version__
-from ._mesh import Mesh
 from ._exceptions import ReadError
+from ._mesh import Mesh
 
 abaqus_to_meshio_type = {
     # trusses

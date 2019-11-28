@@ -5,6 +5,7 @@ I/O for MED/Salome, cf.
 import numpy
 
 from ._common import num_nodes_per_cell
+from ._exceptions import ReadError
 from ._mesh import Mesh
 
 # https://docs.salome-platform.org/5/med/dev/med__outils_8hxx.html
@@ -38,7 +39,10 @@ def read(filename):
     # Mesh ensemble
     mesh_ensemble = f["ENS_MAA"]
     meshes = mesh_ensemble.keys()
-    assert len(meshes) == 1, "Must only contain exactly 1 mesh"
+    if len(meshes) != 1:
+        raise ReadError(
+            "Must only contain exactly 1 mesh, found {}.".format(len(meshes))
+        )
     mesh_name = list(meshes)[0]
     mesh = mesh_ensemble[mesh_name]
 
@@ -47,7 +51,10 @@ def read(filename):
         # One needs NOE (node) and MAI (french maillage, meshing) data. If they
         # are not available in the mesh, check for time-steppings.
         time_step = mesh.keys()
-        assert len(time_step) == 1, "Must only contain exactly 1 time-step"
+        if len(time_step) != 1:
+            raise ReadError(
+                "Must only contain exactly 1 time-step, found {}.".format(len(tme_step))
+            )
         mesh = mesh[list(time_step)[0]]
 
     # Read nodal and cell data if they exist

@@ -6,8 +6,8 @@ import time
 import numpy
 
 from .__about__ import __version__ as version
-from ._mesh import Mesh
 from ._exceptions import WriteError
+from ._mesh import Mesh
 
 meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
 

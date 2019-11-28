@@ -5,9 +5,8 @@ TODO link to specification?
 """
 import numpy
 
-from ._mesh import Mesh
-
 from ._exceptions import ReadError
+from ._mesh import Mesh
 
 
 def read(filename):

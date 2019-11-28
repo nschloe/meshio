@@ -8,6 +8,7 @@ import os
 import numpy
 
 from .__about__ import __version__
+from ._exceptions import ReadError, WriteError
 from ._mesh import Mesh
 
 
@@ -16,10 +17,11 @@ def read(filename):
     if ext == ".node":
         node_filename = filename
         ele_filename = base + ".ele"
-    else:
-        assert ext == ".ele"
+    elif ext == ".ele":
         node_filename = base + ".node"
         ele_filename = filename
+    else:
+        raise ReadError()
 
     # read nodes
     with open(node_filename) as f:
@@ -30,7 +32,8 @@ def read(filename):
         num_points, dim, num_attrs, num_bmarkers = [
             int(item) for item in line.split(" ") if item != ""
         ]
-        assert dim == 3
+        if dim != 3:
+            raise ReadError("Need 3D points.")
 
         points = numpy.fromfile(
             f, dtype=float, count=(4 + num_attrs + num_bmarkers) * num_points, sep=" "
@@ -38,10 +41,11 @@ def read(filename):
 
         node_index_base = int(points[0, 0])
         # make sure the nodes a numbered consecutively
-        assert numpy.all(
+        if not numpy.all(
             points[:, 0]
             == numpy.arange(node_index_base, node_index_base + points.shape[0])
-        )
+        ):
+            raise ReadError()
         # remove the leading index column, the attributes, and the boundary markers
         points = points[:, 1:4]
 
@@ -54,7 +58,8 @@ def read(filename):
         num_tets, num_points_per_tet, num_attrs = [
             int(item) for item in line.strip().split(" ") if item != ""
         ]
-        assert num_points_per_tet == 4
+        if num_points_per_tet != 4:
+            raise ReadError()
         cells = numpy.fromfile(
             f, dtype=int, count=(5 + num_attrs) * num_tets, sep=" "
         ).reshape(num_tets, 5 + num_attrs)
@@ -66,17 +71,18 @@ def read(filename):
 
 
 def write(filename, mesh):
-
     base, ext = os.path.splitext(filename)
     if ext == ".node":
         node_filename = filename
         ele_filename = base + ".ele"
-    else:
-        assert ext == ".ele"
+    elif ext == ".ele":
         node_filename = base + ".node"
         ele_filename = filename
+    else:
+        raise WriteError()
 
-    assert mesh.points.shape[1] == 3
+    if mesh.points.shape[1] != 3:
+        raise WriteError("Can only write 3D points")
 
     # write nodes
     with open(node_filename, "w") as fh:
@@ -85,7 +91,9 @@ def write(filename, mesh):
         for k, pt in enumerate(mesh.points):
             fh.write("{} {:.15e} {:.15e} {:.15e}\n".format(k, pt[0], pt[1], pt[2]))
 
-    assert "tetra" in mesh.cells, "TegGen only supports tetrahedra"
+    if "tetra" not in mesh.cells:
+        raise WriteError("TegGen only supports tetrahedra")
+
     if len(mesh.cells) > 1:
         logging.warning(
             "TetGen only supports tetrahedra, but mesh has {}. Skipping those.".format(

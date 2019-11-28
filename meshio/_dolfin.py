@@ -8,8 +8,8 @@ import re
 
 import numpy
 
-from ._mesh import Mesh
 from ._exceptions import ReadError, WriteError
+from ._mesh import Mesh
 
 
 def _read_mesh(filename):
