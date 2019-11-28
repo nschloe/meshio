@@ -10,6 +10,7 @@ import logging
 import numpy
 
 from ._common import num_nodes_per_cell
+from ._exceptions import ReadError, WriteError
 from ._mesh import Mesh
 from ._vtk import raw_from_cell_data
 
@@ -117,12 +118,14 @@ def _read_nodes(f, is_ascii, data_size):
     points = points[:, 1:]
 
     line = f.readline().decode("utf-8")
-    assert line.strip() == "End Nodes"
+    if line.strip() != "End Nodes":
+        raise ReadError()
     return points
 
 
 def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
-    assert is_ascii
+    if not is_ascii:
+        raise ReadError()
     # First we try to identify the entity
     t = None
     if environ is not None:
@@ -177,9 +180,8 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
     # different number of tags for each cell.
 
     line = f.readline().decode("utf-8")
-    assert line.strip() == "End Elements" or line.strip() == "End Conditions"
-
-    return
+    if line.strip() not in ["End Elements", "End Conditions"]:
+        raise ReadError()
 
 
 def _prepare_cells(cells, cell_tags):
@@ -255,7 +257,8 @@ def _prepare_cells(cells, cell_tags):
 
 
 def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
-    assert is_ascii
+    if not is_ascii:
+        raise ReadError()
     # Read string tags
     num_string_tags = int(f.readline().decode("utf-8"))
     string_tags = [
@@ -280,7 +283,8 @@ def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
     data = data[:, 1:]
 
     line = f.readline().decode("utf-8")
-    assert line.strip() == "End {}".format(tag)
+    if line.strip() != "End {}".format(tag):
+        raise ReadError()
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.
@@ -376,7 +380,8 @@ def cell_data_from_raw(cells, cell_data_raw):
 
 def _write_nodes(fh, points, binary=False):
     fh.write("Begin Nodes\n".encode("utf-8"))
-    assert not binary
+    if binary:
+        raise WriteError()
 
     for k, x in enumerate(points):
         fh.write(
@@ -389,7 +394,8 @@ def _write_nodes(fh, points, binary=False):
 
 
 def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=2):
-    assert not binary
+    if binary:
+        raise WriteError()
     # write elements
     entity = "Elements"
     dimension_name = str(dimension) + "D"
@@ -448,7 +454,8 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
 
 
 def _write_data(fh, tag, name, data, binary):
-    assert not binary
+    if binary:
+        raise WriteError()
     fh.write(("Begin " + tag + " " + name + "\n\n").encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
@@ -476,7 +483,8 @@ def write(filename, mesh, binary=False):
     """Writes mdpa files, cf.
     <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
     """
-    assert not binary
+    if binary:
+        raise WriteError()
     if mesh.points.shape[1] == 2:
         logging.warning(
             "mdpa requires 3D points, but 2D points given. "

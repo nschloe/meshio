@@ -27,6 +27,7 @@ from . import (
     _xdmf,
 )
 from ._common import num_nodes_per_cell
+from ._exceptions import ReadError, WriteError
 from ._mesh import Mesh
 
 input_filetypes = [
@@ -135,9 +136,8 @@ def _filetype_from_path(path):
         if ext in _extension_to_filetype:
             out = _extension_to_filetype[ext]
 
-    assert out is not None, "Could not deduce file format from extension '{}'.".format(
-        ext
-    )
+    if out is None:
+        raise ReadError("Could not deduce file format from extension '{}'.".format(ext))
     return out
 
 
@@ -150,7 +150,8 @@ def read(filename, file_format=None):
     :returns mesh{2,3}d: The mesh data.
     """
     path = pathlib.Path(filename)
-    assert path.exists(), "File {} not found.".format(filename)
+    if not path.exists():
+        raise ReadError("File {} not found.".format(filename))
 
     if not file_format:
         # deduce file format from extension
@@ -206,9 +207,10 @@ def read(filename, file_format=None):
         "mdpa": _mdpa,
     }
 
-    assert file_format in format_to_reader, "Unknown file format '{}' of '{}'.".format(
-        file_format, filename
-    )
+    if file_format not in format_to_reader:
+        raise ReadError(
+            "Unknown file format '{}' of '{}'.".format(file_format, filename)
+        )
 
     return format_to_reader[file_format].read(filename)
 
@@ -248,9 +250,11 @@ def write(filename, mesh, file_format=None, **kwargs):
     # check cells for sanity
     for key, value in mesh.cells.items():
         if key[:7] == "polygon":
-            assert value.shape[1] == int(key[7:])
+            if value.shape[1] != int(key[7:]):
+                raise WriteError()
         elif key in num_nodes_per_cell:
-            assert value.shape[1] == num_nodes_per_cell[key]
+            if value.shape[1] != num_nodes_per_cell[key]:
+                raise WriteError()
         else:
             # we allow custom keys <https://github.com/nschloe/meshio/issues/501> and
             # cannot check those

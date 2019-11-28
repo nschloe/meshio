@@ -7,6 +7,7 @@ import datetime
 import numpy
 
 from .__about__ import __version__
+from ._exceptions import WriteError
 from ._mesh import Mesh
 
 
@@ -61,9 +62,10 @@ def read_buffer(f):
 
 
 def write(filename, mesh):
-    assert (
-        "triangle" in mesh.cells or "quad" in mesh.cells
-    ), "Wavefront .obj files can only contain triangle or quad cells."
+    if "triangle" not in mesh.cells and "quad" not in mesh.cells:
+        raise WriteError(
+            "Wavefront .obj files can only contain triangle or quad cells."
+        )
 
     with open(filename, "w") as f:
         f.write(

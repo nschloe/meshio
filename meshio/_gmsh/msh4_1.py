@@ -9,6 +9,7 @@ from functools import partial
 import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data
+from .._exceptions import ReadError, WriteError
 from .._mesh import Mesh
 from .common import (
     _gmsh_to_meshio_type,
@@ -47,7 +48,8 @@ def read_buffer(f, is_ascii, data_size):
         if not line:
             # EOF
             break
-        assert line[0] == "$"
+        if line[0] != "$":
+            raise ReadError()
         environ = line[1:].strip()
 
         if environ == "PhysicalNames":
@@ -116,9 +118,11 @@ def _read_entities(f, is_ascii, data_size):
 
     if not is_ascii:
         line = f.readline().decode("utf-8").strip()
-        assert line == ""
+        if line != "":
+            raise ReadError()
     line = f.readline().decode("utf-8").strip()
-    assert line == "$EndEntities"
+    if line != "$EndEntities":
+        raise ReadError()
     return physical_tags
 
 
@@ -138,7 +142,8 @@ def _read_nodes(f, is_ascii, data_size):
     for k in range(num_entity_blocks):
         # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
         _, __, parametric = fromfile(f, c_int, 3)
-        assert parametric == 0, "parametric nodes not implemented"
+        if parametric != 0:
+            raise ReadError("parametric nodes not implemented")
         num_nodes = int(fromfile(f, c_size_t, 1)[0])
 
         # From <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>:
@@ -158,10 +163,12 @@ def _read_nodes(f, is_ascii, data_size):
 
     if not is_ascii:
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
 
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndNodes"
+    if line.strip() != "$EndNodes":
+        raise ReadError()
 
     return points, tags
 
@@ -194,9 +201,11 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
 
     if not is_ascii:
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndElements"
+    if line.strip() != "$EndElements":
+        raise ReadError()
 
     # Inverse point tags
     inv_tags = numpy.full(numpy.max(point_tags) + 1, -1, dtype=int)
@@ -260,9 +269,11 @@ def _read_periodic(f, is_ascii, data_size):
         periodic.append([edim, (stag, mtag), affine, slave_master])
     if not is_ascii:
         line = f.readline().decode("utf-8")
-        assert line == "\n"
+        if line != "\n":
+            raise ReadError()
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndPeriodic"
+    if line.strip() != "$EndPeriodic":
+        raise ReadError()
     return periodic
 
 
@@ -367,7 +378,8 @@ def _write_nodes(fh, points, cells, binary):
     # The entity_dim and entity_tag in the $Elements section must correspond to an
     # entity_dim and entity_tag array in the $Nodes section.
     # TODO Not sure what to do if there are multiple element types present.
-    assert len(cells) == 1, "Can only deal with one cell type for now"
+    if len(cells) != 1:
+        raise WriteError("Can only deal with one cell type for now")
     dim_entity = _geometric_dimension[list(cells.keys())[0]]
     entity_tag = 0
 

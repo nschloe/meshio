@@ -3,6 +3,7 @@ import os
 import numpy
 
 from .._common import cell_data_from_raw, write_xml
+from .._exceptions import ReadError, WriteError
 from .._vtk import raw_from_cell_data
 from .common import (
     attribute_type,
@@ -22,7 +23,7 @@ except ImportError:
 
 
 class XdmfTimeSeriesReader:
-    def __init__(self, filename):
+    def __init__(self, filename):  # noqa: C901
         from lxml import etree as ET
 
         self.filename = filename
@@ -31,15 +32,19 @@ class XdmfTimeSeriesReader:
         tree = ET.parse(self.filename, parser)
         root = tree.getroot()
 
-        assert root.tag == "Xdmf"
+        if root.tag != "Xdmf":
+            raise ReadError()
 
         version = root.attrib["Version"]
-        assert version.split(".")[0] == "3", "Unknown XDMF version {}.".format(version)
+        if version.split(".")[0] != "3":
+            raise ReadError("Unknown XDMF version {}.".format(version))
 
         domains = list(root)
-        assert len(domains) == 1
+        if len(domains) != 1:
+            raise ReadError()
         self.domain = domains[0]
-        assert self.domain.tag == "Domain"
+        if self.domain.tag != "Domain":
+            raise ReadError()
 
         grids = list(self.domain)
 
@@ -48,9 +53,12 @@ class XdmfTimeSeriesReader:
         for g in grids:
             if g.attrib["GridType"] == "Collection":
                 collection_grid = g
-        assert collection_grid is not None, "Couldn't find the mesh grid"
-        assert collection_grid.tag == "Grid"
-        assert collection_grid.attrib["CollectionType"] == "Temporal"
+        if collection_grid is None:
+            raise ReadError("Couldn't find the mesh grid")
+        if collection_grid.tag != "Grid":
+            raise ReadError()
+        if collection_grid.attrib["CollectionType"] != "Temporal":
+            raise ReadError()
 
         # get the collection at once
         self.collection = list(collection_grid)
@@ -72,8 +80,10 @@ class XdmfTimeSeriesReader:
                         break
                 except KeyError:
                     continue
-        assert self.mesh_grid is not None, "Couldn't find the mesh grid"
-        assert self.mesh_grid.tag == "Grid"
+        if self.mesh_grid is None:
+            raise ReadError("Couldn't find the mesh grid")
+        if self.mesh_grid.tag != "Grid":
+            raise ReadError()
 
     def __enter__(self):
         return self
@@ -92,7 +102,8 @@ class XdmfTimeSeriesReader:
         for c in grid:
             if c.tag == "Topology":
                 data_items = list(c)
-                assert len(data_items) == 1
+                if len(data_items) != 1:
+                    raise ReadError()
                 data_item = data_items[0]
 
                 data = self._read_data_item(data_item)
@@ -100,7 +111,8 @@ class XdmfTimeSeriesReader:
                 # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
                 # Allow both.
                 if "Type" in c.attrib:
-                    assert "TopologyType" not in c.attrib
+                    if "TopologyType" in c.attrib:
+                        raise ReadError()
                     cell_type = c.attrib["Type"]
                 else:
                     cell_type = c.attrib["TopologyType"]
@@ -117,10 +129,12 @@ class XdmfTimeSeriesReader:
                 except KeyError:
                     pass
                 else:
-                    assert geometry_type in ["XY", "XYZ"]
+                    if geometry_type not in ["XY", "XYZ"]:
+                        raise ReadError()
 
                 data_items = list(c)
-                assert len(data_items) == 1
+                if len(data_items) != 1:
+                    raise ReadError()
                 data_item = data_items[0]
                 points = self._read_data_item(data_item)
 
@@ -139,22 +153,26 @@ class XdmfTimeSeriesReader:
             elif c.tag == "Attribute":
                 name = c.attrib["Name"]
 
-                assert len(list(c)) == 1
+                if len(list(c)) != 1:
+                    raise ReadError()
                 data_item = list(c)[0]
                 data = self._read_data_item(data_item)
 
                 if c.attrib["Center"] == "Node":
                     point_data[name] = data
                 else:
-                    assert c.attrib["Center"] == "Cell"
+                    if c.attrib["Center"] != "Cell":
+                        raise ReadError()
                     cell_data_raw[name] = data
             else:
                 # skip the xi:included mesh
                 continue
 
-        assert self.cells is not None
+        if self.cells is None:
+            raise ReadError()
         cell_data = cell_data_from_raw(self.cells, cell_data_raw)
-        assert t is not None
+        if t is None:
+            raise ReadError()
 
         return t, point_data, cell_data
 
@@ -164,10 +182,12 @@ class XdmfTimeSeriesReader:
         # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files out there
         # use both keys interchangeably.
         if "DataType" in data_item.attrib:
-            assert "NumberType" not in data_item.attrib
+            if "NumberType" in data_item.attrib:
+                raise ReadError()
             data_type = data_item.attrib["DataType"]
         elif "NumberType" in data_item.attrib:
-            assert "DataType" not in data_item.attrib
+            if "DataType" in data_item.attrib:
+                raise ReadError()
             data_type = data_item.attrib["NumberType"]
         else:
             # Default, see
@@ -188,9 +208,10 @@ class XdmfTimeSeriesReader:
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
 
-        assert data_item.attrib["Format"] == "HDF", "Unknown XDMF Format '{}'.".format(
-            data_item.attrib["Format"]
-        )
+        if data_item.attrib["Format"] != "HDF":
+            raise ReadError(
+                "Unknown XDMF Format '{}'.".format(data_item.attrib["Format"])
+            )
 
         info = data_item.text.strip()
         filename, h5path = info.split(":")
@@ -206,7 +227,8 @@ class XdmfTimeSeriesReader:
             f = h5py.File(full_hdf5_path, "r")
             self.hdf5_files[full_hdf5_path] = f
 
-        assert h5path[0] == "/"
+        if h5path[0] != "/":
+            raise ReadError()
 
         for key in h5path[1:].split("/"):
             f = f[key]
@@ -218,10 +240,11 @@ class XdmfTimeSeriesWriter:
     def __init__(self, filename, pretty_xml=True, data_format="HDF"):
         from lxml import etree as ET
 
-        assert data_format in ["XML", "Binary", "HDF"], (
-            "Unknown XDMF data format "
-            "'{}' (use 'XML', 'Binary', or 'HDF'.)".format(data_format)
-        )
+        if data_format not in ["XML", "Binary", "HDF"]:
+            raise WriteError(
+                "Unknown XDMF data format "
+                "'{}' (use 'XML', 'Binary', or 'HDF'.)".format(data_format)
+            )
 
         self.filename = filename
         self.data_format = data_format
@@ -287,7 +310,8 @@ class XdmfTimeSeriesWriter:
         from lxml import etree as ET
 
         grid = ET.SubElement(self.collection, "Grid")
-        assert self.has_mesh
+        if not self.has_mesh:
+            raise WriteError()
         ptr = 'xpointer(//Grid[@Name="{}"]/*[self::Topology or self::Geometry])'.format(
             self.mesh_name
         )
@@ -317,7 +341,8 @@ class XdmfTimeSeriesWriter:
                 data.tofile(f)
             return bin_filename
 
-        assert self.data_format == "HDF"
+        if self.data_format != "HDF":
+            raise WriteError()
         name = "data{}".format(self.data_counter)
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
@@ -329,7 +354,8 @@ class XdmfTimeSeriesWriter:
         if points.shape[1] == 2:
             geometry_type = "XY"
         else:
-            assert points.shape[1] == 3
+            if points.shape[1] != 3:
+                raise WriteError("Need 3D points.")
             geometry_type = "XYZ"
 
         geo = ET.SubElement(grid, "Geometry", GeometryType=geometry_type)
