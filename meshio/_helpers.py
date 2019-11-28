@@ -2,7 +2,7 @@ import pathlib
 
 import numpy
 
-from meshio._files import is_buffer
+from ._files import is_buffer
 from . import (
     _abaqus,
     _ansys,
@@ -204,7 +204,9 @@ def read(filename, file_format=None):
         if file_format is None:
             raise ReadError("File format must be given if buffer is used")
         if file_format == "tetgen":
-            raise ReadError("tetgen format is spread across multiple files, and so cannot be read from a buffer")
+            raise ReadError(
+                "tetgen format is spread across multiple files, and so cannot be read from a buffer"
+            )
         msg = "Unknown file format '{}'".format(file_format)
     else:
         path = pathlib.Path(filename)

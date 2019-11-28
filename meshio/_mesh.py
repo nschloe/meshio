@@ -105,11 +105,13 @@ class Mesh:
 
     def to_file(self, path_or_buf, file_format=None, **kwargs):
         # avoid circular import
-        from meshio import write
+        from ._helpers import write
+
         write(path_or_buf, self, file_format, **kwargs)
 
     @classmethod
     def from_file(cls, path_or_buf, file_format=None):
         # avoid circular import
-        from meshio import read
+        from ._helpers import read
+
         return read(path_or_buf, file_format)

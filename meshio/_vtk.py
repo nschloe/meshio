@@ -6,7 +6,7 @@ from functools import reduce
 
 import numpy
 
-from meshio._files import open_file
+from ._files import open_file
 from .__about__ import __version__
 from ._common import raw_from_cell_data
 from ._exceptions import ReadError, WriteError

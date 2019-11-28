@@ -5,7 +5,7 @@ import time
 
 import numpy
 
-from meshio._files import open_file
+from ._files import open_file
 from .__about__ import __version__ as version
 from ._exceptions import WriteError
 from ._mesh import Mesh

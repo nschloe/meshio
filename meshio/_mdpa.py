@@ -9,7 +9,7 @@ import logging
 
 import numpy
 
-from meshio._files import open_file
+from ._files import open_file
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._mesh import Mesh
