@@ -26,7 +26,8 @@ setup(
     license=about["__license__"],
     platforms="any",
     install_requires=["numpy"],
-    python_requires=">=3",
+    # For pathlib:
+    python_requires=">=3.4",
     extras_require={
         "all": ["netCDF4", "h5py", "lxml"],
         "exodus": ["netCDF4"],

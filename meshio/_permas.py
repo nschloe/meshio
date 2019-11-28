@@ -6,6 +6,8 @@ import logging
 import numpy
 
 from .__about__ import __version__
+from ._exceptions import ReadError
+from ._files import open_file
 from ._mesh import Mesh
 
 permas_to_meshio_type = {
@@ -56,7 +58,7 @@ meshio_to_permas_type = {v: k for k, v in permas_to_meshio_type.items()}
 def read(filename):
     """Reads a PERMAS dat file.
     """
-    with open(filename, "r") as f:
+    with open_file(filename, "r") as f:
         out = read_buffer(f)
     return out
 
@@ -133,11 +135,11 @@ def _read_nodes(f):
 def _read_cells(f, line0, point_gids):
     sline = line0.split(" ")[1:]
     etype_sline = sline[0]
-    assert "TYPE" in etype_sline, etype_sline
+    if "TYPE" not in etype_sline:
+        raise ReadError(etype_sline)
     etype = etype_sline.split("=")[1].strip()
-    assert etype in permas_to_meshio_type, "Element type not available: {}".format(
-        etype
-    )
+    if etype not in permas_to_meshio_type:
+        raise ReadError("Element type not available: {}".format(etype))
     cell_type = permas_to_meshio_type[etype]
     cells, idx = [], []
     while True:
@@ -180,7 +182,8 @@ def get_param_map(word, required_keys=None):
             value = None
         else:
             sword = wordi.split("=")
-            assert len(sword) == 2, sword
+            if len(sword) != 2:
+                raise ReadError(sword)
             key = sword[0].strip()
             value = sword[1].strip()
         param_map[key] = value
@@ -205,7 +208,8 @@ def read_set(f, params_map):
     f.seek(last_pos)
 
     if "generate" in params_map:
-        assert len(set_ids) == 3, set_ids
+        if len(set_ids) != 3:
+            raise ReadError(set_ids)
         set_ids = numpy.arange(set_ids[0], set_ids[1], set_ids[2])
     else:
         try:
@@ -226,7 +230,7 @@ def write(filename, mesh):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    with open(filename, "wt") as f:
+    with open_file(filename, "wt") as f:
         f.write("!PERMAS DataFile Version 17.0\n")
         f.write("!written by meshio v{}\n".format(__version__))
         f.write("$ENTER COMPONENT NAME=DFLT_COMP\n")

@@ -29,10 +29,13 @@ class Mesh:
         lines = [
             "<meshio mesh object>",
             "  Number of points: {}".format(len(self.points)),
-            "  Number of elements:",
         ]
-        for tpe, elems in self.cells.items():
-            lines.append("    {}: {}".format(tpe, len(elems)))
+        if len(self.cells) > 0:
+            lines.append("  Number of cells:")
+            for tpe, elems in self.cells.items():
+                lines.append("    {}: {}".format(tpe, len(elems)))
+        else:
+            lines.append("  No cells.")
 
         if self.node_sets:
             lines.append("  Node sets: {}".format(", ".join(self.node_sets.keys())))
@@ -99,3 +102,16 @@ class Mesh:
             self.cells[key] = all_cells_flat[k : k + n].reshape(s)
             k += n
         return
+
+    def to_file(self, path_or_buf, file_format=None, **kwargs):
+        # avoid circular import
+        from ._helpers import write
+
+        write(path_or_buf, self, file_format, **kwargs)
+
+    @classmethod
+    def from_file(cls, path_or_buf, file_format=None):
+        # avoid circular import
+        from ._helpers import read
+
+        return read(path_or_buf, file_format)

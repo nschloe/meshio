@@ -7,11 +7,13 @@ import logging
 
 import numpy
 
+from ._exceptions import ReadError, WriteError
+from ._files import open_file
 from ._mesh import Mesh
 
 
 def read(filename):
-    with open(filename) as f:
+    with open_file(filename) as f:
         points, cells = read_buffer(f)
     return Mesh(points, cells)
 
@@ -19,7 +21,8 @@ def read(filename):
 def read_buffer(f):
     # assert that the first line reads `OFF`
     line = f.readline()
-    assert line.strip() == "OFF"
+    if line.strip() != "OFF":
+        raise ReadError()
 
     # fast forward to the next significant line
     while True:
@@ -40,7 +43,8 @@ def read_buffer(f):
     data = numpy.fromfile(f, dtype=int, count=4 * num_faces, sep=" ").reshape(
         num_faces, 4
     )
-    assert numpy.all(data[:, 0] == 3), "Can only read triangular faces"
+    if not numpy.all(data[:, 0] == 3):
+        raise ReadError("Can only read triangular faces")
     cells = {"triangle": data[:, 1:]}
 
     return verts, cells
@@ -56,12 +60,12 @@ def write(filename, mesh):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    for key in mesh.cells:
-        assert key in ["triangle"], "Can only deal with triangular faces"
+    if "triangle" not in mesh.cells:
+        raise WriteError("Can only deal with triangular faces")
 
     tri = mesh.cells["triangle"]
 
-    with open(filename, "wb") as fh:
+    with open_file(filename, "wb") as fh:
         fh.write(b"OFF\n")
         fh.write(b"# Created by meshio\n\n")
 

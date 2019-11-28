@@ -4,6 +4,7 @@ import shlex
 import numpy
 
 from .._common import num_nodes_per_cell  # noqa F401
+from .._exceptions import ReadError, WriteError
 
 c_int = numpy.dtype("i")
 c_double = numpy.dtype("d")
@@ -18,8 +19,8 @@ def _read_physical_names(f, field_data):
         value = numpy.array(line[1::-1], dtype=int)
         field_data[key] = value
     line = f.readline().decode("utf-8")
-    assert line.strip() == "$EndPhysicalNames"
-    return
+    if line.strip() != "$EndPhysicalNames":
+        raise ReadError()
 
 
 def _read_data(f, tag, data_dict, data_size, is_ascii):
@@ -48,7 +49,8 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
         # binary
         dtype = [("index", c_int), ("values", c_double, (num_components,))]
         data = numpy.fromfile(f, count=num_items, dtype=dtype)
-        assert (data["index"] == range(1, num_items + 1)).all()
+        if not (data["index"] == range(1, num_items + 1)).all():
+            raise ReadError()
         data = numpy.ascontiguousarray(data["values"])
 
     # fast forward to $End{tag}
@@ -62,7 +64,6 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
         data = data[:, 0]
 
     data_dict[string_tags[0]] = data
-    return
 
 
 # Translate meshio types to gmsh codes
@@ -152,7 +153,6 @@ def _write_physical_names(fh, field_data):
         for entry in entries:
             fh.write('{} {} "{}"\n'.format(*entry).encode("utf-8"))
         fh.write("$EndPhysicalNames\n".encode("utf-8"))
-    return
 
 
 def _write_data(fh, tag, name, data, binary):
@@ -173,11 +173,12 @@ def _write_data(fh, tag, name, data, binary):
     fh.write("{}\n".format(0).encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
-    assert num_components in [
+    if num_components not in [
         1,
         3,
         9,
-    ], "Gmsh only permits 1, 3, or 9 components per data field."
+    ]:
+        raise WriteError("Gmsh only permits 1, 3, or 9 components per data field.")
 
     # Cut off the last dimension in case it's 1. This avoids problems with
     # writing the data.
@@ -209,4 +210,3 @@ def _write_data(fh, tag, name, data, binary):
                 fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
     fh.write("$End{}\n".format(tag).encode("utf-8"))
-    return

@@ -2,10 +2,14 @@ import copy
 import os
 import string
 import tempfile
+from pathlib import Path
 
 import numpy
 
 import meshio
+
+TEST_DIR = Path(__file__).resolve().parent
+MESHES_DIR = TEST_DIR / "meshes"
 
 # In general:
 # Use values with an infinite decimal representation to test precision.

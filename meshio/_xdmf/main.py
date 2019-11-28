@@ -3,10 +3,12 @@ I/O for XDMF.
 http://www.xdmf.org/index.php/XDMF_Model_and_Format
 """
 import os
+from io import BytesIO
 
 import numpy
 
 from .._common import cell_data_from_raw, write_xml
+from .._exceptions import ReadError, WriteError
 from .._mesh import Mesh
 from .._vtk import raw_from_cell_data
 from .common import (
@@ -19,11 +21,6 @@ from .common import (
     xdmf_to_meshio_type,
     xdmf_to_numpy_type,
 )
-
-try:
-    from StringIO import cStringIO as BytesIO
-except ImportError:
-    from io import BytesIO
 
 
 def read(filename):
@@ -42,14 +39,16 @@ class XdmfReader:
         tree = ET.parse(self.filename, parser)
         root = tree.getroot()
 
-        assert root.tag == "Xdmf"
+        if root.tag != "Xdmf":
+            raise ReadError()
 
         version = root.attrib["Version"]
 
         if version.split(".")[0] == "2":
             return self.read_xdmf2(root)
 
-        assert version.split(".")[0] == "3", "Unknown XDMF version {}.".format(version)
+        if version.split(".")[0] != "3":
+            raise ReadError("Unknown XDMF version {}.".format(version))
 
         return self.read_xdmf3(root)
 
@@ -61,10 +60,12 @@ class XdmfReader:
         # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files
         # out there use both keys interchangeably.
         if "DataType" in data_item.attrib:
-            assert "NumberType" not in data_item.attrib
+            if "NumberType" in data_item.attrib:
+                raise ReadError()
             data_type = data_item.attrib["DataType"]
         elif "NumberType" in data_item.attrib:
-            assert "DataType" not in data_item.attrib
+            if "DataType" in data_item.attrib:
+                raise ReadError()
             data_type = data_item.attrib["NumberType"]
         else:
             # Default, see
@@ -85,9 +86,10 @@ class XdmfReader:
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
 
-        assert data_item.attrib["Format"] == "HDF", "Unknown XDMF Format '{}'.".format(
-            data_item.attrib["Format"]
-        )
+        if data_item.attrib["Format"] != "HDF":
+            raise ReadError(
+                "Unknown XDMF Format '{}'.".format(data_item.attrib["Format"])
+            )
 
         info = data_item.text.strip()
         filename, h5path = info.split(":")
@@ -96,7 +98,8 @@ class XdmfReader:
         full_hdf5_path = os.path.join(os.path.dirname(self.filename), filename)
 
         f = h5py.File(full_hdf5_path, "r")
-        assert h5path[0] == "/"
+        if h5path[0] != "/":
+            raise ReadError()
 
         for key in h5path[1:].split("/"):
             f = f[key]
@@ -115,22 +118,23 @@ class XdmfReader:
             field_data[str_tag] = numpy.array([num_tag, dim])
         return field_data
 
-    def read_xdmf2(self, root):
+    def read_xdmf2(self, root):  # noqa: C901
         domains = list(root)
-        assert len(domains) == 1
+        if len(domains) != 1:
+            raise ReadError()
         domain = domains[0]
-        assert domain.tag == "Domain"
+        if domain.tag != "Domain":
+            raise ReadError()
 
         grids = list(domain)
-        assert len(grids) == 1, "XDMF reader: Only supports one grid right now."
+        if len(grids) != 1:
+            raise ReadError("XDMF reader: Only supports one grid right now.")
         grid = grids[0]
-        assert grid.tag == "Grid"
+        if grid.tag != "Grid":
+            raise ReadError()
 
-        try:
-            assert grid.attrib["GridType"] == "Uniform"
-        except KeyError:
-            # The default is 'Uniform'
-            pass
+        if "GridType" in grid.attrib and grid.attrib["GridType"] != "Uniform":
+            raise ReadError()
 
         points = None
         cells = {}
@@ -141,33 +145,32 @@ class XdmfReader:
         for c in grid:
             if c.tag == "Topology":
                 data_items = list(c)
-                assert len(data_items) == 1
+                if len(data_items) != 1:
+                    raise ReadError()
                 meshio_type = xdmf_to_meshio_type[c.attrib["TopologyType"]]
                 cells[meshio_type] = self._read_data_item(data_items[0])
 
             elif c.tag == "Geometry":
-                try:
-                    assert c.attrib["GeometryType"] == "XYZ"
-                except KeyError:
-                    # The default is 'XYZ'
-                    pass
+                if "GeometryType" in c.attrib and c.attrib["GeometryType"] != "XYZ":
+                    raise ReadError()
                 data_items = list(c)
-                assert len(data_items) == 1
+                if len(data_items) != 1:
+                    raise ReadError()
                 points = self._read_data_item(data_items[0])
 
             elif c.tag == "Information":
                 c_data = c.text
-                assert c_data
+                if not c_data:
+                    raise ReadError()
                 field_data = self.read_information(c_data)
 
-            else:
-                assert c.tag == "Attribute", "Unknown section '{}'.".format(c.tag)
-
+            elif c.tag == "Attribute":
                 # assert c.attrib['Active'] == '1'
                 # assert c.attrib['AttributeType'] == 'None'
 
                 data_items = list(c)
-                assert len(data_items) == 1
+                if len(data_items) != 1:
+                    raise ReadError()
 
                 data = self._read_data_item(data_items[0])
 
@@ -178,7 +181,10 @@ class XdmfReader:
                     cell_data_raw[name] = data
                 else:
                     # TODO field data?
-                    assert c.attrib["Center"] == "Grid"
+                    if c.attrib["Center"] != "Grid":
+                        raise ReadError()
+            else:
+                raise ReadError("Unknown section '{}'.".format(c.tag))
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -190,16 +196,20 @@ class XdmfReader:
             field_data=field_data,
         )
 
-    def read_xdmf3(self, root):
+    def read_xdmf3(self, root):  # noqa: C901
         domains = list(root)
-        assert len(domains) == 1
+        if len(domains) != 1:
+            raise ReadError()
         domain = domains[0]
-        assert domain.tag == "Domain"
+        if domain.tag != "Domain":
+            raise ReadError()
 
         grids = list(domain)
-        assert len(grids) == 1, "XDMF reader: Only supports one grid right now."
+        if len(grids) != 1:
+            raise ReadError("XDMF reader: Only supports one grid right now.")
         grid = grids[0]
-        assert grid.tag == "Grid"
+        if grid.tag != "Grid":
+            raise ReadError()
 
         points = None
         cells = {}
@@ -210,7 +220,8 @@ class XdmfReader:
         for c in grid:
             if c.tag == "Topology":
                 data_items = list(c)
-                assert len(data_items) == 1
+                if len(data_items) != 1:
+                    raise ReadError()
                 data_item = data_items[0]
 
                 data = self._read_data_item(data_item)
@@ -218,7 +229,8 @@ class XdmfReader:
                 # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
                 # Allow both.
                 if "Type" in c.attrib:
-                    assert "TopologyType" not in c.attrib
+                    if "TopologyType" in c.attrib:
+                        raise ReadError()
                     cell_type = c.attrib["Type"]
                 else:
                     cell_type = c.attrib["TopologyType"]
@@ -235,27 +247,29 @@ class XdmfReader:
                 except KeyError:
                     pass
                 else:
-                    assert geometry_type in ["XY", "XYZ"]
+                    if geometry_type not in ["XY", "XYZ"]:
+                        raise ReadError()
 
                 data_items = list(c)
-                assert len(data_items) == 1
+                if len(data_items) != 1:
+                    raise ReadError()
                 data_item = data_items[0]
                 points = self._read_data_item(data_item)
 
             elif c.tag == "Information":
                 c_data = c.text
-                assert c_data
+                if not c_data:
+                    raise ReadError()
                 field_data = self.read_information(c_data)
 
-            else:
-                assert c.tag == "Attribute", "Unknown section '{}'.".format(c.tag)
-
+            elif c.tag == "Attribute":
                 # Don't be too strict here: FEniCS, for example, calls this
                 # 'AttributeType'.
                 # assert c.attrib['Type'] == 'None'
 
                 data_items = list(c)
-                assert len(data_items) == 1
+                if len(data_items) != 1:
+                    raise ReadError()
                 data_item = data_items[0]
 
                 data = self._read_data_item(data_item)
@@ -264,8 +278,11 @@ class XdmfReader:
                 if c.attrib["Center"] == "Node":
                     point_data[name] = data
                 else:
-                    assert c.attrib["Center"] == "Cell"
+                    if c.attrib["Center"] != "Cell":
+                        raise ReadError()
                     cell_data_raw[name] = data
+            else:
+                raise ReadError("Unknown section '{}'.".format(c.tag))
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -282,10 +299,11 @@ class XdmfWriter:
     def __init__(self, filename, mesh, pretty_xml=True, data_format="HDF"):
         from lxml import etree as ET
 
-        assert data_format in ["XML", "Binary", "HDF"], (
-            "Unknown XDMF data format "
-            "'{}' (use 'XML', 'Binary', or 'HDF'.)".format(data_format)
-        )
+        if data_format not in ["XML", "Binary", "HDF"]:
+            raise WriteError(
+                "Unknown XDMF data format "
+                "'{}' (use 'XML', 'Binary', or 'HDF'.)".format(data_format)
+            )
 
         self.filename = filename
         self.data_format = data_format
@@ -332,7 +350,8 @@ class XdmfWriter:
                 data.tofile(f)
             return bin_filename
 
-        assert self.data_format == "HDF"
+        if self.data_format != "HDF":
+            raise WriteError()
         name = "data{}".format(self.data_counter)
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
@@ -346,7 +365,8 @@ class XdmfWriter:
         elif points.shape[1] == 2:
             geometry_type = "XY"
         else:
-            assert points.shape[1] == 3
+            if points.shape[1] != 3:
+                raise WriteError()
             geometry_type = "XYZ"
 
         geo = ET.SubElement(grid, "Geometry", GeometryType=geometry_type)

@@ -7,11 +7,13 @@ import datetime
 import numpy
 
 from .__about__ import __version__
+from ._exceptions import WriteError
+from ._files import open_file
 from ._mesh import Mesh
 
 
 def read(filename):
-    with open(filename, "r") as f:
+    with open_file(filename, "r") as f:
         mesh = read_buffer(f)
     return mesh
 
@@ -61,11 +63,12 @@ def read_buffer(f):
 
 
 def write(filename, mesh):
-    assert (
-        "triangle" in mesh.cells or "quad" in mesh.cells
-    ), "Wavefront .obj files can only contain triangle or quad cells."
+    if "triangle" not in mesh.cells and "quad" not in mesh.cells:
+        raise WriteError(
+            "Wavefront .obj files can only contain triangle or quad cells."
+        )
 
-    with open(filename, "w") as f:
+    with open_file(filename, "w") as f:
         f.write(
             "# Created by meshio v{}, {}\n".format(
                 __version__, datetime.datetime.now().isoformat()

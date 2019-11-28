@@ -12,11 +12,13 @@ from ctypes import c_double, c_float
 
 import numpy
 
+from ._exceptions import ReadError
+from ._files import open_file
 from ._mesh import Mesh
 
 
 def read(filename):
-    with open(filename) as f:
+    with open_file(filename) as f:
         mesh = read_buffer(f)
     return mesh
 
@@ -48,7 +50,8 @@ def read_buffer(f):
 
         items = line.split()
 
-        assert items[0].isalpha()
+        if not items[0].isalpha():
+            raise ReadError()
 
         if items[0] == "MeshVersionFormatted":
             version = items[1]
@@ -56,7 +59,8 @@ def read_buffer(f):
         elif items[0] == "Dimension":
             dim = int(items[1])
         elif items[0] == "Vertices":
-            assert dim > 0
+            if dim <= 0:
+                raise ReadError()
             num_verts = int(f.readline())
             out = numpy.fromfile(
                 f, count=num_verts * (dim + 1), dtype=dtype, sep=" "
@@ -88,13 +92,14 @@ def read_buffer(f):
                 f, count=num_normal_at_vertices * 2, dtype=int, sep=" "
             ).reshape(num_normal_at_vertices, 2)
         else:
-            assert items[0] == "End", "Unknown keyword '{}'.".format(items[0])
+            if items[0] != "End":
+                raise ReadError("Unknown keyword '{}'.".format(items[0]))
 
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
 def write(filename, mesh):
-    with open(filename, "wb") as fh:
+    with open_file(filename, "wb") as fh:
         version = {numpy.dtype(c_float): 1, numpy.dtype(c_double): 2}[mesh.points.dtype]
         # N. B.: PEP 461 Adding % formatting to bytes and bytearray
         fh.write(b"MeshVersionFormatted %d\n" % version)
