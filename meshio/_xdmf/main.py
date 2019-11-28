@@ -388,10 +388,11 @@ class XdmfWriter:
 
         # Lines translate to Polylines, and one needs to specify the exact
         # number of nodes. Hence, prepend 2 (without mutating argument).
-        
-        cells = {k: (numpy.insert(cells_in[k], 0, 2, axis=1)
-                     if k == 'line' else cells_in[k])
-                 for k in cells_in}
+
+        cells = {
+            k: (numpy.insert(cells_in[k], 0, 2, axis=1) if k == "line" else cells_in[k])
+            for k in cells_in
+        }
 
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
