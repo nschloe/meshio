@@ -120,7 +120,7 @@ class VtuReader:
     this class.
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename):  # noqa: C901
         from lxml import etree as ET
 
         # libxml2 and with it lxml have a safety net for memory overflows; see, e.g.,

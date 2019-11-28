@@ -53,7 +53,9 @@ def read(filename):
         time_step = mesh.keys()
         if len(time_step) != 1:
             raise ReadError(
-                "Must only contain exactly 1 time-step, found {}.".format(len(tme_step))
+                "Must only contain exactly 1 time-step, found {}.".format(
+                    len(time_step)
+                )
             )
         mesh = mesh[list(time_step)[0]]
 

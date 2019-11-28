@@ -292,7 +292,7 @@ def _read_faces(f, line):
     return data
 
 
-def read(filename):
+def read(filename):  # noqa: C901
     # Initialize the data optional data fields
     field_data = {}
     cell_data = {}

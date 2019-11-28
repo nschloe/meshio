@@ -23,7 +23,7 @@ except ImportError:
 
 
 class XdmfTimeSeriesReader:
-    def __init__(self, filename):
+    def __init__(self, filename):  # noqa: C901
         from lxml import etree as ET
 
         self.filename = filename

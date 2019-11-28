@@ -275,7 +275,7 @@ def _read_binary(
     return Mesh(verts, cells, point_data=point_data, cell_data={})
 
 
-def write(filename, mesh, binary=True):
+def write(filename, mesh, binary=True):  # noqa: C901
     for key in mesh.cells:
         if key not in [
             "triangle",

@@ -11,6 +11,8 @@ __all__ = [
     "write",
     "write_points_cells",
     "Mesh",
+    "ReadError",
+    "WriteError",
     "XdmfTimeSeriesReader",
     "XdmfTimeSeriesWriter",
     "__version__",

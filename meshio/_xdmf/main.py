@@ -118,7 +118,7 @@ class XdmfReader:
             field_data[str_tag] = numpy.array([num_tag, dim])
         return field_data
 
-    def read_xdmf2(self, root):
+    def read_xdmf2(self, root):  # noqa: C901
         domains = list(root)
         if len(domains) != 1:
             raise ReadError()
@@ -196,7 +196,7 @@ class XdmfReader:
             field_data=field_data,
         )
 
-    def read_xdmf3(self, root):
+    def read_xdmf3(self, root):  # noqa: C901
         domains = list(root)
         if len(domains) != 1:
             raise ReadError()
