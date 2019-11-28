@@ -29,10 +29,13 @@ class Mesh:
         lines = [
             "<meshio mesh object>",
             "  Number of points: {}".format(len(self.points)),
-            "  Number of elements:",
         ]
-        for tpe, elems in self.cells.items():
-            lines.append("    {}: {}".format(tpe, len(elems)))
+        if len(self.cells) > 0:
+            lines.append("  Number of cells:")
+            for tpe, elems in self.cells.items():
+                lines.append("    {}: {}".format(tpe, len(elems)))
+        else:
+            lines.append("  No cells.")
 
         if self.node_sets:
             lines.append("  Node sets: {}".format(", ".join(self.node_sets.keys())))
