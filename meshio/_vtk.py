@@ -9,6 +9,7 @@ import numpy
 from .__about__ import __version__
 from ._common import raw_from_cell_data
 from ._exceptions import ReadError, WriteError
+from ._files import open_file
 from ._mesh import Mesh
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
@@ -169,7 +170,7 @@ class Info:
 def read(filename):
     """Reads a VTK vtk file.
     """
-    with open(filename, "rb") as f:
+    with open_file(filename, "rb") as f:
         out = read_buffer(f)
     return out
 
@@ -645,7 +646,7 @@ def write(filename, mesh, binary=True):
     if not binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
 
-    with open(filename, "wb") as f:
+    with open_file(filename, "wb") as f:
         f.write("# vtk DataFile Version 4.2\n".encode("utf-8"))
         f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
         f.write(("BINARY\n" if binary else "ASCII\n").encode("utf-8"))

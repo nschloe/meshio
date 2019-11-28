@@ -13,11 +13,12 @@ from ctypes import c_double, c_float
 import numpy
 
 from ._exceptions import ReadError
+from ._files import open_file
 from ._mesh import Mesh
 
 
 def read(filename):
-    with open(filename) as f:
+    with open_file(filename) as f:
         mesh = read_buffer(f)
     return mesh
 
@@ -98,7 +99,7 @@ def read_buffer(f):
 
 
 def write(filename, mesh):
-    with open(filename, "wb") as fh:
+    with open_file(filename, "wb") as fh:
         version = {numpy.dtype(c_float): 1, numpy.dtype(c_double): 2}[mesh.points.dtype]
         # N. B.: PEP 461 Adding % formatting to bytes and bytearray
         fh.write(b"MeshVersionFormatted %d\n" % version)

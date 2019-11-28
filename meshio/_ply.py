@@ -10,6 +10,7 @@ import warnings
 import numpy
 
 from ._exceptions import ReadError, WriteError
+from ._files import open_file
 from ._mesh import Mesh
 
 # Reference dtypes
@@ -30,7 +31,7 @@ numpy_to_ply_dtype = {numpy.dtype(v): k for k, v in ply_to_numpy_dtype.items()}
 
 
 def read(filename):
-    with open(filename, "rb") as f:
+    with open_file(filename, "rb") as f:
         mesh = read_buffer(f)
     return mesh
 
@@ -283,7 +284,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
         ]:
             raise WriteError("Can only deal with triangular and quadrilateral faces")
 
-    with open(filename, "wb") as fh:
+    with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")
         fh.write(b"comment Created by meshio\n")
 

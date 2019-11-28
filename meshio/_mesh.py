@@ -102,3 +102,16 @@ class Mesh:
             self.cells[key] = all_cells_flat[k : k + n].reshape(s)
             k += n
         return
+
+    def to_file(self, path_or_buf, file_format=None, **kwargs):
+        # avoid circular import
+        from ._helpers import write
+
+        write(path_or_buf, self, file_format, **kwargs)
+
+    @classmethod
+    def from_file(cls, path_or_buf, file_format=None):
+        # avoid circular import
+        from ._helpers import read
+
+        return read(path_or_buf, file_format)

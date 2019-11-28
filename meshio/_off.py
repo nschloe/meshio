@@ -8,11 +8,12 @@ import logging
 import numpy
 
 from ._exceptions import ReadError, WriteError
+from ._files import open_file
 from ._mesh import Mesh
 
 
 def read(filename):
-    with open(filename) as f:
+    with open_file(filename) as f:
         points, cells = read_buffer(f)
     return Mesh(points, cells)
 
@@ -64,7 +65,7 @@ def write(filename, mesh):
 
     tri = mesh.cells["triangle"]
 
-    with open(filename, "wb") as fh:
+    with open_file(filename, "wb") as fh:
         fh.write(b"OFF\n")
         fh.write(b"# Created by meshio\n\n")
 

@@ -9,6 +9,7 @@ import numpy
 
 from .__about__ import __version__
 from ._common import num_nodes_per_cell
+from ._files import open_file
 from ._mesh import Mesh
 
 nastran_to_meshio_type = {
@@ -41,7 +42,7 @@ meshio_to_nastran_type = {v: k for k, v in nastran_to_meshio_type.items()}
 
 
 def read(filename):
-    with open(filename, "r") as f:
+    with open_file(filename, "r") as f:
         out = read_buffer(f)
     return out
 
@@ -141,7 +142,7 @@ def write(filename, mesh):
     else:
         points = mesh.points
 
-    with open(filename, "w") as f:
+    with open_file(filename, "w") as f:
         f.write("$ Nastran file written by meshio v{}\n".format(__version__))
         f.write("BEGIN BULK\n")
 

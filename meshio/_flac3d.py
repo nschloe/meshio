@@ -7,6 +7,7 @@ import numpy
 
 from .__about__ import __version__ as version
 from ._exceptions import WriteError
+from ._files import open_file
 from ._mesh import Mesh
 
 meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
@@ -58,7 +59,7 @@ def read(filename):
     """
     Read FLAC3D f3grid grid file (only ASCII).
     """
-    with open(filename, "r") as f:
+    with open_file(filename, "r") as f:
         out = read_buffer(f)
     return out
 
@@ -176,7 +177,7 @@ def write(filename, mesh):
             "FLAC3D format only supports 'tetra', 'pyramid', 'wedge', and 'hexahedron'."
         )
 
-    with open(filename, "w") as f:
+    with open_file(filename, "w") as f:
         f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
         f.write("* {}\n".format(time.ctime()))
         f.write("* GRIDPOINTS\n")
