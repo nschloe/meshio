@@ -10,6 +10,7 @@ import numpy
 
 from .__about__ import __version__
 from ._common import num_nodes_per_cell, write_xml
+from ._exceptions import ReadError
 from ._mesh import Mesh
 from ._vtk import meshio_to_vtk_type, raw_from_cell_data, vtk_to_meshio_type
 
@@ -24,7 +25,8 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     # Translate it into the cells dictionary.
     # `connectivity` is a one-dimensional vector with
     # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
-    assert len(offsets) == len(types)
+    if len(offsets) != len(types):
+        raise ReadError()
 
     cells = {}
     cell_data = {}
@@ -41,7 +43,8 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
 
 
 def _organize_cells(point_offsets, cells, cell_data_raw):
-    assert len(point_offsets) == len(cells)
+    if len(point_offsets) != len(cells):
+        raise ReadError()
 
     out_cells = {}
     out_cell_data = {}
@@ -75,19 +78,24 @@ def get_grid(root):
     appended_data = None
     for c in root:
         if c.tag == "UnstructuredGrid":
-            assert grid is None, "More than one UnstructuredGrid found."
+            if grid is not None:
+                raise ReadError("More than one UnstructuredGrid found.")
             grid = c
         else:
-            assert c.tag == "AppendedData", "Unknown main tag '{}'.".format(c.tag)
-            assert appended_data is None, "More than one AppendedData found."
-            assert c.attrib["encoding"] == "base64"
+            if c.tag != "AppendedData":
+                raise ReadError("Unknown main tag '{}'.".format(c.tag))
+            if appended_data is not None:
+                raise ReadError("More than one AppendedData section found.")
+            if c.attrib["encoding"] != "base64":
+                raise ReadError("")
             appended_data = c.text.strip()
-            # The appended data always begins with a (meaningless)
-            # underscore.
-            assert appended_data[0] == "_"
+            # The appended data always begins with a (meaningless) underscore.
+            if appended_data[0] != "_":
+                raise ReadError()
             appended_data = appended_data[1:]
 
-    assert grid is not None, "No UnstructuredGrid found."
+    if grid is None:
+        raise ReadError("No UnstructuredGrid found.")
     return grid, appended_data
 
 
@@ -130,17 +138,20 @@ class VtuReader:
         tree = ET.parse(filename, parser)
         root = tree.getroot()
 
-        assert root.tag == "VTKFile"
-        assert root.attrib["type"] == "UnstructuredGrid"
-        assert root.attrib["version"] in [
-            "0.1",
-            "1.0",
-        ], "Unknown VTU file version '{}'.".format(root.attrib["version"])
+        if root.tag != "VTKFile":
+            raise ReadError()
+        if root.attrib["type"] != "UnstructuredGrid":
+            raise ReadError()
+        if root.attrib["version"] not in ["0.1", "1.0"]:
+            raise ReadError(
+                "Unknown VTU file version '{}'.".format(root.attrib["version"])
+            )
 
-        try:
-            assert root.attrib["compressor"] == "vtkZLibDataCompressor"
-        except KeyError:
-            pass
+        if (
+            "compressor" in root.attrib
+            and root.attrib["compressor"] != "vtkZLibDataCompressor"
+        ):
+            raise ReadError()
 
         self.header_type = (
             root.attrib["header_type"] if "header_type" in root.attrib else "UInt32"
@@ -148,10 +159,8 @@ class VtuReader:
 
         try:
             self.byte_order = root.attrib["byte_order"]
-            assert self.byte_order in [
-                "LittleEndian",
-                "BigEndian",
-            ], "Unknown byte order '{}'.".format(self.byte_order)
+            if self.byte_order not in ["LittleEndian", "BigEndian"]:
+                raise ReadError("Unknown byte order '{}'.".format(self.byte_order))
         except KeyError:
             self.byte_order = None
 
@@ -162,13 +171,15 @@ class VtuReader:
         for c in grid:
             if c.tag == "Piece":
                 pieces.append(c)
-            else:
-                assert c.tag == "FieldData", "Unknown grid subtag '{}'.".format(c.tag)
+            elif c.tag == "FieldData":
                 # TODO test field data
                 for data_array in c:
                     field_data[data_array.attrib["Name"]] = self.read_data(data_array)
+            else:
+                raise ReadError("Unknown grid subtag '{}'.".format(c.tag))
 
-        assert pieces, "No Piece found."
+        if not pieces:
+            raise ReadError("No Piece found.")
 
         points = []
         cells = []
@@ -186,10 +197,12 @@ class VtuReader:
             for child in piece:
                 if child.tag == "Points":
                     data_arrays = list(child)
-                    assert len(data_arrays) == 1
+                    if len(data_arrays) != 1:
+                        raise ReadError()
                     data_array = data_arrays[0]
 
-                    assert data_array.tag == "DataArray"
+                    if data_array.tag != "DataArray":
+                        raise ReadError()
 
                     pts = self.read_data(data_array)
 
@@ -198,45 +211,50 @@ class VtuReader:
 
                 elif child.tag == "Cells":
                     for data_array in child:
-                        assert data_array.tag == "DataArray"
+                        if data_array.tag != "DataArray":
+                            raise ReadError()
                         piece_cells[data_array.attrib["Name"]] = self.read_data(
                             data_array
                         )
 
-                    assert len(piece_cells["offsets"]) == num_cells
-                    assert len(piece_cells["types"]) == num_cells
+                    if len(piece_cells["offsets"]) != num_cells:
+                        raise ReadError()
+                    if len(piece_cells["types"]) != num_cells:
+                        raise ReadError()
 
                     cells.append(piece_cells)
 
                 elif child.tag == "PointData":
                     for c in child:
-                        assert c.tag == "DataArray"
+                        if c.tag != "DataArray":
+                            raise ReadError()
                         piece_point_data[c.attrib["Name"]] = self.read_data(c)
 
                     point_data.append(piece_point_data)
 
-                else:
-                    assert child.tag == "CellData", "Unknown tag '{}'.".format(
-                        child.tag
-                    )
-
+                elif child.tag == "CellData":
                     for c in child:
-                        assert c.tag == "DataArray"
+                        if c.tag != "DataArray":
+                            raise ReadError()
                         piece_cell_data_raw[c.attrib["Name"]] = self.read_data(c)
 
                     cell_data_raw.append(piece_cell_data_raw)
+                else:
+                    raise ReadError("Unknown tag '{}'.".format(child.tag))
 
         if not cell_data_raw:
             cell_data_raw = [{}] * len(cells)
 
-        assert len(cell_data_raw) == len(cells)
+        if len(cell_data_raw) != len(cells):
+            raise ReadError()
 
         point_offsets = (
             numpy.cumsum([pts.shape[0] for pts in points]) - points[0].shape[0]
         )
 
         # Now merge across pieces
-        assert points
+        if not points:
+            raise ReadError()
         self.points = numpy.concatenate(points)
 
         if point_data:
@@ -314,11 +332,11 @@ class VtuReader:
             )
         elif fmt == "binary":
             data = self.read_binary(c.text.strip(), c.attrib["type"])
-        else:
-            # appended data
-            assert fmt == "appended", "Unknown data format '{}'.".format(fmt)
+        elif fmt == "appended":
             offset = int(c.attrib["offset"])
             data = self.read_binary(self.appended_data[offset:], c.attrib["type"])
+        else:
+            raise ReadError("Unknown data format '{}'.".format(fmt))
 
         if "NumberOfComponents" in c.attrib:
             data = data.reshape(-1, int(c.attrib["NumberOfComponents"]))

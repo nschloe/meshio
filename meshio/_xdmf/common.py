@@ -1,5 +1,7 @@
 import numpy
 
+from .._exceptions import ReadError
+
 numpy_to_xdmf_dtype = {
     "int32": ("Int", "4"),
     "int64": ("Int", "8"),
@@ -126,7 +128,8 @@ def translate_mixed_cells(data):
     cells = {}
     for tpe, b in bins.items():
         meshio_type = xdmf_idx_to_meshio_type[tpe]
-        assert (data[offsets[b]] == tpe).all()
+        if not (data[offsets[b]] == tpe).all():
+            raise ReadError()
         n = xdmf_idx_to_num_nodes[tpe]
         indices = numpy.array([numpy.arange(1, n + 1) + o for o in offsets[b]])
         cells[meshio_type] = data[indices]
@@ -147,5 +150,6 @@ def attribute_type(data):
     elif len(data.shape) == 2 and data.shape[1] == 6:
         return "Tensor6"
 
-    assert len(data.shape) == 3
+    if len(data.shape) != 3:
+        raise ReadError()
     return "Matrix"
