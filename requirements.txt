@@ -1,0 +1,14 @@
+# runtime
+numpy
+
+# optional runtime
+netCDF4
+h5py
+lxml
+
+# development
+pytest
+isort
+black; python_version >= '3.6'
+flake8
+twine
