@@ -2,9 +2,8 @@ from pathlib import Path
 
 import pytest
 
-import meshio
-
 import helpers
+import meshio
 
 OBJ_PATH = helpers.MESHES_DIR / "obj" / "elephav.obj"
 

@@ -7,9 +7,7 @@ import helpers
 import meshio
 
 
-@pytest.mark.parametrize(
-    "mesh", [helpers.tri_mesh]
-)
+@pytest.mark.parametrize("mesh", [helpers.tri_mesh])
 def test_neuroglancer(mesh):
     def writer(*args, **kwargs):
         return meshio._neuroglancer.write(*args, **kwargs)
@@ -18,9 +16,7 @@ def test_neuroglancer(mesh):
     helpers.write_read(writer, meshio._neuroglancer.read, mesh, 1.0e-8)
 
 
-@pytest.mark.parametrize(
-    "filename, ref_sum, ref_num_cells", [("simple1", 20, 4)]
-)
+@pytest.mark.parametrize("filename, ref_sum, ref_num_cells", [("simple1", 20, 4)])
 def test_reference_file(filename, ref_sum, ref_num_cells):
     this_dir = os.path.dirname(os.path.abspath(__file__))
     filename = os.path.join(this_dir, "meshes", "neuroglancer", filename)

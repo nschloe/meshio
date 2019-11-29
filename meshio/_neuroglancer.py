@@ -7,9 +7,9 @@ import struct
 
 import numpy as np
 
-from ._mesh import Mesh
-from ._files import open_file
 from ._exceptions import ReadError, WriteError
+from ._files import open_file
+from ._mesh import Mesh
 
 
 def write(filename, mesh):
@@ -27,9 +27,7 @@ def write_buffer(file, mesh):
     try:
         triangles = np.asarray(mesh.cells["triangle"], "<I")
     except KeyError:
-        raise WriteError(
-            "Neuroglancer files can only contain triangle cells."
-        )
+        raise WriteError("Neuroglancer files can only contain triangle cells.")
 
     file.write(struct.pack("<I", vertices.shape[0]))
     file.write(vertices.tobytes(order="C"))
@@ -57,10 +55,9 @@ def read_buffer(file):
     if len(buf) != 4 * 3 * num_vertices:
         raise ReadError("The precomputed mesh data is too short")
     flat_vertices = np.frombuffer(buf, "<f")
-    vertices = np.reshape(
-        flat_vertices,
-        (num_vertices, 3),
-    ).copy(order="C")  # TODO remove copy
+    vertices = np.reshape(flat_vertices, (num_vertices, 3),).copy(
+        order="C"
+    )  # TODO remove copy
     # BUG: this could easily exhaust memory if reading a large file that is not
     # in precomputed format.
     buf = file.read()
