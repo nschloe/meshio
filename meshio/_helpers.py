@@ -7,7 +7,6 @@ from . import (
     _ansys,
     _cgns,
     _dolfin,
-    _wkt,
     _exodus,
     _flac3d,
     _gmsh,
@@ -25,6 +24,7 @@ from . import (
     _tetgen,
     _vtk,
     _vtu,
+    _wkt,
     _xdmf,
 )
 from ._common import num_nodes_per_cell

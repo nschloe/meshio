@@ -7,9 +7,7 @@ import helpers
 import meshio
 
 
-@pytest.mark.parametrize(
-    "mesh", [helpers.tri_mesh]
-)
+@pytest.mark.parametrize("mesh", [helpers.tri_mesh])
 def test_wkt(mesh):
     def writer(*args, **kwargs):
         return meshio._wkt.write(*args, **kwargs)
@@ -17,9 +15,7 @@ def test_wkt(mesh):
     helpers.write_read(writer, meshio._wkt.read, mesh, 1.0e-12)
 
 
-@pytest.mark.parametrize(
-    "filename, ref_sum, ref_num_cells", [("simple.wkt", 4, 2)]
-)
+@pytest.mark.parametrize("filename, ref_sum, ref_num_cells", [("simple.wkt", 4, 2)])
 def test_reference_file(filename, ref_sum, ref_num_cells):
     this_dir = os.path.dirname(os.path.abspath(__file__))
     filename = os.path.join(this_dir, "meshes", "wkt", filename)
