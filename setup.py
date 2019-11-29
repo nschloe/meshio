@@ -1,3 +1,4 @@
+import itertools
 import os
 
 from setuptools import find_packages, setup
@@ -7,6 +8,15 @@ base_dir = os.path.abspath(os.path.dirname(__file__))
 about = {}
 with open(os.path.join(base_dir, "meshio", "__about__.py"), "rb") as f:
     exec(f.read(), about)
+
+
+extras = {
+    "exodus": ["netCDF4"],
+    "hdf5": ["h5py"],  # MED, MOAB, XDMF formats
+    "xml": ["lxml"],  # Dolfin, VTU, XDMF, SVG
+    "parsing": ["pyparsing"],  # WKT
+}
+extras["all"] = list(set(itertools.chain.from_iterable(extras.values())))
 
 
 setup(
@@ -28,12 +38,7 @@ setup(
     install_requires=["numpy"],
     # For pathlib:
     python_requires=">=3.4",
-    extras_require={
-        "all": ["netCDF4", "h5py", "lxml"],
-        "exodus": ["netCDF4"],
-        "hdf5": ["h5py"],  # MED, MOAB, XDMF formats
-        "xml": ["lxml"],  # Dolfin, VTU, XDMF, SVG
-    },
+    extras_require=extras,
     classifiers=[
         about["__status__"],
         about["__license__"],
