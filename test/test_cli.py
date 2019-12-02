@@ -1,9 +1,8 @@
 import tempfile
 
-import numpy
-
 import helpers
 import meshio
+import numpy
 
 
 def test_cli():

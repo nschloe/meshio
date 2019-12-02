@@ -1,10 +1,9 @@
 import os
 
-import numpy
-import pytest
-
 import helpers
 import meshio
+import numpy
+import pytest
 
 
 @pytest.mark.parametrize("mesh", [helpers.tet_mesh, helpers.hex_mesh])

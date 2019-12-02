@@ -2,10 +2,9 @@ import copy
 import os
 from functools import partial
 
-import pytest
-
 import helpers
 import meshio
+import pytest
 
 
 def gmsh_periodic():

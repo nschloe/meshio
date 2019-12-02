@@ -1,8 +1,7 @@
-import numpy
-import pygmsh
-
 import meshio
+import numpy
 import optimesh
+import pygmsh
 
 
 def _old_logo():

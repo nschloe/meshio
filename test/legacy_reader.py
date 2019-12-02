@@ -1,5 +1,4 @@
 import numpy
-
 from meshio import Mesh
 from meshio.vtk_io import vtk_to_meshio_type
 

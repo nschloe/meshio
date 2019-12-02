@@ -1,8 +1,7 @@
-import numpy
-import pytest
-
 import helpers
 import meshio
+import numpy
+import pytest
 
 lxml = pytest.importorskip("lxml")
 

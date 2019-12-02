@@ -2,11 +2,10 @@ import os
 import pathlib
 from functools import partial
 
-import numpy
-import pytest
-
 import helpers
 import meshio
+import numpy
+import pytest
 
 test_set = [
     helpers.tri_mesh_2d,

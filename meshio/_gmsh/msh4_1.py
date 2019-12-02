@@ -11,9 +11,15 @@ import numpy
 from .._common import cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._mesh import Mesh
-from .common import (_gmsh_to_meshio_type, _meshio_to_gmsh_type, _read_data,
-                     _read_physical_names, _write_data, _write_physical_names,
-                     num_nodes_per_cell)
+from .common import (
+    _gmsh_to_meshio_type,
+    _meshio_to_gmsh_type,
+    _read_data,
+    _read_physical_names,
+    _write_data,
+    _write_physical_names,
+    num_nodes_per_cell,
+)
 
 c_int = numpy.dtype("i")
 c_size_t = numpy.dtype("P")
@@ -225,12 +231,14 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
                 cell_data[key]["gmsh:physical"] = {}
             for physical_tag in physical_tags:
                 if not physical_tag in cell_data[key]["gmsh:physical"]:
-                    cell_data[key]["gmsh:physical"][physical_tag] = numpy.array([], dtype=int)
+                    cell_data[key]["gmsh:physical"][physical_tag] = numpy.array(
+                        [], dtype=int
+                    )
 
                 cell_data[key]["gmsh:physical"][physical_tag] = numpy.concatenate(
                     [
                         cell_data[key]["gmsh:physical"][physical_tag],
-                        numpy.array(range(start_idx, end_idx), dtype=int)
+                        numpy.array(range(start_idx, end_idx), dtype=int),
                     ]
                 )
 

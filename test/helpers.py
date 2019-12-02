@@ -4,9 +4,8 @@ import string
 import tempfile
 from pathlib import Path
 
-import numpy
-
 import meshio
+import numpy
 
 TEST_DIR = Path(__file__).resolve().parent
 MESHES_DIR = TEST_DIR / "meshes"

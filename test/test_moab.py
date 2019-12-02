@@ -1,7 +1,6 @@
-import pytest
-
 import helpers
 import meshio
+import pytest
 
 h5py = pytest.importorskip("h5py")
 
