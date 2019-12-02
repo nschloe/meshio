@@ -133,19 +133,23 @@ def _read_cells(f, cells, is_ascii):
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {}
     for key in cell_tags:
-        physical = []
+        physical = {}
         geometrical = []
         # output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
-        for item in cell_tags[key]:
+        for idx, item in enumerate(cell_tags[key]):
             if len(item) > 0:
-                physical.append(item[0])
+                if item[0] not in physical:
+                    physical[item[0]] = []
+                physical[item[0]].append(idx)
             if len(item) > 1:
                 geometrical.append(item[1])
             if len(item) > 2:
                 has_additional_tag_data = True
         output_cell_tags[key] = {}
         if len(physical) > 0:
-            output_cell_tags[key]["gmsh:physical"] = numpy.array(physical)
+            if "gmsh:physical" not in output_cell_tags[key]:
+                output_cell_tags[key]["gmsh:physical"] = {}
+            output_cell_tags[key]["gmsh:physical"].update(physical)
         if len(geometrical) > 0:
             output_cell_tags[key]["gmsh:geometrical"] = numpy.array(geometrical)
 
