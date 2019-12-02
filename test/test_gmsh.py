@@ -123,7 +123,7 @@ def test_generic_io():
 
 @pytest.mark.parametrize(
     "filename, ref_sum, ref_num_cells",
-    [("insulated-2.2.msh", 2.001762136876221, {"line": 21, "triangle": 111})],
+    [("insulated-2.2.msh", 2.001762136876221, {"line": 1, "triangle": 2})],
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_reference_file(filename, ref_sum, ref_num_cells, binary):

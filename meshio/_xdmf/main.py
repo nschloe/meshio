@@ -11,16 +11,10 @@ from .._common import cell_data_from_raw, write_xml
 from .._exceptions import ReadError, WriteError
 from .._mesh import Mesh
 from .._vtk import raw_from_cell_data
-from .common import (
-    attribute_type,
-    dtype_to_format_string,
-    meshio_to_xdmf_type,
-    meshio_type_to_xdmf_index,
-    numpy_to_xdmf_dtype,
-    translate_mixed_cells,
-    xdmf_to_meshio_type,
-    xdmf_to_numpy_type,
-)
+from .common import (attribute_type, dtype_to_format_string,
+                     meshio_to_xdmf_type, meshio_type_to_xdmf_index,
+                     numpy_to_xdmf_dtype, translate_mixed_cells,
+                     xdmf_to_meshio_type, xdmf_to_numpy_type)
 
 
 def read(filename):
