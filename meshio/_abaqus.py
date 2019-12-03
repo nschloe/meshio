@@ -30,6 +30,7 @@ abaqus_to_meshio_type = {
     "B33": "line3",
     "B33H": "line3",
     # surfaces
+    "CPS4": "quad",
     "S4": "quad",
     "S4R": "quad",
     "S4RS": "quad",
