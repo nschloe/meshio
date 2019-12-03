@@ -44,6 +44,7 @@ abaqus_to_meshio_type = {
     # "QUAD8": "quad8",
     # "QUAD9": "quad9",
     #
+    "CPS3": "triangle",
     "STRI3": "triangle",
     "S3": "triangle",
     "S3R": "triangle",
