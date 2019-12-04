@@ -1,13 +1,12 @@
+import re
 from collections import OrderedDict
 from io import StringIO
-import re
 
 import numpy as np
 
 from ._exceptions import ReadError, WriteError
 from ._files import open_file
 from ._mesh import Mesh
-
 
 float_pattern = r"[+-]?(?:\d+\.?\d*|\d*\.?\d+)"
 float_re = re.compile(float_pattern)
