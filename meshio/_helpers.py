@@ -2,7 +2,12 @@ import pathlib
 
 import numpy
 
-from . import (
+from meshio._mesh import Mesh
+
+from ._common import num_nodes_per_cell
+from ._exceptions import ReadError, WriteError
+from ._files import is_buffer
+from .formats import (
     _abaqus,
     _ansys,
     _cgns,
@@ -28,10 +33,6 @@ from . import (
     _wkt,
     _xdmf,
 )
-from ._common import num_nodes_per_cell
-from ._exceptions import ReadError, WriteError
-from ._files import is_buffer
-from ._mesh import Mesh
 
 input_filetypes = [
     "abaqus",

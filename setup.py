@@ -23,7 +23,7 @@ setup(
     version=about["__version__"],
     author=about["__author__"],
     author_email=about["__author_email__"],
-    packages=find_packages(),
+    packages=find_packages(include=["meshio", "meshio.*"]),
     description="I/O for various mesh formats",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
