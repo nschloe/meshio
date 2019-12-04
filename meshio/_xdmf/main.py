@@ -4,6 +4,7 @@ http://www.xdmf.org/index.php/XDMF_Model_and_Format
 """
 import os
 from io import BytesIO
+from pathlib import Path
 
 import numpy
 
@@ -36,7 +37,7 @@ class XdmfReader:
         from lxml import etree as ET
 
         parser = ET.XMLParser(remove_comments=True, huge_tree=True)
-        tree = ET.parse(self.filename, parser)
+        tree = ET.parse(Path(self.filename).name, parser)
         root = tree.getroot()
 
         if root.tag != "Xdmf":
