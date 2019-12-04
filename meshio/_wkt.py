@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from io import StringIO
+import re
 
 import numpy as np
 
@@ -8,54 +9,55 @@ from ._files import open_file
 from ._mesh import Mesh
 
 
-def extract_float(lst):
-    return float("".join(lst))
+float_pattern = r"[+-]?(?:\d+\.?\d*|\d*\.?\d+)"
+float_re = re.compile(float_pattern)
+
+point_pattern = r"{0}\s+{0}\s+{0}(?:\s+{0})?".format(float_pattern)
+point_re = re.compile(point_pattern)
+
+triangle_pattern = r"\(\s*\(\s*({})\s*\)\s*\)".format(
+    r"\s*,\s*".join(point_pattern for _ in range(4))
+)
+triangle_re = re.compile(triangle_pattern)
+
+tin_pattern = rf"TIN\s*\((?:\s*{triangle_pattern}\s*,?)*\s*\)"
+tin_re = re.compile(tin_pattern)
 
 
-def extract_point(lst):
-    return [tuple(lst)]
+def read_str(s):
+    s = s.strip()
+    tin_match = tin_re.match(s)
+    if tin_match is None:
+        raise ReadError("Invalid WKT TIN")
+    point_idxs = OrderedDict()
+    tri_idxs = []
+    for tri_match in triangle_re.finditer(tin_match.group()):
+        tri_point_idxs = []
+        for point_match in point_re.finditer(tri_match.group()):
+            point = []
+            for float_match in float_re.finditer(point_match.group()):
+                point.append(float(float_match.group()))
+            point = tuple(point)
+            if point not in point_idxs:
+                point_idxs[point] = len(point_idxs)
+            tri_point_idxs.append(point_idxs[point])
 
+        if tri_point_idxs[-1] != tri_point_idxs[0]:
+            raise ValueError("Triangle is not a closed linestring")
 
-def extract_tri(lst):
-    nums = [lst[2], lst[4], lst[6]]
-    last = lst[8]
-    if last != nums[0]:
-        raise ReadError("Triangle did not start and end at equal points")
-    return [nums]
+        tri_idxs.append(tri_point_idxs[:-1])
 
-
-def extract_tris(lst):
-    return lst[2:-1]
-
-
-def initialise_parser():
     try:
-        from pyparsing import Optional, Regex, Literal, OneOrMore
-    except ImportError:
-        return None
+        point_arr = np.array(list(point_idxs), np.float64)
+    except ValueError as e:
+        if len(set(len(p) for p in point_idxs)) > 1:
+            raise ReadError("Points have mixed dimensionality")
+        else:
+            raise e
 
-    number = Regex(r"[+-]?(\d+\.?\d*|\d*\.?\d+)").setParseAction(extract_float)
-    point = (number * (2, 3)).setParseAction(extract_point)
-    triangle = (
-        Literal("(")
-        + "("
-        + point
-        + ","
-        + point
-        + ","
-        + point
-        + ","
-        + point
-        + ")"
-        + ")"
-        + Optional(",")
-    ).setParseAction(extract_tri)
-    return (Literal("TIN") + "(" + OneOrMore(triangle) + ")").setParseAction(
-        extract_tris
-    )
+    tri_arr = np.array(tri_idxs, np.uint64)
 
-
-parser = initialise_parser()
+    return Mesh(point_arr, {"triangle": tri_arr})
 
 
 def arr_to_str(arr):
@@ -64,44 +66,7 @@ def arr_to_str(arr):
 
 def read(filename):
     with open_file(filename) as f:
-        return read_buffer(f)
-
-
-def triangles_to_mesh(tris):
-    point_idxs = OrderedDict()
-    tri_idxs = []
-    for points in tris:
-        this_tri_idxs = []
-        for point in points:
-            try:
-                idx = point_idxs[point]
-            except KeyError:
-                idx = len(point_idxs)
-                point_idxs[point] = idx
-
-            this_tri_idxs.append(idx)
-        tri_idxs.append(this_tri_idxs)
-
-    points = np.array(list(point_idxs), float)
-    triangles = np.array(tri_idxs, int)
-
-    return Mesh(points, {"triangle": triangles})
-
-
-def read_buffer(f):
-    if parser is None:
-        raise ReadError("pyparsing not installed; WKT not available")
-
-    triangles = parser.parseFile(f, True)
-    return triangles_to_mesh(triangles)
-
-
-def read_str(s):
-    if parser is None:
-        raise ReadError("pyparsing not installed; WKT not available")
-
-    triangles = parser.parseString(s, True)
-    return triangles_to_mesh(triangles)
+        return read_str(f.read())
 
 
 def write(filename, mesh):
