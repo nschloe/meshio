@@ -99,6 +99,7 @@ def translate_mixed_cells(data):
     # https://gitlab.kitware.com/xdmf/xdmf/blob/master/XdmfTopologyType.hpp#L394
     xdmf_idx_to_num_nodes = {
         1: 1,  # vertex
+        2: 2,  # line
         4: 3,  # triangle
         5: 4,  # quad
         6: 4,  # tet
