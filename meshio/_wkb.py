@@ -69,7 +69,7 @@ class WKBType(IntEnum):
         buf.write(b)
 
     def ndim(self):
-        return 2 + int(self/1000)
+        return 2 + int(self / 1000)
 
 
 def read_arr(buf, endianness: Endianness, count: int, dtype="float64"):
@@ -113,7 +113,7 @@ def parse_polygon(b, dim, end):
 
 def parse_ring(b, dim, end):
     count = read_num(b, end)
-    arr = read_arr(b, end, count*dim).reshape((count, dim))
+    arr = read_arr(b, end, count * dim).reshape((count, dim))
     if len(arr) != 4:
         raise ValueError("Ring is not a triangle")
     if not np.array_equal(arr[-1], arr[0]):
@@ -144,9 +144,7 @@ def read(f):
 
 
 def read_buffer(f):
-    return triangles_to_mesh(
-        push_parse_tin(f)
-    )
+    return triangles_to_mesh(push_parse_tin(f))
 
 
 def write(f, mesh):
