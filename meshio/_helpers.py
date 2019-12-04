@@ -25,6 +25,7 @@ from . import (
     _tetgen,
     _vtk,
     _vtu,
+    _wkt,
     _xdmf,
 )
 from ._common import num_nodes_per_cell
@@ -37,6 +38,7 @@ input_filetypes = [
     "ansys",
     "cgns",
     "dolfin-xml",
+    "wkt",
     "exodus",
     "flac3d",
     "gmsh-ascii",
@@ -67,6 +69,7 @@ output_filetypes = [
     "ansys-binary",
     "cgns",
     "dolfin-xml",
+    "wkt",
     "exodus",
     "flac3d",
     "gmsh2-ascii",
@@ -122,6 +125,7 @@ _extension_to_filetype = {
     ".stl": "stl-binary",
     ".vtu": "vtu-binary",
     ".vtk": "vtk-binary",
+    ".wkt": "wkt",
     ".xdmf": "xdmf",
     ".xmf": "xdmf",
     ".inp": "abaqus",
@@ -170,6 +174,7 @@ def read(filename, file_format=None):
         "gmsh4-binary": _gmsh,
         #
         "flac3d": _flac3d,
+        "wkt": _wkt,
         "med": _med,
         "medit": _medit,
         "nastran": _nastran,
@@ -303,6 +308,7 @@ _writer_map = {
     "moab": (_h5m, (), {}),
     "ansys-ascii": (_ansys, (), {"binary": False}),
     "ansys-binary": (_ansys, (), {"binary": True}),
+    "wkt": (_wkt, (), {}),
     "gmsh2-ascii": (_gmsh, ("2",), {"binary": False}),
     "gmsh2-binary": (_gmsh, ("2",), {"binary": True}),
     "gmsh4-ascii": (_gmsh, ("4",), {"binary": False}),

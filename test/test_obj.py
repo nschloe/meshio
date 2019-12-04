@@ -10,7 +10,7 @@ import meshio
 @pytest.mark.parametrize(
     "mesh", [helpers.tri_mesh, helpers.quad_mesh, helpers.tri_quad_mesh]
 )
-def test_ply(mesh):
+def test_obj(mesh):
     def writer(*args, **kwargs):
         return meshio._obj.write(*args, **kwargs)
 

@@ -38,6 +38,7 @@ meshio can read and write all of the following and smoothly converts between the
  * [SVG](https://www.w3.org/TR/SVG/) (2D only, output only)
  * [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats) ([not raw binary data](https://github.com/nschloe/meshio/wiki/VTU-with-raw-binary-data))
+ * [WKT](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry) ([TIN](https://en.wikipedia.org/wiki/Triangulated_irregular_network))
  * [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format)
 
 Install with
