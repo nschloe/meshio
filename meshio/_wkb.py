@@ -7,8 +7,8 @@ from enum import Enum, IntEnum
 
 import numpy as np
 
-from meshio import Mesh
-from meshio._files import open_file
+from ._mesh import Mesh
+from ._files import open_file
 
 
 class Endianness(Enum):
