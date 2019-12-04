@@ -14,7 +14,6 @@ extras = {
     "exodus": ["netCDF4"],
     "hdf5": ["h5py"],  # MED, MOAB, XDMF formats
     "xml": ["lxml"],  # Dolfin, VTU, XDMF, SVG
-    "parsing": ["pyparsing"],  # WKT
 }
 extras["all"] = list(set(itertools.chain.from_iterable(extras.values())))
 

@@ -5,7 +5,6 @@ numpy
 netCDF4
 h5py
 lxml
-pyparsing
 
 # development
 pytest
