@@ -10,6 +10,13 @@ jobs:
       with:
         python-version: "3.x"
     - uses: actions/checkout@v1
+    - name: Lint with isort
+      run: |
+        # For isort, must install all "system" dependencies
+        pip install .[all]
+        pip install pytest
+        pip install isort
+        isort -rc --check .
     - name: Lint with flake8
       run: |
         pip install --upgrade pip

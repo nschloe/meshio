@@ -6,9 +6,18 @@ jobs:
       - image: circleci/python:3.7
     steps:
       - checkout
-      - run: pip3 install -U black flake8 --user
-      - run: black --check .
-      - run: flake8 .
+      - run: |
+          # For isort, must install all "system" dependencies
+          pip3 install isort --user
+          pip3 install .[all] --user
+          pip3 install pytest --user
+          isort -rc -c .
+      - run: |
+          pip3 install black --user
+          black --check .
+      - run: |
+          pip3 install flake8 --user
+          flake8 .
   build:
     working_directory: ~/work
     docker:
