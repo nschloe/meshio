@@ -22,6 +22,7 @@ def gmsh_periodic():
 @pytest.mark.parametrize(
     "mesh",
     [
+        helpers.line_mesh,
         helpers.tri_mesh,
         helpers.triangle6_mesh,
         helpers.quad_mesh,

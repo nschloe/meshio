@@ -9,6 +9,7 @@ import helpers
 import meshio
 
 test_set = [
+    helpers.line_mesh,
     helpers.tri_mesh_2d,
     helpers.tri_mesh,
     helpers.triangle6_mesh,
