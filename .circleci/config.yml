@@ -7,7 +7,11 @@ jobs:
     steps:
       - checkout
       - run: pip3 install -U black flake8 isort --user
-      - run: isort -rc -c .
+      - run: |
+          # For isort, must install all "system" dependencies
+          pip3 install .[all] --user
+          pip3 install pytest
+          isort -rc -c .
       - run: black --check .
       - run: flake8 .
   build:
