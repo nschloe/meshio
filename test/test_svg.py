@@ -9,7 +9,7 @@ import meshio
 lxml = pytest.importorskip("lxml")
 
 
-test_set = [helpers.tri_mesh, helpers.tri_mesh_2d, helpers.quad_mesh]
+test_set = [helpers.line_mesh, helpers.tri_mesh, helpers.tri_mesh_2d, helpers.quad_mesh]
 
 
 @pytest.mark.parametrize("mesh", test_set)
