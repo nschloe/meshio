@@ -114,9 +114,15 @@ def translate_mixed_cells(data):
     offsets = []
     r = 0
     while r < len(data):
-        types.append(data[r])
+        xdmf_type = data[r]
+        types.append(xdmf_type)
         offsets.append(r)
-        r += xdmf_idx_to_num_nodes[data[r]] + 1
+        if xdmf_type == 2:  # line
+            if data[r + 1] != 2:  # polyline
+                raise ReadError("XDMF reader: Only supports 2-point lines for now")
+            r += 1
+        r += 1
+        r += xdmf_idx_to_num_nodes[xdmf_type]
 
     offsets = numpy.array(offsets)
 
@@ -132,7 +138,8 @@ def translate_mixed_cells(data):
         if not (data[offsets[b]] == tpe).all():
             raise ReadError()
         n = xdmf_idx_to_num_nodes[tpe]
-        indices = numpy.array([numpy.arange(1, n + 1) + o for o in offsets[b]])
+        point_offsets = offsets[b] + (2 if tpe == 2 else 1)
+        indices = numpy.array([numpy.arange(n) + o for o in point_offsets])
         cells[meshio_type] = data[indices]
 
     return cells
