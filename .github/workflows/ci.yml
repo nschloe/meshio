@@ -10,6 +10,10 @@ jobs:
       with:
         python-version: "3.x"
     - uses: actions/checkout@v1
+    - name: Lint with isort
+      run: |
+        pip install isort
+        isort -rc --check .
     - name: Lint with flake8
       run: |
         pip install --upgrade pip
