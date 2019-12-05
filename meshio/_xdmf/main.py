@@ -239,7 +239,14 @@ class XdmfReader:
                     cells = translate_mixed_cells(data)
                 else:
                     meshio_type = xdmf_to_meshio_type[cell_type]
-                    cells[meshio_type] = data
+                    if meshio_type == "line":
+                        if (data[:, 0] != 2).any():
+                            raise ReadError(
+                                "Can only read a " + cell_type + " with 2 points"
+                            )
+                        cells[meshio_type] = data[:, 1:]
+                    else:
+                        cells[meshio_type] = data
 
             elif c.tag == "Geometry":
                 try:

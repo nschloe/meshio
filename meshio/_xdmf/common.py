@@ -95,10 +95,11 @@ def translate_mixed_cells(data):
     # `data` is a one-dimensional vector with
     # (cell_type1, p0, p1, ... ,pk, cell_type2, p10, p11, ..., p1k, ...
 
-    # http://www.xdmf.org/index.php/XDMF_Model_and_Format#Topology
+    # http://www.xdmf.org/index.php/XDMF_Model_and_Format#Arbitrary
     # https://gitlab.kitware.com/xdmf/xdmf/blob/master/XdmfTopologyType.hpp#L394
     xdmf_idx_to_num_nodes = {
         1: 1,  # vertex
+        2: 2,  # line
         4: 3,  # triangle
         5: 4,  # quad
         6: 4,  # tet
