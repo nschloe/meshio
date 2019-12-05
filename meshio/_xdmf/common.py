@@ -115,8 +115,8 @@ def translate_mixed_cells(data):
     r = 0
     while r < len(data):
         xdmf_type = data[r]
-        offsets.append(r)
         types.append(xdmf_type)
+        offsets.append(r)
         if xdmf_type == 2:  # line
             if data[r + 1] != 2:  # polyline
                 raise ReadError("XDMF reader: Only supports 2-point lines for now")
