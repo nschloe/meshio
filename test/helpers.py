@@ -31,6 +31,8 @@ tri_mesh = meshio.Mesh(
     {"triangle": numpy.array([[0, 1, 2], [0, 2, 3]])},
 )
 
+line_tri_mesh = meshio.Mesh(line_mesh.points, {**line_mesh.cells, **tri_mesh.cells})
+
 triangle6_mesh = meshio.Mesh(
     numpy.array(
         [
