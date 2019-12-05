@@ -6,6 +6,7 @@ import meshio
 lxml = pytest.importorskip("lxml")
 
 test_set = [
+    helpers.line_mesh,
     helpers.tri_mesh,
     helpers.triangle6_mesh,
     helpers.quad_mesh,

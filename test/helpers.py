@@ -14,6 +14,12 @@ MESHES_DIR = TEST_DIR / "meshes"
 # In general:
 # Use values with an infinite decimal representation to test precision.
 
+line_mesh = meshio.Mesh(
+    numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
+    / 3,
+    {"line": numpy.array([[0, 1], [0, 2], [0, 3], [1, 2], [2, 3]])},
+)
+
 tri_mesh_2d = meshio.Mesh(
     numpy.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]) / 3,
     {"triangle": numpy.array([[0, 1, 2], [0, 2, 3]])},

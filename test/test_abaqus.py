@@ -29,9 +29,7 @@ def test(mesh):
     return
 
 
-@pytest.mark.parametrize(
-    "filename, ref_sum, ref_num_cells", [("UUea.inp", 4950.0, 50)],
-)
+@pytest.mark.parametrize("filename, ref_sum, ref_num_cells", [("UUea.inp", 4950.0, 50)])
 @pytest.mark.parametrize("binary", [False, True])
 def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     this_dir = os.path.dirname(os.path.abspath(__file__))
