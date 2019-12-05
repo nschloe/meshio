@@ -138,7 +138,8 @@ def translate_mixed_cells(data):
         if not (data[offsets[b]] == tpe).all():
             raise ReadError()
         n = xdmf_idx_to_num_nodes[tpe]
-        indices = numpy.array([numpy.arange(n) + 1 + o for o in offsets[b]])
+        point_offsets = offsets[b] + (2 if tpe == 2 else 1)
+        indices = numpy.array([numpy.arange(n) + o for o in point_offsets])
         cells[meshio_type] = data[indices]
 
     return cells
