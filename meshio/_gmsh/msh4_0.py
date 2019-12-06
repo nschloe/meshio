@@ -149,9 +149,9 @@ def _read_nodes(f, is_ascii, data_size):
         for _ in range(num_entity_blocks):
             # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
             numpy.fromfile(f, count=3, dtype=c_int)
-            num_nodes = numpy.fromfile(f, count=1, dtype=c_ulong)
+            num_nodes = numpy.fromfile(f, count=1, dtype=c_ulong)[0]
             dtype = [("tag", c_int), ("x", c_double, (3,))]
-            data = numpy.fromfile(f, count=int(num_nodes), dtype=dtype)
+            data = numpy.fromfile(f, count=num_nodes, dtype=dtype)
             tags.append(data["tag"])
             points.append(data["x"])
 
