@@ -16,7 +16,7 @@ def test_cli():
     meshio._cli.info([infile, "--input-format", "gmsh"])
 
     meshio._cli.convert(
-        [infile, outfile, "--input-format", "gmsh", "--output-format", "vtk-binary",]
+        [infile, outfile, "--input-format", "gmsh", "--output-format", "vtk-binary"]
     )
 
     mesh = meshio.read(outfile, file_format="vtk")
