@@ -132,10 +132,10 @@ how fast the meshio routines are for a certain mesh with about 100k nodes.
 
 ### File size comparison
 
-<img alt="file size" src="https://nschloe.github.io/meshio/filesize.svg" width="70%">
+<img alt="file size" src="https://nschloe.github.io/meshio/filesizes.svg" width="70%">
 
-Comparison of the file sizes for a tetrahedral mesh with about 100k points. The orange
-line marks the size of the mesh in memory.
+Comparison of the file sizes for a tetrahedral mesh with about 100k points. The red line
+marks the size of the mesh in memory.
 
 
 
