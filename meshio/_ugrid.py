@@ -74,7 +74,7 @@ def read_buffer(f):
         # adapt for 0-base
         cells["pyramid"] = out - 1
         # reorder
-        cells["pyramid"] = cells["pyramid"][ : , [3,2,4,0,1] ]
+        cells["pyramid"] = cells["pyramid"][ : , [3,4,1,0,2] ]
         # TODO check if we can avoid that
         out = numpy.zeros(npyra)
         cell_data["pyramid"] = {"ugrid:ref": out}
