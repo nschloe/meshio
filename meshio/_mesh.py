@@ -23,7 +23,6 @@ class Mesh:
         self.element_sets = {} if element_sets is None else element_sets
         self.gmsh_periodic = gmsh_periodic
         self.info = info
-        return
 
     def __repr__(self):
         lines = [
@@ -101,16 +100,15 @@ class Mesh:
             n = numpy.prod(s)
             self.cells[key] = all_cells_flat[k : k + n].reshape(s)
             k += n
-        return
 
-    def to_file(self, path_or_buf, file_format=None, **kwargs):
+    def write(self, path_or_buf, file_format=None, **kwargs):
         # avoid circular import
         from ._helpers import write
 
         write(path_or_buf, self, file_format, **kwargs)
 
     @classmethod
-    def from_file(cls, path_or_buf, file_format=None):
+    def read(cls, path_or_buf, file_format=None):
         # avoid circular import
         from ._helpers import read
 

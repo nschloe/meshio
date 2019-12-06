@@ -20,8 +20,7 @@ import meshio
     ],
 )
 def test_io(mesh):
-    helpers.write_read(meshio._permas.write, meshio._permas.read, mesh, 1.0e-15)
-    return
+    helpers.write_read(meshio.permas.write, meshio.permas.read, mesh, 1.0e-15)
 
 
 def test_generic_io():
@@ -30,4 +29,3 @@ def test_generic_io():
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.post")
     helpers.generic_io("test.0.post.gz")
-    return

@@ -23,8 +23,7 @@ import meshio
     ],
 )
 def test(mesh):
-    helpers.write_read(meshio._nastran.write, meshio._nastran.read, mesh, 1.0e-15)
-    return
+    helpers.write_read(meshio.nastran.write, meshio.nastran.read, mesh, 1.0e-15)
 
 
 def test_reference_file():

@@ -9,7 +9,7 @@ import meshio
 
 @pytest.mark.parametrize("mesh", [helpers.tet_mesh, helpers.hex_mesh])
 def test(mesh):
-    helpers.write_read(meshio._flac3d.write, meshio._flac3d.read, mesh, 1.0e-15)
+    helpers.write_read(meshio.flac3d.write, meshio.flac3d.read, mesh, 1.0e-15)
     return
 
 
