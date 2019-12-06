@@ -130,6 +130,14 @@ with meshio.xdmf.TimeSeriesReader(filename) as reader:
 Some mesh formats are more suitable for I/O than others. Here you find an overview of
 how fast the meshio routines are for a certain mesh with about 100k nodes.
 
+### File size comparison
+
+<img alt="file size" src="https://nschloe.github.io/meshio/filesizes.svg" width="50%">
+
+Comparison of the file sizes for a tetrahedral mesh with about 100k points. The red line
+marks the size of the mesh in memory.
+
+
 
 ### Installation
 
