@@ -26,12 +26,10 @@ test_set = [
 
 @pytest.mark.parametrize("mesh", test_set)
 def test_io(mesh):
-    helpers.write_read(meshio._exodus.write, meshio._exodus.read, mesh, 1.0e-15)
-    return
+    helpers.write_read(meshio.exodus.write, meshio.exodus.read, mesh, 1.0e-15)
 
 
 def test_generic_io():
     helpers.generic_io("test.e")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.e")
-    return

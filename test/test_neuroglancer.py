@@ -10,10 +10,10 @@ import meshio
 @pytest.mark.parametrize("mesh", [helpers.tri_mesh])
 def test_neuroglancer(mesh):
     def writer(*args, **kwargs):
-        return meshio._neuroglancer.write(*args, **kwargs)
+        return meshio.neuroglancer.write(*args, **kwargs)
 
     # 32bit only
-    helpers.write_read(writer, meshio._neuroglancer.read, mesh, 1.0e-8)
+    helpers.write_read(writer, meshio.neuroglancer.read, mesh, 1.0e-8)
 
 
 @pytest.mark.parametrize("filename, ref_sum, ref_num_cells", [("simple1", 20, 4)])

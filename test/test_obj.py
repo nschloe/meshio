@@ -12,13 +12,12 @@ import meshio
 )
 def test_obj(mesh):
     def writer(*args, **kwargs):
-        return meshio._obj.write(*args, **kwargs)
+        return meshio.obj.write(*args, **kwargs)
 
     for key in mesh.cells:
         mesh.cells[key] = mesh.cells[key].astype(numpy.int32)
 
-    helpers.write_read(writer, meshio._obj.read, mesh, 1.0e-12)
-    return
+    helpers.write_read(writer, meshio.obj.read, mesh, 1.0e-12)
 
 
 @pytest.mark.parametrize(
@@ -32,4 +31,3 @@ def test_reference_file(filename, ref_sum, ref_num_cells):
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * abs(ref_sum)
     assert len(mesh.cells["triangle"]) == ref_num_cells
-    return
