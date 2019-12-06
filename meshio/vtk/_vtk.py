@@ -356,7 +356,6 @@ def _read_coords(f, data_type, is_ascii, num_points):
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
-
     return coords
 
 
@@ -372,7 +371,6 @@ def _read_points(f, data_type, is_ascii, num_points):
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
-
     return points.reshape((num_points, 3))
 
 
@@ -384,7 +382,6 @@ def _read_cells(f, is_ascii, num_items):
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
-
     return c
 
 
@@ -624,8 +621,6 @@ def write(filename, mesh, binary=True):
             f.write("CELL_DATA {}\n".format(total_num_cells).encode("utf-8"))
             _write_field_data(f, cell_data_raw, binary)
 
-    return
-
 
 def _write_points(f, points, binary):
     f.write(
@@ -642,7 +637,6 @@ def _write_points(f, points, binary):
         # ascii
         points.tofile(f, sep=" ")
     f.write("\n".encode("utf-8"))
-    return
 
 
 def _write_cells(f, cells, binary):
@@ -685,7 +679,6 @@ def _write_cells(f, cells, binary):
             key_ = key[:7] if key[:7] == "polygon" else key
             for _ in range(len(cells[key])):
                 f.write("{}\n".format(meshio_to_vtk_type[key_]).encode("utf-8"))
-    return
 
 
 def _write_field_data(f, data, binary):
@@ -722,7 +715,6 @@ def _write_field_data(f, data, binary):
             values.tofile(f, sep=" ")
             # numpy.savetxt(f, points)
         f.write("\n".encode("utf-8"))
-    return
 
 
 register(
