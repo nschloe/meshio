@@ -3,7 +3,6 @@ import pathlib
 import numpy
 
 from . import (
-    abaqus,
     ansys,
     cgns,
     dolfin,
@@ -23,7 +22,6 @@ from . import (
     stl,
     svg,
     tetgen,
-    vtk,
     vtu,
     wkt,
     xdmf,
@@ -32,6 +30,15 @@ from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
 from ._mesh import Mesh
+
+
+def register(name, extensions, reader, writer_map):
+    for ext in extensions:
+        _extension_to_filetype[ext] = name
+
+    reader_map[name] = reader
+    _writer_map.update(writer_map)
+
 
 _extension_to_filetype = {
     ".bdf": "nastran",
@@ -43,7 +50,7 @@ _extension_to_filetype = {
     ".fem": "nastran",
     ".med": "med",
     ".mesh": "medit",
-    ".msh": "gmsh4-binary",
+    ".msh": "gmsh",
     ".nas": "nastran",
     ".xml": "dolfin-xml",
     ".post": "permas",
@@ -53,68 +60,83 @@ _extension_to_filetype = {
     ".h5m": "moab",
     ".obj": "obj",
     ".off": "off",
-    ".ply": "ply-binary",
-    ".stl": "stl-binary",
-    ".vtu": "vtu-binary",
-    ".vtk": "vtk-binary",
+    ".ply": "ply",
+    ".stl": "stl",
+    ".vtu": "vtu",
     ".wkt": "wkt",
     ".xdmf": "xdmf",
     ".xmf": "xdmf",
-    ".inp": "abaqus",
     ".mdpa": "mdpa",
     ".svg": "svg",
     ".node": "tetgen",
     ".ele": "tetgen",
 }
 
-format_to_reader = {
-    "abaqus": abaqus,
-    "ansys": ansys,
-    "ansys-ascii": ansys,
-    "ansys-binary": ansys,
-    "cgns": cgns,
-    "exodus": exodus,
-    #
-    "gmsh": gmsh,
-    "gmsh-ascii": gmsh,
-    "gmsh-binary": gmsh,
-    "gmsh2": gmsh,
-    "gmsh2-ascii": gmsh,
-    "gmsh2-binary": gmsh,
-    "gmsh4": gmsh,
-    "gmsh4-ascii": gmsh,
-    "gmsh4-binary": gmsh,
-    #
-    "flac3d": flac3d,
-    "mdpa": mdpa,
-    "med": med,
-    "medit": medit,
-    "nastran": nastran,
-    "neuroglancer": neuroglancer,
-    "dolfin-xml": dolfin,
-    "permas": permas,
-    "moab": h5m,
-    "obj": obj,
-    "off": off,
-    #
-    "ply": ply,
-    "ply-ascii": ply,
-    "ply-binary": ply,
-    #
-    "stl": stl,
-    "stl-ascii": stl,
-    "stl-binary": stl,
-    #
-    "tetgen": tetgen,
-    #
-    "vtu-ascii": vtu,
-    "vtu-binary": vtu,
-    #
-    "vtk-ascii": vtk,
-    "vtk-binary": vtk,
-    #
-    "wkt": wkt,
-    "xdmf": xdmf,
+reader_map = {
+    "ansys": ansys.read,
+    "cgns": cgns.read,
+    "dolfin-xml": dolfin.read,
+    "exodus": exodus.read,
+    "flac3d": flac3d.read,
+    "gmsh": gmsh.read,
+    "mdpa": mdpa.read,
+    "med": med.read,
+    "medit": medit.read,
+    "moab": h5m.read,
+    "nastran": nastran.read,
+    "neuroglancer": neuroglancer.read,
+    "obj": obj.read,
+    "off": off.read,
+    "permas": permas.read,
+    "ply": ply.read,
+    "stl": stl.read,
+    "tetgen": tetgen.read,
+    "vtu": vtu.read,
+    "wkt": wkt.read,
+    "xdmf": xdmf.read,
+}
+
+_writer_map = {
+    "ansys-ascii": lambda f, m, **kwargs: ansys.write(f, m, **kwargs, binary=False),
+    "ansys-binary": lambda f, m, **kwargs: ansys.write(f, m, **kwargs, binary=True),
+    "cgns": cgns.write,
+    "dolfin-xml": dolfin.write,
+    "exodus": exodus.write,
+    "flac3d": flac3d.write,
+    "gmsh": lambda f, m, **kwargs: gmsh.write(f, m, "4", **kwargs, binary=True),
+    "gmsh2-ascii": lambda f, m, **kwargs: gmsh.write(f, m, "2", **kwargs, binary=False),
+    "gmsh2-binary": lambda f, m, **kwargs: gmsh.write(f, m, "2", **kwargs, binary=True),
+    "gmsh4-ascii": lambda f, m, **kwargs: gmsh.write(f, m, "4", **kwargs, binary=False),
+    "gmsh4-binary": lambda f, m, **kwargs: gmsh.write(f, m, "4", **kwargs, binary=True),
+    "mdpa": mdpa.write,
+    "med": med.write,
+    "medit": medit.write,
+    "moab": h5m.write,
+    "nastran": nastran.write,
+    "neuroglancer": neuroglancer.write,
+    "obj": obj.write,
+    "off": off.write,
+    "permas": permas.write,
+    "ply-ascii": lambda f, m, **kwargs: ply.write(f, m, **kwargs, binary=False),
+    "ply-binary": lambda f, m, **kwargs: ply.write(f, m, **kwargs, binary=True),
+    "ply": lambda f, m, **kwargs: ply.write(f, m, **kwargs, binary=True),
+    "stl-ascii": lambda f, m, **kwargs: stl.write(f, m, **kwargs, binary=False),
+    "stl-binary": lambda f, m, **kwargs: stl.write(f, m, **kwargs, binary=True),
+    "stl": lambda f, m, **kwargs: stl.write(f, m, **kwargs, binary=True),
+    "svg": svg.write,
+    "tetgen": tetgen.write,
+    "vtu": lambda f, m, **kwargs: vtu.write(f, m, **kwargs, binary=True),
+    "vtu-ascii": lambda f, m, **kwargs: vtu.write(f, m, **kwargs, binary=False),
+    "vtu-binary": lambda f, m, **kwargs: vtu.write(f, m, **kwargs, binary=True),
+    "wkt": wkt.write,
+    "xdmf": xdmf.write,
+    "xdmf-binary": lambda f, m, **kwargs: xdmf.write(f, m, data_format="Binary"),
+    "xdmf-hdf": lambda f, m, **kwargs: xdmf.write(f, m, data_format="HDF"),
+    "xdmf-xml": lambda f, m, **kwargs: xdmf.write(f, m, data_format="XML"),
+    "xdmf3": xdmf.write,
+    "xdmf3-binary": lambda f, m, **kwargs: xdmf.write(f, m, data_format="Binary"),
+    "xdmf3-hdf": lambda f, m, **kwargs: xdmf.write(f, m, data_format="HDF"),
+    "xdmf3-xml": lambda f, m, **kwargs: xdmf.write(f, m, data_format="XML"),
 }
 
 
@@ -158,10 +180,10 @@ def read(filename, file_format=None):
 
         msg = "Unknown file format '{}' of '{}'.".format(file_format, filename)
 
-    if file_format not in format_to_reader:
+    if file_format not in reader_map:
         raise ReadError(msg)
 
-    return format_to_reader[file_format].read(filename)
+    return reader_map[file_format](filename)
 
 
 def write_points_cells(
@@ -228,48 +250,3 @@ def write(filename, mesh, file_format=None, **kwargs):
 
     # Write
     return writer(filename, mesh, **kwargs)
-
-
-_writer_map = {
-    "abaqus": abaqus.write,
-    "ansys-ascii": lambda f, m, **kwargs: ansys.write(f, m, **kwargs, binary=False),
-    "ansys-binary": lambda f, m, **kwargs: ansys.write(f, m, **kwargs, binary=True),
-    "cgns": cgns.write,
-    "dolfin-xml": dolfin.write,
-    "exodus": exodus.write,
-    "flac3d": flac3d.write,
-    "gmsh2-ascii": lambda f, m, **kwargs: gmsh.write(f, m, "2", **kwargs, binary=False),
-    "gmsh2-binary": lambda f, m, **kwargs: gmsh.write(f, m, "2", **kwargs, binary=True),
-    "gmsh4-ascii": lambda f, m, **kwargs: gmsh.write(f, m, "4", **kwargs, binary=False),
-    "gmsh4-binary": lambda f, m, **kwargs: gmsh.write(f, m, "4", **kwargs, binary=True),
-    "mdpa": mdpa.write,
-    "med": med.write,
-    "medit": medit.write,
-    "moab": h5m.write,
-    "nastran": nastran.write,
-    "neuroglancer": neuroglancer.write,
-    "obj": obj.write,
-    "off": off.write,
-    "permas": permas.write,
-    "ply-ascii": lambda f, m, **kwargs: ply.write(f, m, **kwargs, binary=False),
-    "ply-binary": lambda f, m, **kwargs: ply.write(f, m, **kwargs, binary=True),
-    "stl-ascii": lambda f, m, **kwargs: stl.write(f, m, **kwargs, binary=False),
-    "stl-binary": lambda f, m, **kwargs: stl.write(f, m, **kwargs, binary=True),
-    "svg": svg.write,
-    "tetgen": tetgen.write,
-    "vtk": lambda f, m, **kwargs: vtk.write(f, m, **kwargs, binary=True),
-    "vtk-ascii": lambda f, m, **kwargs: vtk.write(f, m, **kwargs, binary=False),
-    "vtk-binary": lambda f, m, **kwargs: vtk.write(f, m, **kwargs, binary=True),
-    "vtu": lambda f, m, **kwargs: vtu.write(f, m, **kwargs, binary=True),
-    "vtu-ascii": lambda f, m, **kwargs: vtu.write(f, m, **kwargs, binary=False),
-    "vtu-binary": lambda f, m, **kwargs: vtu.write(f, m, **kwargs, binary=True),
-    "wkt": wkt.write,
-    "xdmf": xdmf.write,
-    "xdmf-binary": lambda f, m, **kwargs: xdmf.write(f, m, data_format="Binary"),
-    "xdmf-hdf": lambda f, m, **kwargs: xdmf.write(f, m, data_format="HDF"),
-    "xdmf-xml": lambda f, m, **kwargs: xdmf.write(f, m, data_format="XML"),
-    "xdmf3": xdmf.write,
-    "xdmf3-binary": lambda f, m, **kwargs: xdmf.write(f, m, data_format="Binary"),
-    "xdmf3-hdf": lambda f, m, **kwargs: xdmf.write(f, m, data_format="HDF"),
-    "xdmf3-xml": lambda f, m, **kwargs: xdmf.write(f, m, data_format="XML"),
-}

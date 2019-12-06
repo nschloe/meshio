@@ -300,8 +300,6 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     for name, data in input_mesh.field_data.items():
         assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
 
-    return
-
 
 def generic_io(filename):
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -310,4 +308,3 @@ def generic_io(filename):
         out_mesh = meshio.read(filepath)
         assert (abs(out_mesh.points - tri_mesh.points) < 1.0e-15).all()
         assert (tri_mesh.cells["triangle"] == out_mesh.cells["triangle"]).all()
-    return

@@ -7,6 +7,8 @@ from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
+
 
 abaqus_to_meshio_type = {
     # trusses
@@ -272,3 +274,6 @@ def write(filename, mesh, translate_cell_names=True):
                 nids_strs = (str(nid + 1) for nid in row.tolist())
                 f.write(str(eid) + "," + ",".join(nids_strs) + "\n")
         f.write("*end")
+
+
+register("abaqus", [".inp"], read, {"abaqus": write})
