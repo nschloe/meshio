@@ -33,36 +33,6 @@ from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
 from ._mesh import Mesh
 
-input_filetypes = [
-    "abaqus",
-    "ansys",
-    "cgns",
-    "dolfin-xml",
-    "wkt",
-    "exodus",
-    "flac3d",
-    "gmsh-ascii",
-    "gmsh-binary",
-    "mdpa",
-    "med",
-    "medit",
-    "moab",
-    "nastran",
-    "neuroglancer",
-    "permas",
-    "ply-ascii",
-    "ply-binary",
-    "obj",
-    "off",
-    "stl-ascii",
-    "stl-binary",
-    "vtk-ascii",
-    "vtk-binary",
-    "vtu-ascii",
-    "vtu-binary",
-    "xdmf",
-]
-
 _extension_to_filetype = {
     ".bdf": "nastran",
     ".cgns": "cgns",
@@ -97,6 +67,56 @@ _extension_to_filetype = {
     ".ele": "tetgen",
 }
 
+format_to_reader = {
+    "abaqus": abaqus,
+    "ansys": ansys,
+    "ansys-ascii": ansys,
+    "ansys-binary": ansys,
+    "cgns": cgns,
+    "exodus": exodus,
+    #
+    "gmsh": gmsh,
+    "gmsh-ascii": gmsh,
+    "gmsh-binary": gmsh,
+    "gmsh2": gmsh,
+    "gmsh2-ascii": gmsh,
+    "gmsh2-binary": gmsh,
+    "gmsh4": gmsh,
+    "gmsh4-ascii": gmsh,
+    "gmsh4-binary": gmsh,
+    #
+    "flac3d": flac3d,
+    "mdpa": mdpa,
+    "med": med,
+    "medit": medit,
+    "nastran": nastran,
+    "neuroglancer": neuroglancer,
+    "dolfin-xml": dolfin,
+    "permas": permas,
+    "moab": h5m,
+    "obj": obj,
+    "off": off,
+    #
+    "ply": ply,
+    "ply-ascii": ply,
+    "ply-binary": ply,
+    #
+    "stl": stl,
+    "stl-ascii": stl,
+    "stl-binary": stl,
+    #
+    "tetgen": tetgen,
+    #
+    "vtu-ascii": vtu,
+    "vtu-binary": vtu,
+    #
+    "vtk-ascii": vtk,
+    "vtk-binary": vtk,
+    #
+    "wkt": wkt,
+    "xdmf": xdmf,
+}
+
 
 def _filetype_from_path(path):
     ext = ""
@@ -119,58 +139,6 @@ def read(filename, file_format=None):
 
     :returns mesh{2,3}d: The mesh data.
     """
-    format_to_reader = {
-        "ansys": ansys,
-        "ansys-ascii": ansys,
-        "ansys-binary": ansys,
-        "cgns": cgns,
-        #
-        "gmsh": gmsh,
-        "gmsh-ascii": gmsh,
-        "gmsh-binary": gmsh,
-        "gmsh2": gmsh,
-        "gmsh2-ascii": gmsh,
-        "gmsh2-binary": gmsh,
-        "gmsh4": gmsh,
-        "gmsh4-ascii": gmsh,
-        "gmsh4-binary": gmsh,
-        #
-        "flac3d": flac3d,
-        "wkt": wkt,
-        "med": med,
-        "medit": medit,
-        "nastran": nastran,
-        "neuroglancer": neuroglancer,
-        "dolfin-xml": dolfin,
-        "permas": permas,
-        "moab": h5m,
-        "obj": obj,
-        "off": off,
-        #
-        "ply": ply,
-        "ply-ascii": ply,
-        "ply-binary": ply,
-        #
-        "stl": stl,
-        "stl-ascii": stl,
-        "stl-binary": stl,
-        #
-        "tetgen": tetgen,
-        #
-        "vtu-ascii": vtu,
-        "vtu-binary": vtu,
-        #
-        "vtk-ascii": vtk,
-        "vtk-binary": vtk,
-        #
-        "xdmf": xdmf,
-        "exodus": exodus,
-        #
-        "abaqus": abaqus,
-        #
-        "mdpa": mdpa,
-    }
-
     if is_buffer(filename, "r"):
         if file_format is None:
             raise ReadError("File format must be given if buffer is used")

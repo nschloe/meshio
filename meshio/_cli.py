@@ -7,7 +7,7 @@ import sys
 import numpy
 
 from .__about__ import __copyright__, __version__
-from ._helpers import input_filetypes, _writer_map, read, write
+from ._helpers import format_to_reader, _writer_map, read, write
 
 
 def _get_version_text():
@@ -48,7 +48,6 @@ def convert(argv=None):
 
     # write it out
     write(args.outfile, mesh, file_format=args.output_format)
-    return
 
 
 def _get_convert_parser():
@@ -63,7 +62,7 @@ def _get_convert_parser():
         "--input-format",
         "-i",
         type=str,
-        choices=input_filetypes,
+        choices=list(format_to_reader.keys()),
         help="input file format",
         default=None,
     )
@@ -100,7 +99,6 @@ def _get_convert_parser():
         version=_get_version_text(),
         help="display version information",
     )
-
     return parser
 
 
@@ -129,8 +127,6 @@ def info(argv=None):
         if numpy.any(~point_is_used):
             print("ATTENTION: Some points are not part of any cell.")
 
-    return
-
 
 def _get_info_parser():
     parser = argparse.ArgumentParser(
@@ -143,7 +139,7 @@ def _get_info_parser():
         "--input-format",
         "-i",
         type=str,
-        choices=input_filetypes,
+        choices=list(format_to_reader.keys()),
         help="input file format",
         default=None,
     )
@@ -155,5 +151,4 @@ def _get_info_parser():
         version=_get_version_text(),
         help="display version information",
     )
-
     return parser
