@@ -7,7 +7,7 @@ import sys
 import numpy
 
 from .__about__ import __copyright__, __version__
-from ._helpers import input_filetypes, output_filetypes, read, write
+from ._helpers import input_filetypes, _writer_map, read, write
 
 
 def _get_version_text():
@@ -72,7 +72,7 @@ def _get_convert_parser():
         "--output-format",
         "-o",
         type=str,
-        choices=output_filetypes,
+        choices=list(_writer_map.keys()),
         help="output file format",
         default=None,
     )
