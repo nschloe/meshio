@@ -15,6 +15,7 @@ import numpy
 from .._exceptions import ReadError
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
 
 
 def read(filename):
@@ -162,4 +163,5 @@ def write(filename, mesh):
 
         fh.write(b"\nEnd\n")
 
-    return
+
+register("medit", [".mesh"], read, {"medit": write})

@@ -10,6 +10,7 @@ import numpy
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
 from .._mesh import Mesh
+from .._helpers import register
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -513,4 +514,15 @@ class XdmfWriter:
 
 def write(*args, **kwargs):
     XdmfWriter(*args, **kwargs)
-    return
+
+
+register("xdmf", [".xdmf", ".xmf"], read, {
+    "xdmf": write,
+    "xdmf-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
+    "xdmf-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
+    "xdmf-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
+    "xdmf3": write,
+    "xdmf3-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
+    "xdmf3-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
+    "xdmf3-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
+})

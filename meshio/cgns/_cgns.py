@@ -7,6 +7,7 @@ import numpy
 
 from .._exceptions import ReadError
 from .._mesh import Mesh
+from .._helpers import register
 
 
 def read(filename):
@@ -59,4 +60,6 @@ def write(filename, mesh):
     rnge.create_dataset(" data", data=[1, mesh.cells["tetra"].shape[0]])
     conn = elems.create_group("ElementConnectivity")
     conn.create_dataset(" data", data=mesh.cells["tetra"].reshape(-1) + 1)
-    return
+
+
+register("cgns", [".cgns"], read, {"cgns": write})

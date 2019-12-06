@@ -12,6 +12,7 @@ import numpy
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
 
 # Reference dtypes
 ply_to_numpy_dtype = {
@@ -390,4 +391,9 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 out = "\n".join([fmt.format(*row) for row in out]) + "\n"
                 fh.write(out.encode("utf-8"))
 
-    return
+
+register("ply", [".ply"], read, {
+    "ply-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
+    "ply-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+    "ply": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+})

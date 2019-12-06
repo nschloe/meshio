@@ -1,6 +1,7 @@
 import numpy
 
 from .._exceptions import WriteError
+from .._helpers import register
 
 
 def write(filename, mesh):
@@ -45,3 +46,6 @@ def write(filename, mesh):
 
     tree = ET.ElementTree(svg)
     tree.write(filename, pretty_print=True)
+
+
+register("svg", [".svg"], None, {"svg": write})

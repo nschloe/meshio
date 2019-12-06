@@ -9,6 +9,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
 
 permas_to_meshio_type = {
     "PLOT1": "vertex",
@@ -274,3 +275,6 @@ def write(filename, mesh):
         f.write("$END STRUCTURE\n")
         f.write("$EXIT COMPONENT\n")
         f.write("$FIN\n")
+
+
+register("permas", [".post", ".post.gz", ".dato", ".dato.gz"], read, {"permas": write})

@@ -10,6 +10,7 @@ from ..__about__ import __version__
 from .._exceptions import WriteError
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
 
 
 def read(filename):
@@ -82,4 +83,6 @@ def write(filename, mesh):
         if "quad" in mesh.cells:
             for c in mesh.cells["quad"]:
                 f.write("f {} {} {} {}\n".format(*(c + 1)))
-    return
+
+
+register("obj", [".obj"], read, {"obj": write})

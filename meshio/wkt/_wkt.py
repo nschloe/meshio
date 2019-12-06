@@ -7,6 +7,7 @@ import numpy as np
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
 
 float_pattern = r"[+-]?(?:\d+\.?\d*|\d*\.?\d+)"
 float_re = re.compile(float_pattern)
@@ -96,3 +97,6 @@ def write_str(mesh):
     write_buffer(buf, mesh)
     buf.seek(0)
     return buf.read()
+
+
+register("wkt", [".wkt"], read, {"wkt": write})

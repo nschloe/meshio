@@ -13,6 +13,7 @@ from .._common import num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
 
 ## We check if we can read/write the mesh natively from Kratos
 # TODO: Implement native reading
@@ -577,4 +578,5 @@ def write(filename, mesh, binary=False):
         ):  # NOTE: We will assume always when writing that the components are elements (for now)
             _write_data(fh, "ElementalData", name, dat, binary)
 
-    return
+
+register("mdpa", [".mdpa"], read, {"mdpa": write})

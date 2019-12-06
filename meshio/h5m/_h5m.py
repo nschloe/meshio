@@ -8,6 +8,7 @@ import numpy
 
 from .. import __about__
 from .._mesh import Mesh
+from .._helpers import register
 
 # def _int_to_bool_list(num):
 #     # From <https://stackoverflow.com/a/33608387/353337>.
@@ -230,4 +231,6 @@ def write(filename, mesh, add_global_ids=True):
 
     # set max_id
     tstt.attrs.create("max_id", global_id, dtype="u8")
-    return
+
+
+register("moab", [".h5m"], read, {"moab": write})

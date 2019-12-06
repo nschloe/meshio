@@ -18,6 +18,7 @@ from .._common import (
 )
 from .._exceptions import ReadError
 from .._mesh import Mesh
+from .._helpers import register
 
 
 def num_bytes_to_num_base64_chars(num_bytes):
@@ -494,4 +495,10 @@ def write(filename, mesh, binary=True, pretty_xml=True):
             numpy_to_xml_array(cd, name, "{:.11e}", data)
 
     write_xml(filename, vtk_file, pretty_xml)
-    return
+
+
+register("vtu", [".vtu"], read, {
+    "vtu": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+    "vtu-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
+    "vtu-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+})

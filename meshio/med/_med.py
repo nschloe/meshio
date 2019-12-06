@@ -7,6 +7,7 @@ import numpy
 from .._common import num_nodes_per_cell
 from .._exceptions import ReadError
 from .._mesh import Mesh
+from .._helpers import register
 
 # https://docs.salome-platform.org/5/med/dev/med__outils_8hxx.html
 # https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
@@ -417,3 +418,6 @@ def _write_families(fm_group, tags):
         for i in range(len(name)):
             name_80 = name[i] + "\x00" * (80 - len(name[i]))  # make name 80 characters
             dataset[i] = [ord(x) for x in name_80]
+
+
+register("med", [".med"], read, {"med": write})

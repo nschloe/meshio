@@ -13,6 +13,7 @@ import numpy
 from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._mesh import Mesh
+from .._helpers import register
 
 exodus_to_meshio_type = {
     "SPHERE": "vertex",
@@ -371,4 +372,6 @@ def write(filename, mesh):
             data[:] = values + 1
 
     rootgrp.close()
-    return
+
+
+register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})

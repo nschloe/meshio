@@ -9,6 +9,7 @@ from ..__about__ import __version__ as version
 from .._exceptions import WriteError
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
 
 meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
 
@@ -287,3 +288,6 @@ def _write_zgroup(f, data, ncol=20):
         lines.append(data[nrow * ncol :])
     for line in lines:
         f.write(" {}\n".format(" ".join([str(l) for l in line])))
+
+
+register("flac3d", [".f3grid"], read, {"flac3d": write})

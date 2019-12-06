@@ -11,6 +11,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
 
 
 def _skip_to(f, char):
@@ -464,4 +465,9 @@ def write(filename, mesh, binary=True):
                 fh.write(("))\n").encode("utf8"))
             first_index = last_index + 1
 
-    return
+
+register("ansys", [], read, {
+    "ansys": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+    "ansys-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
+    "ansys-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+})

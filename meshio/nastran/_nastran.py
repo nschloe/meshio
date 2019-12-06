@@ -11,6 +11,7 @@ from ..__about__ import __version__
 from .._common import num_nodes_per_cell
 from .._files import open_file
 from .._mesh import Mesh
+from .._helpers import register
 
 nastran_to_meshio_type = {
     "CELAS1": "vertex",
@@ -214,3 +215,6 @@ def _determine_solid_2nd(f, cell_type):
         elif cell_type == "hexahedron":
             cell_type = "hexahedron20"
     return cell_type
+
+
+register("nastran", [".bdf", ".fem", ".nas"], read, {"nastran": write})

@@ -10,6 +10,7 @@ import numpy
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._mesh import Mesh
+from .._helpers import register
 
 
 def read(filename):
@@ -108,4 +109,5 @@ def write(filename, mesh):
         for k, tet in enumerate(mesh.cells["tetra"]):
             fh.write("{} {} {} {} {}\n".format(k, tet[0], tet[1], tet[2], tet[3]))
 
-    return
+
+register("tetgen", [".ele", ".node"], read, {"tetgen": write})

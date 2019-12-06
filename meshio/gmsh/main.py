@@ -1,6 +1,7 @@
 import struct
 
 from .._exceptions import ReadError
+from .._helpers import register
 from . import _gmsh22, _gmsh40, _gmsh41
 
 _readers = {"2": _gmsh22, "4": _gmsh40, "4.0": _gmsh40, "4.1": _gmsh41}
@@ -98,3 +99,12 @@ def write(filename, mesh, fmt_version, binary=True):
             )
 
     writer.write(filename, mesh, binary=binary)
+
+
+register("gmsh", [".msh"], read, {
+    "gmsh": lambda f, m, **kwargs: write(f, m, "4", **kwargs, binary=True),
+    "gmsh2-ascii": lambda f, m, **kwargs: write(f, m, "2", **kwargs, binary=False),
+    "gmsh2-binary": lambda f, m, **kwargs: write(f, m, "2", **kwargs, binary=True),
+    "gmsh4-ascii": lambda f, m, **kwargs: write(f, m, "4", **kwargs, binary=False),
+    "gmsh4-binary": lambda f, m, **kwargs: write(f, m, "4", **kwargs, binary=True),
+})
