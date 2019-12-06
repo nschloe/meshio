@@ -5,7 +5,7 @@ import numpy
 import pygalmesh
 
 s = pygalmesh.Ball([0, 0, 0], 1.0)
-mesh = pygalmesh.generate_mesh(s, cell_size=1.0e-1, verbose=True)
+mesh = pygalmesh.generate_mesh(s, cell_size=3.0e-2, verbose=True)
 mesh.cells = {"tetra": mesh.cells["tetra"]}
 mesh.point_data = {}
 mesh.cell_data = {}
