@@ -14,8 +14,8 @@ import numpy
 
 from .._exceptions import ReadError
 from .._files import open_file
-from .._mesh import Mesh
 from .._helpers import register
+from .._mesh import Mesh
 
 
 def read(filename):

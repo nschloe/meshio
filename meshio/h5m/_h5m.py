@@ -7,8 +7,8 @@ from datetime import datetime
 import numpy
 
 from .. import __about__
-from .._mesh import Mesh
 from .._helpers import register
+from .._mesh import Mesh
 
 # def _int_to_bool_list(num):
 #     # From <https://stackoverflow.com/a/33608387/353337>.

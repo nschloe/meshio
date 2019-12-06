@@ -17,8 +17,8 @@ from .._common import (
     write_xml,
 )
 from .._exceptions import ReadError
-from .._mesh import Mesh
 from .._helpers import register
+from .._mesh import Mesh
 
 
 def num_bytes_to_num_base64_chars(num_bytes):
@@ -497,8 +497,13 @@ def write(filename, mesh, binary=True, pretty_xml=True):
     write_xml(filename, vtk_file, pretty_xml)
 
 
-register("vtu", [".vtu"], read, {
-    "vtu": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-    "vtu-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-    "vtu-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-})
+register(
+    "vtu",
+    [".vtu"],
+    read,
+    {
+        "vtu": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+        "vtu-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
+        "vtu-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+    },
+)

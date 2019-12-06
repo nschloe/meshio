@@ -7,7 +7,7 @@ import sys
 import numpy
 
 from .__about__ import __copyright__, __version__
-from ._helpers import reader_map, _writer_map, read, write
+from ._helpers import _writer_map, read, reader_map, write
 
 
 def _get_version_text():

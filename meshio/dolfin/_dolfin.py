@@ -9,8 +9,8 @@ import re
 import numpy
 
 from .._exceptions import ReadError, WriteError
-from .._mesh import Mesh
 from .._helpers import register
+from .._mesh import Mesh
 
 
 def _read_mesh(filename):

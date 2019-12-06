@@ -10,8 +10,8 @@ from ..__about__ import __version__
 from .._common import meshio_to_vtk_type, raw_from_cell_data, vtk_to_meshio_type
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._mesh import Mesh
 from .._helpers import register
+from .._mesh import Mesh
 
 vtk_type_to_numnodes = {
     0: 0,  # empty
@@ -733,8 +733,13 @@ def _write_field_data(f, data, binary):
     return
 
 
-register("vtk", [".vtk"], read, {
-    "vtk": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-    "vtk-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-    "vtk-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-})
+register(
+    "vtk",
+    [".vtk"],
+    read,
+    {
+        "vtk": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+        "vtk-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
+        "vtk-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+    },
+)

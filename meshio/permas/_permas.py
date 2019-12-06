@@ -8,8 +8,8 @@ import numpy
 from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
-from .._mesh import Mesh
 from .._helpers import register
+from .._mesh import Mesh
 
 permas_to_meshio_type = {
     "PLOT1": "vertex",

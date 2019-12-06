@@ -8,8 +8,8 @@ import numpy
 from ..__about__ import __version__ as version
 from .._exceptions import WriteError
 from .._files import open_file
-from .._mesh import Mesh
 from .._helpers import register
+from .._mesh import Mesh
 
 meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
 

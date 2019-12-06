@@ -7,7 +7,6 @@ from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
 from ._mesh import Mesh
 
-
 _extension_to_filetype = {}
 reader_map = {}
 _writer_map = {}

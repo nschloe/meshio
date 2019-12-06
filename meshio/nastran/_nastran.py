@@ -10,8 +10,8 @@ import numpy
 from ..__about__ import __version__
 from .._common import num_nodes_per_cell
 from .._files import open_file
-from .._mesh import Mesh
 from .._helpers import register
+from .._mesh import Mesh
 
 nastran_to_meshio_type = {
     "CELAS1": "vertex",
