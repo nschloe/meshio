@@ -23,6 +23,7 @@ from . import (
     _stl,
     _svg,
     _tetgen,
+    _ugrid,
     _vtk,
     _vtu,
     _wkt,
@@ -56,6 +57,7 @@ input_filetypes = [
     "off",
     "stl-ascii",
     "stl-binary",
+    "ugrid",
     "vtk-ascii",
     "vtk-binary",
     "vtu-ascii",
@@ -91,6 +93,7 @@ output_filetypes = [
     "stl-binary",
     "svg",
     "tetgen",
+    "ugrid",
     "vtk-ascii",
     "vtk-binary",
     "vtu-ascii",
@@ -123,6 +126,7 @@ _extension_to_filetype = {
     ".off": "off",
     ".ply": "ply-binary",
     ".stl": "stl-binary",
+    ".ugrid" : "ugrid",
     ".vtu": "vtu-binary",
     ".vtk": "vtk-binary",
     ".wkt": "wkt",
@@ -194,6 +198,8 @@ def read(filename, file_format=None):
         "stl-binary": _stl,
         #
         "tetgen": _tetgen,
+        #
+        "ugrid": _ugrid,
         #
         "vtu-ascii": _vtu,
         "vtu-binary": _vtu,
@@ -325,6 +331,7 @@ _writer_map = {
     "stl-ascii": (_stl, (), {"binary": False}),
     "stl-binary": (_stl, (), {"binary": True}),
     "tetgen": (_tetgen, (), {}),
+    "ugrid": (_ugrid, (), {}),
     "vtu-ascii": (_vtu, (), {"binary": False}),
     "vtu": (_vtu, (), {"binary": True}),
     "vtu-binary": (_vtu, (), {"binary": True}),
