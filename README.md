@@ -60,6 +60,8 @@ mesh = meshio.read(
     file_format="stl"  # optional if filename is a path; inferred from extension
 )
 # mesh.points, mesh.cells, ...
+
+# mesh.vtk.read() is also possible
 ```
 to read a mesh. To write, do
 ```python
@@ -91,14 +93,16 @@ meshio.write(
     mesh,
     # file_format="vtk",  # optional if first argument is a path; inferred from extension
 )
+
+# mesh.vtk.write() is also possible
 ```
 For both input and output, you can optionally specify the exact `file_format`
 (in case you would like to enforce ASCII over binary VTK, for example).
 
 Reading and writing can also be handled directly by the `Mesh` object:
 ```python
-m = meshio.Mesh.from_file(filename, "vtk")  # same arguments as meshio.read
-m.to_file("foo.vtk")  # same arguments as meshio.write, besides `mesh`
+m = meshio.Mesh.read(filename, "vtk")  # same arguments as meshio.read
+m.write("foo.vtk")  # same arguments as meshio.write, besides `mesh`
 ```
 
 #### Time series
