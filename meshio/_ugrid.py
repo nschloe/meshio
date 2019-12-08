@@ -18,8 +18,32 @@ from ._exceptions import ReadError
 from ._files import open_file
 from ._mesh import Mesh
 
+# Float size and endianess are recorded by these suffixes
+# http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/ugc_file_formats.html
+file_types = {
+     "ascii" : { "type" : "ascii" , "float_type" : "f8" ,  "int_type": "i4" },
+        "b8" : { "type" : "binary", "float_type" : ">f8" ,  "int_type": ">i4" },
+        "b4" : { "type" : "binary", "float_type" : ">f4" ,  "int_type": ">i4" },
+       "lb8" : { "type" : "binary", "float_type" : "<f8" ,  "int_type": "<i4" },
+       "lb4" : { "type" : "binary", "float_type" : "<f4" ,  "int_type": "<i4" },
+}
+
+file_type = None
 
 def read(filename):
+
+    global file_type
+
+    file_type = file_types["ascii"]
+    
+    filename_parts = filename.split('.')
+    if len(filename_parts) > 1 :
+        type_suffix = filename_parts[-2] 
+        if type_suffix in ["r8","r4","lr8","lr4"]:
+            raise ReadError("FORTRAN unformatted file format is not supported yet")
+        elif type_suffix in file_types.keys():
+            file_type = file_types[type_suffix]
+
     with open_file(filename) as f:
         mesh = read_buffer(f)
     return mesh
@@ -29,48 +53,55 @@ def read_buffer(f):
     cells = {}
     cell_data = {}
 
-    line = f.readline()
-    if not line:
-        # EOF
-        raise ReadError()
+    itype = file_type["int_type"]
+    ftype = file_type["float_type"]
 
-    line = line.strip()
-    items = line.split()
-    if not len(items) == 7:
-        raise ReadError()
+    def read_section(count, dtype):
+        print(file_type)
+        if file_type["type"] == "ascii":
+            return numpy.fromfile(f, count=count, dtype=dtype, sep = ' ')
+        else:
+            return numpy.fromfile(f, count=count, dtype=dtype)
 
-    nnodes = int(items[0])
-    ntria  = int(items[1])
-    nquad  = int(items[2])
-    ntet   = int(items[3])
-    npyra  = int(items[4])
-    nprism = int(items[5])
-    nhex   = int(items[6])
+    nitems = read_section(count=7, dtype=itype)
+    print(nitems)
+    if not nitems.size == 7:
+        raise ReadError("Header of ugrid file is ill-formed")
 
-    points = numpy.fromfile( f, count = nnodes * 3, dtype=c_double, sep=" ").reshape(nnodes, 3) 
+    nnodes = nitems[0]
+    ntria  = nitems[1]
+    nquad  = nitems[2]
+    ntet   = nitems[3]
+    npyra  = nitems[4]
+    nprism = nitems[5]
+    nhex   = nitems[6]
+
+    points = read_section(count=nnodes * 3, dtype=ftype).reshape(nnodes, 3) 
+    print(points)
     if ntria > 0 :
-        out = numpy.fromfile( f, count=ntria * 3 , dtype=int, sep=" ").reshape(ntria,3)
+        out = read_section(count=ntria * 3, dtype=itype).reshape(ntria,3)
         # adapt for 0-base
         cells["triangle"] = out - 1
     if nquad > 0 :
-        out = numpy.fromfile( f, count=nquad * 4 , dtype=int, sep=" ").reshape(nquad,4)
+        out = read_section(count=nquad * 4, dtype=itype).reshape(nquad,4)
         # adapt for 0-base
         cells["quad"] = out - 1
     if ntria > 0 :
-        out = numpy.fromfile( f, count=ntria , dtype=int, sep=" ")
+        out = read_section(count=ntria , dtype=itype)
         cell_data["triangle"] = {"ugrid:ref": out}
+    print(cells["triangle"])
     if nquad > 0 :
-        out = numpy.fromfile( f, count=nquad, dtype=int, sep=" ")
+        out = read_section(count=nquad, dtype=itype)
         cell_data["quad"] = {"ugrid:ref": out}
     if ntet > 0 :
-        out = numpy.fromfile( f, count=ntet * 4, dtype=int, sep=" ").reshape(ntet,4)
+        out = read_section(count=ntet * 4, dtype=itype).reshape(ntet,4)
         # adapt for 0-base
         cells["tetra"] = out - 1
         # TODO check if we can avoid that
         out = numpy.zeros(ntet)
         cell_data["tetra"] = {"ugrid:ref": out}
     if npyra > 0 :
-        out = numpy.fromfile( f, count=npyra * 5, dtype=int, sep=" ").reshape(npyra,5)
+        out = read_section(count=npyra * 5, dtype=itype).reshape(npyra,5)
         # adapt for 0-base
         cells["pyramid"] = out - 1
         # reorder
@@ -79,7 +110,7 @@ def read_buffer(f):
         out = numpy.zeros(npyra)
         cell_data["pyramid"] = {"ugrid:ref": out}
     if nprism > 0 :
-        out = numpy.fromfile( f, count=nprism * 6, dtype=int, sep=" ").reshape(nprism,6)
+        out = read_section(count=nprism * 6, dtype=itype).reshape(nprism,6)
         # adapt for 0-base
         cells["wedge"] = out - 1
         # reorder
@@ -87,7 +118,7 @@ def read_buffer(f):
         out = numpy.zeros(nprism)
         cell_data["wedge"] = {"ugrid:ref": out}
     if nhex > 0 :
-        out = numpy.fromfile( f, count=nhex * 8, dtype=int, sep=" ").reshape(nhex,8)
+        out = read_section(count=nhex * 8, dtype=itype).reshape(nhex,8)
         # adapt for 0-base
         cells["hexahedron"] = out - 1
         # reorder
