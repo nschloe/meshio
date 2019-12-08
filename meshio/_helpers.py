@@ -126,7 +126,7 @@ _extension_to_filetype = {
     ".off": "off",
     ".ply": "ply-binary",
     ".stl": "stl-binary",
-    ".ugrid" : "ugrid",
+    ".ugrid": "ugrid",
     ".vtu": "vtu-binary",
     ".vtk": "vtk-binary",
     ".wkt": "wkt",
