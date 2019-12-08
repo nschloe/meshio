@@ -62,7 +62,6 @@ def read_buffer(f):
     ftype = file_type["float_type"]
 
     def read_section(count, dtype):
-        print(file_type)
         if file_type["type"] == "ascii":
             return numpy.fromfile(f, count=count, dtype=dtype, sep = ' ')
         else :
@@ -80,7 +79,6 @@ def read_buffer(f):
     if file_type["type"] == "F":
         nbytes = numpy.fromfile(f,count=1,dtype=itype)
 
-    print(nitems)
     if not nitems.size == 7:
         raise ReadError("Header of ugrid file is ill-formed")
 
@@ -96,7 +94,6 @@ def read_buffer(f):
         nbytes = numpy.fromfile(f,count=1,dtype=itype)
 
     points = read_section(count=nnodes * 3, dtype=ftype).reshape(nnodes, 3) 
-    print(points)
     if ntria > 0 :
         out = read_section(count=ntria * 3, dtype=itype).reshape(ntria,3)
         # adapt for 0-base
@@ -108,7 +105,6 @@ def read_buffer(f):
     if ntria > 0 :
         out = read_section(count=ntria , dtype=itype)
         cell_data["triangle"] = {"ugrid:ref": out}
-    print(cells["triangle"])
     if nquad > 0 :
         out = read_section(count=nquad, dtype=itype)
         cell_data["quad"] = {"ugrid:ref": out}
@@ -158,7 +154,6 @@ def write(filename, mesh):
         ftype = file_type["float_type"]
 
         def write_section(array,dtype):
-            print(file_type)
             if file_type["type"] == "ascii":
                 fmt = " ".join(["%{}".format(dtype)] * ( array.shape[1]))
                 numpy.savetxt(f, array, fmt)
@@ -178,6 +173,7 @@ def write(filename, mesh):
                 )
                 logging.warning(msg)
                 continue
+
         nitems = numpy.array(
                 [ [ 
                 ugrid_counts["points"],
@@ -214,8 +210,6 @@ def write(filename, mesh):
                 labels = numpy.ones(ugrid_counts[key], dtype=itype)
             
             labels = labels.reshape(ugrid_counts[key],1)
-            print(labels.shape)
-            print(itype)
             write_section(labels,itype)
 
         # write volume elements
