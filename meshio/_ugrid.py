@@ -1,13 +1,11 @@
 """
 I/O for AFLR's UGRID format
 TODO document :
-<http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html>.
+[1] <http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html>.
 http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_input_output_grids.html
 Check out
-<https://hal.inria.fr/inria-00069921/fr/>
-<https://www.ljll.math.upmc.fr/frey/publications/RT-0253.pdf>
-<https://www.math.u-bordeaux.fr/~dobrzyns/logiciels/RT-422/node58.html>
-for something like a specification.
+[2] <http://www.simcenter.msstate.edu/software/downloads/ug_io/index_simsys_web.php?path=release>
+for UG_IO C code able to read and convert UGRID files
 """
 import logging
 from ctypes import c_double, c_float
@@ -22,10 +20,14 @@ from ._mesh import Mesh
 # http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/ugc_file_formats.html
 file_types = {
      "ascii" : { "type" : "ascii" , "float_type" : "f" ,  "int_type": "i" },
-        "b8" : { "type" : "binary", "float_type" : ">f8" ,  "int_type": ">i4" },
-        "b4" : { "type" : "binary", "float_type" : ">f4" ,  "int_type": ">i4" },
-       "lb8" : { "type" : "binary", "float_type" : "<f8" ,  "int_type": "<i4" },
-       "lb4" : { "type" : "binary", "float_type" : "<f4" ,  "int_type": "<i4" },
+        "b8" : { "type" : "C", "float_type" : ">f8" ,  "int_type": ">i4" },
+        "b4" : { "type" : "C", "float_type" : ">f4" ,  "int_type": ">i4" },
+       "lb8" : { "type" : "C", "float_type" : "<f8" ,  "int_type": "<i4" },
+       "lb4" : { "type" : "C", "float_type" : "<f4" ,  "int_type": "<i4" },
+       "r8" : { "type" : "F", "float_type" : ">f8" ,  "int_type": ">i4" },
+       "r4" : { "type" : "F", "float_type" : ">f4" ,  "int_type": ">i4" },
+       "lr8" : { "type" : "F", "float_type" : "<f8" ,  "int_type": "<i4" },
+       "lr4" : { "type" : "F", "float_type" : "<f4" ,  "int_type": "<i4" },
 }
 
 file_type = None
@@ -35,9 +37,7 @@ def determine_file_type(filename) :
     filename_parts = filename.split('.')
     if len(filename_parts) > 1 :
         type_suffix = filename_parts[-2] 
-        if type_suffix in ["r8","r4","lr8","lr4"]:
-            raise ReadError("FORTRAN unformatted file format is not supported yet")
-        elif type_suffix in file_types.keys():
+        if type_suffix in file_types.keys():
             file_type = file_types[type_suffix]
 
     return file_type
@@ -65,10 +65,21 @@ def read_buffer(f):
         print(file_type)
         if file_type["type"] == "ascii":
             return numpy.fromfile(f, count=count, dtype=dtype, sep = ' ')
-        else:
+        else :
             return numpy.fromfile(f, count=count, dtype=dtype)
-
+    
+    # FORTRAN type includes a number of bytes before and after
+    # each record , according to documentation [1] there are
+    # two records in the file
+    # see also UG_IO freely available code at [2]
+    if file_type["type"] == "F":
+        nbytes = numpy.fromfile(f,count=1,dtype=itype)
+    
     nitems = read_section(count=7, dtype=itype)
+
+    if file_type["type"] == "F":
+        nbytes = numpy.fromfile(f,count=1,dtype=itype)
+
     print(nitems)
     if not nitems.size == 7:
         raise ReadError("Header of ugrid file is ill-formed")
@@ -80,6 +91,9 @@ def read_buffer(f):
     npyra  = nitems[4]
     nprism = nitems[5]
     nhex   = nitems[6]
+
+    if file_type["type"] == "F":
+        nbytes = numpy.fromfile(f,count=1,dtype=itype)
 
     points = read_section(count=nnodes * 3, dtype=ftype).reshape(nnodes, 3) 
     print(points)
@@ -130,6 +144,8 @@ def read_buffer(f):
         # TODO check if we can avoid that
         out = numpy.zeros(nhex)
         cell_data["hexahedron"] = {"ugrid:ref": out}
+    if file_type["type"] == "F":
+        nbytes = numpy.fromfile(f,count=1,dtype=itype)
 
     return Mesh(points, cells, cell_data=cell_data)
 
