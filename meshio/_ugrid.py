@@ -30,12 +30,8 @@ file_types = {
 
 file_type = None
 
-def read(filename):
-
-    global file_type
-
+def determine_file_type(filename) :
     file_type = file_types["ascii"]
-    
     filename_parts = filename.split('.')
     if len(filename_parts) > 1 :
         type_suffix = filename_parts[-2] 
@@ -43,6 +39,15 @@ def read(filename):
             raise ReadError("FORTRAN unformatted file format is not supported yet")
         elif type_suffix in file_types.keys():
             file_type = file_types[type_suffix]
+
+    return file_type
+
+
+def read(filename):
+
+    global file_type
+
+    file_type = determine_file_type(filename)
 
     with open_file(filename) as f:
         mesh = read_buffer(f)
