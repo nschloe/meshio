@@ -16,6 +16,7 @@ from ._files import open_file
 from ._mesh import Mesh
 
 # Float size and endianess are recorded by these suffixes
+# binary files comes in C-type or FORTRAN type
 # http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/ugc_file_formats.html
 file_types = {
     "ascii": {"type": "ascii", "float_type": "f", "int_type": "i"},
@@ -82,62 +83,59 @@ def read_buffer(f):
     if not nitems.size == 7:
         raise ReadError("Header of ugrid file is ill-formed")
 
-    nnodes = nitems[0]
-    ntria = nitems[1]
-    nquad = nitems[2]
-    ntet = nitems[3]
-    npyra = nitems[4]
-    nprism = nitems[5]
-    nhex = nitems[6]
+    ugrid_counts = {
+        "points": (nitems[0], 3),
+        "triangle": (nitems[1], 3),
+        "quad": (nitems[2], 4),
+        "tetra": (nitems[3], 4),
+        "pyramid": (nitems[4], 5),
+        "wedge": (nitems[5], 6),
+        "hexahedron": (nitems[6], 8),
+    }
 
     if file_type["type"] == "F":
         numpy.fromfile(f, count=1, dtype=itype)
 
+    nnodes = ugrid_counts["points"][0]
     points = read_section(count=nnodes * 3, dtype=ftype).reshape(nnodes, 3)
-    if ntria > 0:
-        out = read_section(count=ntria * 3, dtype=itype).reshape(ntria, 3)
-        # adapt for 0-base
-        cells["triangle"] = out - 1
-    if nquad > 0:
-        out = read_section(count=nquad * 4, dtype=itype).reshape(nquad, 4)
-        # adapt for 0-base
-        cells["quad"] = out - 1
-    if ntria > 0:
-        out = read_section(count=ntria, dtype=itype)
-        cell_data["triangle"] = {"ugrid:ref": out}
-    if nquad > 0:
-        out = read_section(count=nquad, dtype=itype)
-        cell_data["quad"] = {"ugrid:ref": out}
-    if ntet > 0:
-        out = read_section(count=ntet * 4, dtype=itype).reshape(ntet, 4)
-        # adapt for 0-base
-        cells["tetra"] = out - 1
-        # TODO check if we can avoid that
-        out = numpy.zeros(ntet)
-        cell_data["tetra"] = {"ugrid:ref": out}
-    if npyra > 0:
-        out = read_section(count=npyra * 5, dtype=itype).reshape(npyra, 5)
-        # adapt for 0-base
-        cells["pyramid"] = out - 1
-        # reorder
-        cells["pyramid"] = cells["pyramid"][:, [3, 4, 1, 0, 2]]
-        # TODO check if we can avoid that
-        out = numpy.zeros(npyra)
-        cell_data["pyramid"] = {"ugrid:ref": out}
-    if nprism > 0:
-        out = read_section(count=nprism * 6, dtype=itype).reshape(nprism, 6)
-        # adapt for 0-base
-        cells["wedge"] = out - 1
-        # TODO check if we can avoid that
-        out = numpy.zeros(nprism)
-        cell_data["wedge"] = {"ugrid:ref": out}
-    if nhex > 0:
-        out = read_section(count=nhex * 8, dtype=itype).reshape(nhex, 8)
-        # adapt for 0-base
-        cells["hexahedron"] = out - 1
-        # TODO check if we can avoid that
-        out = numpy.zeros(nhex)
-        cell_data["hexahedron"] = {"ugrid:ref": out}
+
+    for key in ["triangle", "quad"]:
+        nitems = ugrid_counts[key][0]
+        nvertices = ugrid_counts[key][1]
+        if nitems == 0:
+            continue
+        out = read_section(count=nitems * nvertices, dtype=itype).reshape(
+            nitems, nvertices
+        )
+        # UGRID is one-based
+        cells[key] = out - 1
+
+    for key in ["triangle", "quad"]:
+        nitems = ugrid_counts[key][0]
+        if nitems == 0:
+            continue
+        out = read_section(count=nitems, dtype=itype)
+        cell_data[key] = {"ugrid:ref": out}
+
+    for key in ["tetra", "pyramid", "wedge", "hexahedron"]:
+        nitems = ugrid_counts[key][0]
+        nvertices = ugrid_counts[key][1]
+        if nitems == 0:
+            continue
+        out = read_section(count=nitems * nvertices, dtype=itype).reshape(
+            nitems, nvertices
+        )
+
+        if key == "pyramid":
+            out = out[:, [1, 0, 4, 2, 3]]
+
+        # UGRID is one-based
+        cells[key] = out - 1
+
+        # fill volume element attributes with zero
+        out = numpy.zeros(nitems)
+        cell_data[key] = {"ugrid:ref": out}
+
     if file_type["type"] == "F":
         numpy.fromfile(f, count=1, dtype=itype)
 
@@ -221,10 +219,11 @@ def write(filename, mesh):
 
         # write volume elements
         for key in ["tetra", "pyramid", "wedge", "hexahedron"]:
-            if ugrid_counts[key] > 0:
-                # UGRID is one-based
-                out = mesh.cells[key] + 1
-                if key == "pyramid":
-                    out = out[:, [1, 0, 4, 2, 3]]
-                write_section(out, itype)
+            if ugrid_counts[key] == 0:
+                continue
+            # UGRID is one-based
+            out = mesh.cells[key] + 1
+            if key == "pyramid":
+                out = out[:, [1, 0, 4, 2, 3]]
+            write_section(out, itype)
     return
