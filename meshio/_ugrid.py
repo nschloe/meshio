@@ -128,7 +128,6 @@ def read_buffer(f):
         out = read_section(count=nprism * 6, dtype=itype).reshape(nprism, 6)
         # adapt for 0-base
         cells["wedge"] = out - 1
-        # reorder
         # TODO check if we can avoid that
         out = numpy.zeros(nprism)
         cell_data["wedge"] = {"ugrid:ref": out}
@@ -136,7 +135,6 @@ def read_buffer(f):
         out = read_section(count=nhex * 8, dtype=itype).reshape(nhex, 8)
         # adapt for 0-base
         cells["hexahedron"] = out - 1
-        # reorder
         # TODO check if we can avoid that
         out = numpy.zeros(nhex)
         cell_data["hexahedron"] = {"ugrid:ref": out}
@@ -227,6 +225,6 @@ def write(filename, mesh):
                 # UGRID is one-based
                 out = mesh.cells[key] + 1
                 if key == "pyramid":
-                    out = out[:, [3, 4, 1, 0, 2]]
+                    out = out[:, [1, 0, 4, 2, 3]]
                 write_section(out, itype)
     return
