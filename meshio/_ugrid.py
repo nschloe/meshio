@@ -135,69 +135,79 @@ def read_buffer(f):
 
 
 def write(filename, mesh):
-    with open_file(filename, "wb") as fh:
-        version = {numpy.dtype(c_float): 1, numpy.dtype(c_double): 2}[mesh.points.dtype]
-        """
-        # N. B.: PEP 461 Adding % formatting to bytes and bytearray
-        fh.write(b"MeshVersionFormatted %d\n" % version)
+    file_type = determine_file_type(filename)
+    
+    with open_file(filename, "w") as f:
+        itype = file_type["int_type"]
+        ftype = file_type["float_type"]
 
-        n, d = mesh.points.shape
+        def write_section(array,dtype):
+            print(file_type)
+            if file_type["type"] == "ascii":
+                fmt = " ".join(["%{}".format(dtype)] * ( array.shape[1]))
+                numpy.savetxt(f, array, fmt)
+            else:
+                array.astype(dtype).tofile(f)
+        
+        ugrid_counts = { "points" : 0, "triangle" : 0 , "quad" : 0, "tetra" : 0 , "pyramid" : 0, "wedge" : 0, "hexahedron" : 0 }
 
-        fh.write(b"Dimension %d\n" % d)
-
-        # vertices
-        fh.write(b"\nVertices\n")
-        fh.write("{}\n".format(n).encode("utf-8"))
-        if "medit:ref" in mesh.point_data:
-            labels = mesh.point_data["medit:ref"]
-        elif "gmsh:physical" in mesh.point_data:
-            # Translating gmsh data to medit is an important case, so treat it
-            # explicitly here.
-            labels = mesh.point_data["gmsh:physical"]
-        else:
-            labels = numpy.ones(n, dtype=int)
-        data = numpy.c_[mesh.points, labels]
-        fmt = " ".join(["%r"] * d) + " %d"
-        numpy.savetxt(fh, data, fmt)
-
-        medit_from_meshio = {
-            "line": ("Edges", 2),
-            "triangle": ("Triangles", 3),
-            "quad": ("Quadrilaterals", 4),
-            "tetra": ("Tetrahedra", 4),
-            "hexahedron": ("Hexahedra", 8),
-        }
-
+        ugrid_counts["points"] = mesh.points.shape[0]
+        
         for key, data in mesh.cells.items():
-            try:
-                medit_name, num = medit_from_meshio[key]
-            except KeyError:
-                msg = ("MEDIT's mesh format doesn't know {} cells. Skipping.").format(
+            if key in ugrid_counts.keys():
+                ugrid_counts[key] = data.shape[0]
+            else:
+                msg = ("UGRID mesh format doesn't know {} cells. Skipping.").format(
                     key
                 )
                 logging.warning(msg)
                 continue
-            fh.write(b"\n")
-            fh.write("{}\n".format(medit_name).encode("utf-8"))
-            fh.write("{}\n".format(len(data)).encode("utf-8"))
+        nitems = numpy.array(
+                [ [ 
+                ugrid_counts["points"],
+                ugrid_counts["triangle"],
+                ugrid_counts["quad"],
+                ugrid_counts["tetra"],
+                ugrid_counts["pyramid"],
+                ugrid_counts["wedge"],
+                ugrid_counts["hexahedron"] 
+                ] ])
+        # header
+        write_section(nitems,itype)
+        write_section(mesh.points,ftype)
 
-            if key in mesh.cell_data and "medit:ref" in mesh.cell_data[key]:
+        for key in ["triangle","quad"]:
+            if ugrid_counts[key] > 0 :
+                # UGRID is one-based
+                out = mesh.cells[key] + 1
+                write_section(out,itype)
+        
+        # write boundary tags
+        for key in ["triangle","quad"]:
+            if ugrid_counts[key] == 0 :
+                continue
+            if "ugrid:ref" in mesh.cell_data[key]:
+                labels = mesh.cell_data[key]["ugrid:ref"]
+            elif "medit:ref" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["medit:ref"]
-            elif key in mesh.cell_data and "gmsh:physical" in mesh.cell_data[key]:
-                # Translating gmsh data to medit is an important case, so treat it
-                # explicitly here.
+            elif "gmsh:physical" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["gmsh:physical"]
             elif key in mesh.cell_data and "flac3d:zone" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["flac3d:zone"]
             else:
-                labels = numpy.ones(len(data), dtype=int)
+                labels = numpy.ones(ugrid_counts[key], dtype=itype)
+            
+            labels = labels.reshape(ugrid_counts[key],1)
+            print(labels.shape)
+            print(itype)
+            write_section(labels,itype)
 
-            # adapt 1-base
-            data_with_label = numpy.c_[data + 1, labels]
-            fmt = " ".join(["%d"] * (num + 1))
-            numpy.savetxt(fh, data_with_label, fmt)
-
-        fh.write(b"\nEnd\n")
-
-    """
+        # write volume elements
+        for key in ["tetra","pyramid","wedge","hexahedron"]:
+            if ugrid_counts[key] > 0 :
+                # UGRID is one-based
+                out = mesh.cells[key] + 1
+                if key == "pyramid":
+                    out = out[ : , [3,4,1,0,2] ]
+                write_section(out,itype)
     return
