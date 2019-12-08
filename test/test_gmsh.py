@@ -46,10 +46,8 @@ def gmsh_periodic():
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_gmsh2(mesh, binary):
-    writer = partial(meshio._gmsh.write, fmt_version="2", binary=binary)
-
-    helpers.write_read(writer, meshio._gmsh.read, mesh, 1.0e-15)
-    return
+    writer = partial(meshio.gmsh.write, fmt_version="2", binary=binary)
+    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(
@@ -77,10 +75,9 @@ def test_gmsh2(mesh, binary):
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_gmsh40(mesh, binary):
-    writer = partial(meshio._gmsh.write, fmt_version="4.0", binary=binary)
+    writer = partial(meshio.gmsh.write, fmt_version="4.0", binary=binary)
 
-    helpers.write_read(writer, meshio._gmsh.read, mesh, 1.0e-15)
-    return
+    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(
@@ -109,17 +106,14 @@ def test_gmsh40(mesh, binary):
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_gmsh41(mesh, binary):
-    writer = partial(meshio._gmsh.write, fmt_version="4.1", binary=binary)
-
-    helpers.write_read(writer, meshio._gmsh.read, mesh, 1.0e-15)
-    return
+    writer = partial(meshio.gmsh.write, fmt_version="4.1", binary=binary)
+    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
 def test_generic_io():
     helpers.generic_io("test.msh")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.msh")
-    return
 
 
 @pytest.mark.parametrize(
@@ -139,8 +133,8 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
         k: len(v["gmsh:physical"]) for k, v in mesh.cell_data.items()
     } == ref_num_cells
 
-    writer = partial(meshio._gmsh.write, fmt_version="2", binary=binary)
-    helpers.write_read(writer, meshio._gmsh.read, mesh, 1.0e-15)
+    writer = partial(meshio.gmsh.write, fmt_version="2", binary=binary)
+    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(

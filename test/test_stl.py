@@ -15,7 +15,6 @@ import meshio
 )
 def test_stl(mesh, binary, tol):
     def writer(*args, **kwargs):
-        return meshio._stl.write(*args, binary=binary, **kwargs)
+        return meshio.stl.write(*args, binary=binary, **kwargs)
 
-    helpers.write_read(writer, meshio._stl.read, mesh, tol)
-    return
+    helpers.write_read(writer, meshio.stl.read, mesh, tol)

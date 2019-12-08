@@ -10,9 +10,9 @@ import meshio
 @pytest.mark.parametrize("mesh", [helpers.tri_mesh])
 def test_wkt(mesh):
     def writer(*args, **kwargs):
-        return meshio._wkt.write(*args, **kwargs)
+        return meshio.wkt.write(*args, **kwargs)
 
-    helpers.write_read(writer, meshio._wkt.read, mesh, 1.0e-12)
+    helpers.write_read(writer, meshio.wkt.read, mesh, 1.0e-12)
 
 
 @pytest.mark.parametrize(

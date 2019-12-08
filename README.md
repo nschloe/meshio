@@ -60,6 +60,8 @@ mesh = meshio.read(
     file_format="stl"  # optional if filename is a path; inferred from extension
 )
 # mesh.points, mesh.cells, ...
+
+# mesh.vtk.read() is also possible
 ```
 to read a mesh. To write, do
 ```python
@@ -91,14 +93,16 @@ meshio.write(
     mesh,
     # file_format="vtk",  # optional if first argument is a path; inferred from extension
 )
+
+# mesh.vtk.write() is also possible
 ```
 For both input and output, you can optionally specify the exact `file_format`
 (in case you would like to enforce ASCII over binary VTK, for example).
 
 Reading and writing can also be handled directly by the `Mesh` object:
 ```python
-m = meshio.Mesh.from_file(filename, "vtk")  # same arguments as meshio.read
-m.to_file("foo.vtk")  # same arguments as meshio.write, besides `mesh`
+m = meshio.Mesh.read(filename, "vtk")  # same arguments as meshio.read
+m.write("foo.vtk")  # same arguments as meshio.write, besides `mesh`
 ```
 
 #### Time series
@@ -106,14 +110,14 @@ m.to_file("foo.vtk")  # same arguments as meshio.write, besides `mesh`
 The [XDMF format](http://www.xdmf.org/index.php/XDMF_Model_and_Format) supports time
 series with a shared mesh. You can write times series data using meshio with
 ```python
-with meshio.XdmfTimeSeriesWriter(filename) as writer:
+with meshio.xdmf.TimeSeriesWriter(filename) as writer:
     writer.write_points_cells(points, cells)
     for t in [0.0, 0.1, 0.21]:
         writer.write_data(t, point_data={"phi": data})
 ```
 and read it with
 ```python
-with meshio.XdmfTimeSeriesReader(filename) as reader:
+with meshio.xdmf.TimeSeriesReader(filename) as reader:
     points, cells = reader.read_points_cells()
     for k in range(reader.num_steps):
         t, point_data, cell_data = reader.read_data(k)
@@ -125,6 +129,14 @@ with meshio.XdmfTimeSeriesReader(filename) as reader:
 
 Some mesh formats are more suitable for I/O than others. Here you find an overview of
 how fast the meshio routines are for a certain mesh with about 100k nodes.
+
+### File size comparison
+
+<img alt="file size" src="https://nschloe.github.io/meshio/filesizes.svg" width="50%">
+
+Comparison of the file sizes for a tetrahedral mesh with about 100k points. The red line
+marks the size of the mesh in memory.
+
 
 
 ### Installation

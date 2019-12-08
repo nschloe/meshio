@@ -29,12 +29,10 @@ import meshio
     ],
 )
 def test_io(mesh):
-    helpers.write_read(meshio._mdpa.write, meshio._mdpa.read, mesh, 1.0e-15)
-    return
+    helpers.write_read(meshio.mdpa.write, meshio.mdpa.read, mesh, 1.0e-15)
 
 
 def test_generic_io():
     helpers.generic_io("test.mesh")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.mesh")
-    return

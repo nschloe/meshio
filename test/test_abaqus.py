@@ -23,10 +23,9 @@ import meshio
 )
 def test(mesh):
     def writer(*args, **kwargs):
-        return meshio._abaqus.write(*args, **kwargs)
+        return meshio.abaqus.write(*args, **kwargs)
 
-    helpers.write_read(writer, meshio._abaqus.read, mesh, 1.0e-15)
-    return
+    helpers.write_read(writer, meshio.abaqus.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize("filename, ref_sum, ref_num_cells", [("UUea.inp", 4950.0, 50)])
@@ -39,4 +38,3 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * abs(ref_sum)
     assert len(mesh.cells["quad"]) == ref_num_cells
-    return

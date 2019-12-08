@@ -33,8 +33,7 @@ h5py = pytest.importorskip("h5py")
     ],
 )
 def test_io(mesh):
-    helpers.write_read(meshio._med.write, meshio._med.read, mesh, 1.0e-15)
-    return
+    helpers.write_read(meshio.med.write, meshio.med.read, mesh, 1.0e-15)
 
 
 def test_generic_io():
@@ -83,7 +82,7 @@ def test_reference_file_with_mixed_cells():
     }
     assert mesh.cell_tags == ref_cell_tags_info
 
-    helpers.write_read(meshio._med.write, meshio._med.read, mesh, 1.0e-15)
+    helpers.write_read(meshio.med.write, meshio.med.read, mesh, 1.0e-15)
 
 
 def test_reference_file_with_point_cell_data():
@@ -126,4 +125,4 @@ def test_reference_file_with_point_cell_data():
     data_psi_elem = mesh.cell_data["hexahedron"]["resu____ENEL_ELEM"]
     assert numpy.isclose(numpy.mean(data_psi, axis=1)[0, 0], data_psi_elem[0])
 
-    helpers.write_read(meshio._med.write, meshio._med.read, mesh, 1.0e-15)
+    helpers.write_read(meshio.med.write, meshio.med.read, mesh, 1.0e-15)

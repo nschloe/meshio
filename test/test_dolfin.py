@@ -18,12 +18,10 @@ lxml = pytest.importorskip("lxml")
     ],
 )
 def test_dolfin(mesh):
-    helpers.write_read(meshio._dolfin.write, meshio._dolfin.read, mesh, 1.0e-15)
-    return
+    helpers.write_read(meshio.dolfin.write, meshio.dolfin.read, mesh, 1.0e-15)
 
 
 def test_generic_io():
     helpers.generic_io("test.xml")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.xml")
-    return

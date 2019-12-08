@@ -39,24 +39,22 @@ test_set_reduced = [
 @pytest.mark.parametrize("data_format", ["XML", "Binary", "HDF"])
 def test_xdmf3(mesh, data_format):
     def write(*args, **kwargs):
-        return meshio._xdmf.write(*args, data_format=data_format, **kwargs)
+        return meshio.xdmf.write(*args, data_format=data_format, **kwargs)
 
-    helpers.write_read(write, meshio._xdmf.read, mesh, 1.0e-14)
-    return
+    helpers.write_read(write, meshio.xdmf.read, mesh, 1.0e-14)
 
 
 def test_generic_io():
     helpers.generic_io("test.xdmf")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.xdmf")
-    return
 
 
 def test_time_series():
     # write the data
     filename = "out.xdmf"
 
-    with meshio.XdmfTimeSeriesWriter(filename) as writer:
+    with meshio.xdmf.TimeSeriesWriter(filename) as writer:
         writer.write_points_cells(helpers.tri_mesh_2d.points, helpers.tri_mesh_2d.cells)
         n = helpers.tri_mesh_2d.points.shape[0]
 
@@ -74,15 +72,13 @@ def test_time_series():
             )
 
     # read it back in
-    with meshio.XdmfTimeSeriesReader(filename) as reader:
+    with meshio.xdmf.TimeSeriesReader(filename) as reader:
         points, cells = reader.read_points_cells()
         for k in range(reader.num_steps):
             t, pd, cd = reader.read_data(k)
             assert numpy.abs(times[k] - t) < 1.0e-12
             for key, value in pd.items():
                 assert numpy.all(numpy.abs(value - point_data[k][key]) < 1.0e-12)
-
-    return
 
 
 def test_information_xdmf():
@@ -113,7 +109,6 @@ def test_information_xdmf():
     mesh_in = meshio.read("mesh.xdmf")
 
     assert len(mesh_in.field_data) == len(mesh_out.field_data)
-    return
 
 
 if __name__ == "__main__":
