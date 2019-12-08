@@ -21,7 +21,7 @@ from ._mesh import Mesh
 # Float size and endianess are recorded by these suffixes
 # http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/ugc_file_formats.html
 file_types = {
-     "ascii" : { "type" : "ascii" , "float_type" : "f8" ,  "int_type": "i4" },
+     "ascii" : { "type" : "ascii" , "float_type" : "f" ,  "int_type": "i" },
         "b8" : { "type" : "binary", "float_type" : ">f8" ,  "int_type": ">i4" },
         "b4" : { "type" : "binary", "float_type" : ">f4" ,  "int_type": ">i4" },
        "lb8" : { "type" : "binary", "float_type" : "<f8" ,  "int_type": "<i4" },
