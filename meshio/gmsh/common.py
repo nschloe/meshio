@@ -197,7 +197,7 @@ def _write_data(fh, tag, name, data, binary):
         tmp = numpy.empty(len(data), dtype=dtype)
         tmp["index"] = 1 + numpy.arange(len(data))
         tmp["data"] = data
-        fh.write(tmp.tostring())
+        tmp.tofile(fh)
         fh.write("\n".encode("utf-8"))
     else:
         fmt = " ".join(["{}"] + ["{!r}"] * num_components) + "\n"
