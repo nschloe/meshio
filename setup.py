@@ -36,7 +36,7 @@ setup(
     platforms="any",
     install_requires=["numpy"],
     # For pathlib:
-    python_requires=">=3.4",
+    python_requires=">=3.5",
     extras_require=extras,
     classifiers=[
         about["__status__"],
