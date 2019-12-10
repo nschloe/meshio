@@ -125,18 +125,20 @@ with meshio.xdmf.TimeSeriesReader(filename) as reader:
 
 ### Performance comparison
 
+The comparisons here are for a tetrahedral mesh with about 400k points and 2M
+tetrahedra.  The red lines mark the size of the mesh in memory.
+
+#### File sizes
+
+<img alt="file size" src="https://nschloe.github.io/meshio/filesizes.svg" width="60%">
+
+#### I/O speed
+
 <img alt="performance" src="https://nschloe.github.io/meshio/performance.svg" width="90%">
 
-Some mesh formats are more suitable for I/O than others. Here you find an overview of
-how fast the meshio routines are for a certain mesh with about 100k nodes.
+#### Maximum memory usage
 
-### File size comparison
-
-<img alt="file size" src="https://nschloe.github.io/meshio/filesizes.svg" width="50%">
-
-Comparison of the file sizes for a tetrahedral mesh with about 100k points. The red line
-marks the size of the mesh in memory.
-
+<img alt="memory usage" src="https://nschloe.github.io/meshio/memory.svg" width="90%">
 
 
 ### Installation

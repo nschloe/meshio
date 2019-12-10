@@ -648,9 +648,13 @@ def _write_cells(f, cells, binary):
     if binary:
         for c in cells.values():
             n = c.shape[1]
-            d = numpy.column_stack([numpy.full(c.shape[0], n), c]).astype(
-                numpy.dtype(">i4")
+            dtype = numpy.dtype(">i4")
+            d = numpy.column_stack(
+                [numpy.full(c.shape[0], n, dtype=dtype), c.astype(dtype)],
             )
+            # One must force endianness here:
+            # <https://github.com/numpy/numpy/issues/15088>
+            d = d.astype(dtype)
             f.write(d.tostring())
         f.write("\n".encode("utf-8"))
     else:
@@ -658,7 +662,7 @@ def _write_cells(f, cells, binary):
         for c in cells.values():
             n = c.shape[1]
             # prepend a column with the value n
-            out = numpy.column_stack([numpy.full(c.shape[0], n), c])
+            out = numpy.column_stack([numpy.full(c.shape[0], n, dtype=c.dtype), c])
             fmt = " ".join(["{}"] * out.shape[1])
             # join them all together as strings
             out = "\n".join([fmt.format(*row) for row in out]) + "\n"
