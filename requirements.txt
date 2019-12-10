@@ -8,6 +8,7 @@ lxml
 
 # development
 pytest
+pytest-cov
 isort
 black; python_version >= '3.6'
 flake8

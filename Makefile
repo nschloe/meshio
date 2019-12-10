@@ -33,5 +33,6 @@ black:
 	black .
 
 lint:
+	isort -rc -c .
 	black --check .
 	flake8 .
