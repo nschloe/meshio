@@ -16,11 +16,12 @@ def generate_mesh():
     # points, cells = meshzoo.rectangle(nx=300, ny=300)
     # return meshio.Mesh(points, {"triangle": cells})
     s = pygalmesh.Ball([0, 0, 0], 1.0)
-    mesh = pygalmesh.generate_mesh(s, cell_size=3.0e-2, verbose=True)
+    mesh = pygalmesh.generate_mesh(s, cell_size=2.0e-2, verbose=True)
     # mesh = pygalmesh.generate_mesh(s, cell_size=1.0e-1, verbose=True)
     mesh.cells = {"tetra": mesh.cells["tetra"]}
     mesh.point_data = {}
     mesh.cell_data = {}
+    print(mesh)
     return mesh
 
 
@@ -48,8 +49,9 @@ def plot_speed(names, elapsed_write, elapsed_read):
     ax[1].grid()
 
     fig.tight_layout()
-    plt.show()
-    # fig.savefig("performance.svg", transparent=True, bbox_inches="tight")
+    # plt.show()
+    fig.savefig("performance.svg", transparent=True, bbox_inches="tight")
+    plt.close()
 
 
 def plot_file_sizes(names, file_sizes, mem_size):
@@ -62,7 +64,9 @@ def plot_file_sizes(names, file_sizes, mem_size):
     ax.barh(y_pos, file_sizes, align="center")
     #
     ylim = ax.get_ylim()
-    plt.plot([mem_size, mem_size], [-2, len(file_sizes) + 2], "C3", linewidth=2.0, zorder=0)
+    plt.plot(
+        [mem_size, mem_size], [-2, len(file_sizes) + 2], "C3", linewidth=2.0, zorder=0
+    )
     ax.set_ylim(ylim)
     #
     ax.set_yticks(y_pos)
@@ -71,8 +75,9 @@ def plot_file_sizes(names, file_sizes, mem_size):
     ax.set_xlabel("file size [MB]")
     ax.set_title("file sizes")
     plt.grid()
-    plt.show()
-    # plt.savefig("filesizes.svg", transparent=True, bbox_inches="tight")
+    # plt.show()
+    plt.savefig("filesizes.svg", transparent=True, bbox_inches="tight")
+    plt.close()
 
 
 def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
@@ -91,7 +96,9 @@ def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
     ax[0].grid()
     # plot memsize of mesh
     ylim = ax[0].get_ylim()
-    ax[0].plot([mem_size, mem_size], [-2, len(names) + 2], "C3", linewidth=2.0, zorder=0)
+    ax[0].plot(
+        [mem_size, mem_size], [-2, len(names) + 2], "C3", linewidth=2.0, zorder=0
+    )
     ax[0].set_ylim(ylim)
 
     idx = numpy.argsort(peak_memory_read)[::-1]
@@ -103,12 +110,15 @@ def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
     ax[1].grid()
     # plot memsize of mesh
     ylim = ax[1].get_ylim()
-    ax[1].plot([mem_size, mem_size], [-2, len(names) + 2], "C3", linewidth=2.0, zorder=0)
+    ax[1].plot(
+        [mem_size, mem_size], [-2, len(names) + 2], "C3", linewidth=2.0, zorder=0
+    )
     ax[1].set_ylim(ylim)
 
     fig.tight_layout()
-    plt.show()
-    # fig.savefig("memory.svg", transparent=True, bbox_inches="tight")
+    # plt.show()
+    fig.savefig("memory.svg", transparent=True, bbox_inches="tight")
+    plt.close()
 
 
 def read_write(plot=False):
@@ -192,7 +202,14 @@ def read_write(plot=False):
     peak_memory_read = []
 
     print()
-    print("format                  write (s)    read(s)   file size")
+    print(
+        "format                  "
+        + "write (s)    "
+        + "read(s)      "
+        + "file size    "
+        + "write mem    "
+        + "read mem "
+    )
     print()
     with tempfile.TemporaryDirectory() as directory:
         for name, (writer, reader, filenames) in formats.items():
@@ -206,7 +223,9 @@ def read_write(plot=False):
             peak_memory_write.append(tracemalloc.get_traced_memory()[1])
             tracemalloc.stop()
 
-            file_sizes.append(sum(os.stat(os.path.join(directory, f)).st_size for f in filenames))
+            file_sizes.append(
+                sum(os.stat(os.path.join(directory, f)).st_size for f in filenames)
+            )
 
             tracemalloc.start()
             t = time.time()
@@ -214,7 +233,16 @@ def read_write(plot=False):
             elapsed_read.append(time.time() - t)
             peak_memory_read.append(tracemalloc.get_traced_memory()[1])
             tracemalloc.stop()
-            print("{:<22}  {:e} {:e}".format(name, elapsed_write[-1], elapsed_read[-1]))
+            print(
+                "{:<22}  {:e} {:e} {:e} {:e} {:e}".format(
+                    name,
+                    elapsed_write[-1],
+                    elapsed_read[-1],
+                    file_sizes[-1] / 1024.0 ** 2,
+                    peak_memory_write[-1] / 1024.0 ** 2,
+                    peak_memory_read[-1] / 1024.0 ** 2,
+                )
+            )
 
     names = list(formats.keys())
     # convert to MB
