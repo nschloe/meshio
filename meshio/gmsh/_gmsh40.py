@@ -395,11 +395,7 @@ def _write_elements(fh, cells, binary):
         for cell_type, node_idcs in cells.items():
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             numpy.array(
-                [
-                    1,
-                    _geometric_dimension[cell_type],
-                    _meshio_to_gmsh_type[cell_type],
-                ],
+                [1, _geometric_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
                 dtype=c_int,
             ).tofile(fh)
             numpy.array([node_idcs.shape[0]], dtype=c_ulong).tofile(fh)
