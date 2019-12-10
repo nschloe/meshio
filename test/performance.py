@@ -23,8 +23,8 @@ def generate_mesh():
         mesh = pygalmesh.generate_mesh(s, cell_size=2.0e-2, verbose=True)
         # mesh = pygalmesh.generate_mesh(s, cell_size=1.0e-1, verbose=True)
         mesh.cells = {"tetra": mesh.cells["tetra"]}
-        mesh.point_data = {}
-        mesh.cell_data = {}
+        mesh.point_data = []
+        mesh.cell_data = {"tetra": {}}
         mesh.write("cache.xdmf")
     print(mesh)
     return mesh
@@ -121,22 +121,20 @@ def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
     ax[1].set_ylim(ylim)
 
     fig.tight_layout()
-    plt.show()
-    # fig.savefig("memory.svg", transparent=True, bbox_inches="tight")
-    # plt.close()
+    # plt.show()
+    fig.savefig("memory.svg", transparent=True, bbox_inches="tight")
+    plt.close()
 
 
 def read_write(plot=False):
     mesh = generate_mesh()
+    mem_size = mesh.points.nbytes + mesh.cells["tetra"].nbytes
+    mem_size /= 1024.0 ** 2
+    print(f"mem_size: {mem_size:.2f} MB")
 
     formats = {
         "Abaqus": (meshio.abaqus.write, meshio.abaqus.read, ["out.inp"]),
         # "ansys": ".ans",
-        "Gmsh 4.1 (binary)": (
-            lambda f, m: meshio.gmsh.write(f, m, binary=True),
-            meshio.gmsh.read,
-            ["out.msh"],
-        ),
         "CGNS": (meshio.cgns.write, meshio.cgns.read, ["out.cgns"]),
         "Dolfin-XML": (meshio.dolfin.write, meshio.dolfin.read, ["out.xml"]),
         "FLAC3D": (meshio.flac3d.write, meshio.flac3d.read, ["out.f3grid"]),
@@ -145,8 +143,13 @@ def read_write(plot=False):
             meshio.gmsh.read,
             ["out.msh"],
         ),
+        "Gmsh 4.1 (binary)": (
+            lambda f, m: meshio.gmsh.write(f, m, binary=True),
+            meshio.gmsh.read,
+            ["out.msh"],
+        ),
         "MDPA": (meshio.mdpa.write, meshio.mdpa.read, ["out.mdpa"]),
-        "med": (meshio.med.write, meshio.med.read, ["out.med"]),
+        "MED": (meshio.med.write, meshio.med.read, ["out.med"]),
         "Medit": (meshio.medit.write, meshio.medit.read, ["out.mesh"]),
         "MOAB": (meshio.h5m.write, meshio.h5m.read, ["out.h5m"]),
         # # "obj": ".obj",
@@ -257,8 +260,6 @@ def read_write(plot=False):
     peak_memory_write = peak_memory_write / 1024.0 ** 2
     peak_memory_read = numpy.array(peak_memory_read)
     peak_memory_read = peak_memory_read / 1024.0 ** 2
-    mem_size = mesh.points.nbytes + mesh.cells["tetra"].nbytes
-    mem_size /= 1024.0 ** 2
 
     if plot:
         plot_speed(names, elapsed_write, elapsed_read)
