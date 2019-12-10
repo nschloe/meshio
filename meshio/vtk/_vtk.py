@@ -681,8 +681,8 @@ def _write_cells(f, cells, binary):
         # ascii
         for key in cells:
             key_ = key[:7] if key[:7] == "polygon" else key
-            for _ in range(len(cells[key])):
-                f.write("{}\n".format(meshio_to_vtk_type[key_]).encode("utf-8"))
+            numpy.full(len(cells[key]), meshio_to_vtk_type[key_]).tofile(f, sep="\n")
+            f.write("\n".encode("utf-8"))
 
 
 def _write_field_data(f, data, binary):
