@@ -649,24 +649,21 @@ def _write_cells(f, cells, binary):
         for c in cells.values():
             n = c.shape[1]
             dtype = numpy.dtype(">i4")
-            d = numpy.column_stack(
-                [numpy.full(c.shape[0], n, dtype=dtype), c.astype(dtype)],
-            )
             # One must force endianness here:
             # <https://github.com/numpy/numpy/issues/15088>
-            d = d.astype(dtype)
-            f.write(d.tostring())
+            numpy.column_stack(
+                [numpy.full(c.shape[0], n, dtype=dtype), c.astype(dtype)],
+            ).astype(dtype).tofile(f, sep="")
         f.write("\n".encode("utf-8"))
     else:
         # ascii
         for c in cells.values():
             n = c.shape[1]
             # prepend a column with the value n
-            out = numpy.column_stack([numpy.full(c.shape[0], n, dtype=c.dtype), c])
-            fmt = " ".join(["{}"] * out.shape[1])
-            # join them all together as strings
-            out = "\n".join([fmt.format(*row) for row in out]) + "\n"
-            f.write(out.encode("utf-8"))
+            numpy.column_stack([numpy.full(c.shape[0], n, dtype=c.dtype), c]).tofile(
+                f, sep="\n"
+            )
+            f.write("\n".encode("utf-8"))
 
     # write cell types
     f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
@@ -674,15 +671,16 @@ def _write_cells(f, cells, binary):
         for key in cells:
             key_ = key[:7] if key[:7] == "polygon" else key
             vtk_type = meshio_to_vtk_type[key_]
-            d = numpy.full(len(cells[key]), vtk_type, dtype=numpy.dtype(">i4"))
-            f.write(d.tostring())
+            numpy.full(len(cells[key]), vtk_type, dtype=numpy.dtype(">i4")).tofile(
+                f, sep=""
+            )
         f.write("\n".encode("utf-8"))
     else:
         # ascii
         for key in cells:
             key_ = key[:7] if key[:7] == "polygon" else key
-            for _ in range(len(cells[key])):
-                f.write("{}\n".format(meshio_to_vtk_type[key_]).encode("utf-8"))
+            numpy.full(len(cells[key]), meshio_to_vtk_type[key_]).tofile(f, sep="\n")
+            f.write("\n".encode("utf-8"))
 
 
 def _write_field_data(f, data, binary):

@@ -410,15 +410,11 @@ def _write_nodes(fh, points, cells, binary):
                 "Binary Gmsh needs c_double points (got %s). Converting.", points.dtype
             )
             points = points.astype(c_double)
-        fh.write(
-            numpy.array([num_blocks, n, min_tag, max_tag], dtype=c_size_t).tostring()
-        )
-        fh.write(
-            numpy.array([dim_entity, entity_tag, is_parametric], dtype=c_int).tostring()
-        )
-        fh.write(numpy.array([n], dtype=c_size_t).tostring())
-        fh.write(numpy.arange(1, 1 + n, dtype=c_size_t).tostring())
-        fh.write(points.tostring())
+        numpy.array([num_blocks, n, min_tag, max_tag], dtype=c_size_t).tofile(fh)
+        numpy.array([dim_entity, entity_tag, is_parametric], dtype=c_int).tofile(fh)
+        numpy.array([n], dtype=c_size_t).tofile(fh)
+        numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh)
+        points.tofile(fh, sep="")
         fh.write("\n".encode("utf-8"))
     else:
         fh.write(
@@ -456,12 +452,10 @@ def _write_elements(fh, cells, binary):
     min_element_tag = 1
     max_element_tag = total_num_cells
     if binary:
-        fh.write(
-            numpy.array(
-                [num_blocks, total_num_cells, min_element_tag, max_element_tag],
-                dtype=c_size_t,
-            ).tostring()
-        )
+        numpy.array(
+            [num_blocks, total_num_cells, min_element_tag, max_element_tag],
+            dtype=c_size_t,
+        ).tofile(fh)
 
         tag0 = 1
         for cell_type, node_idcs in cells.items():
@@ -470,9 +464,9 @@ def _write_elements(fh, cells, binary):
             dim = _geometric_dimension[cell_type]
             entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
-            fh.write(numpy.array([dim, entity_tag, cell_type], dtype=c_int).tostring())
+            numpy.array([dim, entity_tag, cell_type], dtype=c_int).tofile(fh)
             n = node_idcs.shape[0]
-            fh.write(numpy.array([n], dtype=c_size_t).tostring())
+            numpy.array([n], dtype=c_size_t).tofile(fh)
 
             if node_idcs.dtype != c_size_t:
                 logging.warning(
@@ -488,7 +482,7 @@ def _write_elements(fh, cells, binary):
                     node_idcs + 1,
                 ]
             )
-            fh.write(data.tostring())
+            data.tofile(fh)
             tag0 += n
 
         fh.write("\n".encode("utf-8"))

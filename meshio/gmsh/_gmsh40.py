@@ -351,14 +351,14 @@ def _write_nodes(fh, points, binary):
         # numEntityBlocks(unsigned long) numNodes(unsigned long)
         # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
         # tag(int) x(double) y(double) z(double)
-        fh.write(numpy.array([1, points.shape[0]], dtype=c_ulong).tostring())
-        fh.write(numpy.array([1, dim_entity, type_node], dtype=c_int).tostring())
-        fh.write(numpy.array([points.shape[0]], dtype=c_ulong).tostring())
+        numpy.array([1, points.shape[0]], dtype=c_ulong).tofile(fh)
+        numpy.array([1, dim_entity, type_node], dtype=c_int).tofile(fh)
+        numpy.array([points.shape[0]], dtype=c_ulong).tofile(fh)
         dtype = [("index", c_int), ("x", c_double, (3,))]
         tmp = numpy.empty(len(points), dtype=dtype)
         tmp["index"] = 1 + numpy.arange(len(points))
         tmp["x"] = points
-        fh.write(tmp.tostring())
+        tmp.tofile(fh)
         fh.write("\n".encode("utf-8"))
     else:
         # write all points as one big block
@@ -389,22 +389,16 @@ def _write_elements(fh, cells, binary):
 
     if binary:
         total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-        fh.write(numpy.array([len(cells), total_num_cells], dtype=c_ulong).tostring())
+        numpy.array([len(cells), total_num_cells], dtype=c_ulong).tofile(fh)
 
         consecutive_index = 0
         for cell_type, node_idcs in cells.items():
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
-            fh.write(
-                numpy.array(
-                    [
-                        1,
-                        _geometric_dimension[cell_type],
-                        _meshio_to_gmsh_type[cell_type],
-                    ],
-                    dtype=c_int,
-                ).tostring()
-            )
-            fh.write(numpy.array([node_idcs.shape[0]], dtype=c_ulong).tostring())
+            numpy.array(
+                [1, _geometric_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
+                dtype=c_int,
+            ).tofile(fh)
+            numpy.array([node_idcs.shape[0]], dtype=c_ulong).tofile(fh)
 
             if node_idcs.dtype != c_int:
                 raise WriteError()
@@ -419,7 +413,7 @@ def _write_elements(fh, cells, binary):
                     node_idcs + 1,
                 ]
             )
-            fh.write(data.tostring())
+            data.tofile(fh)
             consecutive_index += len(node_idcs)
 
         fh.write("\n".encode("utf-8"))
