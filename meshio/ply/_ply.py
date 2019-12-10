@@ -388,7 +388,9 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 if key not in cells:
                     continue
                 dat = cells[key]
-                out = numpy.column_stack([numpy.full(dat.shape[0], dat.shape[1]), dat])
+                out = numpy.column_stack(
+                    [numpy.full(dat.shape[0], dat.shape[1], dtype=dat.dtype), dat]
+                )
                 # savetxt is slower
                 # numpy.savetxt(fh, out, "%d  %d %d %d")
                 fmt = " ".join(["{}"] * out.shape[1])
