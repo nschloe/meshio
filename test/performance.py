@@ -1,6 +1,7 @@
 import os
 import tempfile
 import time
+import tracemalloc
 
 import matplotlib.pyplot as plt
 import meshio
@@ -72,6 +73,42 @@ def plot_file_sizes(names, file_sizes, mem_size):
     plt.grid()
     plt.show()
     # plt.savefig("filesizes.svg", transparent=True, bbox_inches="tight")
+
+
+def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
+    names = numpy.asarray(names)
+    peak_memory_write = numpy.asarray(peak_memory_write)
+    peak_memory_read = numpy.asarray(peak_memory_read)
+
+    fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+
+    idx = numpy.argsort(peak_memory_write)[::-1]
+    ax[0].barh(range(len(names)), peak_memory_write[idx], align="center")
+    ax[0].set_yticks(range(len(names)))
+    ax[0].set_yticklabels(names[idx])
+    ax[0].set_xlabel("peak memory [MB]")
+    ax[0].set_title("write")
+    ax[0].grid()
+    # plot memsize of mesh
+    ylim = ax[0].get_ylim()
+    ax[0].plot([mem_size, mem_size], [-2, len(names) + 2], "C3", linewidth=2.0, zorder=0)
+    ax[0].set_ylim(ylim)
+
+    idx = numpy.argsort(peak_memory_read)[::-1]
+    ax[1].barh(range(len(names)), peak_memory_read[idx], align="center")
+    ax[1].set_yticks(range(len(names)))
+    ax[1].set_yticklabels(names[idx])
+    ax[1].set_xlabel("peak memory [MB]")
+    ax[1].set_title("read")
+    ax[1].grid()
+    # plot memsize of mesh
+    ylim = ax[1].get_ylim()
+    ax[1].plot([mem_size, mem_size], [-2, len(names) + 2], "C3", linewidth=2.0, zorder=0)
+    ax[1].set_ylim(ylim)
+
+    fig.tight_layout()
+    plt.show()
+    # fig.savefig("memory.svg", transparent=True, bbox_inches="tight")
 
 
 def read_write(plot=False):
@@ -148,86 +185,11 @@ def read_write(plot=False):
         "TetGen": (meshio.tetgen.write, meshio.tetgen.read, ["out.node", "out.ele"],),
     }
 
-    # formats = {
-    #     "Abaqus": (meshio.abaqus.write, meshio.abaqus.read),
-    #     "ANSYS (ASCII)": (
-    #         lambda f, m: meshio.ansys.write(f, m, binary=False),
-    #         meshio.ansys.read,
-    #     ),
-    #     "ANSYS (binary)": (
-    #         lambda f, m: meshio.ansys.write(f, m, binary=True),
-    #         meshio.ansys.read,
-    #     ),
-    #     "Exodus": (meshio.exodus.write, meshio.exodus.read),
-    #     "Dolfin XML": (meshio.dolfin.write, meshio.dolfin.read),
-    #     "Gmsh 4.1 (ASCII)": (
-    #         lambda f, m: meshio.gmsh.write(f, m, binary=False),
-    #         meshio.gmsh.read,
-    #     ),
-    #     "Gmsh 4.1 (binary)": (
-    #         lambda f, m: meshio.gmsh.write(f, m, binary=True),
-    #         meshio.gmsh.read,
-    #     ),
-    #     "MDPA": (meshio.mdpa.write, meshio.mdpa.read),
-    #     "MED": (meshio.med.write, meshio.med.read),
-    #     "Medit": (meshio.medit.write, meshio.medit.read),
-    #     "MOAB": (meshio.h5m.write, meshio.h5m.read),
-    #     "Nastran": (meshio.nastran.write, meshio.nastran.read),
-    #     # "OFF": (meshio.off.write, meshio.off.read),
-    #     "Permas": (meshio.permas.write, meshio.permas.read),
-    #     "PLY (ASCII)": (
-    #         lambda f, m: meshio.ply.write(f, m, binary=False),
-    #         meshio.ply.read,
-    #     ),
-    #     "PLY (binary)": (
-    #         lambda f, m: meshio.ply.write(f, m, binary=True),
-    #         meshio.ply.read,
-    #     ),
-    #     "STL (ASCII)": (
-    #         lambda f, m: meshio.stl.write(f, m, binary=False),
-    #         meshio.stl.read,
-    #     ),
-    #     "STL (binary)": (
-    #         lambda f, m: meshio.stl.write(f, m, binary=True),
-    #         meshio.stl.read,
-    #     ),
-    #     "VTK (ASCII)": (
-    #         lambda f, m: meshio.vtk.write(f, m, binary=False),
-    #         meshio.vtk.read,
-    #     ),
-    #     "VTK (binary)": (
-    #         lambda f, m: meshio.vtk.write(f, m, binary=True),
-    #         meshio.vtk.read,
-    #     ),
-    #     "VTU (ASCII)": (
-    #         lambda f, m: meshio.vtu.write(f, m, binary=False),
-    #         meshio.vtu.read,
-    #     ),
-    #     "VTU (binary)": (
-    #         lambda f, m: meshio.vtu.write(f, m, binary=True),
-    #         meshio.vtu.read,
-    #     ),
-    #     "XDMF (XML)": (
-    #         lambda f, m: meshio.xdmf.write(f, m, data_format="XML"),
-    #         meshio.xdmf.read,
-    #     ),
-    #     "XDMF (binary)": (
-    #         lambda f, m: meshio.xdmf.write(f, m, data_format="Binary"),
-    #         meshio.xdmf.read,
-    #     ),
-    #     "XDMF (HDF, uncompressed)": (
-    #         lambda f, m: meshio.xdmf.write(f, m, data_format="HDF", compression=None),
-    #         meshio.xdmf.read,
-    #     ),
-    #     "XDMF (HDF, GZIP)": (
-    #         lambda f, m: meshio.xdmf.write(f, m, data_format="HDF", compression="gzip"),
-    #         meshio.xdmf.read,
-    #     ),
-    # }
-
     elapsed_write = []
     elapsed_read = []
     file_sizes = []
+    peak_memory_write = []
+    peak_memory_read = []
 
     print()
     print("format                  write (s)    read(s)   file size")
@@ -235,27 +197,40 @@ def read_write(plot=False):
     with tempfile.TemporaryDirectory() as directory:
         for name, (writer, reader, filenames) in formats.items():
             filename = os.path.join(directory, filenames[0])
+
+            tracemalloc.start()
             t = time.time()
             writer(filename, mesh)
+            # snapshot = tracemalloc.take_snapshot()
             elapsed_write.append(time.time() - t)
+            peak_memory_write.append(tracemalloc.get_traced_memory()[1])
+            tracemalloc.stop()
 
             file_sizes.append(sum(os.stat(os.path.join(directory, f)).st_size for f in filenames))
 
+            tracemalloc.start()
             t = time.time()
             reader(filename)
             elapsed_read.append(time.time() - t)
+            peak_memory_read.append(tracemalloc.get_traced_memory()[1])
+            tracemalloc.stop()
             print("{:<22}  {:e} {:e}".format(name, elapsed_write[-1], elapsed_read[-1]))
 
     names = list(formats.keys())
     # convert to MB
     file_sizes = numpy.array(file_sizes)
     file_sizes = file_sizes / 1024.0 ** 2
+    peak_memory_write = numpy.array(peak_memory_write)
+    peak_memory_write = peak_memory_write / 1024.0 ** 2
+    peak_memory_read = numpy.array(peak_memory_read)
+    peak_memory_read = peak_memory_read / 1024.0 ** 2
     mem_size = mesh.points.nbytes + mesh.cells["tetra"].nbytes
     mem_size /= 1024.0 ** 2
 
     if plot:
         plot_speed(names, elapsed_write, elapsed_read)
         plot_file_sizes(names, file_sizes, mem_size)
+        plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size)
 
 
 if __name__ == "__main__":
