@@ -96,7 +96,7 @@ def read_write(plot=False):
     elapsed_read = []
 
     print()
-    print("format             write (s)    read(s)")
+    print("format                  write (s)    read(s)")
     print()
     for name, (writer, reader) in formats.items():
         filename = tempfile.NamedTemporaryFile().name
@@ -107,7 +107,7 @@ def read_write(plot=False):
         t = time.time()
         reader(filename)
         elapsed_read.append(time.time() - t)
-        print("{:<17}  {:e} {:e}".format(name, elapsed_write[-1], elapsed_read[-1]))
+        print("{:<22}  {:e} {:e}".format(name, elapsed_write[-1], elapsed_read[-1]))
 
     if plot:
         import numpy as np
@@ -136,7 +136,7 @@ def read_write(plot=False):
         ax[1].grid()
 
         fig.tight_layout()
-        plt.show()
+        # plt.show()
         fig.savefig("performance.svg", transparent=True, bbox_inches="tight")
 
 
