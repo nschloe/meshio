@@ -134,7 +134,16 @@ def read_write(plot=False):
 
     formats = {
         "Abaqus": (meshio.abaqus.write, meshio.abaqus.read, ["out.inp"]),
-        # "ansys": ".ans",
+        "Ansys (ASCII)": (
+            lambda f, m: meshio.ansys.write(f, m, binary=False),
+            meshio.ansys.read,
+            ["out.ans"],
+        ),
+        # "Ansys (binary)": (
+        #     lambda f, m: meshio.ansys.write(f, m, binary=True),
+        #     meshio.ansys.read,
+        #     ["out.ans"],
+        # ),
         "CGNS": (meshio.cgns.write, meshio.cgns.read, ["out.cgns"]),
         "Dolfin-XML": (meshio.dolfin.write, meshio.dolfin.read, ["out.xml"]),
         "FLAC3D": (meshio.flac3d.write, meshio.flac3d.read, ["out.f3grid"]),
@@ -202,6 +211,12 @@ def read_write(plot=False):
             ["out.xdmf"],
         ),
     }
+
+    # formats = {
+    #     # "VTK (ASCII)": formats["VTK (ASCII)"],
+    #     # "VTK (binary)": formats["VTK (binary)"],
+    #     "Gmsh 4.1 (binary)": formats["Gmsh 4.1 (binary)"],
+    # }
 
     elapsed_write = []
     elapsed_read = []
