@@ -109,7 +109,6 @@ def write_xml(filename, root, pretty_print=False):
 
     tree = ET.ElementTree(root)
     tree.write(filename, pretty_print=pretty_print)
-    return
 
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html

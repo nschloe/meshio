@@ -366,6 +366,9 @@ def _chunk_it(array, n):
 
 
 def write(filename, mesh, binary=True, pretty_xml=True):
+    # Writing XML with an etree required first transforming the (potentially large)
+    # arrays into string, which are much larger in memory still. This makes this writer
+    # very memory hungry. See <https://stackoverflow.com/q/59272477/353337>.
     from lxml import etree as ET
 
     if not binary:
