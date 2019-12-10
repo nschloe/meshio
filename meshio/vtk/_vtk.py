@@ -658,7 +658,7 @@ def _write_cells(f, cells, binary):
         for c in cells.values():
             n = c.shape[1]
             # prepend a column with the value n
-            out = numpy.column_stack([numpy.full(c.shape[0], n), c])
+            out = numpy.column_stack([numpy.full(c.shape[0], n, dtype=c.dtype), c])
             fmt = " ".join(["{}"] * out.shape[1])
             # join them all together as strings
             out = "\n".join([fmt.format(*row) for row in out]) + "\n"
