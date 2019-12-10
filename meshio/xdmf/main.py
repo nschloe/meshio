@@ -303,7 +303,15 @@ class XdmfReader:
 
 
 class XdmfWriter:
-    def __init__(self, filename, mesh, pretty_xml=True, data_format="HDF"):
+    def __init__(
+        self,
+        filename,
+        mesh,
+        pretty_xml=True,
+        data_format="HDF",
+        compression=None,
+        compression_opts=None,
+    ):
         from lxml import etree as ET
 
         if data_format not in ["XML", "Binary", "HDF"]:
@@ -315,6 +323,8 @@ class XdmfWriter:
         self.filename = filename
         self.data_format = data_format
         self.data_counter = 0
+        self.compression = compression
+        self.compression_opts = compression_opts
 
         if data_format == "HDF":
             import h5py
@@ -360,7 +370,12 @@ class XdmfWriter:
             raise WriteError()
         name = "data{}".format(self.data_counter)
         self.data_counter += 1
-        self.h5_file.create_dataset(name, data=data)
+        self.h5_file.create_dataset(
+            name,
+            data=data,
+            compression=self.compression,
+            compression_opts=self.compression_opts,
+        )
         return os.path.basename(self.h5_filename) + ":/" + name
 
     def points(self, grid, points):
@@ -387,7 +402,6 @@ class XdmfWriter:
             Precision=prec,
         )
         data_item.text = self.numpy_to_xml_string(points)
-        return
 
     def cells(self, cells_in, grid):
         from lxml import etree as ET

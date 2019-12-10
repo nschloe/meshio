@@ -83,7 +83,7 @@ def _read_header(f):
     return fmt_version, data_size, is_ascii
 
 
-def write(filename, mesh, fmt_version, binary=True):
+def write(filename, mesh, fmt_version="4.1", binary=True):
     """Writes a Gmsh msh file.
     """
     try:

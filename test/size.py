@@ -1,5 +1,6 @@
 import os
 
+import meshio
 import matplotlib.pyplot as plt
 import numpy
 import pygalmesh
@@ -13,38 +14,58 @@ mesh.cell_data = {}
 print("num points: {}".format(mesh.points.shape[0]))
 
 formats = {
-    "vtu": ".vtu",
-    "vtk": ".vtk",
-    "gmsh": ".msh",
-    "abaqus": ".inp",
+    "VTU (binary)": (lambda f, m: meshio.vtu.write(f, m, binary=True), ["out.vtu"]),
+    "VTU (ASCII)": (lambda f, m: meshio.vtu.write(f, m, binary=False), ["out.vtu"]),
+    "VTK (binary)": (lambda f, m: meshio.vtk.write(f, m, binary=True), ["out.vtk"]),
+    "VTK (ASCII)": (lambda f, m: meshio.vtk.write(f, m, binary=False), ["out.vtk"]),
+    "Gmsh 4.1 (binary)": (
+        lambda f, m: meshio.gmsh.write(f, m, binary=True),
+        ["out.msh"],
+    ),
+    "Gmsh 4.1 (ASCII)": (
+        lambda f, m: meshio.gmsh.write(f, m, binary=False),
+        ["out.msh"],
+    ),
+    "Abaqus": (meshio.abaqus.write, ["out.inp"]),
     # "ansys": ".ans",
-    "cgns": ".cgns",
-    "dolfin-xml": ".xml",
-    "mdpa": ".mdpa",
-    "med": ".med",
-    "medit": ".mesh",
-    "moab": ".h5m",
-    # "obj": ".obj",
-    # "ply": ".ply",
-    # "stl": ".stl",
-    "nastran": ".bdf",
-    # "off": ".off",
-    # "exodus": ".e",
-    "flac3d": ".f3grid",
-    "permas": ".dato",
-    # "wkt": ".wkt",
+    "CGNS": (meshio.cgns.write, ["out.cgns"]),
+    "Dolfin-XML": (meshio.dolfin.write, ["out.xml"]),
+    "MDPA": (meshio.mdpa.write, ["out.mdpa"]),
+    "med": (meshio.med.write, ["out.med"]),
+    "Medit": (meshio.medit.write, ["out.mesh"]),
+    "MOAB": (meshio.h5m.write, ["out.h5m"]),
+    # # "obj": ".obj",
+    # # "ply": ".ply",
+    # # "stl": ".stl",
+    "Nastran": (meshio.nastran.write, ["out.bdf"]),
+    # # "off": ".off",
+    # # "exodus": ".e",
+    "FLAC3D": (meshio.flac3d.write, ["out.f3grid"]),
+    "Permas": (meshio.permas.write, ["out.dato"]),
+    # # "wkt": ".wkt",
+    "XDMF (XML)": (
+        lambda f, m: meshio.xdmf.write(f, m, data_format="XML"),
+        ["out.xdmf"],
+    ),
+    "XDMF (HDF, uncompressed)": (
+        lambda f, m: meshio.xdmf.write(f, m, data_format="HDF", compression=None),
+        ["out.xdmf", "out.h5"],
+    ),
+    "XDMF (HDF, GZIP)": (
+        lambda f, m: meshio.xdmf.write(f, m, data_format="HDF", compression="gzip"),
+        ["out.xdmf", "out.h5"],
+    ),
+    "XDMF (binary)": (
+        lambda f, m: meshio.xdmf.write(f, m, data_format="Binary"),
+        ["out.xdmf", "out0.bin", "out1.bin"],
+    ),
+    "TetGen": (meshio.tetgen.write, ["out.node", "out.ele"],),
 }
 
 file_sizes = {}
-for name, ext in formats.items():
-    mesh.write(f"out{ext}")
-    file_sizes[name] = os.stat(f"out{ext}").st_size
-
-
-mesh.write("out.xdmf")
-file_sizes["xdmf"] = os.stat("out.xdmf").st_size + os.stat("out.h5").st_size
-mesh.write("out.node")
-file_sizes["tetgen"] = os.stat("out.node").st_size + os.stat("out.ele").st_size
+for name, (fun, filenames) in formats.items():
+    fun(filenames[0], mesh)
+    file_sizes[name] = sum(os.stat(f).st_size for f in filenames)
 
 mem_size = mesh.points.nbytes + mesh.cells["tetra"].nbytes
 
