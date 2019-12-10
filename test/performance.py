@@ -16,12 +16,16 @@ def generate_mesh():
     # import meshzoo
     # points, cells = meshzoo.rectangle(nx=300, ny=300)
     # return meshio.Mesh(points, {"triangle": cells})
-    s = pygalmesh.Ball([0, 0, 0], 1.0)
-    mesh = pygalmesh.generate_mesh(s, cell_size=2.0e-2, verbose=True)
-    # mesh = pygalmesh.generate_mesh(s, cell_size=1.0e-1, verbose=True)
-    mesh.cells = {"tetra": mesh.cells["tetra"]}
-    mesh.point_data = {}
-    mesh.cell_data = {}
+    if os.path.isfile("cache.xdmf"):
+        mesh = meshio.read("cache.xdmf")
+    else:
+        s = pygalmesh.Ball([0, 0, 0], 1.0)
+        mesh = pygalmesh.generate_mesh(s, cell_size=2.0e-2, verbose=True)
+        # mesh = pygalmesh.generate_mesh(s, cell_size=1.0e-1, verbose=True)
+        mesh.cells = {"tetra": mesh.cells["tetra"]}
+        mesh.point_data = {}
+        mesh.cell_data = {}
+        mesh.write("cache.xdmf")
     print(mesh)
     return mesh
 
@@ -117,49 +121,30 @@ def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
     ax[1].set_ylim(ylim)
 
     fig.tight_layout()
-    # plt.show()
-    fig.savefig("memory.svg", transparent=True, bbox_inches="tight")
-    plt.close()
+    plt.show()
+    # fig.savefig("memory.svg", transparent=True, bbox_inches="tight")
+    # plt.close()
 
 
 def read_write(plot=False):
     mesh = generate_mesh()
 
     formats = {
-        "VTU (binary)": (
-            lambda f, m: meshio.vtu.write(f, m, binary=True),
-            meshio.vtu.read,
-            ["out.vtu"],
-        ),
-        "VTU (ASCII)": (
-            lambda f, m: meshio.vtu.write(f, m, binary=False),
-            meshio.vtu.read,
-            ["out.vtu"],
-        ),
-        "VTK (binary)": (
-            lambda f, m: meshio.vtk.write(f, m, binary=True),
-            meshio.vtk.read,
-            ["out.vtk"],
-        ),
-        "VTK (ASCII)": (
-            lambda f, m: meshio.vtk.write(f, m, binary=False),
-            meshio.vtk.read,
-            ["out.vtk"],
-        ),
+        "Abaqus": (meshio.abaqus.write, meshio.abaqus.read, ["out.inp"]),
+        # "ansys": ".ans",
         "Gmsh 4.1 (binary)": (
             lambda f, m: meshio.gmsh.write(f, m, binary=True),
             meshio.gmsh.read,
             ["out.msh"],
         ),
+        "CGNS": (meshio.cgns.write, meshio.cgns.read, ["out.cgns"]),
+        "Dolfin-XML": (meshio.dolfin.write, meshio.dolfin.read, ["out.xml"]),
+        "FLAC3D": (meshio.flac3d.write, meshio.flac3d.read, ["out.f3grid"]),
         "Gmsh 4.1 (ASCII)": (
             lambda f, m: meshio.gmsh.write(f, m, binary=False),
             meshio.gmsh.read,
             ["out.msh"],
         ),
-        "Abaqus": (meshio.abaqus.write, meshio.abaqus.read, ["out.inp"]),
-        # "ansys": ".ans",
-        "CGNS": (meshio.cgns.write, meshio.cgns.read, ["out.cgns"]),
-        "Dolfin-XML": (meshio.dolfin.write, meshio.dolfin.read, ["out.xml"]),
         "MDPA": (meshio.mdpa.write, meshio.mdpa.read, ["out.mdpa"]),
         "med": (meshio.med.write, meshio.med.read, ["out.med"]),
         "Medit": (meshio.medit.write, meshio.medit.read, ["out.mesh"]),
@@ -170,30 +155,49 @@ def read_write(plot=False):
         "Nastran": (meshio.nastran.write, meshio.nastran.read, ["out.bdf"]),
         # # "off": ".off",
         # # "exodus": ".e",
-        "FLAC3D": (meshio.flac3d.write, meshio.flac3d.read, ["out.f3grid"]),
         "Permas": (meshio.permas.write, meshio.permas.read, ["out.dato"]),
         # # "wkt": ".wkt",
-        "XDMF (XML)": (
-            lambda f, m: meshio.xdmf.write(f, m, data_format="XML"),
-            meshio.xdmf.read,
-            ["out.xdmf"],
+        "TetGen": (meshio.tetgen.write, meshio.tetgen.read, ["out.node", "out.ele"],),
+        "VTK (binary)": (
+            lambda f, m: meshio.vtk.write(f, m, binary=True),
+            meshio.vtk.read,
+            ["out.vtk"],
         ),
-        "XDMF (HDF, uncompressed)": (
-            lambda f, m: meshio.xdmf.write(f, m, data_format="HDF", compression=None),
-            meshio.xdmf.read,
-            ["out.xdmf", "out.h5"],
+        "VTK (ASCII)": (
+            lambda f, m: meshio.vtk.write(f, m, binary=False),
+            meshio.vtk.read,
+            ["out.vtk"],
         ),
-        "XDMF (HDF, GZIP)": (
-            lambda f, m: meshio.xdmf.write(f, m, data_format="HDF", compression="gzip"),
-            meshio.xdmf.read,
-            ["out.xdmf", "out.h5"],
+        "VTU (binary)": (
+            lambda f, m: meshio.vtu.write(f, m, binary=True),
+            meshio.vtu.read,
+            ["out.vtu"],
+        ),
+        "VTU (ASCII)": (
+            lambda f, m: meshio.vtu.write(f, m, binary=False),
+            meshio.vtu.read,
+            ["out.vtu"],
         ),
         "XDMF (binary)": (
             lambda f, m: meshio.xdmf.write(f, m, data_format="Binary"),
             meshio.xdmf.read,
             ["out.xdmf", "out0.bin", "out1.bin"],
         ),
-        "TetGen": (meshio.tetgen.write, meshio.tetgen.read, ["out.node", "out.ele"],),
+        "XDMF (HDF, GZIP)": (
+            lambda f, m: meshio.xdmf.write(f, m, data_format="HDF", compression="gzip"),
+            meshio.xdmf.read,
+            ["out.xdmf", "out.h5"],
+        ),
+        "XDMF (HDF, uncompressed)": (
+            lambda f, m: meshio.xdmf.write(f, m, data_format="HDF", compression=None),
+            meshio.xdmf.read,
+            ["out.xdmf", "out.h5"],
+        ),
+        "XDMF (XML)": (
+            lambda f, m: meshio.xdmf.write(f, m, data_format="XML"),
+            meshio.xdmf.read,
+            ["out.xdmf"],
+        ),
     }
 
     elapsed_write = []
