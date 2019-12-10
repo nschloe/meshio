@@ -4,9 +4,10 @@ import time
 import tracemalloc
 
 import matplotlib.pyplot as plt
-import meshio
 import numpy
 import pygalmesh
+
+import meshio
 
 
 def generate_mesh():
