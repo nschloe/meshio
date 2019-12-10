@@ -80,14 +80,20 @@ idx = numpy.argsort(file_sizes)
 file_sizes = [file_sizes[i] for i in idx]
 labels = [labels[i] for i in idx]
 
-plt.bar(range(len(file_sizes)), file_sizes, align="center")
-xlim = plt.gca().get_xlim()
-plt.plot([-2, len(file_sizes) + 2], [mem_size, mem_size], "C3", linewidth=2.0, zorder=0)
-plt.gca().set_xlim(xlim)
-plt.gca().set_xticks(range(len(file_sizes)))
-plt.gca().set_xticklabels(labels, rotation=90)
-plt.gca().set_ylabel("file size [MB]")
-plt.gca().set_title("file sizes")
+
+ax = plt.gca()
+y_pos = numpy.arange(len(file_sizes))
+ax.barh(y_pos, file_sizes, align='center')
+#
+ylim = ax.get_ylim()
+plt.plot([mem_size, mem_size], [-2, len(file_sizes) + 2], "C3", linewidth=2.0, zorder=0)
+ax.set_ylim(ylim)
+#
+ax.set_yticks(y_pos)
+ax.set_yticklabels(labels)
+ax.invert_yaxis()  # labels read top-to-bottom
+ax.set_xlabel('file size [MB]')
+ax.set_title("file sizes")
 plt.grid()
 # plt.show()
 plt.savefig("filesizes.svg", transparent=True, bbox_inches="tight")
