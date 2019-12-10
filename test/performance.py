@@ -35,21 +35,21 @@ def read_write(plot=False):
             lambda f, m: meshio.gmsh.write(f, m, binary=True),
             meshio.gmsh.read,
         ),
-        # "MDPA": (meshio.mdpa.write, meshio.mdpa.read),
+        "MDPA": (meshio.mdpa.write, meshio.mdpa.read),
         "MED": (meshio.med.write, meshio.med.read),
         "Medit": (meshio.medit.write, meshio.medit.read),
         "MOAB": (meshio.h5m.write, meshio.h5m.read),
-        # "Nastran": (meshio.nastran.write, meshio.nastran.read),
+        "Nastran": (meshio.nastran.write, meshio.nastran.read),
         # "OFF": (meshio.off.write, meshio.off.read),
         "Permas": (meshio.permas.write, meshio.permas.read),
-        # "PLY (ASCII)": (
-        #     lambda f, m: meshio.ply.write(f, m, binary=False),
-        #     meshio.ply.read,
-        # ),
-        # "PLY (binary)": (
-        #     lambda f, m: meshio.ply.write(f, m, binary=True),
-        #     meshio.ply.read,
-        # ),
+        "PLY (ASCII)": (
+            lambda f, m: meshio.ply.write(f, m, binary=False),
+            meshio.ply.read,
+        ),
+        "PLY (binary)": (
+            lambda f, m: meshio.ply.write(f, m, binary=True),
+            meshio.ply.read,
+        ),
         "STL (ASCII)": (
             lambda f, m: meshio.stl.write(f, m, binary=False),
             meshio.stl.read,
@@ -58,10 +58,10 @@ def read_write(plot=False):
             lambda f, m: meshio.stl.write(f, m, binary=True),
             meshio.stl.read,
         ),
-        # "VTK (ASCII)": (
-        #     lambda f, m: meshio.vtk.write(f, m, binary=False),
-        #     meshio.vtk.read,
-        # ),
+        "VTK (ASCII)": (
+            lambda f, m: meshio.vtk.write(f, m, binary=False),
+            meshio.vtk.read,
+        ),
         "VTK (binary)": (
             lambda f, m: meshio.vtk.write(f, m, binary=True),
             meshio.vtk.read,
@@ -136,7 +136,7 @@ def read_write(plot=False):
         ax[1].grid()
 
         fig.tight_layout()
-        # plt.show()
+        plt.show()
         fig.savefig("performance.svg", transparent=True, bbox_inches="tight")
 
 

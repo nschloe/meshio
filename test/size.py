@@ -83,7 +83,7 @@ labels = [labels[i] for i in idx]
 
 ax = plt.gca()
 y_pos = numpy.arange(len(file_sizes))
-ax.barh(y_pos, file_sizes, align='center')
+ax.barh(y_pos, file_sizes, align="center")
 #
 ylim = ax.get_ylim()
 plt.plot([mem_size, mem_size], [-2, len(file_sizes) + 2], "C3", linewidth=2.0, zorder=0)
@@ -92,7 +92,7 @@ ax.set_ylim(ylim)
 ax.set_yticks(y_pos)
 ax.set_yticklabels(labels)
 ax.invert_yaxis()  # labels read top-to-bottom
-ax.set_xlabel('file size [MB]')
+ax.set_xlabel("file size [MB]")
 ax.set_title("file sizes")
 plt.grid()
 # plt.show()
