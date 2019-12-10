@@ -220,10 +220,11 @@ def write(filename, mesh, add_global_ids=True):
         global_id += len(data)
 
     # add cell data
-    if mesh.cell_data:
-        tags = elem_group.create_group("tags")
-        for key, value in mesh.cell_data.items():
-            tags.create_dataset(key, data=value)
+    for cell_type, cd in mesh.cell_data.items():
+        if cd:
+            tags = elem_group.create_group("tags")
+            for key, value in cd.items():
+                tags.create_dataset(key, data=value)
 
     # add empty set -- MOAB wants this
     sets = tstt.create_group("sets")
