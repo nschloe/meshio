@@ -113,7 +113,7 @@ def _read_cells(f, line):
         # dead zone
         return None, None
 
-    element_type_to_key_num_nodes = {
+    key, num_nodes_per_cell = {
         0: ("mixed", None),
         1: ("triangle", 3),
         2: ("tetra", 4),
@@ -121,12 +121,10 @@ def _read_cells(f, line):
         4: ("hexahedron", 8),
         5: ("pyra", 5),
         6: ("wedge", 6),
-    }
+    }[element_type]
 
-    key, num_nodes_per_cell = element_type_to_key_num_nodes[element_type]
-
-    # Skip to the opening `(` and make sure that there's no non-whitespace
-    # character between the last closing bracket and the `(`.
+    # Skip to the opening `(` and make sure that there's no non-whitespace character
+    # between the last closing bracket and the `(`.
     if line.strip()[-1] != "(":
         c = None
         while True:
