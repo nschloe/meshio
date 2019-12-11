@@ -10,7 +10,6 @@ from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
-from .._exceptions import ReadError
 
 meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
 
