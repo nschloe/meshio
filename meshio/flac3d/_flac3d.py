@@ -10,6 +10,7 @@ from .._exceptions import WriteError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
+from .._exceptions import ReadError
 
 meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
 
@@ -106,7 +107,8 @@ def read_buffer(f):
                 mapper[cid].append(zidx)
             field_data[name] = numpy.array([zidx, 3])
             slots.add(slot)
-            assert len(slots) == 1, "Multiple slots are not supported."
+            if len(slots) > 1:
+                raise ReadError("Multiple slots are not supported")
         line = f.readline()
 
     if zidx:
