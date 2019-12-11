@@ -6,11 +6,10 @@ import time
 import numpy
 
 from ..__about__ import __version__ as version
-from .._exceptions import WriteError
+from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
-from .._exceptions import ReadError
 
 meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
 
