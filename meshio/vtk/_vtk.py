@@ -502,14 +502,13 @@ def translate_cells(data, types, cell_data_raw):
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
 
     # Collect types into bins.
-    # See <https://stackoverflow.com/q/47310359/353337> for better
-    # alternatives.
+    # See <https://stackoverflow.com/q/47310359/353337> for better alternatives.
     bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
     has_polygon = meshio_to_vtk_type["polygon"] in bins
 
-    # Deduct offsets from the cell types. This is much faster than manually
-    # going through the data array. Slight disadvantage: This doesn't work for
-    # cells with a custom number of points.
+    # Deduct offsets from the cell types. This is much faster than manually going
+    # through the data array. Slight disadvantage: This doesn't work for cells with a
+    # custom number of points.
     numnodes = numpy.empty(len(types), dtype=int)
     if has_polygon:
         # If some polygons are in the VTK file, loop over the cells
@@ -648,21 +647,22 @@ def _write_cells(f, cells, binary):
     if binary:
         for c in cells.values():
             n = c.shape[1]
-            d = numpy.column_stack([numpy.full(c.shape[0], n), c]).astype(
-                numpy.dtype(">i4")
-            )
-            f.write(d.tostring())
+            dtype = numpy.dtype(">i4")
+            # One must force endianness here:
+            # <https://github.com/numpy/numpy/issues/15088>
+            numpy.column_stack(
+                [numpy.full(c.shape[0], n, dtype=dtype), c.astype(dtype)],
+            ).astype(dtype).tofile(f, sep="")
         f.write("\n".encode("utf-8"))
     else:
         # ascii
         for c in cells.values():
             n = c.shape[1]
             # prepend a column with the value n
-            out = numpy.column_stack([numpy.full(c.shape[0], n), c])
-            fmt = " ".join(["{}"] * out.shape[1])
-            # join them all together as strings
-            out = "\n".join([fmt.format(*row) for row in out]) + "\n"
-            f.write(out.encode("utf-8"))
+            numpy.column_stack([numpy.full(c.shape[0], n, dtype=c.dtype), c]).tofile(
+                f, sep="\n"
+            )
+            f.write("\n".encode("utf-8"))
 
     # write cell types
     f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
@@ -670,15 +670,16 @@ def _write_cells(f, cells, binary):
         for key in cells:
             key_ = key[:7] if key[:7] == "polygon" else key
             vtk_type = meshio_to_vtk_type[key_]
-            d = numpy.full(len(cells[key]), vtk_type, dtype=numpy.dtype(">i4"))
-            f.write(d.tostring())
+            numpy.full(len(cells[key]), vtk_type, dtype=numpy.dtype(">i4")).tofile(
+                f, sep=""
+            )
         f.write("\n".encode("utf-8"))
     else:
         # ascii
         for key in cells:
             key_ = key[:7] if key[:7] == "polygon" else key
-            for _ in range(len(cells[key])):
-                f.write("{}\n".format(meshio_to_vtk_type[key_]).encode("utf-8"))
+            numpy.full(len(cells[key]), meshio_to_vtk_type[key_]).tofile(f, sep="\n")
+            f.write("\n".encode("utf-8"))
 
 
 def _write_field_data(f, data, binary):

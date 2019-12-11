@@ -80,7 +80,7 @@ def write(filename, mesh):
         node_filename = base + ".node"
         ele_filename = filename
     else:
-        raise WriteError()
+        raise WriteError("Must specify .node or .ele file. Got {}.".format(filename))
 
     if mesh.points.shape[1] != 3:
         raise WriteError("Can only write 3D points")

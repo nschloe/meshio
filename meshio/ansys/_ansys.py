@@ -422,7 +422,7 @@ def write(filename, mesh, binary=True):
             ).encode("utf8")
         )
         if binary:
-            fh.write(mesh.points.tostring())
+            mesh.points.tofile(fh)
             fh.write("\n)".encode("utf8"))
             fh.write("End of Binary Section 3010)\n".encode("utf8"))
         else:
@@ -455,7 +455,7 @@ def write(filename, mesh, binary=True):
                 ).encode("utf8")
             )
             if binary:
-                fh.write((values + first_node_index).tostring())
+                (values + first_node_index).tofile(fh)
                 fh.write("\n)".encode("utf8"))
                 fh.write(("End of Binary Section {})\n".format(key)).encode("utf8"))
             else:

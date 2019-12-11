@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import pytest
@@ -32,6 +33,7 @@ def test_write_str(mesh, tmpdir):
     assert Path(tmp_path).is_file()
 
 
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="Fails with 3.5")
 def test_write_pathlike(mesh, tmpdir):
     tmp_path = Path(tmpdir.join("tmp.obj"))
     meshio.write(tmp_path, mesh)
