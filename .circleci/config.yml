@@ -39,18 +39,17 @@ jobs:
       - image: circleci/python:3.7
     steps:
       - run: |
-        # For isort, must install all "system" dependencies
-        pip3 install isort --user
-        pip3 install .[all] --user
-        pip3 install pytest --user
-        isort -rc -c .
+          # For isort, must install all "system" dependencies
+          pip3 install isort --user
+          pip3 install .[all] --user
+          pip3 install pytest --user
+          isort -rc -c .
       - run: |
-        pip3 install black --user
-        black --check .
+          pip3 install black --user
+          black --check .
       - run: |
-        pip3 install flake8 --user
-        flake8 .
-
+          pip3 install flake8 --user
+          flake8 .
 
 workflows:
   version: 2
