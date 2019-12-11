@@ -8,7 +8,10 @@ shared: &shared
     - checkout
     - run: git lfs pull
     - run: pip install .[all] --user
-    - run: "[ $UPLOAD_COV ] && bash <(curl -s https://codecov.io/bash)"
+    - run: |
+        if [ $UPLOAD_COV ]; then
+          bash <(curl -s https://codecov.io/bash)
+        fi
 
 jobs:
   py38:
