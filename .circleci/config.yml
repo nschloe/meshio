@@ -54,8 +54,9 @@ jobs:
 workflows:
   version: 2
   test_and_lint:
-    - py38
-    - py37
-    - py36
-    - py35
-    - lint
+    jobs:
+      - py38
+      - py37
+      - py36
+      - py35
+      - lint
