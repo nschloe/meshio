@@ -502,14 +502,13 @@ def translate_cells(data, types, cell_data_raw):
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
 
     # Collect types into bins.
-    # See <https://stackoverflow.com/q/47310359/353337> for better
-    # alternatives.
+    # See <https://stackoverflow.com/q/47310359/353337> for better alternatives.
     bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
     has_polygon = meshio_to_vtk_type["polygon"] in bins
 
-    # Deduct offsets from the cell types. This is much faster than manually
-    # going through the data array. Slight disadvantage: This doesn't work for
-    # cells with a custom number of points.
+    # Deduct offsets from the cell types. This is much faster than manually going
+    # through the data array. Slight disadvantage: This doesn't work for cells with a
+    # custom number of points.
     numnodes = numpy.empty(len(types), dtype=int)
     if has_polygon:
         # If some polygons are in the VTK file, loop over the cells
