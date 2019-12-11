@@ -2,9 +2,12 @@ version: 2
 
 shared: &shared
   steps:
+    - run: DEBIAN_FRONTEND=noninteractive sudo apt-get install tzdata
+    - run: sudo apt-get install -y git git-lfs python3-h5py python3-netcdf4 python3-lxml
+    - run: pip3 install -U pytest pytest-cov --user
     - checkout
-    - run: pip install tox tox-pyenv --user
-    - run: tox -e $TOX_JOB
+    - run: git lfs pull
+    - run: pip install .[all] --user
     - run: "[ $UPLOAD_COV ] && bash <(curl -s https://codecov.io/bash)"
 
 jobs:
@@ -13,32 +16,47 @@ jobs:
     docker:
       - image: circleci/python:3.8
         environment:
-          TOX_JOB: py38
+          UPLOAD_COV: "true"
 
   py37:
     <<: *shared
     docker:
       - image: circleci/python:3.7
-        environment:
-          TOX_JOB: py37
 
   py36:
     <<: *shared
     docker:
       - image: circleci/python:3.6
-        environment:
-          TOX_JOB: py36
 
   py35:
     <<: *shared
     docker:
       - image: circleci/python:3.5
-        environment:
-          TOX_JOB: py35
 
   lint:
     <<: *shared
     docker:
       - image: circleci/python:3.7
-        environment:
-          TOX_JOB: lint
+    steps:
+      - run: |
+        # For isort, must install all "system" dependencies
+        pip3 install isort --user
+        pip3 install .[all] --user
+        pip3 install pytest --user
+        isort -rc -c .
+      - run: |
+        pip3 install black --user
+        black --check .
+      - run: |
+        pip3 install flake8 --user
+        flake8 .
+
+
+workflows:
+  version: 2
+  test_and_lint:
+    - py38
+    - py37
+    - py36
+    - py35
+    - lint
