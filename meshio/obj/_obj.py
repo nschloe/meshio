@@ -46,7 +46,7 @@ def read_buffer(f):
             # "s 1" or "s off" controls smooth shading
             pass
         elif split[0] == "f":
-            faces.append([int(item.split("//")[0]) for item in split[1:]])
+            faces.append([int(item.split("/")[0]) for item in split[1:]])
         else:
             # who knows
             pass
