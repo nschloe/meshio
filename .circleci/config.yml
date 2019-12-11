@@ -1,12 +1,44 @@
 version: 2
 
+shared: &shared
+  steps:
+    - checkout
+    - run: pip install tox tox-pyenv --user
+    - run: tox -e $TOX_JOB
+    - run: "[ $UPLOAD_COV ] && bash <(curl -s https://codecov.io/bash)"
+
 jobs:
-  build:
+  py38:
+    <<: *shared
     docker:
       - image: circleci/python:3.8
-    steps:
-      - run: pip install tox tox-pyenv --user
-      - run: pyenv global 3.8.0 3.7.5 3.6.9 3.5.9
-      - checkout
-      - run: tox
-      - run: bash <(curl -s https://codecov.io/bash)
+        environment:
+          TOX_JOB: py38
+
+  py37:
+    <<: *shared
+    docker:
+      - image: circleci/python:3.7
+        environment:
+          TOX_JOB: py37
+
+  py36:
+    <<: *shared
+    docker:
+      - image: circleci/python:3.6
+        environment:
+          TOX_JOB: py36
+
+  py35:
+    <<: *shared
+    docker:
+      - image: circleci/python:3.5
+        environment:
+          TOX_JOB: py35
+
+  lint:
+    <<: *shared
+    docker:
+      - image: circleci/python:3.7
+        environment:
+          TOX_JOB: lint
