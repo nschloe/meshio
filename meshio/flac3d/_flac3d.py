@@ -109,9 +109,12 @@ def read_buffer(f):
             assert len(slots) == 1, "Multiple slots are not supported."
         line = f.readline()
 
-    cell_data = {k: {"flac3d:zone": numpy.zeros(v)} for k, v in count.items() if v}
-    for i, numnodes, zid in mapper.values():
-        cell_data[numnodes_to_meshio_type[numnodes]]["flac3d:zone"][i] = zid
+    if zidx:
+        cell_data = {k: {"flac3d:zone": numpy.zeros(v)} for k, v in count.items() if v}
+        for i, numnodes, zid in mapper.values():
+            cell_data[numnodes_to_meshio_type[numnodes]]["flac3d:zone"][i] = zid
+    else:
+        cell_data = {}
 
     return Mesh(
         points=numpy.array(points),
@@ -176,8 +179,13 @@ def write(filename, mesh):
         _write_points(f, mesh.points)
         f.write("* ZONES\n")
         _write_cells(f, mesh.points, mesh.cells)
-        f.write("* ZONE GROUPS\n")
-        _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
+
+        if mesh.cell_data:
+            if set(kk for v in mesh.cell_data.values() for kk in v.keys()).intersection(
+                meshio_data
+            ):
+                f.write("* ZONE GROUPS\n")
+                _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
 
 
 def _write_points(f, points):
@@ -213,8 +221,10 @@ def _translate_zones(points, cells):
         corner[:, meshio_to_flac3d_order[k][:4]]
         for k, corner in zip(meshio_types, corners)
     ]
-    p0, p1, p2, p3 = points[numpy.concatenate(tmp).T]
-    dets = (numpy.cross(p1 - p0, p2 - p0) * (p3 - p0)).sum(axis=1)
+    tmp = points[numpy.concatenate(tmp).T]
+    dets = (numpy.cross(tmp[1] - tmp[0], tmp[2] - tmp[0]) * (tmp[3] - tmp[0])).sum(
+        axis=1
+    )
 
     # Reorder corner points
     meshio_types = [
