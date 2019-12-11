@@ -118,7 +118,7 @@ def read_buffer(f):
 
     return Mesh(
         points=numpy.array(points),
-        cells={k: numpy.array(v) for k, v in cells.items()},
+        cells={k: numpy.array(v)[:,flac3d_to_meshio_order[k]] for k, v in cells.items()},
         cell_data=cell_data,
         field_data=field_data,
     )
