@@ -41,6 +41,7 @@ jobs:
     docker:
       - image: circleci/python:3.7
     steps:
+      - checkout
       - run: |
           # For isort, must install all "system" dependencies
           pip3 install isort --user
