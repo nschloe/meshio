@@ -5,7 +5,7 @@ jobs:
     docker:
       - image: circleci/python:3.8
     steps:
-      - run: pip install tox tox-pyenv
+      - run: pip install tox tox-pyenv --user
       - run: pyenv global 3.8.0 3.7.5 3.6.9 3.5.9
       - checkout
       - run: tox
