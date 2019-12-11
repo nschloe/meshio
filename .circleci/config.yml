@@ -8,6 +8,7 @@ shared: &shared
     - checkout
     - run: git lfs pull
     - run: pip install .[all] --user
+    - run: pytest --cov
     - run: |
         if [ $UPLOAD_COV ]; then
           bash <(curl -s https://codecov.io/bash)
@@ -37,9 +38,8 @@ jobs:
       - image: circleci/python:3.5
 
   lint:
-    <<: *shared
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/python:3.8
     steps:
       - checkout
       - run: |
