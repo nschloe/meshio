@@ -233,11 +233,11 @@ def write(filename, mesh):
         for key in ["triangle", "quad"]:
             if ugrid_counts[key] == 0:
                 continue
-            if "ugrid:ref" in mesh.cell_data[key]:
+            if key in mesh.cell_data and "ugrid:ref" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["ugrid:ref"]
-            elif "medit:ref" in mesh.cell_data[key]:
+            elif key in mesh.cell_data and "medit:ref" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["medit:ref"]
-            elif "gmsh:physical" in mesh.cell_data[key]:
+            elif key in mesh.cell_data and "gmsh:physical" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["gmsh:physical"]
             elif key in mesh.cell_data and "flac3d:zone" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["flac3d:zone"]
