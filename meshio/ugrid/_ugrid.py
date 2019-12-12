@@ -157,8 +157,10 @@ def write(filename, mesh):
 
         def write_section(array, dtype):
             if file_type["type"] == "ascii":
-                fmt = " ".join(["%{}".format(dtype)] * (array.shape[1]))
-                numpy.savetxt(f, array, fmt)
+                if dtype == "i":
+                    numpy.savetxt(f, array, fmt="%d")
+                else:
+                    numpy.savetxt(f, array)
             else:
                 array.astype(dtype).tofile(f)
 
