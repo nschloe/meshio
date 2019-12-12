@@ -206,9 +206,7 @@ def _write_cells(f, points, cells):
     for i, (meshio_type, zone) in enumerate(zones.items()):
         fmt = "Z {} {} " + " ".join((["{}"] * zone.shape[1])) + "\n"
         for entry in zone + 1:
-            f.write(
-                fmt.format(meshio_to_flac3d_type[meshio_type], i + 1, *entry)
-            )
+            f.write(fmt.format(meshio_to_flac3d_type[meshio_type], i + 1, *entry))
 
 
 def _translate_zones(points, cells):
