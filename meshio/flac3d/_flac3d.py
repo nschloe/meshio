@@ -216,17 +216,21 @@ def _translate_zones(points, cells):
     coordinate system (outward normal vectors). Reorder corner points according to sign
     of scalar triple products.
     """
+    # See <https://stackoverflow.com/a/42386330/353337>
+    def slicing_summing(a, b, c):
+        c0 = b[:,1]*c[:,2] - b[:,2]*c[:,1]
+        c1 = b[:,2]*c[:,0] - b[:,0]*c[:,2]
+        c2 = b[:,0]*c[:,1] - b[:,1]*c[:,0]
+        return a[:,0]*c0 + a[:,1]*c1 + a[:,2]*c2
+
     zones = {}
     for key, idx in cells.items():
         if key not in meshio_only:
             continue
 
         # Compute scalar triple products
-        # TODO Faster with <https://stackoverflow.com/a/42386330/353337>
         tmp = points[idx[:, meshio_to_flac3d_order[key][:4]].T]
-        det = (numpy.cross(tmp[1] - tmp[0], tmp[2] - tmp[0]) * (tmp[3] - tmp[0])).sum(
-            axis=1
-        )
+        det = slicing_summing(tmp[1] - tmp[0], tmp[2] - tmp[0], tmp[3] - tmp[0])
         # Reorder corner points
         zones[key] = numpy.empty(idx.shape, dtype=int)
         zones[key][det > 0] = idx[:, meshio_to_flac3d_order[key]][det > 0]
