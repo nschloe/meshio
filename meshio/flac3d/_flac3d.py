@@ -148,7 +148,7 @@ def _read_zgroup(f, line):
     """
     Read cell group.
     """
-    name = line[1].replace('"', "")
+    name = line[1].replace("\"", "")
     data = []
     slot = "" if "SLOT" not in line else line[-1]
 
@@ -245,7 +245,7 @@ def _write_cell_data(f, cells, cell_data, field_data):
     """
     zgroups, labels = _translate_zgroups(cells, cell_data, field_data)
     for k, v in zgroups.items():
-        f.write("ZGROUP '{}'\n".format(labels[k]))
+        f.write("ZGROUP \"{}\"\n".format(labels[k]))
         _write_zgroup(f, v)
 
 
