@@ -61,6 +61,13 @@ def read(filename):
     return mesh
 
 
+def _read_section(f, count, dtype):
+    if file_type["type"] == "ascii":
+        return numpy.fromfile(f, count=count, dtype=dtype, sep=" ")
+    else:
+        return numpy.fromfile(f, count=count, dtype=dtype)
+
+
 def read_buffer(f):
     cells = {}
     cell_data = {}
@@ -68,23 +75,17 @@ def read_buffer(f):
     itype = file_type["int_type"]
     ftype = file_type["float_type"]
 
-    def read_section(count, dtype):
-        if file_type["type"] == "ascii":
-            return numpy.fromfile(f, count=count, dtype=dtype, sep=" ")
-        else:
-            return numpy.fromfile(f, count=count, dtype=dtype)
-
     # FORTRAN type includes a number of bytes before and after
     # each record , according to documentation [1] there are
     # two records in the file
     # see also UG_IO freely available code at [2]
     if file_type["type"] == "F":
-        numpy.fromfile(f, count=1, dtype=itype)
+        _read_section(f, count=1, dtype=itype)
 
-    nitems = read_section(count=7, dtype=itype)
+    nitems = _read_section(f, count=7, dtype=itype)
 
     if file_type["type"] == "F":
-        numpy.fromfile(f, count=1, dtype=itype)
+        _read_section(f, count=1, dtype=itype)
 
     if not nitems.size == 7:
         raise ReadError("Header of ugrid file is ill-formed")
@@ -100,17 +101,17 @@ def read_buffer(f):
     }
 
     if file_type["type"] == "F":
-        numpy.fromfile(f, count=1, dtype=itype)
+        _read_section(f, count=1, dtype=itype)
 
     nnodes = ugrid_counts["points"][0]
-    points = read_section(count=nnodes * 3, dtype=ftype).reshape(nnodes, 3)
+    points = _read_section(f, count=nnodes * 3, dtype=ftype).reshape(nnodes, 3)
 
     for key in ["triangle", "quad"]:
         nitems = ugrid_counts[key][0]
         nvertices = ugrid_counts[key][1]
         if nitems == 0:
             continue
-        out = read_section(count=nitems * nvertices, dtype=itype).reshape(
+        out = _read_section(f, count=nitems * nvertices, dtype=itype).reshape(
             nitems, nvertices
         )
         # UGRID is one-based
@@ -120,7 +121,7 @@ def read_buffer(f):
         nitems = ugrid_counts[key][0]
         if nitems == 0:
             continue
-        out = read_section(count=nitems, dtype=itype)
+        out = _read_section(f, count=nitems, dtype=itype)
         cell_data[key] = {"ugrid:ref": out}
 
     for key in ["tetra", "pyramid", "wedge", "hexahedron"]:
@@ -128,7 +129,7 @@ def read_buffer(f):
         nvertices = ugrid_counts[key][1]
         if nitems == 0:
             continue
-        out = read_section(count=nitems * nvertices, dtype=itype).reshape(
+        out = _read_section(f, count=nitems * nvertices, dtype=itype).reshape(
             nitems, nvertices
         )
 
@@ -143,26 +144,30 @@ def read_buffer(f):
         cell_data[key] = {"ugrid:ref": out}
 
     if file_type["type"] == "F":
-        numpy.fromfile(f, count=1, dtype=itype)
+        _read_section(f, count=1, dtype=itype)
 
     return Mesh(points, cells, cell_data=cell_data)
 
 
+file_type = None
+
+
+def _write_section(f, array, dtype):
+    if file_type["type"] == "ascii":
+        ncols = array.shape[1]
+        fmt = " ".join(["%r"] * ncols)
+        numpy.savetxt(f, array, fmt=fmt)
+    else:
+        array.astype(dtype).tofile(f)
+
+
 def write(filename, mesh):
+    global file_type
     file_type = determine_file_type(filename)
 
     with open_file(filename, "w") as f:
         itype = file_type["int_type"]
         ftype = file_type["float_type"]
-
-        def write_section(array, dtype):
-            if file_type["type"] == "ascii":
-                if dtype == "i":
-                    numpy.savetxt(f, array, fmt="%d")
-                else:
-                    numpy.savetxt(f, array)
-            else:
-                array.astype(dtype).tofile(f)
 
         ugrid_counts = {
             "points": 0,
@@ -204,14 +209,15 @@ def write(filename, mesh):
         fortran_header = None
         if file_type["type"] == "F":
             fortran_header = numpy.array([nitems.nbytes])
-            write_section(fortran_header, itype)
+            _write_section(f, fortran_header, itype)
 
-        write_section(nitems, itype)
-
-        if file_type["type"] == "F":
-            write_section(fortran_header, itype)
+        _write_section(f, nitems, itype)
 
         if file_type["type"] == "F":
+            # finish current record
+            _write_section(f, fortran_header, itype)
+
+            # start next record
             fortran_header = mesh.points.nbytes
             for key, array in mesh.cells.items():
                 fortran_header += array.nbytes
@@ -221,15 +227,15 @@ def write(filename, mesh):
             if ugrid_counts["quad"] > 0:
                 fortran_header += ugrid_counts["quad"] * numpy.dtype(itype).itemsize
             fortran_header = numpy.array([fortran_header])
-            write_section(fortran_header, itype)
+            _write_section(f, fortran_header, itype)
 
-        write_section(mesh.points, ftype)
+        _write_section(f, mesh.points, ftype)
 
         for key in ["triangle", "quad"]:
             if ugrid_counts[key] > 0:
                 # UGRID is one-based
                 out = mesh.cells[key] + 1
-                write_section(out, itype)
+                _write_section(f, out, itype)
 
         # write boundary tags
         for key in ["triangle", "quad"]:
@@ -247,7 +253,7 @@ def write(filename, mesh):
                 labels = numpy.ones(ugrid_counts[key], dtype=itype)
 
             labels = labels.reshape(ugrid_counts[key], 1)
-            write_section(labels, itype)
+            _write_section(f, labels, itype)
 
         # write volume elements
         for key in ["tetra", "pyramid", "wedge", "hexahedron"]:
@@ -257,10 +263,10 @@ def write(filename, mesh):
             out = mesh.cells[key] + 1
             if key == "pyramid":
                 out = out[:, [1, 0, 4, 2, 3]]
-            write_section(out, itype)
+            _write_section(f, out, itype)
 
         if file_type["type"] == "F":
-            write_section(fortran_header, itype)
+            _write_section(f, fortran_header, itype)
     return
 
 
