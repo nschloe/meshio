@@ -200,47 +200,37 @@ def _write_points(f, points):
 
 
 def _write_cells(f, points, cells):
+    """Write zones.
     """
-    Write zones.
-    """
-    zones, meshio_types = _translate_zones(points, cells)
-    for i, (zone, meshio_type) in enumerate(zip(zones, meshio_types)):
-        zone_str = " ".join([str(z) for z in zone + 1])
-        f.write(
-            "Z {} {} {}\n".format(meshio_to_flac3d_type[meshio_type], i + 1, zone_str)
-        )
+    zones = _translate_zones(points, cells)
+    for i, (meshio_type, zone) in enumerate(zones.items()):
+        fmt = "Z {} {} " + " ".join((["{}"] * zone.shape[1])) + "\n"
+        for entry in zone + 1:
+            f.write(fmt.format(meshio_to_flac3d_type[meshio_type], i + 1, *entry))
 
 
 def _translate_zones(points, cells):
+    """Reorder meshio cells to FLAC3D zones. Four first points must form a right-handed
+    coordinate system (outward normal vectors). Reorder corner points according to sign
+    of scalar triple products.
     """
-    Reorder meshio cells to FLAC3D zones. Four first points must form a
-    right-handed coordinate system (outward normal vectors). Reorder corner
-    points according to sign of scalar triple products.
-    """
-    # Calculate scalar triple products
-    meshio_types = [k for k in cells.keys() if k in meshio_only]
-    corners = [v for k, v in cells.items() if k in meshio_only]
-    tmp = [
-        corner[:, meshio_to_flac3d_order[k][:4]]
-        for k, corner in zip(meshio_types, corners)
-    ]
-    tmp = points[numpy.concatenate(tmp).T]
-    dets = (numpy.cross(tmp[1] - tmp[0], tmp[2] - tmp[0]) * (tmp[3] - tmp[0])).sum(
-        axis=1
-    )
+    zones = {}
+    for key, idx in cells.items():
+        if key not in meshio_only:
+            continue
 
-    # Reorder corner points
-    meshio_types = [
-        kk for k, v in cells.items() for kk in [k] * len(v) if k in meshio_only
-    ]
-    corners = [c for corner in corners for c in corner]
-    zones = [
-        corner[meshio_to_flac3d_order[k]]
-        if det > 0.0
-        else corner[meshio_to_flac3d_order_2[k]]
-        for corner, k, det in zip(corners, meshio_types, dets)
-    ]
-    return zones, meshio_types
+        # Compute scalar triple products
+        # TODO Faster with <https://stackoverflow.com/a/42386330/353337>
+        tmp = points[idx[:, meshio_to_flac3d_order[key][:4]].T]
+        det = (numpy.cross(tmp[1] - tmp[0], tmp[2] - tmp[0]) * (tmp[3] - tmp[0])).sum(
+            axis=1
+        )
+        # Reorder corner points
+        zones[key] = numpy.empty(idx.shape, dtype=int)
+        zones[key][det > 0] = idx[:, meshio_to_flac3d_order[key]][det > 0]
+        zones[key][det <= 0] = idx[:, meshio_to_flac3d_order_2[key]][det <= 0]
+
+    return zones
 
 
 def _write_cell_data(f, cells, cell_data, field_data):
