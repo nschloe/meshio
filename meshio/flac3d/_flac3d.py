@@ -244,9 +244,9 @@ def _write_cell_data(f, cells, cell_data, field_data):
     Write zone groups.
     """
     zgroups, labels = _translate_zgroups(cells, cell_data, field_data)
-    for k, v in zgroups.items():
+    for k in sorted(zgroups.keys()):
         f.write("ZGROUP \"{}\"\n".format(labels[k]))
-        _write_zgroup(f, v)
+        _write_zgroup(f, zgroups[k])
 
 
 def _translate_zgroups(cells, cell_data, field_data):
