@@ -196,7 +196,31 @@ def write(filename, mesh):
             ]
         )
         # header
+
+        # fortran_header corresponds to the number of bytes in each record
+        # it has to be before and after each record
+        fortran_header = None
+        if file_type["type"] == "F":
+            fortran_header = numpy.array([nitems.nbytes])
+            write_section(fortran_header, itype)
+
         write_section(nitems, itype)
+
+        if file_type["type"] == "F":
+            write_section(fortran_header, itype)
+
+        if file_type["type"] == "F":
+            fortran_header = mesh.points.nbytes
+            for key, array in mesh.cells.items():
+                fortran_header += array.nbytes
+            # boundary tags
+            if ugrid_counts["triangle"] > 0:
+                fortran_header += ugrid_counts["triangle"] * numpy.dtype(itype).itemsize
+            if ugrid_counts["quad"] > 0:
+                fortran_header += ugrid_counts["quad"] * numpy.dtype(itype).itemsize
+            fortran_header = numpy.array([fortran_header])
+            write_section(fortran_header, itype)
+
         write_section(mesh.points, ftype)
 
         for key in ["triangle", "quad"]:
@@ -232,6 +256,9 @@ def write(filename, mesh):
             if key == "pyramid":
                 out = out[:, [1, 0, 4, 2, 3]]
             write_section(out, itype)
+
+        if file_type["type"] == "F":
+            write_section(fortran_header, itype)
     return
 
 
