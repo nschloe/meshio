@@ -1,4 +1,10 @@
-# class etree
+# This XML writer is a drop-in replacement for LXML/Python XML Etree. It only offers one
+# other member: self.text_write.
+# The problem is that, for LXML, the entire etree has to be constructed in memory before
+# writing it to a file. Many mesh formats that use XML have lots of int or float data
+# written in the text fields. Converting this to ASCII first requires a lot of memory.
+# This etree here allows the writing method to write to the file directly, without
+# having to create a string representation first.
 
 
 class Element:
