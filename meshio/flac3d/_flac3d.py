@@ -36,7 +36,7 @@ numnodes_to_meshio_type = {
     6: "wedge",
     8: "hexahedron",
 }
-meshio_type_to_numnodes = {v:k for k, v in numnodes_to_meshio_type.items()}
+meshio_type_to_numnodes = {v: k for k, v in numnodes_to_meshio_type.items()}
 
 
 meshio_to_flac3d_type = {
@@ -162,7 +162,7 @@ def _read_zgroup(f, line):
     """
     Read cell group.
     """
-    name = line[1].replace("\"", "")
+    name = line[1].replace('"', "")
     data = []
     slot = "" if "SLOT" not in line else line[-1]
 
@@ -185,9 +185,7 @@ def write(filename, mesh):
     Write FLAC3D f3grid grid file (only ASCII).
     """
     if not any(cell_type in meshio_only.keys() for cell_type in mesh.cells.keys()):
-        raise WriteError(
-            "FLAC3D format only supports 3D cells"
-        )
+        raise WriteError("FLAC3D format only supports 3D cells")
 
     with open_file(filename, "w") as f:
         f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
@@ -233,10 +231,10 @@ def _translate_zones(points, cells):
     """
     # See <https://stackoverflow.com/a/42386330/353337>
     def slicing_summing(a, b, c):
-        c0 = b[:,1]*c[:,2] - b[:,2]*c[:,1]
-        c1 = b[:,2]*c[:,0] - b[:,0]*c[:,2]
-        c2 = b[:,0]*c[:,1] - b[:,1]*c[:,0]
-        return a[:,0]*c0 + a[:,1]*c1 + a[:,2]*c2
+        c0 = b[:, 1] * c[:, 2] - b[:, 2] * c[:, 1]
+        c1 = b[:, 2] * c[:, 0] - b[:, 0] * c[:, 2]
+        c2 = b[:, 0] * c[:, 1] - b[:, 1] * c[:, 0]
+        return a[:, 0] * c0 + a[:, 1] * c1 + a[:, 2] * c2
 
     zones = {}
     for key, idx in cells.items():
@@ -261,7 +259,7 @@ def _write_cell_data(f, cells, cell_data, field_data):
     """
     zgroups, labels = _translate_zgroups(cells, cell_data, field_data)
     for k in sorted(zgroups.keys()):
-        f.write("ZGROUP \"{}\"\n".format(labels[k]))
+        f.write('ZGROUP "{}"\n'.format(labels[k]))
         _write_zgroup(f, zgroups[k])
 
 
