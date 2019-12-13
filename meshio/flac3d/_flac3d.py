@@ -11,7 +11,20 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
 
-meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
+meshio_only = {
+    "tetra": "tetra",
+    "tetra10": "tetra",
+    "pyramid": "pyramid",
+    "pyramid13": "pyramid",
+    "wedge": "wedge",
+    "wedge12": "wedge",
+    "wedge15": "wedge",
+    "wedge18": "wedge",
+    "hexahedron": "hexahedron",
+    "hexahedron20": "hexahedron",
+    "hexahedron24": "hexahedron",
+    "hexahedron27": "hexahedron",
+}
 
 
 meshio_data = {"flac3d:zone", "gmsh:physical", "medit:ref"}
@@ -23,6 +36,7 @@ numnodes_to_meshio_type = {
     6: "wedge",
     8: "hexahedron",
 }
+meshio_type_to_numnodes = {v: k for k, v in numnodes_to_meshio_type.items()}
 
 
 meshio_to_flac3d_type = {
@@ -81,7 +95,7 @@ def read_buffer(f):
 
     pidx = 0
     zidx = 0
-    count = {k: 0 for k in meshio_only}
+    count = {k: 0 for k in flac3d_to_meshio_order.keys()}
     line = f.readline()
     while line:
         line = line.rstrip().split()
@@ -170,10 +184,8 @@ def write(filename, mesh):
     """
     Write FLAC3D f3grid grid file (only ASCII).
     """
-    if not any(cell_type in meshio_only for cell_type in mesh.cells.keys()):
-        raise WriteError(
-            "FLAC3D format only supports 'tetra', 'pyramid', 'wedge', and 'hexahedron'."
-        )
+    if not any(cell_type in meshio_only.keys() for cell_type in mesh.cells.keys()):
+        raise WriteError("FLAC3D format only supports 3D cells")
 
     with open_file(filename, "w") as f:
         f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
@@ -203,10 +215,13 @@ def _write_cells(f, points, cells):
     """Write zones.
     """
     zones = _translate_zones(points, cells)
-    for i, (meshio_type, zone) in enumerate(zones.items()):
+    i = 1
+    for meshio_type, zone in zones.items():
+        meshio_type = meshio_only[meshio_type]
         fmt = "Z {} {} " + " ".join((["{}"] * zone.shape[1])) + "\n"
         for entry in zone + 1:
-            f.write(fmt.format(meshio_to_flac3d_type[meshio_type], i + 1, *entry))
+            f.write(fmt.format(meshio_to_flac3d_type[meshio_type], i, *entry))
+            i += 1
 
 
 def _translate_zones(points, cells):
@@ -214,19 +229,24 @@ def _translate_zones(points, cells):
     coordinate system (outward normal vectors). Reorder corner points according to sign
     of scalar triple products.
     """
+    # See <https://stackoverflow.com/a/42386330/353337>
+    def slicing_summing(a, b, c):
+        c0 = b[:, 1] * c[:, 2] - b[:, 2] * c[:, 1]
+        c1 = b[:, 2] * c[:, 0] - b[:, 0] * c[:, 2]
+        c2 = b[:, 0] * c[:, 1] - b[:, 1] * c[:, 0]
+        return a[:, 0] * c0 + a[:, 1] * c1 + a[:, 2] * c2
+
     zones = {}
     for key, idx in cells.items():
-        if key not in meshio_only:
+        if key not in meshio_only.keys():
             continue
 
         # Compute scalar triple products
-        # TODO Faster with <https://stackoverflow.com/a/42386330/353337>
+        key = meshio_only[key]
         tmp = points[idx[:, meshio_to_flac3d_order[key][:4]].T]
-        det = (numpy.cross(tmp[1] - tmp[0], tmp[2] - tmp[0]) * (tmp[3] - tmp[0])).sum(
-            axis=1
-        )
+        det = slicing_summing(tmp[1] - tmp[0], tmp[2] - tmp[0], tmp[3] - tmp[0])
         # Reorder corner points
-        zones[key] = numpy.empty(idx.shape, dtype=int)
+        zones[key] = numpy.empty((len(idx), meshio_type_to_numnodes[key]), dtype=int)
         zones[key][det > 0] = idx[:, meshio_to_flac3d_order[key]][det > 0]
         zones[key][det <= 0] = idx[:, meshio_to_flac3d_order_2[key]][det <= 0]
 
@@ -238,20 +258,20 @@ def _write_cell_data(f, cells, cell_data, field_data):
     Write zone groups.
     """
     zgroups, labels = _translate_zgroups(cells, cell_data, field_data)
-    for k, v in zgroups.items():
-        f.write("ZGROUP '{}'\n".format(labels[k]))
-        _write_zgroup(f, v)
+    for k in sorted(zgroups.keys()):
+        f.write('ZGROUP "{}"\n'.format(labels[k]))
+        _write_zgroup(f, zgroups[k])
 
 
 def _translate_zgroups(cells, cell_data, field_data):
     """
     Convert meshio cell_data to FLAC3D zone groups.
     """
-    n_cells = sum([len(v) for k, v in cells.items() if k in meshio_only])
+    n_cells = sum([len(v) for k, v in cells.items() if k in meshio_only.keys()])
     zone_data = numpy.zeros(n_cells, dtype=numpy.int32)
     idx = 0
     for k, v in cells.items():
-        if k in meshio_only:
+        if k in meshio_only.keys():
             if k in cell_data.keys():
                 for kk, vv in cell_data[k].items():
                     if kk in meshio_data:
