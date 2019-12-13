@@ -33,7 +33,7 @@ def test(mesh, binary):
             *args,
             binary=binary,
             # don't use pretty xml to increase test coverage
-            pretty_xml=False,
+            # pretty_xml=False,
             **kwargs,
         )
 
