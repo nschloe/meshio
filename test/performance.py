@@ -215,10 +215,11 @@ def read_write(plot=False):
     # formats = {
     #     # "VTK (ASCII)": formats["VTK (ASCII)"],
     #     # "VTK (binary)": formats["VTK (binary)"],
-    #     "VTU (ASCII)": formats["VTU (ASCII)"],
-    #     "VTU (binary)": formats["VTU (binary)"],
+    #     # "VTU (ASCII)": formats["VTU (ASCII)"],
+    #     # "VTU (binary)": formats["VTU (binary)"],
     #     # "Gmsh 4.1 (binary)": formats["Gmsh 4.1 (binary)"],
     #     # "FLAC3D": formats["FLAC3D"],
+    #     "MDPA": formats["MDPA"],
     # }
 
     elapsed_write = []
