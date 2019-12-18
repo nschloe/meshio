@@ -156,9 +156,7 @@ def _pyramid_volume(cell):
 # ugrid node ordering is the same for all elements except the
 # pyramids. In order to make sure we got it right read a cube
 # split into pyramids and evaluate its volume
-@pytest.mark.parametrize(
-    "filename, volume,accuracy", [("pyra_cube.ugrid", 1.0, 1e-15)]
-)
+@pytest.mark.parametrize("filename, volume,accuracy", [("pyra_cube.ugrid", 1.0, 1e-15)])
 def test_volume(filename, volume, accuracy):
     this_dir = os.path.dirname(os.path.abspath(__file__))
     filename = os.path.join(this_dir, "meshes", "ugrid", filename)
