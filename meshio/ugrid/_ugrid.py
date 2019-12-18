@@ -60,8 +60,7 @@ def read(filename):
 def _read_section(f, file_type, count, dtype):
     if file_type["type"] == "ascii":
         return numpy.fromfile(f, count=count, dtype=dtype, sep=" ")
-    else:
-        return numpy.fromfile(f, count=count, dtype=dtype)
+    return numpy.fromfile(f, count=count, dtype=dtype)
 
 
 def read_buffer(f, file_type):
