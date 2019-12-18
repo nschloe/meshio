@@ -134,7 +134,7 @@ def read_buffer(f):
         )
 
         if key == "pyramid":
-            out = out[:, [1, 0, 4, 2, 3]]
+            out = out[:, [1, 0, 3, 4, 2]]
 
         # UGRID is one-based
         cells[key] = out - 1

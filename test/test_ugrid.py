@@ -100,3 +100,55 @@ def test_reference_file(filename, ref_num_points, ref_num_triangle, ref_num_quad
     assert tags.keys() == ref_tag_counts.keys()
     for key in tags.keys():
         assert tags[key] == ref_tag_counts[key]
+
+def _tet_volume(cell):
+    """
+    Evaluate the volume of a tetrahedron using the value
+    of the deteminant
+    | a_x a_y a_z 1 |
+    | b_x b_y b_z 1 |
+    | c_x c_y c_z 1 |
+    | d_x d_y d_z 1 |
+    """
+
+    t = numpy.ones((4,1))
+    cell = numpy.append(cell,t,axis=1)
+    vol = -numpy.linalg.det(cell)/6.0
+    return vol
+
+def _pyramid_volume(cell):
+    """
+    evaluate pyramid volume by splitting it into 
+    two tetrahedra
+    """
+    tet0 = cell[[0,1,3,4]]
+    tet1 = cell[[1,2,3,4]]
+
+    vol = 0.0
+    vol += _tet_volume(tet0)
+    vol += _tet_volume(tet1)
+    return vol
+
+# ugrid node ordering is the same for all elements except the
+# pyramids. In order to make sure we got it right read a cube
+# split into pyramids and evaluate its volume
+@pytest.mark.parametrize(
+        "filename, volume,accuracy",
+        [
+            ("pyra_cube.ugrid", 1.0, 1e-15),
+        ]
+)
+def test_volume(filename, volume,accuracy):
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "ugrid", filename)
+
+    mesh = meshio.read(filename)
+
+    assert mesh.cells["pyramid"].shape[1] == 5
+    assert mesh.cells["pyramid"].shape[0] == 6
+    vol = 0.0
+    for _cell in mesh.cells["pyramid"]:
+        cell = numpy.array([mesh.points[i] for i in _cell])
+        v = _pyramid_volume(cell)
+        vol += v
+    assert numpy.isclose(vol,1.0,accuracy)
