@@ -36,8 +36,6 @@ file_types = {
     "lr4": {"type": "F", "float_type": "<f4", "int_type": "<i4"},
 }
 
-file_type = None
-
 
 def determine_file_type(filename):
     file_type = file_types["ascii"]
@@ -52,23 +50,21 @@ def determine_file_type(filename):
 
 def read(filename):
 
-    global file_type
-
     file_type = determine_file_type(filename)
 
     with open_file(filename) as f:
-        mesh = read_buffer(f)
+        mesh = read_buffer(f, file_type)
     return mesh
 
 
-def _read_section(f, count, dtype):
+def _read_section(f, file_type, count, dtype):
     if file_type["type"] == "ascii":
         return numpy.fromfile(f, count=count, dtype=dtype, sep=" ")
     else:
         return numpy.fromfile(f, count=count, dtype=dtype)
 
 
-def read_buffer(f):
+def read_buffer(f, file_type):
     cells = {}
     cell_data = {}
 
@@ -80,12 +76,12 @@ def read_buffer(f):
     # two records in the file
     # see also UG_IO freely available code at [2]
     if file_type["type"] == "F":
-        _read_section(f, count=1, dtype=itype)
+        _read_section(f, file_type, count=1, dtype=itype)
 
-    nitems = _read_section(f, count=7, dtype=itype)
+    nitems = _read_section(f, file_type, count=7, dtype=itype)
 
     if file_type["type"] == "F":
-        _read_section(f, count=1, dtype=itype)
+        _read_section(f, file_type, count=1, dtype=itype)
 
     if not nitems.size == 7:
         raise ReadError("Header of ugrid file is ill-formed")
@@ -101,19 +97,21 @@ def read_buffer(f):
     }
 
     if file_type["type"] == "F":
-        _read_section(f, count=1, dtype=itype)
+        _read_section(f, file_type, count=1, dtype=itype)
 
     nnodes = ugrid_counts["points"][0]
-    points = _read_section(f, count=nnodes * 3, dtype=ftype).reshape(nnodes, 3)
+    points = _read_section(f, file_type, count=nnodes * 3, dtype=ftype).reshape(
+        nnodes, 3
+    )
 
     for key in ["triangle", "quad"]:
         nitems = ugrid_counts[key][0]
         nvertices = ugrid_counts[key][1]
         if nitems == 0:
             continue
-        out = _read_section(f, count=nitems * nvertices, dtype=itype).reshape(
-            nitems, nvertices
-        )
+        out = _read_section(
+            f, file_type, count=nitems * nvertices, dtype=itype
+        ).reshape(nitems, nvertices)
         # UGRID is one-based
         cells[key] = out - 1
 
@@ -121,7 +119,7 @@ def read_buffer(f):
         nitems = ugrid_counts[key][0]
         if nitems == 0:
             continue
-        out = _read_section(f, count=nitems, dtype=itype)
+        out = _read_section(f, file_type, count=nitems, dtype=itype)
         cell_data[key] = {"ugrid:ref": out}
 
     for key in ["tetra", "pyramid", "wedge", "hexahedron"]:
@@ -129,9 +127,9 @@ def read_buffer(f):
         nvertices = ugrid_counts[key][1]
         if nitems == 0:
             continue
-        out = _read_section(f, count=nitems * nvertices, dtype=itype).reshape(
-            nitems, nvertices
-        )
+        out = _read_section(
+            f, file_type, count=nitems * nvertices, dtype=itype
+        ).reshape(nitems, nvertices)
 
         if key == "pyramid":
             out = out[:, [1, 0, 3, 4, 2]]
@@ -144,15 +142,12 @@ def read_buffer(f):
         cell_data[key] = {"ugrid:ref": out}
 
     if file_type["type"] == "F":
-        _read_section(f, count=1, dtype=itype)
+        _read_section(f, file_type, count=1, dtype=itype)
 
     return Mesh(points, cells, cell_data=cell_data)
 
 
-file_type = None
-
-
-def _write_section(f, array, dtype):
+def _write_section(f, file_type, array, dtype):
     if file_type["type"] == "ascii":
         ncols = array.shape[1]
         fmt = " ".join(["%r"] * ncols)
@@ -162,112 +157,114 @@ def _write_section(f, array, dtype):
 
 
 def write(filename, mesh):
-    global file_type
     file_type = determine_file_type(filename)
 
     with open_file(filename, "w") as f:
-        itype = file_type["int_type"]
-        ftype = file_type["float_type"]
+        _write_buffer(f, file_type, mesh)
 
-        ugrid_counts = {
-            "points": 0,
-            "triangle": 0,
-            "quad": 0,
-            "tetra": 0,
-            "pyramid": 0,
-            "wedge": 0,
-            "hexahedron": 0,
-        }
 
-        ugrid_counts["points"] = mesh.points.shape[0]
+def _write_buffer(f, file_type, mesh):
+    itype = file_type["int_type"]
+    ftype = file_type["float_type"]
 
-        for key, data in mesh.cells.items():
-            if key in ugrid_counts.keys():
-                ugrid_counts[key] = data.shape[0]
-            else:
-                msg = ("UGRID mesh format doesn't know {} cells. Skipping.").format(key)
-                logging.warning(msg)
-                continue
+    ugrid_counts = {
+        "points": 0,
+        "triangle": 0,
+        "quad": 0,
+        "tetra": 0,
+        "pyramid": 0,
+        "wedge": 0,
+        "hexahedron": 0,
+    }
 
-        nitems = numpy.array(
+    ugrid_counts["points"] = mesh.points.shape[0]
+
+    for key, data in mesh.cells.items():
+        if key in ugrid_counts.keys():
+            ugrid_counts[key] = data.shape[0]
+        else:
+            msg = ("UGRID mesh format doesn't know {} cells. Skipping.").format(key)
+            logging.warning(msg)
+            continue
+
+    nitems = numpy.array(
+        [
             [
-                [
-                    ugrid_counts["points"],
-                    ugrid_counts["triangle"],
-                    ugrid_counts["quad"],
-                    ugrid_counts["tetra"],
-                    ugrid_counts["pyramid"],
-                    ugrid_counts["wedge"],
-                    ugrid_counts["hexahedron"],
-                ]
+                ugrid_counts["points"],
+                ugrid_counts["triangle"],
+                ugrid_counts["quad"],
+                ugrid_counts["tetra"],
+                ugrid_counts["pyramid"],
+                ugrid_counts["wedge"],
+                ugrid_counts["hexahedron"],
             ]
-        )
-        # header
+        ]
+    )
+    # header
 
-        # fortran_header corresponds to the number of bytes in each record
-        # it has to be before and after each record
-        fortran_header = None
-        if file_type["type"] == "F":
-            fortran_header = numpy.array([nitems.nbytes])
-            _write_section(f, fortran_header, itype)
+    # fortran_header corresponds to the number of bytes in each record
+    # it has to be before and after each record
+    fortran_header = None
+    if file_type["type"] == "F":
+        fortran_header = numpy.array([nitems.nbytes])
+        _write_section(f, file_type, fortran_header, itype)
 
-        _write_section(f, nitems, itype)
+    _write_section(f, file_type, nitems, itype)
 
-        if file_type["type"] == "F":
-            # finish current record
-            _write_section(f, fortran_header, itype)
+    if file_type["type"] == "F":
+        # finish current record
+        _write_section(f, file_type, fortran_header, itype)
 
-            # start next record
-            fortran_header = mesh.points.nbytes
-            for key, array in mesh.cells.items():
-                fortran_header += array.nbytes
-            # boundary tags
-            if ugrid_counts["triangle"] > 0:
-                fortran_header += ugrid_counts["triangle"] * numpy.dtype(itype).itemsize
-            if ugrid_counts["quad"] > 0:
-                fortran_header += ugrid_counts["quad"] * numpy.dtype(itype).itemsize
-            fortran_header = numpy.array([fortran_header])
-            _write_section(f, fortran_header, itype)
+        # start next record
+        fortran_header = mesh.points.nbytes
+        for key, array in mesh.cells.items():
+            fortran_header += array.nbytes
+        # boundary tags
+        if ugrid_counts["triangle"] > 0:
+            fortran_header += ugrid_counts["triangle"] * numpy.dtype(itype).itemsize
+        if ugrid_counts["quad"] > 0:
+            fortran_header += ugrid_counts["quad"] * numpy.dtype(itype).itemsize
+        fortran_header = numpy.array([fortran_header])
+        _write_section(f, file_type, fortran_header, itype)
 
-        _write_section(f, mesh.points, ftype)
+    _write_section(f, file_type, mesh.points, ftype)
 
-        for key in ["triangle", "quad"]:
-            if ugrid_counts[key] > 0:
-                # UGRID is one-based
-                out = mesh.cells[key] + 1
-                _write_section(f, out, itype)
-
-        # write boundary tags
-        for key in ["triangle", "quad"]:
-            if ugrid_counts[key] == 0:
-                continue
-            if key in mesh.cell_data and "ugrid:ref" in mesh.cell_data[key]:
-                labels = mesh.cell_data[key]["ugrid:ref"]
-            elif key in mesh.cell_data and "medit:ref" in mesh.cell_data[key]:
-                labels = mesh.cell_data[key]["medit:ref"]
-            elif key in mesh.cell_data and "gmsh:physical" in mesh.cell_data[key]:
-                labels = mesh.cell_data[key]["gmsh:physical"]
-            elif key in mesh.cell_data and "flac3d:zone" in mesh.cell_data[key]:
-                labels = mesh.cell_data[key]["flac3d:zone"]
-            else:
-                labels = numpy.ones(ugrid_counts[key], dtype=itype)
-
-            labels = labels.reshape(ugrid_counts[key], 1)
-            _write_section(f, labels, itype)
-
-        # write volume elements
-        for key in ["tetra", "pyramid", "wedge", "hexahedron"]:
-            if ugrid_counts[key] == 0:
-                continue
+    for key in ["triangle", "quad"]:
+        if ugrid_counts[key] > 0:
             # UGRID is one-based
             out = mesh.cells[key] + 1
-            if key == "pyramid":
-                out = out[:, [1, 0, 4, 2, 3]]
-            _write_section(f, out, itype)
+            _write_section(f, file_type, out, itype)
 
-        if file_type["type"] == "F":
-            _write_section(f, fortran_header, itype)
-    return
+    # write boundary tags
+    for key in ["triangle", "quad"]:
+        if ugrid_counts[key] == 0:
+            continue
+        if key in mesh.cell_data and "ugrid:ref" in mesh.cell_data[key]:
+            labels = mesh.cell_data[key]["ugrid:ref"]
+        elif key in mesh.cell_data and "medit:ref" in mesh.cell_data[key]:
+            labels = mesh.cell_data[key]["medit:ref"]
+        elif key in mesh.cell_data and "gmsh:physical" in mesh.cell_data[key]:
+            labels = mesh.cell_data[key]["gmsh:physical"]
+        elif key in mesh.cell_data and "flac3d:zone" in mesh.cell_data[key]:
+            labels = mesh.cell_data[key]["flac3d:zone"]
+        else:
+            labels = numpy.ones(ugrid_counts[key], dtype=itype)
+
+        labels = labels.reshape(ugrid_counts[key], 1)
+        _write_section(f, file_type, labels, itype)
+
+    # write volume elements
+    for key in ["tetra", "pyramid", "wedge", "hexahedron"]:
+        if ugrid_counts[key] == 0:
+            continue
+        # UGRID is one-based
+        out = mesh.cells[key] + 1
+        if key == "pyramid":
+            out = out[:, [1, 0, 4, 2, 3]]
+        _write_section(f, file_type, out, itype)
+
+    if file_type["type"] == "F":
+        _write_section(f, file_type, fortran_header, itype)
 
 
 register("ugrid", [".ugrid"], read, {"ugrid": write})
