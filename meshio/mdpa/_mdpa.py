@@ -102,14 +102,16 @@ def read(filename):
 
 def _read_nodes(f, is_ascii, data_size):
     # Count the number of nodes. This is _extremely_ ugly; we first read the _entire_
-    # file and see when we meet "End Nodes".
+    # file until "End Nodes". The crazy thing is that first counting the lines, then
+    # skipping back to pos, and using fromfile there is _faster_ than accumulating the
+    # points into a list and converting them to a numpy array afterwards. A point count
+    # would be _really_ helpful here, but yeah, that's a fallacy of the format.
     # <https://github.com/KratosMultiphysics/Kratos/issues/5365>
     pos = f.tell()
-    lines = f.readlines()
     num_nodes = 0
-    for line in lines:
-        str_line = str(line)
-        if "End Nodes" in str_line:
+    while True:
+        line = f.readline().decode("utf-8")
+        if "End Nodes" in line:
             break
         num_nodes += 1
     f.seek(pos)
@@ -142,19 +144,11 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
                 if key in entity_name:
                     t = _mdpa_to_meshio_type[key]
                     break
-    # Now we compute the number of entities
-    pos = f.tell()
-    lines = f.readlines()
-    total_num_cells = 0
-    for line in lines:
-        str_line = str(line)
-        if "End Elements" in str_line or "End Conditions" in str_line:
-            break
-        total_num_cells += 1
-    f.seek(pos)
 
-    for _ in range(total_num_cells):
+    while True:
         line = f.readline().decode("utf-8")
+        if "End Elements" in line or "End Conditions" in line:
+            break
         # data[0] gives the entity id
         # data[1] gives the property id
         # The rest are the ids of the nodes
@@ -180,13 +174,11 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
     # Cannot convert cell_tags[key] to numpy array: There may be a
     # different number of tags for each cell.
 
-    line = f.readline().decode("utf-8")
     if line.strip() not in ["End Elements", "End Conditions"]:
         raise ReadError()
 
 
 def _prepare_cells(cells, cell_tags):
-
     # Declaring has additional data tag
     has_additional_tag_data = False
 
@@ -316,7 +308,7 @@ def read_buffer(f):
     cell_tags = {}
 
     # Saving position
-    pos = f.tell()
+    # pos = f.tell()
     # Read mesh
     while True:
         line = f.readline().decode("utf-8")
@@ -334,7 +326,7 @@ def read_buffer(f):
     has_additional_tag_data = _prepare_cells(cells, cell_tags)
 
     # Reverting to the original position
-    f.seek(pos)
+    # f.seek(pos)
     # Read data
     # TODO: To implement
     # while False:

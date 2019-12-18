@@ -278,10 +278,7 @@ def _read_periodic(f, is_ascii, data_size):
 
 
 def write(filename, mesh, binary=True):
-    # logging.warning("Writing MSH4.1 unimplemented, falling back on MSH2")
-    # write2(filename, mesh, binary=binary)
     write4_1(filename, mesh, binary=binary)
-    return
 
 
 def write4_1(filename, mesh, binary=True):
@@ -414,7 +411,7 @@ def _write_nodes(fh, points, cells, binary):
         numpy.array([dim_entity, entity_tag, is_parametric], dtype=c_int).tofile(fh)
         numpy.array([n], dtype=c_size_t).tofile(fh)
         numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh)
-        points.tofile(fh, sep="")
+        points.tofile(fh)
         fh.write("\n".encode("utf-8"))
     else:
         fh.write(
@@ -475,14 +472,13 @@ def _write_elements(fh, cells, binary):
                 )
                 node_idcs = node_idcs.astype(c_size_t)
 
-            data = numpy.column_stack(
+            numpy.column_stack(
                 [
                     numpy.arange(tag0, tag0 + n, dtype=c_size_t),
                     # increment indices by one to conform with gmsh standard
                     node_idcs + 1,
                 ]
-            )
-            data.tofile(fh)
+            ).tofile(fh)
             tag0 += n
 
         fh.write("\n".encode("utf-8"))

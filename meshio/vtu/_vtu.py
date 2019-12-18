@@ -14,7 +14,6 @@ from .._common import (
     num_nodes_per_cell,
     raw_from_cell_data,
     vtk_to_meshio_type,
-    write_xml,
 )
 from .._exceptions import ReadError
 from .._helpers import register
@@ -365,11 +364,12 @@ def _chunk_it(array, n):
         k += 1
 
 
-def write(filename, mesh, binary=True, pretty_xml=True):
+def write(filename, mesh, binary=True):
     # Writing XML with an etree required first transforming the (potentially large)
     # arrays into string, which are much larger in memory still. This makes this writer
     # very memory hungry. See <https://stackoverflow.com/q/59272477/353337>.
-    from lxml import etree as ET
+    # from lxml import etree as ET
+    from .._cxml import etree as ET
 
     if not binary:
         logging.warning("VTU ASCII files are only meant for debugging.")
@@ -416,33 +416,48 @@ def write(filename, mesh, binary=True, pretty_xml=True):
             da.set("NumberOfComponents", "{}".format(data.shape[1]))
         if binary:
             da.set("format", "binary")
-            max_block_size = 32768
-            data_bytes = data.tostring()
 
-            # round up
-            num_blocks = -int(-len(data_bytes) // max_block_size)
-            last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
+            def text_writer(f):
+                max_block_size = 32768
+                data_bytes = data.tostring()
 
-            compressed_blocks = [
-                # This zlib.compress is the slowest part of the writer
-                zlib.compress(block)
-                for block in _chunk_it(data_bytes, max_block_size)
-            ]
+                # round up
+                num_blocks = -int(-len(data_bytes) // max_block_size)
+                last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
 
-            # collect header
-            header = numpy.array(
-                [num_blocks, max_block_size, last_block_size]
-                + [len(b) for b in compressed_blocks],
-                dtype=vtu_to_numpy_type[header_type],
-            )
-            da.text = (
-                base64.b64encode(header.tostring())
-                + base64.b64encode(b"".join(compressed_blocks))
-            ).decode()
+                # It's too bad that we have to keep all blocks in memory. This is
+                # necessary because the header, written first, needs to know the lengths
+                # of all blocks. Also, the blocks are encoded _after_ having been
+                # concatenated.
+                compressed_blocks = [
+                    # This zlib.compress is the slowest part of the writer
+                    zlib.compress(block)
+                    for block in _chunk_it(data_bytes, max_block_size)
+                ]
+
+                # collect header
+                header = numpy.array(
+                    [num_blocks, max_block_size, last_block_size]
+                    + [len(b) for b in compressed_blocks],
+                    dtype=vtu_to_numpy_type[header_type],
+                )
+                f.write(base64.b64encode(header.tostring()).decode())
+                f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
+
         else:
             da.set("format", "ascii")
-            # This join() operations is the bottleneck for the write
-            da.text = "\n".join(map(fmt.format, data.reshape(-1)))
+
+            def text_writer(f):
+                # This write() loop is the bottleneck for the write. Alternatives:
+                # savetxt is super slow:
+                #   numpy.savetxt(f, data.reshape(-1), fmt=fmt)
+                # joining and writing is a bit faster, but consumes huge amounts of
+                # memory:
+                #   f.write("\n".join(map(fmt.format, data.reshape(-1))))
+                for item in data.reshape(-1):
+                    f.write((fmt + "\n").format(item))
+
+        da.text_writer = text_writer
         return
 
     comment = ET.Comment("This file was created by meshio v{}".format(__version__))
@@ -495,7 +510,10 @@ def write(filename, mesh, binary=True, pretty_xml=True):
         for name, data in raw_from_cell_data(mesh.cell_data).items():
             numpy_to_xml_array(cd, name, "{:.11e}", data)
 
-    write_xml(filename, vtk_file, pretty_xml)
+    # write_xml(filename, vtk_file, pretty_xml)
+
+    tree = ET.ElementTree(vtk_file)
+    tree.write(filename)
 
 
 register(
