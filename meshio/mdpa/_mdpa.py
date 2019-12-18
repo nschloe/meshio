@@ -404,7 +404,8 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
     consecutive_index = 0
     aux_cell_type = None
     for cell_type, node_idcs in cells.items():
-        # local_dimension = local_dimension_types[cell_type] # NOTE: The names of the dummy conditions are not regular, require extra work
+        # NOTE: The names of the dummy conditions are not regular, require extra work
+        # local_dimension = local_dimension_types[cell_type]
         # if (local_dimension < dimension):
         # entity = "Conditions"
 
@@ -444,7 +445,7 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
                 form.format(
                     " " + str(consecutive_index + k + 1),
                     " ".join([str(val) for val in fcd[k]]),
-                    " ".join([str(cc + 1) for cc in c]),
+                    " ".join([str(cc) for cc in c + 1]),
                 ).encode("utf-8")
             )
 

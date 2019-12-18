@@ -44,6 +44,15 @@ def test_xdmf3(mesh, data_format):
     helpers.write_read(write, meshio.xdmf.read, mesh, 1.0e-14)
 
 
+# HDF5 compressed I/O
+@pytest.mark.parametrize("mesh", test_set_full)
+def test_compression(mesh):
+    def write(*args, **kwargs):
+        return meshio.xdmf.write(*args, data_format="HDF", compression="gzip", **kwargs)
+
+    helpers.write_read(write, meshio.xdmf.read, mesh, 1.0e-14)
+
+
 def test_generic_io():
     helpers.generic_io("test.xdmf")
     # With additional, insignificant suffix:

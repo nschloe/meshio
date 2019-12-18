@@ -274,9 +274,7 @@ class VtuReader:
         self.cells, self.cell_data = _organize_cells(
             point_offsets, cells, cell_data_raw
         )
-
         self.field_data = field_data
-        return
 
     def read_binary(self, data, data_type):
         # first read the the block size; it determines the size of the header
@@ -333,8 +331,8 @@ class VtuReader:
 
         if fmt == "ascii":
             # ascii
-            data = numpy.array(
-                c.text.split(), dtype=vtu_to_numpy_type[c.attrib["type"]]
+            data = numpy.fromstring(
+                c.text, dtype=vtu_to_numpy_type[c.attrib["type"]], sep=" "
             )
         elif fmt == "binary":
             data = self.read_binary(c.text.strip(), c.attrib["type"])
@@ -368,6 +366,9 @@ def _chunk_it(array, n):
 
 
 def write(filename, mesh, binary=True, pretty_xml=True):
+    # Writing XML with an etree required first transforming the (potentially large)
+    # arrays into string, which are much larger in memory still. This makes this writer
+    # very memory hungry. See <https://stackoverflow.com/q/59272477/353337>.
     from lxml import etree as ET
 
     if not binary:

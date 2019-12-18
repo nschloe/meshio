@@ -162,13 +162,14 @@ def write(filename, mesh):
             for cell in cells:
                 cell_id += 1
                 cell_info = "{}, {:d},, ".format(nastran_type, cell_id)
-                conn = ", ".join(str(nid + 1) for nid in cell[:6])
+                cell1 = cell + 1
+                conn = ", ".join(str(nid) for nid in cell1[:6])
                 f.write(cell_info + conn + "\n")
                 if len(cell) >= 7:
-                    conn = ", ".join(str(nid + 1) for nid in cell[6:14])
+                    conn = ", ".join(str(nid) for nid in cell1[6:14])
                     f.write("+, " + conn + "\n")
                     if len(cell) >= 15:
-                        conn = ", ".join(str(nid + 1) for nid in cell[14:])
+                        conn = ", ".join(str(nid) for nid in cell1[14:])
                         f.write("+, " + conn + "\n")
 
         f.write("ENDDATA\n")

@@ -344,7 +344,7 @@ def _write_nodes(fh, points, binary):
         tmp = numpy.empty(len(points), dtype=dtype)
         tmp["index"] = 1 + numpy.arange(len(points))
         tmp["x"] = points
-        fh.write(tmp.tostring())
+        tmp.tofile(fh)
         fh.write("\n".encode("utf-8"))
     else:
         for k, x in enumerate(points):
@@ -386,7 +386,7 @@ def _write_elements(fh, cells, tag_data, binary):
             array = numpy.hstack([a, fcd, node_idcs + 1])
             if array.dtype != c_int:
                 raise WriteError()
-            fh.write(array.tostring())
+            array.tofile(fh)
         else:
             form = (
                 "{} "

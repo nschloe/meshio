@@ -6,7 +6,7 @@ import time
 import numpy
 
 from ..__about__ import __version__ as version
-from .._exceptions import WriteError
+from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
@@ -17,13 +17,14 @@ meshio_only = {"tetra", "pyramid", "wedge", "hexahedron"}
 meshio_data = {"flac3d:zone", "gmsh:physical", "medit:ref"}
 
 
-flac3d_to_meshio_type = {
-    "T4": "tetra",
-    "P5": "pyramid",
-    "W6": "wedge",
-    "B7": "hexahedron",
-    "B8": "hexahedron",
+numnodes_to_meshio_type = {
+    4: "tetra",
+    5: "pyramid",
+    6: "wedge",
+    8: "hexahedron",
 }
+
+
 meshio_to_flac3d_type = {
     "tetra": "T4",
     "pyramid": "P5",
@@ -73,100 +74,96 @@ def read_buffer(f):
     """
     points = []
     point_ids = {}
-    zones = {}
-    zgroups = {}
-    count = {k: 0 for k in meshio_to_flac3d_type.keys()}
+    cells = {}
+    mapper = {}
+    field_data = {}
+    slots = set()
 
-    index = 0
+    pidx = 0
+    zidx = 0
+    count = {k: 0 for k in meshio_only}
     line = f.readline()
     while line:
-        if line.startswith("ZGROUP"):
-            _read_zgroup(f, line, zgroups)
-        elif line.startswith("G"):
-            pid = _read_point(line, points)
-            point_ids[pid] = index
-            index += 1
-        elif line.startswith("Z"):
-            _read_cell(line, zones, count, point_ids)
+        line = line.rstrip().split()
+        if line[0] == "G":
+            pid, point = _read_point(line)
+            points.append(point)
+            point_ids[pid] = pidx
+            pidx += 1
+        elif line[0] == "Z":
+            cid, cell = _read_cell(line, point_ids)
+            cell_type = numnodes_to_meshio_type[len(cell)]
+            if cell_type in cells:
+                cells[cell_type].append(cell)
+            else:
+                cells[cell_type] = [cell]
+            mapper[cid] = [count[cell_type], len(cell)]
+            count[cell_type] += 1
+        elif line[0] == "ZGROUP":
+            name, data, slot = _read_zgroup(f, line)
+            zidx += 1
+            for cid in data:
+                mapper[cid].append(zidx)
+            field_data[name] = numpy.array([zidx, 3])
+            slots.add(slot)
+            if len(slots) > 1:
+                raise ReadError("Multiple slots are not supported")
         line = f.readline()
 
-    cells, cell_data, field_data = _translate_cells(zones, zgroups, count)
+    if zidx:
+        cell_data = {k: {"flac3d:zone": numpy.zeros(v)} for k, v in count.items() if v}
+        for i, numnodes, zid in mapper.values():
+            cell_data[numnodes_to_meshio_type[numnodes]]["flac3d:zone"][i] = zid
+    else:
+        cell_data = {}
+
     return Mesh(
         points=numpy.array(points),
-        cells=cells,
+        cells={
+            k: numpy.array(v)[:, flac3d_to_meshio_order[k]] for k, v in cells.items()
+        },
         cell_data=cell_data,
         field_data=field_data,
     )
 
 
-def _read_point(line, points):
+def _read_point(line):
     """
     Read point coordinates.
     """
-    line = line.rstrip().split()
-    points.append([float(l) for l in line[2:]])
-    return int(line[1])
+    return int(line[1]), [float(l) for l in line[2:]]
 
 
-def _read_cell(line, zones, count, point_ids):
+def _read_cell(line, point_ids):
     """
     Read cell corners.
     """
-    line = line.rstrip().split()
-    meshio_type = flac3d_to_meshio_type[line[1]]
     cell = [point_ids[int(l)] for l in line[3:]]
     if line[1] == "B7":
         cell.append(cell[-1])
-    zones[int(line[2])] = {
-        "meshio_id": count[meshio_type],
-        "meshio_type": meshio_type,
-        "cell": [cell[i] for i in flac3d_to_meshio_order[meshio_type]],
-    }
-    count[meshio_type] += 1
+    return int(line[2]), cell
 
 
-def _read_zgroup(f, line, zgroups):
+def _read_zgroup(f, line):
     """
     Read cell group.
     """
-    group_name = line.rstrip().split()[1].replace('"', "")
-    zgroups[group_name] = []
+    name = line[1].replace('"', "")
+    data = []
+    slot = "" if "SLOT" not in line else line[-1]
 
     i = f.tell()
     line = f.readline()
     while True:
         line = line.rstrip().split()
-        if line and (line[0] not in ["*", "ZGROUP"]):
-            zgroups[group_name].extend([int(l) for l in line])
+        if line and (line[0] not in {"*", "ZGROUP"}):
+            data += [int(l) for l in line]
         else:
             f.seek(i)
             break
         i = f.tell()
         line = f.readline()
-
-
-def _translate_cells(zones, zgroups, count):
-    """
-    Convert FLAC3D zones and groups as meshio cells and cell_data.
-    """
-    meshio_types = [k for k in meshio_to_flac3d_type.keys() if count[k]]
-    cells = {k: [] for k in meshio_types}
-    cell_data = {k: numpy.zeros(count[k]) for k in meshio_types}
-    field_data = {}
-
-    for v in zones.values():
-        cells[v["meshio_type"]].append(v["cell"])
-
-    for zid, (k, v) in enumerate(zgroups.items()):
-        field_data[k] = numpy.array([zid + 1, 3])
-        for i in v:
-            mid = zones[i]["meshio_id"]
-            mt = zones[i]["meshio_type"]
-            cell_data[mt][mid] = zid + 1
-
-    cells = {k: numpy.array(v) for k, v in cells.items()}
-    cell_data = {k: {"flac3d:zone": v} for k, v in cell_data.items()}
-    return cells, cell_data, field_data
+    return name, data, slot
 
 
 def write(filename, mesh):
@@ -185,8 +182,13 @@ def write(filename, mesh):
         _write_points(f, mesh.points)
         f.write("* ZONES\n")
         _write_cells(f, mesh.points, mesh.cells)
-        f.write("* ZONE GROUPS\n")
-        _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
+
+        if mesh.cell_data:
+            if set(kk for v in mesh.cell_data.values() for kk in v.keys()).intersection(
+                meshio_data
+            ):
+                f.write("* ZONE GROUPS\n")
+                _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
 
 
 def _write_points(f, points):
@@ -203,7 +205,7 @@ def _write_cells(f, points, cells):
     """
     zones, meshio_types = _translate_zones(points, cells)
     for i, (zone, meshio_type) in enumerate(zip(zones, meshio_types)):
-        zone_str = " ".join([str(z + 1) for z in zone])
+        zone_str = " ".join([str(z) for z in zone + 1])
         f.write(
             "Z {} {} {}\n".format(meshio_to_flac3d_type[meshio_type], i + 1, zone_str)
         )
@@ -222,8 +224,10 @@ def _translate_zones(points, cells):
         corner[:, meshio_to_flac3d_order[k][:4]]
         for k, corner in zip(meshio_types, corners)
     ]
-    p0, p1, p2, p3 = points[numpy.concatenate(tmp).T]
-    dets = (numpy.cross(p1 - p0, p2 - p0) * (p3 - p0)).sum(axis=1)
+    tmp = points[numpy.concatenate(tmp).T]
+    dets = (numpy.cross(tmp[1] - tmp[0], tmp[2] - tmp[0]) * (tmp[3] - tmp[0])).sum(
+        axis=1
+    )
 
     # Reorder corner points
     meshio_types = [
