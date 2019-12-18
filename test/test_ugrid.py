@@ -141,7 +141,7 @@ def _tet_volume(cell):
 
 def _pyramid_volume(cell):
     """
-    evaluate pyramid volume by splitting it into 
+    Evaluate pyramid volume by splitting it into
     two tetrahedra
     """
     tet0 = cell[[0, 1, 3, 4]]
@@ -157,7 +157,7 @@ def _pyramid_volume(cell):
 # pyramids. In order to make sure we got it right read a cube
 # split into pyramids and evaluate its volume
 @pytest.mark.parametrize(
-    "filename, volume,accuracy", [("pyra_cube.ugrid", 1.0, 1e-15),]
+    "filename, volume,accuracy", [("pyra_cube.ugrid", 1.0, 1e-15)]
 )
 def test_volume(filename, volume, accuracy):
     this_dir = os.path.dirname(os.path.abspath(__file__))
