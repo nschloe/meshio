@@ -36,6 +36,7 @@ meshio can read and write all of the following and smoothly converts between the
  * [STL](https://en.wikipedia.org/wiki/STL_(file_format))
  * [TetGen .node/.ele](https://wias-berlin.de/software/tetgen/fformats.html)
  * [SVG](https://www.w3.org/TR/SVG/) (2D only, output only)
+ * [UGRID](http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html)
  * [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
  * [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats) ([not raw binary data](https://github.com/nschloe/meshio/wiki/VTU-with-raw-binary-data))
  * [WKT](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry) ([TIN](https://en.wikipedia.org/wiki/Triangulated_irregular_network))
