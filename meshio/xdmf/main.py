@@ -435,13 +435,11 @@ class XdmfWriter:
             )
             cd = numpy.concatenate(
                 [
-                    # prepend column with xdmf type index
-                    numpy.insert(
-                        [value, 2] if key == "line" else value,
-                        0,
-                        meshio_type_to_xdmf_index[key],
-                        axis=1,
-                    ).flatten()
+                    numpy.hstack(
+                        [numpy.full((value.shape[0],
+                                     2 if key == 'line' else 1),
+                                    meshio_type_to_xdmf_index[key]),
+                         value]).flatten()
                     for key, value in cells.items()
                 ]
             )
