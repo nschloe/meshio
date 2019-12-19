@@ -428,7 +428,11 @@ class XdmfWriter:
                 NumberOfElements=str(total_num_cells),
             )
             total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
-            dim = str(total_num_cell_items + total_num_cells)
+            dim = str(
+                total_num_cell_items
+                + total_num_cells
+                + (cells["line"].shape[0] if "line" in cells else 0)
+            )
             cd = numpy.concatenate(
                 [
                     # prepend column with xdmf type index
