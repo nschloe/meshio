@@ -427,7 +427,7 @@ class XdmfWriter:
                 TopologyType="Mixed",
                 NumberOfElements=str(total_num_cells),
             )
-            total_num_cell_items = sum(c.size for c in cells.values())
+            total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
             dim = str(total_num_cell_items + total_num_cells)
             cd = numpy.concatenate(
                 [
