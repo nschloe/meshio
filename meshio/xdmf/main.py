@@ -149,7 +149,14 @@ class XdmfReader:
                     raise ReadError()
                 topology_type = c.attrib["TopologyType"]
                 if topology_type == "Mixed":
-                    cells = translate_mixed_cells(data_items[0])
+                    cells = translate_mixed_cells(
+                        numpy.fromstring(
+                            data_items[0].text,
+                            int,
+                            int(data_items[0].attrib["Dimensions"]),
+                            " ",
+                        )
+                    )
                 else:
                     meshio_type = xdmf_to_meshio_type[topology_type]
                     cells[meshio_type] = self._read_data_item(data_items[0])
