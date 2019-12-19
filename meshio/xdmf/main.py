@@ -436,10 +436,14 @@ class XdmfWriter:
             cd = numpy.concatenate(
                 [
                     numpy.hstack(
-                        [numpy.full((value.shape[0],
-                                     2 if key == 'line' else 1),
-                                    meshio_type_to_xdmf_index[key]),
-                         value]).flatten()
+                        [
+                            numpy.full(
+                                (value.shape[0], 2 if key == "line" else 1),
+                                meshio_type_to_xdmf_index[key],
+                            ),
+                            value,
+                        ]
+                    ).flatten()
                     for key, value in cells.items()
                 ]
             )
