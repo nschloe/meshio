@@ -30,7 +30,6 @@ def read(filename):
 class XdmfReader:
     def __init__(self, filename):
         self.filename = filename
-        return
 
     def read(self):
         from lxml import etree as ET
@@ -238,15 +237,7 @@ class XdmfReader:
                 if cell_type == "Mixed":
                     cells = translate_mixed_cells(data)
                 else:
-                    meshio_type = xdmf_to_meshio_type[cell_type]
-                    if meshio_type == "line":
-                        if (data[:, 0] != 2).any():
-                            raise ReadError(
-                                "Can only read a " + cell_type + " with 2 points"
-                            )
-                        cells[meshio_type] = data[:, 1:]
-                    else:
-                        cells[meshio_type] = data
+                    cells[xdmf_to_meshio_type[cell_type]] = data
 
             elif c.tag == "Geometry":
                 try:
@@ -403,16 +394,8 @@ class XdmfWriter:
         )
         data_item.text = self.numpy_to_xml_string(points)
 
-    def cells(self, cells_in, grid):
+    def cells(self, cells, grid):
         from lxml import etree as ET
-
-        # Lines translate to Polylines, and one needs to specify the exact
-        # number of nodes. Hence, prepend 2 (without mutating argument).
-
-        cells = {
-            k: (numpy.insert(cells_in[k], 0, 2, axis=1) if k == "line" else cells_in[k])
-            for k in cells_in
-        }
 
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
@@ -436,6 +419,7 @@ class XdmfWriter:
             )
             data_item.text = self.numpy_to_xml_string(cells[meshio_type])
         elif len(cells) > 1:
+
             total_num_cells = sum(c.shape[0] for c in cells.values())
             topo = ET.SubElement(
                 grid,
@@ -444,12 +428,21 @@ class XdmfWriter:
                 NumberOfElements=str(total_num_cells),
             )
             total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
-            dim = str(total_num_cell_items + total_num_cells)
+            dim = str(
+                total_num_cell_items
+                + total_num_cells
+                + (cells["line"].shape[0] if "line" in cells else 0)
+            )
             cd = numpy.concatenate(
                 [
-                    # prepend column with xdmf type index
-                    numpy.insert(
-                        value, 0, meshio_type_to_xdmf_index[key], axis=1
+                    numpy.hstack(
+                        [
+                            numpy.full(
+                                (value.shape[0], 2 if key == "line" else 1),
+                                meshio_type_to_xdmf_index[key],
+                            ),
+                            value,
+                        ]
                     ).flatten()
                     for key, value in cells.items()
                 ]
@@ -464,7 +457,6 @@ class XdmfWriter:
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(cd)
-        return
 
     def point_data(self, point_data, grid):
         from lxml import etree as ET
@@ -488,7 +480,6 @@ class XdmfWriter:
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(data)
-        return
 
     def cell_data(self, cell_data, grid):
         from lxml import etree as ET
@@ -513,7 +504,6 @@ class XdmfWriter:
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(data)
-        return
 
     def field_data(self, field_data, information):
         from lxml import etree as ET
@@ -523,7 +513,6 @@ class XdmfWriter:
             data_item = ET.SubElement(info, "map", key=name, dim=str(data[1]))
             data_item.text = str(data[0])
         information.text = ET.CDATA(ET.tostring(info))
-        return
 
 
 def write(*args, **kwargs):
