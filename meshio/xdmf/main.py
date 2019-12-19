@@ -30,7 +30,6 @@ def read(filename):
 class XdmfReader:
     def __init__(self, filename):
         self.filename = filename
-        return
 
     def read(self):
         from lxml import etree as ET
@@ -452,7 +451,6 @@ class XdmfWriter:
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(cd)
-        return
 
     def point_data(self, point_data, grid):
         from lxml import etree as ET
@@ -476,7 +474,6 @@ class XdmfWriter:
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(data)
-        return
 
     def cell_data(self, cell_data, grid):
         from lxml import etree as ET
@@ -501,7 +498,6 @@ class XdmfWriter:
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(data)
-        return
 
     def field_data(self, field_data, information):
         from lxml import etree as ET
@@ -511,7 +507,6 @@ class XdmfWriter:
             data_item = ET.SubElement(info, "map", key=name, dim=str(data[1]))
             data_item.text = str(data[0])
         information.text = ET.CDATA(ET.tostring(info))
-        return
 
 
 def write(*args, **kwargs):
