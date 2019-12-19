@@ -434,8 +434,10 @@ class XdmfWriter:
                 [
                     # prepend column with xdmf type index
                     numpy.insert(
-                        [value, 2] if key == 'line' else value,
-                        0, meshio_type_to_xdmf_index[key], axis=1
+                        [value, 2] if key == "line" else value,
+                        0,
+                        meshio_type_to_xdmf_index[key],
+                        axis=1,
                     ).flatten()
                     for key, value in cells.items()
                 ]
