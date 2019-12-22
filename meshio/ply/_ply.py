@@ -304,9 +304,21 @@ def write(filename, mesh, binary=True):  # noqa: C901
         fh.write("element vertex {:d}\n".format(mesh.points.shape[0]).encode("utf-8"))
         #
         dim_names = ["x", "y", "z"]
+        # From <https://en.wikipedia.org/wiki/PLY_(file_format)>:
+        #
+        # > The type can be specified with one of char uchar short ushort int uint float
+        # > double, or one of int8 uint8 int16 uint16 int32 uint32 float32 float64.
+        #
+        # We're adding [u]int64 here.
         type_name_table = {
             numpy.dtype(numpy.int8): "int8",
+            numpy.dtype(numpy.int16): "int16",
+            numpy.dtype(numpy.int32): "int32",
             numpy.dtype(numpy.int64): "int64",
+            numpy.dtype(numpy.uint8): "uint8",
+            numpy.dtype(numpy.uint16): "uint16",
+            numpy.dtype(numpy.uint32): "uint32",
+            numpy.dtype(numpy.uint64): "uint64",
             numpy.dtype(numpy.float32): "float",
             numpy.dtype(numpy.float64): "double",
         }
