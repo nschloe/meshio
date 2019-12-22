@@ -16,7 +16,7 @@
 There are various mesh formats available for representing unstructured meshes.
 meshio can read and write all of the following and smoothly converts between them:
 
- [Abaqus](http://abaqus.software.polimi.it/v6.14/index.html),
+> [Abaqus](http://abaqus.software.polimi.it/v6.14/index.html),
  [ANSYS msh](https://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf),
  [CGNS](https://cgns.github.io/),
  [DOLFIN XML](https://manpages.ubuntu.com/manpages/disco/man1/dolfin-convert.1.html),
@@ -30,7 +30,7 @@ meshio can read and write all of the following and smoothly converts between the
  [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed#mesh-representation-of-segmented-object-surfaces),
  [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats) (versions 2 and 4),
  [OBJ](https://en.wikipedia.org/wiki/Wavefront_.obj_file),
- [OFF](https://segeval.cs.princeton.edu/public/off_format.html)m
+ [OFF](https://segeval.cs.princeton.edu/public/off_format.html),
  [PERMAS](https://www.intes.de),
  [PLY](https://en.wikipedia.org/wiki/PLY_(file_format)),
  [STL](https://en.wikipedia.org/wiki/STL_(file_format)),
