@@ -85,7 +85,7 @@ def read(filename):  # noqa: C901
     ns_names = []
     # eb_names = []
     ns = []
-    node_sets = {}
+    point_sets = {}
     info = []
 
     for key, value in nc.variables.items():
@@ -171,7 +171,7 @@ def read(filename):  # noqa: C901
             cell_data[cell_type][name] = data[k : k + n]
         k += n
 
-    node_sets = {name: dat for name, dat in zip(ns_names, ns)}
+    point_sets = {name: dat for name, dat in zip(ns_names, ns)}
 
     nc.close()
     return Mesh(
@@ -179,7 +179,7 @@ def read(filename):  # noqa: C901
         cells,
         point_data=point_data,
         cell_data=cell_data,
-        node_sets=node_sets,
+        point_sets=point_sets,
         info=info,
     )
 
@@ -282,7 +282,7 @@ def write(filename, mesh):
     rootgrp.createDimension("num_dim", mesh.points.shape[1])
     rootgrp.createDimension("num_elem", total_num_elems)
     rootgrp.createDimension("num_el_blk", len(mesh.cells))
-    rootgrp.createDimension("num_node_sets", len(mesh.node_sets))
+    rootgrp.createDimension("num_node_sets", len(mesh.point_sets))
     rootgrp.createDimension("len_string", 33)
     rootgrp.createDimension("len_line", 81)
     rootgrp.createDimension("four", 4)
@@ -353,17 +353,17 @@ def write(filename, mesh):
             node_data[0] = data
 
     # node sets
-    num_node_sets = len(mesh.node_sets)
-    if num_node_sets > 0:
+    num_point_sets = len(mesh.point_sets)
+    if num_point_sets > 0:
         data = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets")
         data_names = rootgrp.createVariable(
             "ns_names", "S1", ("num_node_sets", "len_string")
         )
-        for k, name in enumerate(mesh.node_sets.keys()):
+        for k, name in enumerate(mesh.point_sets.keys()):
             data[k] = k
             for i, letter in enumerate(name):
                 data_names[k, i] = letter.encode("utf-8")
-        for k, (key, values) in enumerate(mesh.node_sets.items()):
+        for k, (key, values) in enumerate(mesh.point_sets.items()):
             dim1 = "num_nod_ns{}".format(k + 1)
             rootgrp.createDimension(dim1, values.shape[0])
             dtype = numpy_to_exodus_dtype[values.dtype.name]
