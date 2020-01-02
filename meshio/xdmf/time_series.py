@@ -1,4 +1,6 @@
+from io import BytesIO
 import os
+import xml.etree.ElementTree as ET
 
 import numpy
 
@@ -15,19 +17,12 @@ from .common import (
     xdmf_to_numpy_type,
 )
 
-try:
-    from StringIO import cStringIO as BytesIO
-except ImportError:
-    from io import BytesIO
-
 
 class TimeSeriesReader:
     def __init__(self, filename):  # noqa: C901
-        from lxml import etree as ET
-
         self.filename = filename
 
-        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        parser = ET.XMLParser()
         tree = ET.parse(self.filename, parser)
         root = tree.getroot()
 
@@ -237,8 +232,6 @@ class TimeSeriesReader:
 
 class TimeSeriesWriter:
     def __init__(self, filename, pretty_xml=True, data_format="HDF"):
-        from lxml import etree as ET
-
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -286,8 +279,6 @@ class TimeSeriesWriter:
         #     <DataItem Dimensions="8457 2" Format="HDF">maxwell.h5:/Mesh/0/mesh/geometry</DataItem>
         #   </Geometry>
         # </Grid>
-        from lxml import etree as ET
-
         self.mesh_name = "mesh"
         grid = ET.SubElement(
             self.domain, "Grid", Name=self.mesh_name, GridType="Uniform"
@@ -306,8 +297,6 @@ class TimeSeriesWriter:
         #     <DataItem Dimensions="8457 1" Format="HDF">maxwell.h5:/VisualisationVector/1</DataItem>
         #   </Attribute>
         # </Grid>
-        from lxml import etree as ET
-
         grid = ET.SubElement(self.collection, "Grid")
         if not self.has_mesh:
             raise WriteError()
@@ -348,8 +337,6 @@ class TimeSeriesWriter:
         return os.path.basename(self.h5_filename) + ":/" + name
 
     def points(self, grid, points):
-        from lxml import etree as ET
-
         if points.shape[1] == 2:
             geometry_type = "XY"
         else:
@@ -371,8 +358,6 @@ class TimeSeriesWriter:
         data_item.text = self.numpy_to_xml_string(points)
 
     def cells(self, cells, grid):
-        from lxml import etree as ET
-
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
             num_cells = len(cells[meshio_type])
@@ -431,8 +416,6 @@ class TimeSeriesWriter:
             data_item.text = self.numpy_to_xml_string(cd)
 
     def point_data(self, point_data, grid):
-        from lxml import etree as ET
-
         for name, data in point_data.items():
             att = ET.SubElement(
                 grid,
@@ -454,8 +437,6 @@ class TimeSeriesWriter:
             data_item.text = self.numpy_to_xml_string(data)
 
     def cell_data(self, cell_data, grid):
-        from lxml import etree as ET
-
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(

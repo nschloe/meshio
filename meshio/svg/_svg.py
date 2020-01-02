@@ -1,3 +1,5 @@
+import xml.etree.ElementTree as ET
+
 import numpy
 
 from .._exceptions import WriteError
@@ -5,8 +7,6 @@ from .._helpers import register
 
 
 def write(filename, mesh):
-    from lxml import etree as ET
-
     if mesh.points.shape[1] == 3 and not numpy.allclose(
         mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
     ):
@@ -45,7 +45,7 @@ def write(filename, mesh):
             )
 
     tree = ET.ElementTree(svg)
-    tree.write(filename, pretty_print=True)
+    tree.write(filename)
 
 
 register("svg", [".svg"], None, {"svg": write})
