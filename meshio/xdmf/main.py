@@ -214,84 +214,90 @@ class XdmfReader:
         if domain.tag != "Domain":
             raise ReadError()
 
-        grids = list(domain)
-        if len(grids) != 1:
-            raise ReadError("XDMF reader: Only supports one grid right now.")
-        grid = grids[0]
-        if grid.tag != "Grid":
-            raise ReadError()
-
         points = None
         cells = {}
         point_data = {}
         cell_data_raw = {}
         field_data = {}
 
-        for c in grid:
-            if c.tag == "Topology":
-                data_items = list(c)
-                if len(data_items) != 1:
-                    raise ReadError()
-                data_item = data_items[0]
+        domain_data = {}
 
-                data = self._read_data_item(data_item)
+        for domain_item in domain:
+            if domain_item.tag == "DataItem":
+                domain_data[domain_item.attrib["Name"]] = self._read_data_item(
+                    domain_item
+                )
+            elif domain_item.tag == "Grid":
+                for c in domain_item:
+                    if c.tag == "Topology":
+                        data_items = list(c)
+                        if len(data_items) != 1:
+                            raise ReadError()
+                        data_item = data_items[0]
 
-                # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
-                # Allow both.
-                if "Type" in c.attrib:
-                    if "TopologyType" in c.attrib:
-                        raise ReadError()
-                    cell_type = c.attrib["Type"]
-                else:
-                    cell_type = c.attrib["TopologyType"]
+                        data = self._read_data_item(data_item)
 
-                if cell_type == "Mixed":
-                    cells = translate_mixed_cells(data)
-                else:
-                    cells[xdmf_to_meshio_type[cell_type]] = data
+                        # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
+                        # Allow both.
+                        if "Type" in c.attrib:
+                            if "TopologyType" in c.attrib:
+                                raise ReadError()
+                            cell_type = c.attrib["Type"]
+                        else:
+                            cell_type = c.attrib["TopologyType"]
 
-            elif c.tag == "Geometry":
-                try:
-                    geometry_type = c.attrib["GeometryType"]
-                except KeyError:
-                    pass
-                else:
-                    if geometry_type not in ["XY", "XYZ"]:
-                        raise ReadError()
+                        if cell_type == "Mixed":
+                            cells = translate_mixed_cells(data)
+                        else:
+                            cells[xdmf_to_meshio_type[cell_type]] = data
 
-                data_items = list(c)
-                if len(data_items) != 1:
-                    raise ReadError()
-                data_item = data_items[0]
-                points = self._read_data_item(data_item)
+                    elif c.tag == "Geometry":
+                        try:
+                            geometry_type = c.attrib["GeometryType"]
+                        except KeyError:
+                            pass
+                        else:
+                            if geometry_type not in ["XY", "XYZ"]:
+                                raise ReadError()
 
-            elif c.tag == "Information":
-                c_data = c.text
-                if not c_data:
-                    raise ReadError()
-                field_data = self.read_information(c_data)
+                        data_items = list(c)
+                        if len(data_items) != 1:
+                            raise ReadError()
+                        data_item = data_items[0]
+                        points = self._read_data_item(data_item)
 
-            elif c.tag == "Attribute":
-                # Don't be too strict here: FEniCS, for example, calls this
-                # 'AttributeType'.
-                # assert c.attrib['Type'] == 'None'
+                    elif c.tag == "Information":
+                        c_data = c.text
+                        if not c_data:
+                            raise ReadError()
+                        field_data = self.read_information(c_data)
 
-                data_items = list(c)
-                if len(data_items) != 1:
-                    raise ReadError()
-                data_item = data_items[0]
+                    elif c.tag == "Attribute":
+                        # Don't be too strict here: FEniCS, for example, calls this
+                        # 'AttributeType'.
+                        # assert c.attrib['Type'] == 'None'
 
-                data = self._read_data_item(data_item)
+                        data_items = list(c)
+                        if len(data_items) != 1:
+                            raise ReadError()
+                        data_item = data_items[0]
 
-                name = c.attrib["Name"]
-                if c.attrib["Center"] == "Node":
-                    point_data[name] = data
-                else:
-                    if c.attrib["Center"] != "Cell":
-                        raise ReadError()
-                    cell_data_raw[name] = data
+                        data = self._read_data_item(data_item)
+
+                        name = c.attrib["Name"]
+                        if c.attrib["Center"] == "Node":
+                            point_data[name] = data
+                        else:
+                            if c.attrib["Center"] != "Cell":
+                                raise ReadError()
+                            cell_data_raw[name] = data
+                    else:
+                        raise ReadError("Unknown section '{}'.".format(c.tag))
+
             else:
-                raise ReadError("Unknown section '{}'.".format(c.tag))
+                raise ReadError(
+                    "XDMF reader: unknown Domain element: {}".format(domain_item.tag)
+                )
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
