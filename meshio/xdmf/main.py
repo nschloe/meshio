@@ -228,6 +228,7 @@ class XdmfReader:
         point_data = {}
         cell_data_raw = {}
         field_data = {}
+        cell_sets = {}
 
         for domain_item in domain:
             if domain_item.tag == "DataItem":
@@ -255,7 +256,23 @@ class XdmfReader:
                         if cell_type == "Mixed":
                             cells = translate_mixed_cells(data)
                         else:
-                            cells[xdmf_to_meshio_type[cell_type]] = data
+                            meshio_cell_type = xdmf_to_meshio_type[cell_type]
+                            if meshio_cell_type in cells:
+                                cell_sets[meshio_cell_type][
+                                    domain_item.attrib["Name"]
+                                ] = cells[meshio_cell_type].shape[0] + numpy.arange(
+                                    data.shape[0]
+                                )
+                                cells[meshio_cell_type] = numpy.append(
+                                    cells[meshio_cell_type], data, axis=0
+                                )
+                            else:
+                                cell_sets[meshio_cell_type] = {
+                                    domain_item.attrib["Name"]: numpy.arange(
+                                        data.shape[0]
+                                    )
+                                }
+                                cells[meshio_cell_type] = data
 
                     elif c.tag == "Geometry":
                         try:
@@ -313,6 +330,7 @@ class XdmfReader:
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
+            cell_sets=cell_sets,
         )
 
 
