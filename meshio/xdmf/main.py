@@ -54,6 +54,11 @@ class XdmfReader:
     def _read_data_item(self, data_item):
         import h5py
 
+        if "Reference" in data_item.attrib:
+            return self._read_data_item(data_item.xpath(
+                data_item.text if data_item.attrib["Reference"] == "XML"
+                else data_item.attrib["Reference"])[0])
+
         dims = [int(d) for d in data_item.attrib["Dimensions"].split()]
 
         # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files
