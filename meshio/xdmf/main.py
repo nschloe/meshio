@@ -229,13 +229,10 @@ class XdmfReader:
         cell_data_raw = {}
         field_data = {}
 
-        domain_data = {}
-
         for domain_item in domain:
             if domain_item.tag == "DataItem":
-                domain_data[domain_item.attrib["Name"]] = self._read_data_item(
-                    domain_item
-                )
+                # This will presumably be read from elsewhere by Reference.
+                pass
             elif domain_item.tag == "Grid":
                 for c in domain_item:
                     if c.tag == "Topology":
