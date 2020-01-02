@@ -4,8 +4,6 @@ import pytest
 import helpers
 import meshio
 
-lxml = pytest.importorskip("lxml")
-
 test_set_full = [
     helpers.line_mesh,
     helpers.tri_mesh,

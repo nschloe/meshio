@@ -3,11 +3,12 @@ I/O for XDMF.
 http://www.xdmf.org/index.php/XDMF_Model_and_Format
 """
 import os
+import xml.etree.ElementTree as ET
 from io import BytesIO
 
 import numpy
 
-from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
+from .._common import CDATA, cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from .._mesh import Mesh
@@ -32,9 +33,7 @@ class XdmfReader:
         self.filename = filename
 
     def read(self):
-        from lxml import etree as ET
-
-        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        parser = ET.XMLParser()
         tree = ET.parse(self.filename, parser)
         root = tree.getroot()
 
@@ -115,8 +114,6 @@ class XdmfReader:
         return f[()]
 
     def read_information(self, c_data):
-        from lxml import etree as ET
-
         field_data = {}
         root = ET.fromstring(c_data)
         for child in root:
@@ -323,8 +320,6 @@ class XdmfWriter:
         compression=None,
         compression_opts=None,
     ):
-        from lxml import etree as ET
-
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -390,8 +385,6 @@ class XdmfWriter:
         return os.path.basename(self.h5_filename) + ":/" + name
 
     def points(self, grid, points):
-        from lxml import etree as ET
-
         if points.shape[1] == 1:
             geometry_type = "X"
         elif points.shape[1] == 2:
@@ -415,8 +408,6 @@ class XdmfWriter:
         data_item.text = self.numpy_to_xml_string(points)
 
     def cells(self, cells, grid):
-        from lxml import etree as ET
-
         if len(cells) == 1:
             meshio_type = list(cells.keys())[0]
             num_cells = len(cells[meshio_type])
@@ -479,8 +470,6 @@ class XdmfWriter:
             data_item.text = self.numpy_to_xml_string(cd)
 
     def point_data(self, point_data, grid):
-        from lxml import etree as ET
-
         for name, data in point_data.items():
             att = ET.SubElement(
                 grid,
@@ -502,8 +491,6 @@ class XdmfWriter:
             data_item.text = self.numpy_to_xml_string(data)
 
     def cell_data(self, cell_data, grid):
-        from lxml import etree as ET
-
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(
@@ -526,13 +513,12 @@ class XdmfWriter:
             data_item.text = self.numpy_to_xml_string(data)
 
     def field_data(self, field_data, information):
-        from lxml import etree as ET
-
         info = ET.Element("main")
         for name, data in field_data.items():
             data_item = ET.SubElement(info, "map", key=name, dim=str(data[1]))
             data_item.text = str(data[0])
-        information.text = ET.CDATA(ET.tostring(info))
+        # information.text = ET.CDATA(ET.tostring(info))
+        information.append(CDATA(ET.tostring(info).decode("utf-8")))
 
 
 def write(*args, **kwargs):
