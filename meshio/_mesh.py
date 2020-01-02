@@ -9,7 +9,7 @@ class Mesh:
         point_data=None,
         cell_data=None,
         field_data=None,
-        node_sets=None,
+        point_sets=None,
         element_sets=None,
         gmsh_periodic=None,
         info=None,
@@ -19,7 +19,7 @@ class Mesh:
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
         self.field_data = {} if field_data is None else field_data
-        self.node_sets = {} if node_sets is None else node_sets
+        self.point_sets = {} if point_sets is None else point_sets
         self.element_sets = {} if element_sets is None else element_sets
         self.gmsh_periodic = gmsh_periodic
         self.info = info
@@ -36,8 +36,8 @@ class Mesh:
         else:
             lines.append("  No cells.")
 
-        if self.node_sets:
-            lines.append("  Node sets: {}".format(", ".join(self.node_sets.keys())))
+        if self.point_sets:
+            lines.append("  Point sets: {}".format(", ".join(self.point_sets.keys())))
 
         if self.point_data:
             lines.append("  Point data: {}".format(", ".join(self.point_data.keys())))
