@@ -3,12 +3,12 @@ I/O for XDMF.
 http://www.xdmf.org/index.php/XDMF_Model_and_Format
 """
 import os
-from io import BytesIO
 import xml.etree.ElementTree as ET
+from io import BytesIO
 
 import numpy
 
-from .._common import cell_data_from_raw, raw_from_cell_data, write_xml, CDATA
+from .._common import CDATA, cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from .._mesh import Mesh

@@ -1,6 +1,6 @@
-from io import BytesIO
 import os
 import xml.etree.ElementTree as ET
+from io import BytesIO
 
 import numpy
 
