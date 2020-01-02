@@ -1,3 +1,5 @@
+import xml.etree.ElementTree as ET
+
 import numpy
 
 num_nodes_per_cell = {
@@ -104,11 +106,34 @@ def raw_from_cell_data(cell_data):
     return cell_data_raw
 
 
-def write_xml(filename, root, pretty_print=False):
-    from lxml import etree as ET
+# https://stackoverflow.com/a/30019607/353337
+def CDATA(text=None):
+    element = ET.Element("![CDATA[")
+    element.text = text
+    return element
 
+
+ET._original_serialize_xml = ET._serialize_xml
+
+
+def _serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwargs):
+
+    if elem.tag == "![CDATA[":
+        write("\n<{}{}]]>\n".format(elem.tag, elem.text))
+        if elem.tail:
+            write(ET._escape_cdata(elem.tail))
+    else:
+        return ET._original_serialize_xml(
+            write, elem, qnames, namespaces, short_empty_elements, **kwargs
+        )
+
+
+ET._serialize_xml = ET._serialize["xml"] = _serialize_xml
+
+
+def write_xml(filename, root, pretty_print=False):
     tree = ET.ElementTree(root)
-    tree.write(filename, pretty_print=pretty_print)
+    tree.write(filename)
 
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
