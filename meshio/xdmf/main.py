@@ -40,7 +40,7 @@ class XdmfReader:
         if root.tag != "Xdmf":
             raise ReadError()
 
-        version = root.attrib["Version"]
+        version = root.get("Version")
 
         if version.split(".")[0] == "2":
             return self.read_xdmf2(root)
@@ -50,28 +50,31 @@ class XdmfReader:
 
         return self.read_xdmf3(root)
 
-    def _read_data_item(self, data_item):
+    def _read_data_item(self, data_item, root=None):
         import h5py
 
-        if "Reference" in data_item.attrib:
-            return self._read_data_item(
-                data_item.xpath(
-                    data_item.text
-                    if data_item.attrib["Reference"] == "XML"
-                    else data_item.attrib["Reference"]
-                )[0]
-            )
+        if data_item.get("Reference"):
+            xpath = (
+                data_item.text
+                if data_item.get("Reference") == "XML"
+                else data_item.get("Reference")
+            ).strip()
+            if xpath.startswith("/"):
+                return self._read_data_item(
+                    root.find(".//" + "/".join(xpath.split("/")[2:])), root
+                )
+            raise ValueError("Can't read XPath {}.".format(xpath))
 
-        dims = [int(d) for d in data_item.attrib["Dimensions"].split()]
+        dims = numpy.fromstring(data_item.get("Dimensions"), dtype=int, sep=" ")
 
         # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files
         # out there use both keys interchangeably.
-        if "DataType" in data_item.attrib:
-            if "NumberType" in data_item.attrib:
+        if data_item.get("DataType"):
+            if data_item.get("NumberType"):
                 raise ReadError()
-            data_type = data_item.attrib["DataType"]
-        elif "NumberType" in data_item.attrib:
-            data_type = data_item.attrib["NumberType"]
+            data_type = data_item.get("DataType")
+        elif data_item.get("NumberType"):
+            data_type = data_item.get("NumberType")
         else:
             # Default, see
             # <http://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
@@ -82,16 +85,17 @@ class XdmfReader:
         except KeyError:
             precision = "4"
 
-        if data_item.attrib["Format"] == "XML":
-            return numpy.array(
-                data_item.text.split(), dtype=xdmf_to_numpy_type[(data_type, precision)]
+        if data_item.get("Format") == "XML":
+            return numpy.fromstring(
+                data_item.text,
+                dtype=xdmf_to_numpy_type[(data_type, precision)],
+                sep=" ",
             ).reshape(dims)
         elif data_item.attrib["Format"] == "Binary":
             return numpy.fromfile(
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
-
-        if data_item.attrib["Format"] != "HDF":
+        elif data_item.attrib["Format"] != "HDF":
             raise ReadError(
                 "Unknown XDMF Format '{}'.".format(data_item.attrib["Format"])
             )
@@ -237,16 +241,16 @@ class XdmfReader:
                             raise ReadError()
                         data_item = data_items[0]
 
-                        data = self._read_data_item(data_item)
+                        data = self._read_data_item(data_item, root)
 
                         # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
                         # Allow both.
-                        if "Type" in c.attrib:
-                            if "TopologyType" in c.attrib:
+                        if c.get("Type"):
+                            if c.get("TopologyType"):
                                 raise ReadError()
-                            cell_type = c.attrib["Type"]
+                            cell_type = c.get("Type")
                         else:
-                            cell_type = c.attrib["TopologyType"]
+                            cell_type = c.get("TopologyType")
 
                         if cell_type == "Mixed":
                             cells = translate_mixed_cells(data)
@@ -263,26 +267,20 @@ class XdmfReader:
                                 )
                             else:
                                 cell_sets[meshio_cell_type] = {
-                                    domain_item.attrib["Name"]: numpy.arange(
-                                        data.shape[0]
-                                    )
+                                    domain_item.get("Name"): numpy.arange(data.shape[0])
                                 }
                                 cells[meshio_cell_type] = data
 
                     elif c.tag == "Geometry":
-                        try:
-                            geometry_type = c.attrib["GeometryType"]
-                        except KeyError:
-                            pass
-                        else:
-                            if geometry_type not in ["XY", "XYZ"]:
+                        if c.get("GeometryType"):
+                            if c.get("GeometryType") not in ["XY", "XYZ"]:
                                 raise ReadError()
 
                         data_items = list(c)
                         if len(data_items) != 1:
                             raise ReadError()
                         data_item = data_items[0]
-                        points = self._read_data_item(data_item)
+                        points = self._read_data_item(data_item, root)
 
                     elif c.tag == "Information":
                         c_data = c.text
