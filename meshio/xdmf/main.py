@@ -71,8 +71,6 @@ class XdmfReader:
                 raise ReadError()
             data_type = data_item.attrib["DataType"]
         elif "NumberType" in data_item.attrib:
-            if "DataType" in data_item.attrib:
-                raise ReadError()
             data_type = data_item.attrib["NumberType"]
         else:
             # Default, see
