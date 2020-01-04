@@ -26,14 +26,21 @@ def test(mesh):
     helpers.write_read(meshio.nastran.write, meshio.nastran.read, mesh, 1.0e-15)
 
 
-def test_reference_file():
+@pytest.mark.parametrize("filename", ["cylinder.fem", "cylinder_cells_first.fem"])
+def test_reference_file(filename):
     this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "nastran", "cylinder.fem")
+    filename = os.path.join(this_dir, "meshes", "nastran", filename)
     mesh = meshio.read(filename)
 
     # Points
     assert numpy.isclose(mesh.points.sum(), 16.5316866)
 
     # Cells
-    ref_num_cells = {"pyramid": 18, "quad": 18, "line": 17, "tetra": 63, "triangle": 4}
-    assert {k: len(v) for k, v in mesh.cells.items()} == ref_num_cells
+    ref_num_cells = {
+        "line": 241,
+        "triangle": 171,
+        "quad": 721,
+        "pyramid": 1180,
+        "tetra": 5309,
+    }
+    assert {k: v.sum() for k, v in mesh.cells.items()} == ref_num_cells
