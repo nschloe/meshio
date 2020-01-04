@@ -91,12 +91,9 @@ def read_buffer(f):
 
         try:
             cells[cell_type].append(cell)
-        except KeyError:
-            cells[cell_type] = [cell]
-
-        try:
             cells_id[cell_type].append(cell_id)
         except KeyError:
+            cells[cell_type] = [cell]
             cells_id[cell_type] = [cell_id]
 
     while True:
@@ -198,14 +195,14 @@ def write(filename, mesh):
             for cell in cells:
                 cell_id += 1
                 cell_info = "{}, {:d},, ".format(nastran_type, cell_id)
-                cell = _convert_to_nastran_ordering(cell, nastran_type)
                 cell1 = cell + 1
+                cell1 = _convert_to_nastran_ordering(cell1, nastran_type)
                 conn = ", ".join(str(nid) for nid in cell1[:6])
                 f.write(cell_info + conn + "\n")
-                if len(cell) >= 7:
+                if len(cell1) > 6:
                     conn = ", ".join(str(nid) for nid in cell1[6:14])
                     f.write("+, " + conn + "\n")
-                    if len(cell) >= 15:
+                    if len(cell1) > 14:
                         conn = ", ".join(str(nid) for nid in cell1[14:])
                         f.write("+, " + conn + "\n")
 
