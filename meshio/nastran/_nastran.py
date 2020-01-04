@@ -13,6 +13,7 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
 
+CHUNK_SIZE = 8
 nastran_to_meshio_type = {
     "CELAS1": "vertex",
     "CBEAM": "line",
@@ -23,14 +24,17 @@ nastran_to_meshio_type = {
     "CBAR": "line",
     "CTRIAR": "triangle",
     "CTRIA3": "triangle",
+    "CTRAX6": "triangle6",
     "CTRIAX6": "triangle6",
     "CTRIA6": "triangle6",
     "CQUADR": "quad",
     "CSHEAR": "quad",
     "CQUAD4": "quad",
     "CQUAD8": "quad8",
+    "CQUAD9": "quad9",
     "CTETRA": "tetra",
     "CTETRA_": "tetra10",  # fictive
+    "CPYRAM": "pyramid",
     "CPYRA": "pyramid",
     "CPYRA_": "pyramid13",  # fictive
     "CPENTA": "wedge",
@@ -53,18 +57,48 @@ def read_buffer(f):
     begin_bulk = False
     while not begin_bulk:
         line = f.readline()
+        if not line:
+            raise RuntimeError('"BEGIN BULK" statement not found')
+            break
         if line.strip().startswith("BEGIN BULK"):
             begin_bulk = True
             break
-    else:
-        raise RuntimeError('"BEGIN BULK" statement not found')
 
     # Reading data
     points = []
     points_id = []
-    points_id_dict = None
     cells = {}
     cells_id = {}
+    cell = None
+    cell_type = None
+    keyword_prev = None
+
+    def add_cell(cell, cell_type, keyword_prev):
+        cell = list(map(int, cell))
+        cell = _convert_to_vtk_ordering(cell, keyword_prev)
+
+        # Treat 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
+        if len(cell) > num_nodes_per_cell[cell_type]:
+            assert cell_type in ["tetra", "pyramid", "wedge", "hexahedron"]
+            if cell_type == "tetra":
+                cell_type = "tetra10"
+            elif cell_type == "pyramid":
+                cell_type = "pyramid13"
+            elif cell_type == "wedge":
+                cell_type = "wedge15"
+            elif cell_type == "hexahedron":
+                cell_type = "hexahedron20"
+
+        try:
+            cells[cell_type].append(cell)
+        except KeyError:
+            cells[cell_type] = [cell]
+
+        try:
+            cells_id[cell_type].append(cell_id)
+        except KeyError:
+            cells_id[cell_type] = [cell_id]
+
     while True:
         line = f.readline()
         if not line:
@@ -80,7 +114,7 @@ def read_buffer(f):
             continue
 
         chunks = _chunk_string(line)
-        keyword = chunks[0]
+        keyword = chunks[0].strip()
 
         # Points
         if keyword == "GRID":
@@ -90,41 +124,43 @@ def read_buffer(f):
 
         # Cells
         elif keyword in nastran_to_meshio_type:
-            if points_id_dict is None:
-                points_id_dict = dict(zip(points_id, range(len(points))))
+            # Add previous cell and cell_id
+            if cell is not None:
+                add_cell(cell, cell_type, keyword_prev)
+
+            # Current cell
             cell_type = nastran_to_meshio_type[keyword]
-
-            # For solid elements, check if it corresponds to a 2nd-order element
-            if keyword in nastran_solid_types:
-                cell_type = _determine_solid_2nd(f, cell_type)
-
             cell_id = int(chunks[1])
-            if cell_type in cells_id:
-                cells_id[cell_type].append(cell_id)
-            else:
-                cells_id[cell_type] = [cell_id]
 
             n_nodes = num_nodes_per_cell[cell_type]
-            if n_nodes <= 6:
-                cell = [points_id_dict[int(i)] for i in chunks[3 : 3 + n_nodes]]
+            if keyword in nastran_solid_types or n_nodes > 6:
+                cell = chunks[3:]
             else:
-                cell = [points_id_dict[int(i)] for i in chunks[3:]]
-                chunks = _chunk_string(f.readline())
-                cell.extend([points_id_dict[int(i)] for i in chunks[1:]])
-                if n_nodes >= 15:
-                    chunks = _chunk_string(f.readline())
-                    cell.extend([points_id_dict[int(i)] for i in chunks[1:]])
+                cell = chunks[3 : 3 + n_nodes]
 
-            if cell_type in cells:
-                cells[cell_type].append(cell)
-            else:
-                cells[cell_type] = [cell]
+            keyword_prev = keyword
 
+        # Cells card continuation for 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
+        elif keyword[0] == "+":
+            assert cell is not None
+            cell.extend(chunks[1:])
+
+    # Add the last cell
+    add_cell(cell, cell_type, keyword_prev)
+
+    # Convert to numpy arrays
     points = numpy.array(points)
     points_id = numpy.array(points_id, dtype=int)
-    for key in cells:
-        cells[key] = numpy.array(cells[key], dtype=int)
-        cells_id[key] = numpy.array(cells_id[key], dtype=int)
+    for cell_type in cells:
+        cells[cell_type] = numpy.array(cells[cell_type], dtype=int)
+        cells_id[cell_type] = numpy.array(cells_id[cell_type], dtype=int)
+
+    # Convert to natural point ordering
+    # https://stackoverflow.com/questions/16992713/translate-every-element-in-numpy-array-according-to-key
+    points_id_dict = dict(zip(points_id, numpy.arange(len(points), dtype=int)))
+    points_id_get = numpy.vectorize(points_id_dict.__getitem__)
+    for cell_type in cells:
+        cells[cell_type] = points_id_get(cells[cell_type])
 
     # Construct the mesh object
     mesh = Mesh(points, cells)
@@ -162,6 +198,7 @@ def write(filename, mesh):
             for cell in cells:
                 cell_id += 1
                 cell_info = "{}, {:d},, ".format(nastran_type, cell_id)
+                cell = _convert_to_nastran_ordering(cell, nastran_type)
                 cell1 = cell + 1
                 conn = ", ".join(str(nid) for nid in cell1[:6])
                 f.write(cell_info + conn + "\n")
@@ -176,46 +213,34 @@ def write(filename, mesh):
 
 
 def _nastran_float(string):
-    string = string.strip()
     try:
         return float(string)
     except ValueError:
+        string = string.strip()
         return float(string[0] + string[1:].replace("+", "e+").replace("-", "e-"))
 
 
 def _chunk_string(string):
     string = string.strip()
     if "," in string:  # free format
-        chunks = [chunk.strip() for chunk in string.split(",")]
+        chunks = string.split(",")
     else:  # fixed format
-        chunk_size = 8
         chunks = [
-            string[0 + i : chunk_size + i].strip()
-            for i in range(0, len(string), chunk_size)
+            string[0 + i : CHUNK_SIZE + i] for i in range(0, len(string), CHUNK_SIZE)
         ]
     return chunks[:9]  # the 10-th chunk is ignored
 
 
-def _determine_solid_2nd(f, cell_type):
-    element_lines = 1
-    curr_pos = f.tell()
-    if f.readline()[0] == "+":
-        element_lines += 1
-        if f.readline()[0] == "+":
-            element_lines += 1
-    f.seek(curr_pos)
+def _convert_to_vtk_ordering(cell, nastran_type):
+    if nastran_type in ["CTRAX6", "CTRIAX6"]:
+        cell = [cell[i] for i in [0, 2, 4, 1, 3, 5]]
+    return cell
 
-    if element_lines == 2:
-        if cell_type == "tetra":
-            cell_type = "tetra10"
-        elif cell_type == "pyramid":
-            cell_type = "pyramid13"
-    elif element_lines == 3:
-        if cell_type == "wedge":
-            cell_type = "wedge15"
-        elif cell_type == "hexahedron":
-            cell_type = "hexahedron20"
-    return cell_type
+
+def _convert_to_nastran_ordering(cell, nastran_type):
+    if nastran_type in ["CTRAX6", "CTRIAX6"]:
+        cell = [cell[i] for i in [0, 3, 1, 4, 2, 5]]
+    return cell
 
 
 register("nastran", [".bdf", ".fem", ".nas"], read, {"nastran": write})
