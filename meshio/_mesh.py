@@ -113,3 +113,27 @@ class Mesh:
         from ._helpers import read
 
         return read(path_or_buf, file_format)
+
+    def iterpoints(self):
+        for i, point in enumerate(self.points):
+            data = (
+                {label: data_array[i] for label, data_array in self.point_data.items()}
+                if self.point_data
+                else {}
+            )
+            yield (point, data)
+
+    def itercells(self):
+        from ._common import num_nodes_per_cell
+
+        for cell_type in sorted(self.cells.keys(), key=lambda x: num_nodes_per_cell[x]):
+            for i, corner in enumerate(self.cells[cell_type]):
+                data = (
+                    {
+                        label: data_array[i]
+                        for label, data_array in self.cell_data[cell_type].items()
+                    }
+                    if cell_type in self.cell_data
+                    else {}
+                )
+                yield (corner, data, cell_type)
