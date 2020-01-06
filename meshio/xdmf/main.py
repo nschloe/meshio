@@ -50,14 +50,17 @@ class XdmfReader:
 
         return self.read_xdmf3(root)
 
-    def _read_data_item(self, data_item):
+    def _read_data_item(self, data_item, root=None):
         import h5py
 
         reference = data_item.get("Reference")
         if reference:
-            return self._read_data_item(
-                data_item.xpath(data_item.text if reference == "XML" else reference)[0]
-            )
+            xpath = (data_item.text if reference == "XML" else reference).strip()
+            if xpath.startswith("/"):
+                return self._read_data_item(
+                    root.find(".//" + "/".join(xpath.split("/")[2:])), root
+                )
+            raise ValueError("Can't read XPath {}.".format(xpath))
 
         dims = [int(d) for d in data_item.get("Dimensions").split()]
 
