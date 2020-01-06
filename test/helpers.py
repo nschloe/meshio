@@ -228,20 +228,12 @@ def add_cell_data(mesh, dim, num_tags=2, dtype=numpy.float):
     mesh2 = copy.deepcopy(mesh)
     numpy.random.seed(0)
     cell_data = {}
-    for cell_type in mesh.cells:
-        num_cells = len(mesh.cells[cell_type])
-        if dim == 1:
-            cell_data[cell_type] = {
-                string.ascii_lowercase[k]: numpy.random.rand(num_cells).astype(dtype)
-                for k in range(num_tags)
-            }
-        else:
-            cell_data[cell_type] = {
-                string.ascii_lowercase[k]: numpy.random.rand(num_cells, dim).astype(
-                    dtype
-                )
-                for k in range(num_tags)
-            }
+    for k in range(num_tags):
+        shape = tuple() if dim == 1 else (dim,)
+        cell_data[string.ascii_lowercase[k]] = {
+            cell_type: numpy.random.rand(*((len(cells),) + shape)).astype(dtype)
+            for cell_type, cells in mesh.cells.items()
+        }
 
     mesh2.cell_data = cell_data
     return mesh2

@@ -131,23 +131,22 @@ def _read_cells(f, cells, is_ascii):
         cells[key] -= 1
 
     # restrict to the standard two data items (physical, geometrical)
-    output_cell_tags = {}
-    for key in cell_tags:
+    output_cell_tags = {"gmsh:physical": {}, "gmsh:geometrical": {}}
+    for cell_type in cell_tags:
         physical = []
         geometrical = []
-        # output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
-        for item in cell_tags[key]:
+        # output_cell_tags[cell_type] = {"gmsh:physical": [], "gmsh:geometrical": []}
+        for item in cell_tags[cell_type]:
             if len(item) > 0:
                 physical.append(item[0])
             if len(item) > 1:
                 geometrical.append(item[1])
             if len(item) > 2:
                 has_additional_tag_data = True
-        output_cell_tags[key] = {}
         if len(physical) > 0:
-            output_cell_tags[key]["gmsh:physical"] = numpy.array(physical)
+            output_cell_tags["gmsh:physical"][cell_type] = numpy.array(physical)
         if len(geometrical) > 0:
-            output_cell_tags[key]["gmsh:geometrical"] = numpy.array(geometrical)
+            output_cell_tags["gmsh:geometrical"][cell_type] = numpy.array(geometrical)
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     if "tetra10" in cells:
@@ -175,14 +174,13 @@ def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
         # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
         # says:
         # >>>
-        # By default, the first tag is the number of the physical entity to
-        # which the element belongs; the second is the number of the
-        # elementary geometrical entity to which the element belongs; the
-        # third is the number of mesh partitions to which the element
-        # belongs, followed by the partition ids (negative partition ids
-        # indicate ghost cells). A zero tag is equivalent to no tag. Gmsh
-        # and most codes using the MSH 2 format require at least the first
-        # two tags (physical and elementary tags).
+        # By default, the first tag is the number of the physical entity to which the
+        # element belongs; the second is the number of the elementary geometrical entity
+        # to which the element belongs; the third is the number of mesh partitions to
+        # which the element belongs, followed by the partition ids (negative partition
+        # ids indicate ghost cells). A zero tag is equivalent to no tag. Gmsh and most
+        # codes using the MSH 2 format require at least the first two tags (physical and
+        # elementary tags).
         # <<<
         num_tags = data[2]
         if num_tags > 0:
@@ -193,10 +191,8 @@ def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
     # convert to numpy arrays
     for key in cells:
         cells[key] = numpy.array(cells[key], dtype=int)
-    # Cannot convert cell_tags[key] to numpy array: There may be a
-    # different number of tags for each cell.
-
-    return
+    # Cannot convert cell_tags[key] to numpy array: There may be a different number of
+    # tags for each cell.
 
 
 def _read_cells_binary(f, cells, cell_tags, total_num_cells):
@@ -306,18 +302,15 @@ def write(filename, mesh, binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the
-        # rest is actual cell data.
+        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the rest is
+        # actual cell data.
         tag_data = {}
         other_data = {}
-        for cell_type, a in mesh.cell_data.items():
-            tag_data[cell_type] = {}
-            other_data[cell_type] = {}
-            for key, data in a.items():
-                if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
-                    tag_data[cell_type][key] = data.astype(c_int)
-                else:
-                    other_data[cell_type][key] = data
+        for key, d in mesh.cell_data.items():
+            if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
+                tag_data[key] = d
+            else:
+                other_data[key] = d
 
         _write_nodes(fh, mesh.points, binary)
         _write_elements(fh, cells, tag_data, binary)
@@ -325,6 +318,7 @@ def write(filename, mesh, binary=True):
             _write_periodic(fh, mesh.gmsh_periodic)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, binary)
+
         cell_data_raw = raw_from_cell_data(other_data)
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, binary)
@@ -363,10 +357,10 @@ def _write_elements(fh, cells, tag_data, binary):
         tags = []
         for key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
             try:
-                tags.append(tag_data[cell_type][key])
+                tags.append(tag_data[key][cell_type])
             except KeyError:
                 pass
-        fcd = numpy.concatenate([tags]).T
+        fcd = numpy.concatenate([tags]).astype(c_int).T
 
         if len(fcd) == 0:
             fcd = numpy.empty((len(node_idcs), 0), dtype=c_int)
@@ -381,7 +375,7 @@ def _write_elements(fh, cells, tag_data, binary):
             a += 1 + consecutive_index
             array = numpy.hstack([a, fcd, node_idcs + 1])
             if array.dtype != c_int:
-                raise WriteError()
+                raise WriteError(f"Wrong dtype (require c_int, got {array.dtype})")
             array.tofile(fh)
         else:
             form = (

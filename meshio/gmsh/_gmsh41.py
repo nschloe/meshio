@@ -331,6 +331,7 @@ def write4_1(filename, mesh, binary=True):
             _write_periodic(fh, mesh.gmsh_periodic, binary)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, binary)
+
         cell_data_raw = raw_from_cell_data(mesh.cell_data)
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, binary)
