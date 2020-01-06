@@ -4,7 +4,6 @@ numpy
 # optional runtime
 netCDF4
 h5py
-lxml
 
 # development
 pytest
