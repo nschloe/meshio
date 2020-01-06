@@ -53,6 +53,7 @@ exodus_to_meshio_type = {
     #
     "TETRA": "tetra",
     "TETRA4": "tetra4",
+    "TET4": "tetra4",
     "TETRA8": "tetra8",
     "TETRA10": "tetra10",
     "TETRA14": "tetra14",
