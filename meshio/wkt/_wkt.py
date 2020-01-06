@@ -20,7 +20,7 @@ triangle_pattern = r"\(\s*\(\s*({})\s*\)\s*\)".format(
 )
 triangle_re = re.compile(triangle_pattern)
 
-tin_pattern = r"TIN\s*\((?:\s*{}\s*,?)*\s*\)".format(triangle_pattern)
+tin_pattern = fr"TIN\s*\((?:\s*{triangle_pattern}\s*,?)*\s*\)"
 tin_re = re.compile(tin_pattern)
 
 
@@ -50,7 +50,7 @@ def read_str(s):
     try:
         point_arr = np.array(list(point_idxs), np.float64)
     except ValueError as e:
-        if len(set(len(p) for p in point_idxs)) > 1:
+        if len({len(p) for p in point_idxs}) > 1:
             raise ReadError("Points have mixed dimensionality")
         else:
             raise e

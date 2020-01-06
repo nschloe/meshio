@@ -119,7 +119,7 @@ ET._original_serialize_xml = ET._serialize_xml
 def _serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwargs):
 
     if elem.tag == "![CDATA[":
-        write("\n<{}{}]]>\n".format(elem.tag, elem.text))
+        write(f"\n<{elem.tag}{elem.text}]]>\n")
         if elem.tail:
             write(ET._escape_cdata(elem.tail))
     else:

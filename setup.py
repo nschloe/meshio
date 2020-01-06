@@ -34,8 +34,8 @@ setup(
     license=about["__license__"],
     platforms="any",
     install_requires=["numpy"],
-    # For pathlib:
-    python_requires=">=3.5",
+    # For pathlib >= 3.5, f-strings 3.6:
+    python_requires=">=3.6",
     extras_require=extras,
     classifiers=[
         about["__status__"],

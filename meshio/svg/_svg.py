@@ -11,7 +11,7 @@ def write(filename, mesh):
         mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
     ):
         raise WriteError(
-            "SVG can only handle flat 2D meshes (shape: {})".format(mesh.points.shape)
+            f"SVG can only handle flat 2D meshes (shape: {mesh.points.shape})"
         )
 
     pts = mesh.points[:, :2].copy()
@@ -26,7 +26,7 @@ def write(filename, mesh):
         "svg",
         xmlns="http://www.w3.org/2000/svg",
         version="1.1",
-        viewBox="{:.3f} {:.3f} {:.3f} {:.3f}".format(min_x, min_y, width, height),
+        viewBox=f"{min_x:.3f} {min_y:.3f} {width:.3f} {height:.3f}",
     )
 
     style = ET.SubElement(svg, "style")
