@@ -56,11 +56,7 @@ class XdmfReader:
         reference = data_item.get("Reference")
         if reference:
             return self._read_data_item(
-                data_item.xpath(
-                    data_item.text
-                    if reference == "XML"
-                    else reference
-                )[0]
+                data_item.xpath(data_item.text if reference == "XML" else reference)[0]
             )
 
         dims = [int(d) for d in data_item.get("Dimensions").split()]
@@ -93,10 +89,8 @@ class XdmfReader:
             return numpy.fromfile(
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
-        elfif data_item.get("Format") != "HDF":
-            raise ReadError(
-                "Unknown XDMF Format '{}'.".format(data_item.get("Format"))
-            )
+        elif data_item.get("Format") != "HDF":
+            raise ReadError("Unknown XDMF Format '{}'.".format(data_item.get("Format")))
 
         info = data_item.text.strip()
         filename, h5path = info.split(":")

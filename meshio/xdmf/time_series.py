@@ -199,9 +199,7 @@ class TimeSeriesReader:
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
         elif data_item.get("Format") != "HDF":
-            raise ReadError(
-                "Unknown XDMF Format '{}'.".format(data_item.get("Format"))
-            )
+            raise ReadError("Unknown XDMF Format '{}'.".format(data_item.get("Format")))
 
         info = data_item.text.strip()
         filename, h5path = info.split(":")
