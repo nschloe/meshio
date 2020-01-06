@@ -47,7 +47,8 @@ def read(filename, file_format=None):
             raise ReadError("File format must be given if buffer is used")
         if file_format == "tetgen":
             raise ReadError(
-                "tetgen format is spread across multiple files, and so cannot be read from a buffer"
+                "tetgen format is spread across multiple files "
+                "and so cannot be read from a buffer"
             )
         msg = f"Unknown file format '{file_format}'"
     else:

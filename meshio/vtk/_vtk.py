@@ -555,9 +555,10 @@ def translate_cells(data, types, cell_data_raw):
                 raise ReadError()
             indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
             cells[meshio_type] = data[indices]
-            cell_data[meshio_type] = {
-                key: value[b] for key, value in cell_data_raw.items()
-            }
+            for name in cell_data_raw:
+                if name not in cell_data:
+                    cell_data[name] = {}
+                cell_data[name][meshio_type] = cell_data_raw[name][b]
 
     return cells, cell_data
 
@@ -585,14 +586,14 @@ def write(filename, mesh, binary=True):
                 mesh.point_data[name] = pad(values)
 
     if mesh.cell_data:
-        for t, data in mesh.cell_data.items():
-            for name, values in data.items():
+        for name, data in mesh.cell_data.items():
+            for t, values in data.items():
                 if len(values.shape) == 2 and values.shape[1] == 2:
                     logging.warning(
                         "VTK requires 3D vectors, but 2D vectors given. "
                         "Appending 0 third component to {}.".format(name)
                     )
-                    mesh.cell_data[t][name] = pad(mesh.cell_data[t][name])
+                    mesh.cell_data[name][t] = pad(mesh.cell_data[name][t])
 
     if not binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
@@ -616,9 +617,8 @@ def write(filename, mesh, binary=True):
         # write cell data
         if mesh.cell_data:
             total_num_cells = sum([len(c) for c in mesh.cells.values()])
-            cell_data_raw = raw_from_cell_data(mesh.cell_data)
             f.write(f"CELL_DATA {total_num_cells}\n".encode("utf-8"))
-            _write_field_data(f, cell_data_raw, binary)
+            _write_field_data(f, raw_from_cell_data(mesh.cell_data), binary)
 
 
 def _write_points(f, points, binary):

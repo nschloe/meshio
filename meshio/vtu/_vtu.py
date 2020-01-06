@@ -43,7 +43,10 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
         b = types == vtk_type
         indices = numpy.add.outer(offsets[b], numpy.arange(-n, 0, dtype=offsets.dtype))
         cells[meshio_type] = connectivity[indices]
-        cell_data[meshio_type] = {key: value[b] for key, value in cell_data_raw.items()}
+        for name, d in cell_data_raw.items():
+            if name not in cell_data:
+                cell_data[name] = {}
+            cell_data[name][meshio_type] = d[b]
 
     return cells, cell_data
 
@@ -66,10 +69,12 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
             if key not in out_cell_data:
                 out_cell_data[key] = {}
 
-            for name in cell_data[key]:
-                if name not in out_cell_data[key]:
-                    out_cell_data[key][name] = []
-                out_cell_data[key][name].append(cell_data[key][name])
+            for name in cell_data:
+                if name not in out_cell_data:
+                    out_cell_data[name] = {}
+                if key not in out_cell_data[name]:
+                    out_cell_data[name][key] = []
+                out_cell_data[name][key].append(cell_data[name][key])
 
     for key in out_cells:
         out_cells[key] = numpy.concatenate(out_cells[key])

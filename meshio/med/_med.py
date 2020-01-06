@@ -97,9 +97,9 @@ def read(filename):
         # Cell tags
         if "FAM" in med_cell_type_group:
             tags = med_cell_type_group["FAM"][()]
-            if cell_type not in cell_data:
-                cell_data[cell_type] = {}
-            cell_data[cell_type]["cell_tags"] = tags  # replacing previous "cell_tags"
+            if "cell_tags" not in cell_data:
+                cell_data["cell_tags"] = {}
+            cell_data["cell_tags"][cell_type] = tags  # replacing previous "cell_tags"
 
     # Information for cell tags
     cell_tags = {}
@@ -186,11 +186,11 @@ def _read_cell_data(cell_data, name, supp, med_data, profiles):
         if values.shape[-1] == 1:  # cut off for scalars
             values = values[:, 0]
 
-    try:  # cell type already exists
-        key = med_to_meshio_type[med_type]
-        cell_data[key][name] = values
-    except KeyError:
-        cell_data[key] = {name: values}
+    if name not in cell_data:
+        cell_data[name] = {}
+    key = med_to_meshio_type[med_type]
+    cell_data[name][key] = values
+
     return cell_data
 
 
@@ -273,10 +273,10 @@ def write(filename, mesh, add_global_ids=True):
         nod.attrs.create("NBR", len(cells))
 
         # Cell tags
-        if cell_type in mesh.cell_data:
-            if "cell_tags" in mesh.cell_data[cell_type]:  # works only for med -> med
+        if "cell_tags" in mesh.cell_data:  # works only for med -> med
+            if cell_type in mesh.cell_data["cell_tags"]:
                 family = med_cells.create_dataset(
-                    "FAM", data=mesh.cell_data[cell_type]["cell_tags"]
+                    "FAM", data=mesh.cell_data["cell_tags"][cell_type]
                 )
                 family.attrs.create("CGT", 1)
                 family.attrs.create("NBR", len(cells))
@@ -316,11 +316,10 @@ def write(filename, mesh, add_global_ids=True):
     # Cell data
     # Only support writing ELEM fields with only 1 Gauss point per cell
     # Or ELNO (DG) fields defined at every node per cell
-    for cell_type, d in mesh.cell_data.items():
-        for name, data in d.items():
-            if name == "cell_tags":  # ignore cell_tags already written under FAS
-                continue
-
+    for name, d in mesh.cell_data.items():
+        if name == "cell_tags":  # ignore cell_tags already written under FAS
+            continue
+        for cell_type, data in d.items():
             # Determine the nature of the cell data
             # Either shape = (n_data, ) or (n_data, n_components) -> ELEM
             # or shape = (n_data, n_gauss_points, n_components) -> ELNO or ELGA
@@ -332,8 +331,6 @@ def write(filename, mesh, add_global_ids=True):
             else:  # general ELGA data defined at unknown Gauss points
                 supp = "ELGA"
             _write_data(fields, mesh_name, profile, name, supp, data, med_type)
-
-    return
 
 
 def _write_data(fields, mesh_name, profile, name, supp, data, med_type=None):

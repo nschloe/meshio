@@ -69,7 +69,7 @@ def test_reference_file_with_mixed_cells():
         "triangle": -30,
     }
     assert {
-        k: v["cell_tags"].sum() for k, v in mesh.cell_data.items()
+        k: sum(v) for k, v in mesh.cell_data["cell_tags"].items()
     } == ref_sum_cell_tags
     ref_cell_tags_info = {
         -6: ["Top circle"],
@@ -104,13 +104,13 @@ def test_reference_file_with_point_cell_data():
 
     # Cell data
     # ELNO (1 data point for every node of each element)
-    data_eps = mesh.cell_data["hexahedron"]["resu____EPSI_ELNO"]
+    data_eps = mesh.cell_data["resu____EPSI_ELNO"]["hexahedron"]
     assert data_eps.shape == (1, 8, 6)  # (n_cells, n_nodes_per_element, n_components)
     data_eps_mean = numpy.mean(data_eps, axis=1)[0]
     eps_ref = numpy.array([1, 0, 0, 0.5, 0.5, 0])
     assert numpy.allclose(data_eps_mean, eps_ref)
 
-    data_sig = mesh.cell_data["hexahedron"]["resu____SIEF_ELNO"]
+    data_sig = mesh.cell_data["resu____SIEF_ELNO"]["hexahedron"]
     assert data_sig.shape == (1, 8, 6)  # (n_cells, n_nodes_per_element, n_components)
     data_sig_mean = numpy.mean(data_sig, axis=1)[0]
     sig_ref = numpy.array(
@@ -118,11 +118,11 @@ def test_reference_file_with_point_cell_data():
     )
     assert numpy.allclose(data_sig_mean, sig_ref)
 
-    data_psi = mesh.cell_data["hexahedron"]["resu____ENEL_ELNO"]
+    data_psi = mesh.cell_data["resu____ENEL_ELNO"]["hexahedron"]
     assert data_psi.shape == (1, 8, 1)  # (n_cells, n_nodes_per_element, n_components)
 
     # ELEM (1 data point for each element)
-    data_psi_elem = mesh.cell_data["hexahedron"]["resu____ENEL_ELEM"]
+    data_psi_elem = mesh.cell_data["resu____ENEL_ELEM"]["hexahedron"]
     assert numpy.isclose(numpy.mean(data_psi, axis=1)[0, 0], data_psi_elem[0])
 
     helpers.write_read(meshio.med.write, meshio.med.read, mesh, 1.0e-15)

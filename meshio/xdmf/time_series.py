@@ -225,7 +225,7 @@ class TimeSeriesReader:
 
 
 class TimeSeriesWriter:
-    def __init__(self, filename, pretty_xml=True, data_format="HDF"):
+    def __init__(self, filename, data_format="HDF"):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -235,7 +235,6 @@ class TimeSeriesWriter:
         self.filename = filename
         self.data_format = data_format
         self.data_counter = 0
-        self.pretty_xml = pretty_xml
 
         self.xdmf_file = ET.Element("Xdmf", Version="3.0")
 
@@ -281,7 +280,7 @@ class TimeSeriesWriter:
         self.cells(cells, grid)
         self.has_mesh = True
 
-        write_xml(self.filename, self.xdmf_file, self.pretty_xml)
+        write_xml(self.filename, self.xdmf_file)
 
     def write_data(self, t, point_data=None, cell_data=None):
         # <Grid>
@@ -305,7 +304,7 @@ class TimeSeriesWriter:
         if cell_data:
             self.cell_data(cell_data, grid)
 
-        write_xml(self.filename, self.xdmf_file, self.pretty_xml)
+        write_xml(self.filename, self.xdmf_file)
 
     def numpy_to_xml_string(self, data):
         if self.data_format == "XML":

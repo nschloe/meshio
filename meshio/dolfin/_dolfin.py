@@ -62,7 +62,7 @@ def _read_cell_data(filename, cell_type):
         "uint": numpy.dtype("uint"),
     }
 
-    cell_data = {cell_type: {}}
+    cell_data = {}
     dir_name = os.path.dirname(filename)
     if not os.path.dirname(filename):
         dir_name = os.getcwd()
@@ -97,7 +97,10 @@ def _read_cell_data(filename, cell_type):
             idx = int(child.attrib["index"])
             data[idx] = child.attrib["value"]
 
-        cell_data[cell_type][name] = data
+        if name not in cell_data:
+            cell_data[name] = {}
+        cell_data[name][cell_type] = data
+
     return cell_data
 
 
@@ -207,11 +210,13 @@ def write(filename, mesh):
 
     _write_mesh(filename, mesh.points, cell_type, mesh.cells)
 
-    if cell_type in mesh.cell_data:
-        for key, data in mesh.cell_data[cell_type].items():
-            cell_data_filename = "{}_{}.xml".format(os.path.splitext(filename)[0], key)
-            dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
-            _write_cell_data(cell_data_filename, dim, numpy.array(data))
+    for name, dictionary in mesh.cell_data.items():
+        if cell_type not in dictionary:
+            continue
+        data = dictionary[cell_type]
+        cell_data_filename = "{}_{}.xml".format(os.path.splitext(filename)[0], name)
+        dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
+        _write_cell_data(cell_data_filename, dim, numpy.array(data))
 
 
 register("dolfin-xml", [".xml"], read, {"dolfin-xml": write})

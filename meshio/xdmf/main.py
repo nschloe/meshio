@@ -312,7 +312,6 @@ class XdmfWriter:
         self,
         filename,
         mesh,
-        pretty_xml=True,
         data_format="HDF",
         compression=None,
         compression_opts=None,
@@ -351,7 +350,7 @@ class XdmfWriter:
 
         ET.register_namespace("xi", "https://www.w3.org/2001/XInclude/")
 
-        write_xml(filename, xdmf_file, pretty_xml)
+        write_xml(filename, xdmf_file)
 
     def numpy_to_xml_string(self, data):
         if self.data_format == "XML":
