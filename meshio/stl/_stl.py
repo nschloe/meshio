@@ -186,7 +186,7 @@ def _write_ascii(filename, points, cells):
     normals = _compute_normals(pts)
 
     with open_file(filename, "wb") as fh:
-        fh.write("solid\n".encode("utf-8"))
+        fh.write(b"solid\n")
 
         for local_pts, normal in zip(pts, normals):
             # facet normal 0.455194 -0.187301 -0.870469
@@ -202,7 +202,7 @@ def _write_ascii(filename, points, cells):
             out += [" endloop", "endfacet"]
             fh.write(("\n".join(out) + "\n").encode("utf-8"))
 
-        fh.write("endsolid\n".encode("utf-8"))
+        fh.write(b"endsolid\n")
 
 
 def _binary(filename, points, cells):

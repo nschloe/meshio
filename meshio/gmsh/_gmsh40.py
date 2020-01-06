@@ -314,14 +314,14 @@ def write(filename, mesh, binary=True):
         mode_idx = 1 if binary else 0
         size_of_double = 8
         fh.write(
-            ("$MeshFormat\n4.0 {} {}\n".format(mode_idx, size_of_double)).encode(
+            (f"$MeshFormat\n4.0 {mode_idx} {size_of_double}\n").encode(
                 "utf-8"
             )
         )
         if binary:
             fh.write(struct.pack("i", 1))
-            fh.write("\n".encode("utf-8"))
-        fh.write("$EndMeshFormat\n".encode("utf-8"))
+            fh.write(b"\n")
+        fh.write(b"$EndMeshFormat\n")
 
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
@@ -340,7 +340,7 @@ def write(filename, mesh, binary=True):
 
 
 def _write_nodes(fh, points, binary):
-    fh.write("$Nodes\n".encode("utf-8"))
+    fh.write(b"$Nodes\n")
 
     # TODO not sure what dimEntity is supposed to say
     dim_entity = 0
@@ -359,7 +359,7 @@ def _write_nodes(fh, points, binary):
         tmp["index"] = 1 + numpy.arange(len(points))
         tmp["x"] = points
         tmp.tofile(fh)
-        fh.write("\n".encode("utf-8"))
+        fh.write(b"\n")
     else:
         # write all points as one big block
         # numEntityBlocks(unsigned long) numNodes(unsigned long)
@@ -378,14 +378,14 @@ def _write_nodes(fh, points, binary):
                 "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
             )
 
-    fh.write("$EndNodes\n".encode("utf-8"))
+    fh.write(b"$EndNodes\n")
     return
 
 
 def _write_elements(fh, cells, binary):
     # TODO respect binary
     # write elements
-    fh.write("$Elements\n".encode("utf-8"))
+    fh.write(b"$Elements\n")
 
     if binary:
         total_num_cells = sum([data.shape[0] for _, data in cells.items()])
@@ -416,7 +416,7 @@ def _write_elements(fh, cells, binary):
             data.tofile(fh)
             consecutive_index += len(node_idcs)
 
-        fh.write("\n".encode("utf-8"))
+        fh.write(b"\n")
     else:
         # count all cells
         total_num_cells = sum([data.shape[0] for _, data in cells.items()])
@@ -441,7 +441,7 @@ def _write_elements(fh, cells, binary):
                 fh.write(fmt.format(consecutive_index, *idx).encode("utf-8"))
                 consecutive_index += 1
 
-    fh.write("$EndElements\n".encode("utf-8"))
+    fh.write(b"$EndElements\n")
     return
 
 
@@ -456,7 +456,7 @@ def _write_periodic(fh, periodic, binary):
             fmt = kwargs.pop("fmt", fmt)
             numpy.savetxt(fh, ary, fmt, **kwargs)
 
-    fh.write("$Periodic\n".encode("utf-8"))
+    fh.write(b"$Periodic\n")
     tofile(fh, len(periodic), c_int)
     for dim, (stag, mtag), affine, slave_master in periodic:
         tofile(fh, [dim, stag, mtag], c_int)
@@ -469,8 +469,8 @@ def _write_periodic(fh, periodic, binary):
         tofile(fh, len(slave_master), c_int)
         tofile(fh, slave_master, c_int)
     if binary:
-        fh.write("\n".encode("utf-8"))
-    fh.write("$EndPeriodic\n".encode("utf-8"))
+        fh.write(b"\n")
+    fh.write(b"$EndPeriodic\n")
 
 
 _geometric_dimension = {

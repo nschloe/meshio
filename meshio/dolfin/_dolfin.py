@@ -33,7 +33,7 @@ def _read_mesh(filename):
         elif elem.tag == "mesh":
             dim = int(elem.attrib["dim"])
             cell_type, npc = dolfin_to_meshio_type[elem.attrib["celltype"]]
-            cell_tags = ["v{}".format(i) for i in range(npc)]
+            cell_tags = [f"v{i}" for i in range(npc)]
         elif elem.tag == "vertices":
             points = numpy.empty((int(elem.attrib["size"]), dim))
             keys = ["x", "y"]
@@ -72,7 +72,7 @@ def _read_cell_data(filename, cell_type):
     for f in os.listdir(dir_name):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
-        out = re.match("{}_([^\\.]+)\\.xml".format(basename), f)
+        out = re.match(f"{basename}_([^\\.]+)\\.xml", f)
         if not out:
             continue
         name = out.group(1)
@@ -126,7 +126,7 @@ def _write_mesh(filename, points, cell_type, cells):
 
     dim = points.shape[1]
     if dim not in [2, 3]:
-        raise WriteError("Can only write dimension 2, 3, got {}.".format(dim))
+        raise WriteError(f"Can only write dimension 2, 3, got {dim}.")
 
     coord_names = ["x", "y"]
     if dim == 3:
@@ -152,7 +152,7 @@ def _write_mesh(filename, points, cell_type, cells):
                 xcells, meshio_to_dolfin_type[ct], index=str(idx)
             )
             for k, c in enumerate(cell):
-                cell_entry.attrib["v{}".format(k)] = str(c)
+                cell_entry.attrib[f"v{k}"] = str(c)
             idx += 1
 
     tree = ET.ElementTree(dolfin)

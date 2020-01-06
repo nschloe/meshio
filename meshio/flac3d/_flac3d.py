@@ -188,7 +188,7 @@ def write(filename, mesh):
         raise WriteError("FLAC3D format only supports 3D cells")
 
     with open_file(filename, "w") as f:
-        f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
+        f.write(f"* FLAC3D grid produced by meshio v{version}\n")
         f.write("* {}\n".format(time.ctime()))
         f.write("* GRIDPOINTS\n")
         _write_points(f, mesh.points)
@@ -196,7 +196,7 @@ def write(filename, mesh):
         _write_cells(f, mesh.points, mesh.cells)
 
         if mesh.cell_data:
-            if set(kk for v in mesh.cell_data.values() for kk in v.keys()).intersection(
+            if {kk for v in mesh.cell_data.values() for kk in v.keys()}.intersection(
                 meshio_data
             ):
                 f.write("* ZONE GROUPS\n")
@@ -218,7 +218,7 @@ def _write_cells(f, points, cells):
     i = 1
     for meshio_type, zone in zones.items():
         meshio_type = meshio_only[meshio_type]
-        fmt = "Z {} {} " + " ".join((["{}"] * zone.shape[1])) + "\n"
+        fmt = "Z {} {} " + " ".join(["{}"] * zone.shape[1]) + "\n"
         for entry in zone + 1:
             f.write(fmt.format(meshio_to_flac3d_type[meshio_type], i, *entry))
             i += 1

@@ -276,7 +276,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
     data = data[:, 1:]
 
     line = f.readline().decode("utf-8")
-    if line.strip() != "End {}".format(tag):
+    if line.strip() != f"End {tag}":
         raise ReadError()
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
@@ -372,7 +372,7 @@ def cell_data_from_raw(cells, cell_data_raw):
 
 
 def _write_nodes(fh, points, binary=False):
-    fh.write("Begin Nodes\n".encode("utf-8"))
+    fh.write(b"Begin Nodes\n")
     if binary:
         raise WriteError()
 
@@ -382,7 +382,7 @@ def _write_nodes(fh, points, binary=False):
                 "utf-8"
             )
         )
-    fh.write("End Nodes\n\n".encode("utf-8"))
+    fh.write(b"End Nodes\n\n")
     return
 
 
@@ -443,7 +443,7 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
 
         consecutive_index += len(node_idcs)
 
-    fh.write("End Elements\n\n".encode("utf-8"))
+    fh.write(b"End Elements\n\n")
     return
 
 
@@ -530,11 +530,11 @@ def write(filename, mesh, binary=False):
 
     with open_file(filename, "wb") as fh:
         # Write some additional info
-        fh.write(("Begin ModelPartData\n").encode("utf-8"))
-        fh.write(("//  VARIABLE_NAME value\n").encode("utf-8"))
-        fh.write(("End ModelPartData\n\n").encode("utf-8"))
-        fh.write(("Begin Properties 0\n").encode("utf-8"))
-        fh.write(("End Properties\n\n").encode("utf-8"))
+        fh.write(b"Begin ModelPartData\n")
+        fh.write(b"//  VARIABLE_NAME value\n")
+        fh.write(b"End ModelPartData\n\n")
+        fh.write(b"Begin Properties 0\n")
+        fh.write(b"End Properties\n\n")
 
         # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the
         # rest is actual cell data.

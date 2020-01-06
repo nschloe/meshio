@@ -298,14 +298,14 @@ def write(filename, mesh, binary=True):
         mode_idx = 1 if binary else 0
         size_of_double = 8
         fh.write(
-            ("$MeshFormat\n2.2 {} {}\n".format(mode_idx, size_of_double)).encode(
+            (f"$MeshFormat\n2.2 {mode_idx} {size_of_double}\n").encode(
                 "utf-8"
             )
         )
         if binary:
             fh.write(struct.pack("i", 1))
-            fh.write("\n".encode("utf-8"))
-        fh.write("$EndMeshFormat\n".encode("utf-8"))
+            fh.write(b"\n")
+        fh.write(b"$EndMeshFormat\n")
 
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
@@ -337,7 +337,7 @@ def write(filename, mesh, binary=True):
 
 
 def _write_nodes(fh, points, binary):
-    fh.write("$Nodes\n".encode("utf-8"))
+    fh.write(b"$Nodes\n")
     fh.write("{}\n".format(len(points)).encode("utf-8"))
     if binary:
         dtype = [("index", c_int), ("x", c_double, (3,))]
@@ -345,22 +345,22 @@ def _write_nodes(fh, points, binary):
         tmp["index"] = 1 + numpy.arange(len(points))
         tmp["x"] = points
         tmp.tofile(fh)
-        fh.write("\n".encode("utf-8"))
+        fh.write(b"\n")
     else:
         for k, x in enumerate(points):
             fh.write(
                 "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
             )
-    fh.write("$EndNodes\n".encode("utf-8"))
+    fh.write(b"$EndNodes\n")
     return
 
 
 def _write_elements(fh, cells, tag_data, binary):
     # write elements
-    fh.write("$Elements\n".encode("utf-8"))
+    fh.write(b"$Elements\n")
     # count all cells
     total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-    fh.write("{}\n".format(total_num_cells).encode("utf-8"))
+    fh.write(f"{total_num_cells}\n".encode("utf-8"))
 
     consecutive_index = 0
     for cell_type, node_idcs in cells.items():
@@ -406,18 +406,18 @@ def _write_elements(fh, cells, tag_data, binary):
 
         consecutive_index += len(node_idcs)
     if binary:
-        fh.write("\n".encode("utf-8"))
-    fh.write("$EndElements\n".encode("utf-8"))
+        fh.write(b"\n")
+    fh.write(b"$EndElements\n")
     return
 
 
 def _write_periodic(fh, periodic):
-    fh.write("$Periodic\n".encode("utf-8"))
+    fh.write(b"$Periodic\n")
     fh.write("{}\n".format(len(periodic)).encode("utf-8"))
     for dim, (stag, mtag), affine, slave_master in periodic:
-        fh.write("{} {} {}\n".format(dim, stag, mtag).encode("utf-8"))
+        fh.write(f"{dim} {stag} {mtag}\n".encode("utf-8"))
         if affine is not None:
-            fh.write("Affine ".encode("utf-8"))
+            fh.write(b"Affine ")
             affine = numpy.array(affine, dtype=float)
             affine = numpy.atleast_2d(affine.ravel())
             numpy.savetxt(fh, affine, "%.16g")
@@ -425,6 +425,6 @@ def _write_periodic(fh, periodic):
         slave_master = slave_master + 1  # Add one, Gmsh is 0-based
         fh.write("{}\n".format(len(slave_master)).encode("utf-8"))
         for snode, mnode in slave_master:
-            fh.write("{} {}\n".format(snode, mnode).encode("utf-8"))
-    fh.write("$EndPeriodic\n".encode("utf-8"))
+            fh.write(f"{snode} {mnode}\n".encode("utf-8"))
+    fh.write(b"$EndPeriodic\n")
     return
