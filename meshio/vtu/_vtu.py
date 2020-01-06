@@ -4,6 +4,7 @@ I/O for VTU.
 import base64
 import logging
 import sys
+import xml.etree.ElementTree as ET
 import zlib
 
 import numpy
@@ -42,7 +43,10 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
         b = types == vtk_type
         indices = numpy.add.outer(offsets[b], numpy.arange(-n, 0, dtype=offsets.dtype))
         cells[meshio_type] = connectivity[indices]
-        cell_data[meshio_type] = {key: value[b] for key, value in cell_data_raw.items()}
+        for name, d in cell_data_raw.items():
+            if name not in cell_data:
+                cell_data[name] = {}
+            cell_data[name][meshio_type] = d[b]
 
     return cells, cell_data
 
@@ -65,10 +69,12 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
             if key not in out_cell_data:
                 out_cell_data[key] = {}
 
-            for name in cell_data[key]:
-                if name not in out_cell_data[key]:
-                    out_cell_data[key][name] = []
-                out_cell_data[key][name].append(cell_data[key][name])
+            for name in cell_data:
+                if name not in out_cell_data:
+                    out_cell_data[name] = {}
+                if key not in out_cell_data[name]:
+                    out_cell_data[name][key] = []
+                out_cell_data[name][key].append(cell_data[name][key])
 
     for key in out_cells:
         out_cells[key] = numpy.concatenate(out_cells[key])
@@ -88,7 +94,7 @@ def get_grid(root):
             grid = c
         else:
             if c.tag != "AppendedData":
-                raise ReadError("Unknown main tag '{}'.".format(c.tag))
+                raise ReadError(f"Unknown main tag '{c.tag}'.")
             if appended_data is not None:
                 raise ReadError("More than one AppendedData section found.")
             if c.attrib["encoding"] != "base64":
@@ -126,20 +132,7 @@ class VtuReader:
     """
 
     def __init__(self, filename):  # noqa: C901
-        from lxml import etree as ET
-
-        # libxml2 and with it lxml have a safety net for memory overflows; see, e.g.,
-        # <https://stackoverflow.com/q/33828728/353337>.
-        # This causes the error
-        # ```
-        # cannot parse large files and instead throws the exception
-        #
-        # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
-        # ```
-        # Setting huge_tree=True removes the limit. Another alternative would be to use
-        # Python's native xml parser to avoid this error,
-        # import xml.etree.cElementTree as ET
-        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        parser = ET.XMLParser()
         tree = ET.parse(filename, parser)
         root = tree.getroot()
 
@@ -165,7 +158,7 @@ class VtuReader:
         try:
             self.byte_order = root.attrib["byte_order"]
             if self.byte_order not in ["LittleEndian", "BigEndian"]:
-                raise ReadError("Unknown byte order '{}'.".format(self.byte_order))
+                raise ReadError(f"Unknown byte order '{self.byte_order}'.")
         except KeyError:
             self.byte_order = None
 
@@ -181,7 +174,7 @@ class VtuReader:
                 for data_array in c:
                     field_data[data_array.attrib["Name"]] = self.read_data(data_array)
             else:
-                raise ReadError("Unknown grid subtag '{}'.".format(c.tag))
+                raise ReadError(f"Unknown grid subtag '{c.tag}'.")
 
         if not pieces:
             raise ReadError("No Piece found.")
@@ -245,7 +238,7 @@ class VtuReader:
 
                     cell_data_raw.append(piece_cell_data_raw)
                 else:
-                    raise ReadError("Unknown tag '{}'.".format(child.tag))
+                    raise ReadError(f"Unknown tag '{child.tag}'.")
 
         if not cell_data_raw:
             cell_data_raw = [{}] * len(cells)
@@ -339,7 +332,7 @@ class VtuReader:
             offset = int(c.attrib["offset"])
             data = self.read_binary(self.appended_data[offset:], c.attrib["type"])
         else:
-            raise ReadError("Unknown data format '{}'.".format(fmt))
+            raise ReadError(f"Unknown data format '{fmt}'.")
 
         if "NumberOfComponents" in c.attrib:
             data = data.reshape(-1, int(c.attrib["NumberOfComponents"]))
@@ -368,7 +361,6 @@ def write(filename, mesh, binary=True):
     # Writing XML with an etree required first transforming the (potentially large)
     # arrays into string, which are much larger in memory still. This makes this writer
     # very memory hungry. See <https://stackoverflow.com/q/59272477/353337>.
-    # from lxml import etree as ET
     from .._cxml import etree as ET
 
     if not binary:
@@ -460,7 +452,7 @@ def write(filename, mesh, binary=True):
         da.text_writer = text_writer
         return
 
-    comment = ET.Comment("This file was created by meshio v{}".format(__version__))
+    comment = ET.Comment(f"This file was created by meshio v{__version__}")
     vtk_file.insert(1, comment)
 
     grid = ET.SubElement(vtk_file, "UnstructuredGrid")
@@ -470,7 +462,7 @@ def write(filename, mesh, binary=True):
         grid,
         "Piece",
         NumberOfPoints="{}".format(len(points)),
-        NumberOfCells="{}".format(total_num_cells),
+        NumberOfCells=f"{total_num_cells}",
     )
 
     # points

@@ -27,7 +27,7 @@ c_double = numpy.dtype("d")
 
 
 def _size_type(data_size):
-    return numpy.dtype("u{}".format(data_size))
+    return numpy.dtype(f"u{data_size}")
 
 
 def read_buffer(f, is_ascii, data_size):
@@ -314,12 +314,12 @@ def write4_1(filename, mesh, binary=True):
     with open(filename, "wb") as fh:
         file_type = 1 if binary else 0
         data_size = c_size_t.itemsize
-        fh.write("$MeshFormat\n".encode("utf-8"))
-        fh.write("4.1 {} {}\n".format(file_type, data_size).encode("utf-8"))
+        fh.write(b"$MeshFormat\n")
+        fh.write(f"4.1 {file_type} {data_size}\n".encode("utf-8"))
         if binary:
             fh.write(struct.pack("i", 1))
-            fh.write("\n".encode("utf-8"))
-        fh.write("$EndMeshFormat\n".encode("utf-8"))
+            fh.write(b"\n")
+        fh.write(b"$EndMeshFormat\n")
 
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
@@ -331,6 +331,7 @@ def write4_1(filename, mesh, binary=True):
             _write_periodic(fh, mesh.gmsh_periodic, binary)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, binary)
+
         cell_data_raw = raw_from_cell_data(mesh.cell_data)
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, binary)
@@ -370,7 +371,7 @@ def _write_entities(fh, cells, binary):
 
 
 def _write_nodes(fh, points, cells, binary):
-    fh.write("$Nodes\n".encode("utf-8"))
+    fh.write(b"$Nodes\n")
 
     # The entity_dim and entity_tag in the $Elements section must correspond to an
     # entity_dim and entity_tag array in the $Nodes section.
@@ -412,21 +413,15 @@ def _write_nodes(fh, points, cells, binary):
         numpy.array([n], dtype=c_size_t).tofile(fh)
         numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh)
         points.tofile(fh)
-        fh.write("\n".encode("utf-8"))
+        fh.write(b"\n")
     else:
-        fh.write(
-            "{} {} {} {}\n".format(num_blocks, n, min_tag, max_tag).encode("utf-8")
-        )
-        fh.write(
-            "{} {} {} {}\n".format(dim_entity, entity_tag, is_parametric, n).encode(
-                "utf-8"
-            )
-        )
+        fh.write(f"{num_blocks} {n} {min_tag} {max_tag}\n".encode("utf-8"))
+        fh.write(f"{dim_entity} {entity_tag} {is_parametric} {n}\n".encode("utf-8"))
         numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh, "\n", "%d")
-        fh.write("\n".encode("utf-8"))
+        fh.write(b"\n")
         numpy.savetxt(fh, points, delimiter=" ")
 
-    fh.write("$EndNodes\n".encode("utf-8"))
+    fh.write(b"$EndNodes\n")
     return
 
 
@@ -442,7 +437,7 @@ def _write_elements(fh, cells, binary):
       ...
     $EndElements
     """
-    fh.write("$Elements\n".encode("utf-8"))
+    fh.write(b"$Elements\n")
 
     total_num_cells = sum(map(len, cells.values()))
     num_blocks = len(cells)
@@ -481,7 +476,7 @@ def _write_elements(fh, cells, binary):
             ).tofile(fh)
             tag0 += n
 
-        fh.write("\n".encode("utf-8"))
+        fh.write(b"\n")
     else:
         fh.write(
             "{} {} {} {}\n".format(
@@ -496,9 +491,7 @@ def _write_elements(fh, cells, binary):
             entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]
-            fh.write(
-                "{} {} {} {}\n".format(dim, entity_tag, cell_type, n).encode("utf-8")
-            )
+            fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode("utf-8"))
 
             numpy.savetxt(
                 fh,
@@ -509,7 +502,7 @@ def _write_elements(fh, cells, binary):
             )
             tag0 += n
 
-    fh.write("$EndElements\n".encode("utf-8"))
+    fh.write(b"$EndElements\n")
     return
 
 
@@ -540,7 +533,7 @@ def _write_periodic(fh, periodic, binary):
             fmt = kwargs.pop("fmt", fmt)
             numpy.savetxt(fh, ary, fmt, **kwargs)
 
-    fh.write("$Periodic\n".encode("utf-8"))
+    fh.write(b"$Periodic\n")
     tofile(fh, len(periodic), c_size_t)
     for dim, (stag, mtag), affine, slave_master in periodic:
         tofile(fh, [dim, stag, mtag], c_int)
@@ -555,8 +548,8 @@ def _write_periodic(fh, periodic, binary):
         tofile(fh, len(slave_master), c_size_t)
         tofile(fh, slave_master, c_size_t)
     if binary:
-        fh.write("\n".encode("utf-8"))
-    fh.write("$EndPeriodic\n".encode("utf-8"))
+        fh.write(b"\n")
+    fh.write(b"$EndPeriodic\n")
 
 
 _geometric_dimension = {

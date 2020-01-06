@@ -46,7 +46,7 @@ class XdmfReader:
             return self.read_xdmf2(root)
 
         if version.split(".")[0] != "3":
-            raise ReadError("Unknown XDMF version {}.".format(version))
+            raise ReadError(f"Unknown XDMF version {version}.")
 
         return self.read_xdmf3(root)
 
@@ -197,7 +197,7 @@ class XdmfReader:
                     if c.get("Center") != "Grid":
                         raise ReadError()
             else:
-                raise ReadError("Unknown section '{}'.".format(c.tag))
+                raise ReadError(f"Unknown section '{c.tag}'.")
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -308,9 +308,7 @@ class XdmfReader:
                         raise ReadError("Unknown section '{}'.".format(c.tag))
 
             else:
-                raise ReadError(
-                    "XDMF reader: unknown Domain element: {}".format(domain_item.tag)
-                )
+                raise ReadError(f"Unknown section '{c.tag}'.")
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -326,13 +324,7 @@ class XdmfReader:
 
 class XdmfWriter:
     def __init__(
-        self,
-        filename,
-        mesh,
-        pretty_xml=True,
-        data_format="HDF",
-        compression=None,
-        compression_opts=None,
+        self, filename, mesh, data_format="HDF", compression=None, compression_opts=None
     ):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
@@ -368,7 +360,7 @@ class XdmfWriter:
 
         ET.register_namespace("xi", "https://www.w3.org/2001/XInclude/")
 
-        write_xml(filename, xdmf_file, pretty_xml)
+        write_xml(filename, xdmf_file)
 
     def numpy_to_xml_string(self, data):
         if self.data_format == "XML":
@@ -387,8 +379,8 @@ class XdmfWriter:
             return bin_filename
 
         if self.data_format != "HDF":
-            raise WriteError()
-        name = "data{}".format(self.data_counter)
+            raise WriteError(f'Unknown data format "{self.data_format}"')
+        name = f"data{self.data_counter}"
         self.data_counter += 1
         self.h5_file.create_dataset(
             name,

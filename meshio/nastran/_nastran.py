@@ -177,7 +177,7 @@ def write(filename, mesh):
         points = mesh.points
 
     with open_file(filename, "w") as f:
-        f.write("$ Nastran file written by meshio v{}\n".format(__version__))
+        f.write(f"$ Nastran file written by meshio v{__version__}\n")
         f.write("BEGIN BULK\n")
 
         # Points
@@ -194,7 +194,7 @@ def write(filename, mesh):
             nastran_type = meshio_to_nastran_type[cell_type].replace("_", "")
             for cell in cells:
                 cell_id += 1
-                cell_info = "{}, {:d},, ".format(nastran_type, cell_id)
+                cell_info = f"{nastran_type}, {cell_id:d},, "
                 cell1 = cell + 1
                 cell1 = _convert_to_nastran_ordering(cell1, nastran_type)
                 conn = ", ".join(str(nid) for nid in cell1[:6])

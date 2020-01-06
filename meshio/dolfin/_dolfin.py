@@ -5,6 +5,7 @@ I/O for DOLFIN's XML format, cf.
 import logging
 import os
 import re
+import xml.etree.ElementTree as ET
 
 import numpy
 
@@ -14,8 +15,6 @@ from .._mesh import Mesh
 
 
 def _read_mesh(filename):
-    from lxml import etree as ET
-
     dolfin_to_meshio_type = {"triangle": ("triangle", 3), "tetrahedron": ("tetra", 4)}
 
     # Use iterparse() to avoid loading the entire file via parse(). iterparse()
@@ -34,7 +33,7 @@ def _read_mesh(filename):
         elif elem.tag == "mesh":
             dim = int(elem.attrib["dim"])
             cell_type, npc = dolfin_to_meshio_type[elem.attrib["celltype"]]
-            cell_tags = ["v{}".format(i) for i in range(npc)]
+            cell_tags = [f"v{i}" for i in range(npc)]
         elif elem.tag == "vertices":
             points = numpy.empty((int(elem.attrib["size"]), dim))
             keys = ["x", "y"]
@@ -57,15 +56,13 @@ def _read_mesh(filename):
 
 
 def _read_cell_data(filename, cell_type):
-    from lxml import etree as ET
-
     dolfin_type_to_numpy_type = {
         "int": numpy.dtype("int"),
         "float": numpy.dtype("float"),
         "uint": numpy.dtype("uint"),
     }
 
-    cell_data = {cell_type: {}}
+    cell_data = {}
     dir_name = os.path.dirname(filename)
     if not os.path.dirname(filename):
         dir_name = os.getcwd()
@@ -75,12 +72,12 @@ def _read_cell_data(filename, cell_type):
     for f in os.listdir(dir_name):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
-        out = re.match("{}_([^\\.]+)\\.xml".format(basename), f)
+        out = re.match(f"{basename}_([^\\.]+)\\.xml", f)
         if not out:
             continue
         name = out.group(1)
 
-        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        parser = ET.XMLParser()
         tree = ET.parse(os.path.join(dir_name, f), parser)
         root = tree.getroot()
 
@@ -100,7 +97,10 @@ def _read_cell_data(filename, cell_type):
             idx = int(child.attrib["index"])
             data[idx] = child.attrib["value"]
 
-        cell_data[cell_type][name] = data
+        if name not in cell_data:
+            cell_data[name] = {}
+        cell_data[name][cell_type] = data
+
     return cell_data
 
 
@@ -111,8 +111,6 @@ def read(filename):
 
 
 def _write_mesh(filename, points, cell_type, cells):
-    from lxml import etree as ET
-
     stripped_cells = {cell_type: cells[cell_type]}
 
     dolfin = ET.Element("dolfin", nsmap={"dolfin": "https://fenicsproject.org/"})
@@ -131,7 +129,7 @@ def _write_mesh(filename, points, cell_type, cells):
 
     dim = points.shape[1]
     if dim not in [2, 3]:
-        raise WriteError("Can only write dimension 2, 3, got {}.".format(dim))
+        raise WriteError(f"Can only write dimension 2, 3, got {dim}.")
 
     coord_names = ["x", "y"]
     if dim == 3:
@@ -157,12 +155,11 @@ def _write_mesh(filename, points, cell_type, cells):
                 xcells, meshio_to_dolfin_type[ct], index=str(idx)
             )
             for k, c in enumerate(cell):
-                cell_entry.attrib["v{}".format(k)] = str(c)
+                cell_entry.attrib[f"v{k}"] = str(c)
             idx += 1
 
     tree = ET.ElementTree(dolfin)
-    tree.write(filename, pretty_print=True)
-    return
+    tree.write(filename)
 
 
 def _numpy_type_to_dolfin_type(dtype):
@@ -181,8 +178,6 @@ def _numpy_type_to_dolfin_type(dtype):
 
 
 def _write_cell_data(filename, dim, cell_data):
-    from lxml import etree as ET
-
     dolfin = ET.Element("dolfin", nsmap={"dolfin": "https://fenicsproject.org/"})
 
     mesh_function = ET.SubElement(
@@ -197,8 +192,7 @@ def _write_cell_data(filename, dim, cell_data):
         ET.SubElement(mesh_function, "entity", index=str(k), value=repr(value))
 
     tree = ET.ElementTree(dolfin)
-    tree.write(filename, pretty_print=True)
-    return
+    tree.write(filename)
 
 
 def write(filename, mesh):
@@ -216,11 +210,13 @@ def write(filename, mesh):
 
     _write_mesh(filename, mesh.points, cell_type, mesh.cells)
 
-    if cell_type in mesh.cell_data:
-        for key, data in mesh.cell_data[cell_type].items():
-            cell_data_filename = "{}_{}.xml".format(os.path.splitext(filename)[0], key)
-            dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
-            _write_cell_data(cell_data_filename, dim, numpy.array(data))
+    for name, dictionary in mesh.cell_data.items():
+        if cell_type not in dictionary:
+            continue
+        data = dictionary[cell_type]
+        cell_data_filename = "{}_{}.xml".format(os.path.splitext(filename)[0], name)
+        dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
+        _write_cell_data(cell_data_filename, dim, numpy.array(data))
 
 
 register("dolfin-xml", [".xml"], read, {"dolfin-xml": write})

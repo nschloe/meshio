@@ -140,7 +140,7 @@ def read_buffer(f):
 
     data_type = f.readline().decode("utf-8").strip().upper()
     if data_type not in ["ASCII", "BINARY"]:
-        raise ReadError("Unknown VTK data type '{}'.".format(data_type))
+        raise ReadError(f"Unknown VTK data type '{data_type}'.")
     info.is_ascii = data_type == "ASCII"
 
     while True:
@@ -252,7 +252,7 @@ def _read_subsection(f, info):
     elif info.section == "FIELD":
         d.update(_read_fields(f, int(info.split[2]), info.is_ascii))
     else:
-        raise ReadError("Unknown section '{}'.".format(info.section))
+        raise ReadError(f"Unknown section '{info.section}'.")
 
 
 def _check_mesh(info):
@@ -555,9 +555,10 @@ def translate_cells(data, types, cell_data_raw):
                 raise ReadError()
             indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
             cells[meshio_type] = data[indices]
-            cell_data[meshio_type] = {
-                key: value[b] for key, value in cell_data_raw.items()
-            }
+            for name in cell_data_raw:
+                if name not in cell_data:
+                    cell_data[name] = {}
+                cell_data[name][meshio_type] = cell_data_raw[name][b]
 
     return cells, cell_data
 
@@ -585,23 +586,23 @@ def write(filename, mesh, binary=True):
                 mesh.point_data[name] = pad(values)
 
     if mesh.cell_data:
-        for t, data in mesh.cell_data.items():
-            for name, values in data.items():
+        for name, data in mesh.cell_data.items():
+            for t, values in data.items():
                 if len(values.shape) == 2 and values.shape[1] == 2:
                     logging.warning(
                         "VTK requires 3D vectors, but 2D vectors given. "
                         "Appending 0 third component to {}.".format(name)
                     )
-                    mesh.cell_data[t][name] = pad(mesh.cell_data[t][name])
+                    mesh.cell_data[name][t] = pad(mesh.cell_data[name][t])
 
     if not binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
 
     with open_file(filename, "wb") as f:
-        f.write("# vtk DataFile Version 4.2\n".encode("utf-8"))
-        f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
+        f.write(b"# vtk DataFile Version 4.2\n")
+        f.write(f"written by meshio v{__version__}\n".encode("utf-8"))
         f.write(("BINARY\n" if binary else "ASCII\n").encode("utf-8"))
-        f.write("DATASET UNSTRUCTURED_GRID\n".encode("utf-8"))
+        f.write(b"DATASET UNSTRUCTURED_GRID\n")
 
         # write points and cells
         _write_points(f, points, binary)
@@ -610,15 +611,14 @@ def write(filename, mesh, binary=True):
         # write point data
         if mesh.point_data:
             num_points = mesh.points.shape[0]
-            f.write("POINT_DATA {}\n".format(num_points).encode("utf-8"))
+            f.write(f"POINT_DATA {num_points}\n".encode("utf-8"))
             _write_field_data(f, mesh.point_data, binary)
 
         # write cell data
         if mesh.cell_data:
             total_num_cells = sum([len(c) for c in mesh.cells.values()])
-            cell_data_raw = raw_from_cell_data(mesh.cell_data)
-            f.write("CELL_DATA {}\n".format(total_num_cells).encode("utf-8"))
-            _write_field_data(f, cell_data_raw, binary)
+            f.write(f"CELL_DATA {total_num_cells}\n".encode("utf-8"))
+            _write_field_data(f, raw_from_cell_data(mesh.cell_data), binary)
 
 
 def _write_points(f, points, binary):
@@ -635,7 +635,7 @@ def _write_points(f, points, binary):
     else:
         # ascii
         points.tofile(f, sep=" ")
-    f.write("\n".encode("utf-8"))
+    f.write(b"\n")
 
 
 def _write_cells(f, cells, binary):
@@ -643,7 +643,7 @@ def _write_cells(f, cells, binary):
     total_num_idx = sum([numpy.prod(c.shape) for c in cells.values()])
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
-    f.write("CELLS {} {}\n".format(total_num_cells, total_num_idx).encode("utf-8"))
+    f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode("utf-8"))
     if binary:
         for c in cells.values():
             n = c.shape[1]
@@ -653,7 +653,7 @@ def _write_cells(f, cells, binary):
             numpy.column_stack(
                 [numpy.full(c.shape[0], n, dtype=dtype), c.astype(dtype)],
             ).astype(dtype).tofile(f, sep="")
-        f.write("\n".encode("utf-8"))
+        f.write(b"\n")
     else:
         # ascii
         for c in cells.values():
@@ -662,10 +662,10 @@ def _write_cells(f, cells, binary):
             numpy.column_stack([numpy.full(c.shape[0], n, dtype=c.dtype), c]).tofile(
                 f, sep="\n"
             )
-            f.write("\n".encode("utf-8"))
+            f.write(b"\n")
 
     # write cell types
-    f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
+    f.write(f"CELL_TYPES {total_num_cells}\n".encode("utf-8"))
     if binary:
         for key in cells:
             key_ = key[:7] if key[:7] == "polygon" else key
@@ -673,13 +673,13 @@ def _write_cells(f, cells, binary):
             numpy.full(len(cells[key]), vtk_type, dtype=numpy.dtype(">i4")).tofile(
                 f, sep=""
             )
-        f.write("\n".encode("utf-8"))
+        f.write(b"\n")
     else:
         # ascii
         for key in cells:
             key_ = key[:7] if key[:7] == "polygon" else key
             numpy.full(len(cells[key]), meshio_to_vtk_type[key_]).tofile(f, sep="\n")
-            f.write("\n".encode("utf-8"))
+            f.write(b"\n")
 
 
 def _write_field_data(f, data, binary):
@@ -695,9 +695,7 @@ def _write_field_data(f, data, binary):
             num_components = values.shape[1]
 
         if " " in name:
-            raise WriteError(
-                "VTK doesn't support spaces in field names ('{}').".format(name)
-            )
+            raise WriteError(f"VTK doesn't support spaces in field names ('{name}').")
 
         f.write(
             (
@@ -715,7 +713,7 @@ def _write_field_data(f, data, binary):
             # ascii
             values.tofile(f, sep=" ")
             # numpy.savetxt(f, points)
-        f.write("\n".encode("utf-8"))
+        f.write(b"\n")
 
 
 register(

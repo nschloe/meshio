@@ -13,7 +13,6 @@ with open(os.path.join(base_dir, "meshio", "__about__.py"), "rb") as f:
 extras = {
     "exodus": ["netCDF4"],
     "hdf5": ["h5py"],  # MED, MOAB, XDMF formats
-    "xml": ["lxml"],  # Dolfin, VTU
 }
 extras["all"] = list(set(itertools.chain.from_iterable(extras.values())))
 
@@ -35,8 +34,8 @@ setup(
     license=about["__license__"],
     platforms="any",
     install_requires=["numpy"],
-    # For pathlib:
-    python_requires=">=3.5",
+    # For pathlib >= 3.5, f-strings 3.6:
+    python_requires=">=3.6",
     extras_require=extras,
     classifiers=[
         about["__status__"],

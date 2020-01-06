@@ -151,8 +151,8 @@ pip3 install meshio --user
 ```
 to install.
 
-Additional dependencies (`netcdf4`, `h5py` and `lxml`) are required for some of the
-output formats and can be pulled in by
+Additional dependencies (`netcdf4`, `h5py`) are required for some of the output formats
+and can be pulled in by
 ```
 pip install meshio[all] --user
 ```

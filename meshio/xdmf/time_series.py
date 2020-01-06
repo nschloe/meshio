@@ -31,7 +31,7 @@ class TimeSeriesReader:
 
         version = root.get("Version")
         if version.split(".")[0] != "3":
-            raise ReadError("Unknown XDMF version {}.".format(version))
+            raise ReadError(f"Unknown XDMF version {version}.")
 
         domains = list(root)
         if len(domains) != 1:
@@ -225,7 +225,7 @@ class TimeSeriesReader:
 
 
 class TimeSeriesWriter:
-    def __init__(self, filename, pretty_xml=True, data_format="HDF"):
+    def __init__(self, filename, data_format="HDF"):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -235,7 +235,6 @@ class TimeSeriesWriter:
         self.filename = filename
         self.data_format = data_format
         self.data_counter = 0
-        self.pretty_xml = pretty_xml
 
         self.xdmf_file = ET.Element("Xdmf", Version="3.0")
 
@@ -281,7 +280,7 @@ class TimeSeriesWriter:
         self.cells(cells, grid)
         self.has_mesh = True
 
-        write_xml(self.filename, self.xdmf_file, self.pretty_xml)
+        write_xml(self.filename, self.xdmf_file)
 
     def write_data(self, t, point_data=None, cell_data=None):
         # <Grid>
@@ -298,14 +297,14 @@ class TimeSeriesWriter:
             self.mesh_name
         )
         ET.SubElement(grid, "{http://www.w3.org/2003/XInclude}include", xpointer=ptr)
-        ET.SubElement(grid, "Time", Value="{}".format(t))
+        ET.SubElement(grid, "Time", Value=f"{t}")
 
         if point_data:
             self.point_data(point_data, grid)
         if cell_data:
             self.cell_data(cell_data, grid)
 
-        write_xml(self.filename, self.xdmf_file, self.pretty_xml)
+        write_xml(self.filename, self.xdmf_file)
 
     def numpy_to_xml_string(self, data):
         if self.data_format == "XML":
@@ -325,7 +324,7 @@ class TimeSeriesWriter:
 
         if self.data_format != "HDF":
             raise WriteError()
-        name = "data{}".format(self.data_counter)
+        name = f"data{self.data_counter}"
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
         return os.path.basename(self.h5_filename) + ":/" + name

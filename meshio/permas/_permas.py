@@ -140,7 +140,7 @@ def _read_cells(f, line0, point_gids):
         raise ReadError(etype_sline)
     etype = etype_sline.split("=")[1].strip()
     if etype not in permas_to_meshio_type:
-        raise ReadError("Element type not available: {}".format(etype))
+        raise ReadError(f"Element type not available: {etype}")
     cell_type = permas_to_meshio_type[etype]
     cells, idx = [], []
     while True:
@@ -192,7 +192,7 @@ def get_param_map(word, required_keys=None):
     msg = ""
     for key in required_keys:
         if key not in param_map:
-            msg += "%r not found in %r\n" % (key, word)
+            msg += f"{key} not found in {word}\n"
     if msg:
         raise RuntimeError(msg)
     return param_map
@@ -233,12 +233,12 @@ def write(filename, mesh):
 
     with open_file(filename, "wt") as f:
         f.write("!PERMAS DataFile Version 17.0\n")
-        f.write("!written by meshio v{}\n".format(__version__))
+        f.write(f"!written by meshio v{__version__}\n")
         f.write("$ENTER COMPONENT NAME=DFLT_COMP\n")
         f.write("$STRUCTURE\n")
         f.write("$COOR\n")
         for k, x in enumerate(mesh.points):
-            f.write("{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]))
+            f.write("{} {} {} {}\n".format(k + 1, x[0], x[1], x[2]))
         eid = 0
         tria6_order = [0, 3, 1, 4, 2, 5]
         tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]
