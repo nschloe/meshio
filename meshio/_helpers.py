@@ -75,7 +75,7 @@ def write_points_cells(
     cell_data=None,
     field_data=None,
     file_format=None,
-    **kwargs
+    **kwargs,
 ):
     points = numpy.asarray(points)
     cells = {key: numpy.asarray(value) for key, value in cells.items()}

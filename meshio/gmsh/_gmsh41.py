@@ -414,14 +414,8 @@ def _write_nodes(fh, points, cells, binary):
         points.tofile(fh)
         fh.write(b"\n")
     else:
-        fh.write(
-            f"{num_blocks} {n} {min_tag} {max_tag}\n".encode("utf-8")
-        )
-        fh.write(
-            f"{dim_entity} {entity_tag} {is_parametric} {n}\n".encode(
-                "utf-8"
-            )
-        )
+        fh.write(f"{num_blocks} {n} {min_tag} {max_tag}\n".encode("utf-8"))
+        fh.write(f"{dim_entity} {entity_tag} {is_parametric} {n}\n".encode("utf-8"))
         numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh, "\n", "%d")
         fh.write(b"\n")
         numpy.savetxt(fh, points, delimiter=" ")
@@ -496,9 +490,7 @@ def _write_elements(fh, cells, binary):
             entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]
-            fh.write(
-                f"{dim} {entity_tag} {cell_type} {n}\n".encode("utf-8")
-            )
+            fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode("utf-8"))
 
             numpy.savetxt(
                 fh,

@@ -695,9 +695,7 @@ def _write_field_data(f, data, binary):
             num_components = values.shape[1]
 
         if " " in name:
-            raise WriteError(
-                f"VTK doesn't support spaces in field names ('{name}')."
-            )
+            raise WriteError(f"VTK doesn't support spaces in field names ('{name}').")
 
         f.write(
             (

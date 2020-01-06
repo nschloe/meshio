@@ -294,9 +294,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
         fh.write(b"comment Created by meshio\n")
 
         if binary:
-            fh.write(
-                f"format binary_{sys.byteorder}_endian 1.0\n".encode("utf-8")
-            )
+            fh.write(f"format binary_{sys.byteorder}_endian 1.0\n".encode("utf-8"))
         else:
             fh.write(b"format ascii 1.0\n")
 
@@ -361,9 +359,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
         ply_type = numpy_to_ply_dtype[cell_dtype]
         fh.write(
-            f"property list {ply_type} {ply_type} vertex_indices\n".encode(
-                "utf-8"
-            )
+            f"property list {ply_type} {ply_type} vertex_indices\n".encode("utf-8")
         )
         # TODO other cell data
         fh.write(b"end_header\n")
