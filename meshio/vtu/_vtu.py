@@ -4,6 +4,7 @@ I/O for VTU.
 import base64
 import logging
 import sys
+import xml.etree.ElementTree as ET
 import zlib
 
 import numpy
@@ -126,20 +127,7 @@ class VtuReader:
     """
 
     def __init__(self, filename):  # noqa: C901
-        from lxml import etree as ET
-
-        # libxml2 and with it lxml have a safety net for memory overflows; see, e.g.,
-        # <https://stackoverflow.com/q/33828728/353337>.
-        # This causes the error
-        # ```
-        # cannot parse large files and instead throws the exception
-        #
-        # lxml.etree.XMLSyntaxError: xmlSAX2Characters: huge text node, [...]
-        # ```
-        # Setting huge_tree=True removes the limit. Another alternative would be to use
-        # Python's native xml parser to avoid this error,
-        # import xml.etree.cElementTree as ET
-        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        parser = ET.XMLParser()
         tree = ET.parse(filename, parser)
         root = tree.getroot()
 
@@ -368,7 +356,6 @@ def write(filename, mesh, binary=True):
     # Writing XML with an etree required first transforming the (potentially large)
     # arrays into string, which are much larger in memory still. This makes this writer
     # very memory hungry. See <https://stackoverflow.com/q/59272477/353337>.
-    # from lxml import etree as ET
     from .._cxml import etree as ET
 
     if not binary:

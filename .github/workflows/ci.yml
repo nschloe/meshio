@@ -41,7 +41,7 @@ jobs:
         lfs: true
     - name: Install dependencies
       run: |
-        sudo apt-get install -y python3-h5py python3-netcdf4 python3-lxml
+        sudo apt-get install -y python3-h5py python3-netcdf4
     - name: Install package
       run: |
         pip install --upgrade pip

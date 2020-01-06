@@ -5,6 +5,7 @@ I/O for DOLFIN's XML format, cf.
 import logging
 import os
 import re
+import xml.etree.ElementTree as ET
 
 import numpy
 
@@ -14,8 +15,6 @@ from .._mesh import Mesh
 
 
 def _read_mesh(filename):
-    from lxml import etree as ET
-
     dolfin_to_meshio_type = {"triangle": ("triangle", 3), "tetrahedron": ("tetra", 4)}
 
     # Use iterparse() to avoid loading the entire file via parse(). iterparse()
@@ -57,8 +56,6 @@ def _read_mesh(filename):
 
 
 def _read_cell_data(filename, cell_type):
-    from lxml import etree as ET
-
     dolfin_type_to_numpy_type = {
         "int": numpy.dtype("int"),
         "float": numpy.dtype("float"),
@@ -80,7 +77,7 @@ def _read_cell_data(filename, cell_type):
             continue
         name = out.group(1)
 
-        parser = ET.XMLParser(remove_comments=True, huge_tree=True)
+        parser = ET.XMLParser()
         tree = ET.parse(os.path.join(dir_name, f), parser)
         root = tree.getroot()
 
@@ -111,8 +108,6 @@ def read(filename):
 
 
 def _write_mesh(filename, points, cell_type, cells):
-    from lxml import etree as ET
-
     stripped_cells = {cell_type: cells[cell_type]}
 
     dolfin = ET.Element("dolfin", nsmap={"dolfin": "https://fenicsproject.org/"})
@@ -161,8 +156,7 @@ def _write_mesh(filename, points, cell_type, cells):
             idx += 1
 
     tree = ET.ElementTree(dolfin)
-    tree.write(filename, pretty_print=True)
-    return
+    tree.write(filename)
 
 
 def _numpy_type_to_dolfin_type(dtype):
@@ -181,8 +175,6 @@ def _numpy_type_to_dolfin_type(dtype):
 
 
 def _write_cell_data(filename, dim, cell_data):
-    from lxml import etree as ET
-
     dolfin = ET.Element("dolfin", nsmap={"dolfin": "https://fenicsproject.org/"})
 
     mesh_function = ET.SubElement(
@@ -197,8 +189,7 @@ def _write_cell_data(filename, dim, cell_data):
         ET.SubElement(mesh_function, "entity", index=str(k), value=repr(value))
 
     tree = ET.ElementTree(dolfin)
-    tree.write(filename, pretty_print=True)
-    return
+    tree.write(filename)
 
 
 def write(filename, mesh):
