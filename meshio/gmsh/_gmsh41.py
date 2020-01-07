@@ -221,20 +221,24 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         if key in cells:
             cells[key] = numpy.concatenate([cells[key], values])
             if physical_tag:
-                if key not in cell_data:
-                    cell_data[key] = {}
-                cell_data[key]["gmsh:physical"] = numpy.concatenate(
+                if "gmsh:physical" not in cell_data:
+                    cell_data["gmsh:physical"] = {}
+                if key not in cell_data["gmsh:physical"]:
+                    cell_data["gmsh:physical"][key] = {}
+                cell_data["gmsh:physical"][key] = numpy.concatenate(
                     [
-                        cell_data[key]["gmsh:physical"],
+                        cell_data["gmsh:physical"][key],
                         physical_tag[0] * numpy.ones(len(values), int),
                     ]
                 )
         else:
             cells[key] = values
             if physical_tag:
-                if key not in cell_data:
-                    cell_data[key] = {}
-                cell_data[key]["gmsh:physical"] = physical_tag[0] * numpy.ones(
+                if "gmsh:physical" not in cell_data:
+                    cell_data["gmsh:physical"] = {}
+                if key not in cell_data["gmsh:physical"]:
+                    cell_data["gmsh:physical"][key] = {}
+                cell_data["gmsh:physical"][key] = physical_tag[0] * numpy.ones(
                     len(values), int
                 )
 
