@@ -1,4 +1,8 @@
+import collections
+
 import numpy
+
+Cells = collections.namedtuple("Cells", ["type", "data"])
 
 
 class Mesh:
@@ -15,7 +19,7 @@ class Mesh:
         info=None,
     ):
         self.points = points
-        self.cells = cells
+        self.cells = [Cells(cell_type, data) for cell_type, data in cells]
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
         self.field_data = {} if field_data is None else field_data
@@ -31,7 +35,7 @@ class Mesh:
         ]
         if len(self.cells) > 0:
             lines.append("  Number of cells:")
-            for tpe, elems in self.cells.items():
+            for tpe, elems in self.cells:
                 lines.append("    {}: {}".format(tpe, len(elems)))
         else:
             lines.append("  No cells.")

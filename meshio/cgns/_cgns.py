@@ -28,7 +28,7 @@ def read(filename):
     # TODO how to distinguish cell types?
     if cells.shape[1] != 4:
         raise ReadError("Can only read tetrahedra.")
-    cells = {"tetra": cells}
+    cells = [("tetra", cells)]
 
     return Mesh(points, cells)
 
@@ -57,9 +57,13 @@ def write(filename, mesh):
     # TODO write cells other than tetra
     elems = zone1.create_group("GridElements")
     rnge = elems.create_group("ElementRange")
-    rnge.create_dataset(" data", data=[1, mesh.cells["tetra"].shape[0]])
+    for cell_type, data in mesh.cells:
+        if cell_type == "tetra":
+            rnge.create_dataset(" data", data=[1, data.shape[0]])
     conn = elems.create_group("ElementConnectivity")
-    conn.create_dataset(" data", data=mesh.cells["tetra"].reshape(-1) + 1)
+    for cell_type, data in mesh.cells:
+        if cell_type == "tetra":
+            conn.create_dataset(" data", data=data.reshape(-1) + 1)
 
 
 register("cgns", [".cgns"], read, {"cgns": write})

@@ -216,31 +216,15 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         (physical_tag, tpe, inv_tags[d[:, 1:] - 1]) for physical_tag, tpe, d in data
     ]
 
-    cells = {}
+    cells = []
     for physical_tag, key, values in data:
-        if key in cells:
-            cells[key] = numpy.concatenate([cells[key], values])
-            if physical_tag:
-                if "gmsh:physical" not in cell_data:
-                    cell_data["gmsh:physical"] = {}
-                if key not in cell_data["gmsh:physical"]:
-                    cell_data["gmsh:physical"][key] = {}
-                cell_data["gmsh:physical"][key] = numpy.concatenate(
-                    [
-                        cell_data["gmsh:physical"][key],
-                        physical_tag[0] * numpy.ones(len(values), int),
-                    ]
-                )
-        else:
-            cells[key] = values
-            if physical_tag:
-                if "gmsh:physical" not in cell_data:
-                    cell_data["gmsh:physical"] = {}
-                if key not in cell_data["gmsh:physical"]:
-                    cell_data["gmsh:physical"][key] = {}
-                cell_data["gmsh:physical"][key] = physical_tag[0] * numpy.ones(
-                    len(values), int
-                )
+        cells.append((key, values))
+        if physical_tag:
+            if "gmsh:physical" not in cell_data:
+                cell_data["gmsh:physical"] = {}
+            cell_data["gmsh:physical"].append(
+                (key, physical_tag[0] * numpy.ones(len(values), int))
+            )
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     if "tetra10" in cells:
@@ -382,7 +366,7 @@ def _write_nodes(fh, points, cells, binary):
     # TODO Not sure what to do if there are multiple element types present.
     if len(cells) != 1:
         raise WriteError("Can only deal with one cell type for now")
-    dim_entity = _geometric_dimension[list(cells.keys())[0]]
+    dim_entity = _geometric_dimension[cells[0].type]
     entity_tag = 0
 
     # write all points as one big block
@@ -443,7 +427,7 @@ def _write_elements(fh, cells, binary):
     """
     fh.write(b"$Elements\n")
 
-    total_num_cells = sum(map(len, cells.values()))
+    total_num_cells = sum(len(c.data) for c in cells)
     num_blocks = len(cells)
     min_element_tag = 1
     max_element_tag = total_num_cells
@@ -489,7 +473,7 @@ def _write_elements(fh, cells, binary):
         )
 
         tag0 = 1
-        for cell_type, node_idcs in cells.items():
+        for cell_type, node_idcs in cells:
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
             dim = _geometric_dimension[cell_type]
             entity_tag = 0

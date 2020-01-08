@@ -528,7 +528,7 @@ def translate_cells(data, types, cell_data_raw):
     if not numpy.all(numnodes == data[offsets]):
         raise ReadError()
 
-    cells = {}
+    cells = []
     cell_data = {}
     if has_polygon:
         # TODO: cell_data
@@ -543,10 +543,8 @@ def translate_cells(data, types, cell_data_raw):
                 key = "quad"
             else:
                 key = "polygon" + str(nbedges)
-            if key in cells:
-                cells[key] = numpy.vstack([cells[key], cell])
-            else:
-                cells[key] = numpy.reshape(cell, (1, -1))
+
+            cells.append((key, numpy.reshape(cell, (1, -1))))
     else:
         for tpe, b in bins.items():
             meshio_type = vtk_to_meshio_type[tpe]
@@ -554,7 +552,7 @@ def translate_cells(data, types, cell_data_raw):
             if not (data[offsets[b]] == n).all():
                 raise ReadError()
             indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
-            cells[meshio_type] = data[indices]
+            cells.append((meshio_type, data[indices]))
             for name in cell_data_raw:
                 if name not in cell_data:
                     cell_data[name] = {}
@@ -639,19 +637,19 @@ def _write_points(f, points, binary):
 
 
 def _write_cells(f, cells, binary):
-    total_num_cells = sum([len(c) for c in cells.values()])
-    total_num_idx = sum([numpy.prod(c.shape) for c in cells.values()])
+    total_num_cells = sum([len(c.data) for c in cells])
+    total_num_idx = sum([numpy.prod(c.data.shape) for c in cells])
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
     f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode("utf-8"))
     if binary:
-        for c in cells.values():
-            n = c.shape[1]
+        for c in cells:
+            n = c.data.shape[1]
             dtype = numpy.dtype(">i4")
             # One must force endianness here:
             # <https://github.com/numpy/numpy/issues/15088>
             numpy.column_stack(
-                [numpy.full(c.shape[0], n, dtype=dtype), c.astype(dtype)],
+                [numpy.full(c.data.shape[0], n, dtype=dtype), c.data.astype(dtype)],
             ).astype(dtype).tofile(f, sep="")
         f.write(b"\n")
     else:
@@ -667,18 +665,18 @@ def _write_cells(f, cells, binary):
     # write cell types
     f.write(f"CELL_TYPES {total_num_cells}\n".encode("utf-8"))
     if binary:
-        for key in cells:
-            key_ = key[:7] if key[:7] == "polygon" else key
+        for c in cells:
+            key_ = c.type[:7] if c.type[:7] == "polygon" else c.type
             vtk_type = meshio_to_vtk_type[key_]
-            numpy.full(len(cells[key]), vtk_type, dtype=numpy.dtype(">i4")).tofile(
+            numpy.full(len(c.data), vtk_type, dtype=numpy.dtype(">i4")).tofile(
                 f, sep=""
             )
         f.write(b"\n")
     else:
         # ascii
-        for key in cells:
-            key_ = key[:7] if key[:7] == "polygon" else key
-            numpy.full(len(cells[key]), meshio_to_vtk_type[key_]).tofile(f, sep="\n")
+        for c in cells:
+            key_ = c.type[:7] if c.type[:7] == "polygon" else c.type
+            numpy.full(len(c.data), meshio_to_vtk_type[key_]).tofile(f, sep="\n")
             f.write(b"\n")
 
 

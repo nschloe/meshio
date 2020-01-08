@@ -37,4 +37,6 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     tol = 1.0e-2
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * abs(ref_sum)
-    assert len(mesh.cells["quad"]) == ref_num_cells
+    for cells in mesh.cells:
+        if cells.type == "quad":
+            assert len(cells.data) == ref_num_cells

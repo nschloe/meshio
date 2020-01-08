@@ -81,7 +81,7 @@ num_nodes_per_cell = {
 
 
 def cell_data_from_raw(cells, cell_data_raw):
-    cs = numpy.cumsum([len(val) for val in cells.values()])
+    cs = numpy.cumsum([len(c[1]) for c in cells])
     return {
         name: dict(zip(cells.keys(), numpy.split(d, cs)))
         for name, d in cell_data_raw.items()

@@ -101,7 +101,7 @@ def read(filename):
 
 def read_buffer(f):
     # Initialize the optional data fields
-    cells = {}
+    cells = []
     nsets = {}
     elsets = {}
     field_data = {}
@@ -124,7 +124,7 @@ def read_buffer(f):
             points, point_gids, line = _read_nodes(f)
         elif keyword.upper().startswith("ELEMENT"):
             key, idx, line = _read_cells(f, keyword, point_gids)
-            cells[key] = idx
+            cells.append((key, idx))
         elif keyword.upper().startswith("NSET"):
             params_map = get_param_map(keyword, required_keys=["NSET"])
             setids, line = read_set(f, params_map)
@@ -263,7 +263,7 @@ def write(filename, mesh, translate_cell_names=True):
         for k, x in enumerate(mesh.points):
             f.write(fmt.format(k + 1, *x))
         eid = 0
-        for cell_type, node_idcs in mesh.cells.items():
+        for cell_type, node_idcs in mesh.cells:
             name = (
                 meshio_to_abaqus_type[cell_type] if translate_cell_names else cell_type
             )

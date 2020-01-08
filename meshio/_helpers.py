@@ -79,7 +79,7 @@ def write_points_cells(
     **kwargs,
 ):
     points = numpy.asarray(points)
-    cells = {key: numpy.asarray(value) for key, value in cells.items()}
+    cells = [(key, numpy.asarray(value)) for key, value in cells]
     mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
@@ -118,7 +118,7 @@ def write(filename, mesh, file_format=None, **kwargs):
         )
 
     # check cells for sanity
-    for key, value in mesh.cells.items():
+    for key, value in mesh.cells:
         if key[:7] == "polygon":
             if value.shape[1] != int(key[7:]):
                 raise WriteError()
