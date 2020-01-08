@@ -29,9 +29,9 @@ class TimeSeriesReader:
         if root.tag != "Xdmf":
             raise ReadError()
 
-        version = root.attrib["Version"]
+        version = root.get("Version")
         if version.split(".")[0] != "3":
-            raise ReadError("Unknown XDMF version {}.".format(version))
+            raise ReadError(f"Unknown XDMF version {version}.")
 
         domains = list(root)
         if len(domains) != 1:
@@ -45,13 +45,13 @@ class TimeSeriesReader:
         # find the collection grid
         collection_grid = None
         for g in grids:
-            if g.attrib["GridType"] == "Collection":
+            if g.get("GridType") == "Collection":
                 collection_grid = g
         if collection_grid is None:
             raise ReadError("Couldn't find the mesh grid")
         if collection_grid.tag != "Grid":
             raise ReadError()
-        if collection_grid.attrib["CollectionType"] != "Temporal":
+        if collection_grid.get("CollectionType") != "Temporal":
             raise ReadError()
 
         # get the collection at once
@@ -63,17 +63,14 @@ class TimeSeriesReader:
         # find the uniform grid
         self.mesh_grid = None
         for g in grids:
-            if g.attrib["GridType"] == "Uniform":
+            if g.get("GridType") == "Uniform":
                 self.mesh_grid = g
         # if not found, take the first uniform grid in the collection grid
         if self.mesh_grid is None:
             for g in self.collection:
-                try:
-                    if g.attrib["GridType"] == "Uniform":
-                        self.mesh_grid = g
-                        break
-                except KeyError:
-                    continue
+                if g.get("GridType") == "Uniform":
+                    self.mesh_grid = g
+                    break
         if self.mesh_grid is None:
             raise ReadError("Couldn't find the mesh grid")
         if self.mesh_grid.tag != "Grid":
@@ -104,12 +101,12 @@ class TimeSeriesReader:
 
                 # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
                 # Allow both.
-                if "Type" in c.attrib:
-                    if "TopologyType" in c.attrib:
+                if c.get("Type"):
+                    if c.get("TopologyType"):
                         raise ReadError()
-                    cell_type = c.attrib["Type"]
+                    cell_type = c.get("Type")
                 else:
-                    cell_type = c.attrib["TopologyType"]
+                    cell_type = c.get("TopologyType")
 
                 if cell_type == "Mixed":
                     cells = translate_mixed_cells(data)
@@ -119,7 +116,7 @@ class TimeSeriesReader:
 
             elif c.tag == "Geometry":
                 try:
-                    geometry_type = c.attrib["GeometryType"]
+                    geometry_type = c.get("GeometryType")
                 except KeyError:
                     pass
                 else:
@@ -143,19 +140,19 @@ class TimeSeriesReader:
 
         for c in list(self.collection[k]):
             if c.tag == "Time":
-                t = float(c.attrib["Value"])
+                t = float(c.get("Value"))
             elif c.tag == "Attribute":
-                name = c.attrib["Name"]
+                name = c.get("Name")
 
                 if len(list(c)) != 1:
                     raise ReadError()
                 data_item = list(c)[0]
                 data = self._read_data_item(data_item)
 
-                if c.attrib["Center"] == "Node":
+                if c.get("Center") == "Node":
                     point_data[name] = data
                 else:
-                    if c.attrib["Center"] != "Cell":
+                    if c.get("Center") != "Cell":
                         raise ReadError()
                     cell_data_raw[name] = data
             else:
@@ -171,18 +168,18 @@ class TimeSeriesReader:
         return t, point_data, cell_data
 
     def _read_data_item(self, data_item):
-        dims = [int(d) for d in data_item.attrib["Dimensions"].split()]
+        dims = [int(d) for d in data_item.get("Dimensions").split()]
 
         # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files out there
         # use both keys interchangeably.
-        if "DataType" in data_item.attrib:
-            if "NumberType" in data_item.attrib:
+        if data_item.get("DataType"):
+            if data_item.get("NumberType"):
                 raise ReadError()
-            data_type = data_item.attrib["DataType"]
-        elif "NumberType" in data_item.attrib:
-            if "DataType" in data_item.attrib:
+            data_type = data_item.get("DataType")
+        elif data_item.get("NumberType"):
+            if data_item.get("DataType"):
                 raise ReadError()
-            data_type = data_item.attrib["NumberType"]
+            data_type = data_item.get("NumberType")
         else:
             # Default, see
             # <http://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
@@ -193,19 +190,16 @@ class TimeSeriesReader:
         except KeyError:
             precision = "4"
 
-        if data_item.attrib["Format"] == "XML":
+        if data_item.get("Format") == "XML":
             return numpy.array(
                 data_item.text.split(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
-        elif data_item.attrib["Format"] == "Binary":
+        elif data_item.get("Format") == "Binary":
             return numpy.fromfile(
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
-
-        if data_item.attrib["Format"] != "HDF":
-            raise ReadError(
-                "Unknown XDMF Format '{}'.".format(data_item.attrib["Format"])
-            )
+        elif data_item.get("Format") != "HDF":
+            raise ReadError("Unknown XDMF Format '{}'.".format(data_item.get("Format")))
 
         info = data_item.text.strip()
         filename, h5path = info.split(":")
@@ -231,7 +225,7 @@ class TimeSeriesReader:
 
 
 class TimeSeriesWriter:
-    def __init__(self, filename, pretty_xml=True, data_format="HDF"):
+    def __init__(self, filename, data_format="HDF"):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -241,7 +235,6 @@ class TimeSeriesWriter:
         self.filename = filename
         self.data_format = data_format
         self.data_counter = 0
-        self.pretty_xml = pretty_xml
 
         self.xdmf_file = ET.Element("Xdmf", Version="3.0")
 
@@ -287,7 +280,7 @@ class TimeSeriesWriter:
         self.cells(cells, grid)
         self.has_mesh = True
 
-        write_xml(self.filename, self.xdmf_file, self.pretty_xml)
+        write_xml(self.filename, self.xdmf_file)
 
     def write_data(self, t, point_data=None, cell_data=None):
         # <Grid>
@@ -304,14 +297,14 @@ class TimeSeriesWriter:
             self.mesh_name
         )
         ET.SubElement(grid, "{http://www.w3.org/2003/XInclude}include", xpointer=ptr)
-        ET.SubElement(grid, "Time", Value="{}".format(t))
+        ET.SubElement(grid, "Time", Value=f"{t}")
 
         if point_data:
             self.point_data(point_data, grid)
         if cell_data:
             self.cell_data(cell_data, grid)
 
-        write_xml(self.filename, self.xdmf_file, self.pretty_xml)
+        write_xml(self.filename, self.xdmf_file)
 
     def numpy_to_xml_string(self, data):
         if self.data_format == "XML":
@@ -331,7 +324,7 @@ class TimeSeriesWriter:
 
         if self.data_format != "HDF":
             raise WriteError()
-        name = "data{}".format(self.data_counter)
+        name = f"data{self.data_counter}"
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
         return os.path.basename(self.h5_filename) + ":/" + name

@@ -81,29 +81,18 @@ num_nodes_per_cell = {
 
 
 def cell_data_from_raw(cells, cell_data_raw):
-    cell_data = {k: {} for k in cells}
-    for key in cell_data_raw:
-        d = cell_data_raw[key]
-        r = 0
-        for k in cells:
-            cell_data[k][key] = d[r : r + len(cells[k])]
-            r += len(cells[k])
-    return cell_data
+    cs = numpy.cumsum([len(val) for val in cells.values()])
+    return {
+        name: dict(zip(cells.keys(), numpy.split(d, cs)))
+        for name, d in cell_data_raw.items()
+    }
 
 
 def raw_from_cell_data(cell_data):
-    # merge cell data
-    cell_data_raw = {}
-    for d in cell_data.values():
-        for name, values in d.items():
-            if name in cell_data_raw:
-                cell_data_raw[name].append(values)
-            else:
-                cell_data_raw[name] = [values]
-    for name in cell_data_raw:
-        cell_data_raw[name] = numpy.concatenate(cell_data_raw[name])
-
-    return cell_data_raw
+    return {
+        name: numpy.concatenate(list(value.values()))
+        for name, value in cell_data.items()
+    }
 
 
 # https://stackoverflow.com/a/30019607/353337
@@ -119,7 +108,7 @@ ET._original_serialize_xml = ET._serialize_xml
 def _serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwargs):
 
     if elem.tag == "![CDATA[":
-        write("\n<{}{}]]>\n".format(elem.tag, elem.text))
+        write(f"\n<{elem.tag}{elem.text}]]>\n")
         if elem.tail:
             write(ET._escape_cdata(elem.tail))
     else:
@@ -131,7 +120,7 @@ def _serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwar
 ET._serialize_xml = ET._serialize["xml"] = _serialize_xml
 
 
-def write_xml(filename, root, pretty_print=False):
+def write_xml(filename, root):
     tree = ET.ElementTree(root)
     tree.write(filename)
 

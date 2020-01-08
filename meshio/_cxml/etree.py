@@ -22,7 +22,7 @@ class Element:
         self.kwargs[key] = value
 
     def write(self, f):
-        kw_list = ['{}="{}"'.format(key, value) for key, value in self.kwargs.items()]
+        kw_list = [f'{key}="{value}"' for key, value in self.kwargs.items()]
         f.write("<{}>\n".format(" ".join([self.name] + kw_list)))
         if self.text:
             f.write(self.text)
@@ -32,7 +32,7 @@ class Element:
             f.write("\n")
         for child in self._children:
             child.write(f)
-        f.write("</{}>\n".format(self.name))
+        f.write(f"</{self.name}>\n")
 
 
 class SubElement(Element):
@@ -46,7 +46,7 @@ class Comment:
         self.text = text
 
     def write(self, f):
-        f.write("<!--{}-->\n".format(self.text))
+        f.write(f"<!--{self.text}-->\n")
 
 
 class ElementTree:

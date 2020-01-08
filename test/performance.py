@@ -130,7 +130,7 @@ def read_write(plot=False):
     mesh = generate_mesh()
     mem_size = mesh.points.nbytes + mesh.cells["tetra"].nbytes
     mem_size /= 1024.0 ** 2
-    print("mem_size: {:.2f} MB".format(mem_size))
+    print(f"mem_size: {mem_size:.2f} MB")
 
     formats = {
         "Abaqus": (meshio.abaqus.write, meshio.abaqus.read, ["out.inp"]),

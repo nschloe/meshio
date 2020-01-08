@@ -131,23 +131,22 @@ def _read_cells(f, cells, is_ascii):
         cells[key] -= 1
 
     # restrict to the standard two data items (physical, geometrical)
-    output_cell_tags = {}
-    for key in cell_tags:
+    output_cell_tags = {"gmsh:physical": {}, "gmsh:geometrical": {}}
+    for cell_type in cell_tags:
         physical = []
         geometrical = []
-        # output_cell_tags[key] = {"gmsh:physical": [], "gmsh:geometrical": []}
-        for item in cell_tags[key]:
+        # output_cell_tags[cell_type] = {"gmsh:physical": [], "gmsh:geometrical": []}
+        for item in cell_tags[cell_type]:
             if len(item) > 0:
                 physical.append(item[0])
             if len(item) > 1:
                 geometrical.append(item[1])
             if len(item) > 2:
                 has_additional_tag_data = True
-        output_cell_tags[key] = {}
         if len(physical) > 0:
-            output_cell_tags[key]["gmsh:physical"] = numpy.array(physical)
+            output_cell_tags["gmsh:physical"][cell_type] = numpy.array(physical)
         if len(geometrical) > 0:
-            output_cell_tags[key]["gmsh:geometrical"] = numpy.array(geometrical)
+            output_cell_tags["gmsh:geometrical"][cell_type] = numpy.array(geometrical)
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     if "tetra10" in cells:
@@ -175,14 +174,13 @@ def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
         # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
         # says:
         # >>>
-        # By default, the first tag is the number of the physical entity to
-        # which the element belongs; the second is the number of the
-        # elementary geometrical entity to which the element belongs; the
-        # third is the number of mesh partitions to which the element
-        # belongs, followed by the partition ids (negative partition ids
-        # indicate ghost cells). A zero tag is equivalent to no tag. Gmsh
-        # and most codes using the MSH 2 format require at least the first
-        # two tags (physical and elementary tags).
+        # By default, the first tag is the number of the physical entity to which the
+        # element belongs; the second is the number of the elementary geometrical entity
+        # to which the element belongs; the third is the number of mesh partitions to
+        # which the element belongs, followed by the partition ids (negative partition
+        # ids indicate ghost cells). A zero tag is equivalent to no tag. Gmsh and most
+        # codes using the MSH 2 format require at least the first two tags (physical and
+        # elementary tags).
         # <<<
         num_tags = data[2]
         if num_tags > 0:
@@ -193,10 +191,8 @@ def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
     # convert to numpy arrays
     for key in cells:
         cells[key] = numpy.array(cells[key], dtype=int)
-    # Cannot convert cell_tags[key] to numpy array: There may be a
-    # different number of tags for each cell.
-
-    return
+    # Cannot convert cell_tags[key] to numpy array: There may be a different number of
+    # tags for each cell.
 
 
 def _read_cells_binary(f, cells, cell_tags, total_num_cells):
@@ -297,31 +293,24 @@ def write(filename, mesh, binary=True):
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
-        fh.write(
-            ("$MeshFormat\n2.2 {} {}\n".format(mode_idx, size_of_double)).encode(
-                "utf-8"
-            )
-        )
+        fh.write((f"$MeshFormat\n2.2 {mode_idx} {size_of_double}\n").encode("utf-8"))
         if binary:
             fh.write(struct.pack("i", 1))
-            fh.write("\n".encode("utf-8"))
-        fh.write("$EndMeshFormat\n".encode("utf-8"))
+            fh.write(b"\n")
+        fh.write(b"$EndMeshFormat\n")
 
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the
-        # rest is actual cell data.
+        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the rest is
+        # actual cell data.
         tag_data = {}
         other_data = {}
-        for cell_type, a in mesh.cell_data.items():
-            tag_data[cell_type] = {}
-            other_data[cell_type] = {}
-            for key, data in a.items():
-                if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
-                    tag_data[cell_type][key] = data.astype(c_int)
-                else:
-                    other_data[cell_type][key] = data
+        for key, d in mesh.cell_data.items():
+            if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
+                tag_data[key] = d
+            else:
+                other_data[key] = d
 
         _write_nodes(fh, mesh.points, binary)
         _write_elements(fh, cells, tag_data, binary)
@@ -329,6 +318,7 @@ def write(filename, mesh, binary=True):
             _write_periodic(fh, mesh.gmsh_periodic)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, binary)
+
         cell_data_raw = raw_from_cell_data(other_data)
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, binary)
@@ -337,7 +327,7 @@ def write(filename, mesh, binary=True):
 
 
 def _write_nodes(fh, points, binary):
-    fh.write("$Nodes\n".encode("utf-8"))
+    fh.write(b"$Nodes\n")
     fh.write("{}\n".format(len(points)).encode("utf-8"))
     if binary:
         dtype = [("index", c_int), ("x", c_double, (3,))]
@@ -345,32 +335,32 @@ def _write_nodes(fh, points, binary):
         tmp["index"] = 1 + numpy.arange(len(points))
         tmp["x"] = points
         tmp.tofile(fh)
-        fh.write("\n".encode("utf-8"))
+        fh.write(b"\n")
     else:
         for k, x in enumerate(points):
             fh.write(
                 "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
             )
-    fh.write("$EndNodes\n".encode("utf-8"))
+    fh.write(b"$EndNodes\n")
     return
 
 
 def _write_elements(fh, cells, tag_data, binary):
     # write elements
-    fh.write("$Elements\n".encode("utf-8"))
+    fh.write(b"$Elements\n")
     # count all cells
     total_num_cells = sum([data.shape[0] for _, data in cells.items()])
-    fh.write("{}\n".format(total_num_cells).encode("utf-8"))
+    fh.write(f"{total_num_cells}\n".encode("utf-8"))
 
     consecutive_index = 0
     for cell_type, node_idcs in cells.items():
         tags = []
         for key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
             try:
-                tags.append(tag_data[cell_type][key])
+                tags.append(tag_data[key][cell_type])
             except KeyError:
                 pass
-        fcd = numpy.concatenate([tags]).T
+        fcd = numpy.concatenate([tags]).astype(c_int).T
 
         if len(fcd) == 0:
             fcd = numpy.empty((len(node_idcs), 0), dtype=c_int)
@@ -385,7 +375,7 @@ def _write_elements(fh, cells, tag_data, binary):
             a += 1 + consecutive_index
             array = numpy.hstack([a, fcd, node_idcs + 1])
             if array.dtype != c_int:
-                raise WriteError()
+                raise WriteError(f"Wrong dtype (require c_int, got {array.dtype})")
             array.tofile(fh)
         else:
             form = (
@@ -406,18 +396,18 @@ def _write_elements(fh, cells, tag_data, binary):
 
         consecutive_index += len(node_idcs)
     if binary:
-        fh.write("\n".encode("utf-8"))
-    fh.write("$EndElements\n".encode("utf-8"))
+        fh.write(b"\n")
+    fh.write(b"$EndElements\n")
     return
 
 
 def _write_periodic(fh, periodic):
-    fh.write("$Periodic\n".encode("utf-8"))
+    fh.write(b"$Periodic\n")
     fh.write("{}\n".format(len(periodic)).encode("utf-8"))
     for dim, (stag, mtag), affine, slave_master in periodic:
-        fh.write("{} {} {}\n".format(dim, stag, mtag).encode("utf-8"))
+        fh.write(f"{dim} {stag} {mtag}\n".encode("utf-8"))
         if affine is not None:
-            fh.write("Affine ".encode("utf-8"))
+            fh.write(b"Affine ")
             affine = numpy.array(affine, dtype=float)
             affine = numpy.atleast_2d(affine.ravel())
             numpy.savetxt(fh, affine, "%.16g")
@@ -425,6 +415,6 @@ def _write_periodic(fh, periodic):
         slave_master = slave_master + 1  # Add one, Gmsh is 0-based
         fh.write("{}\n".format(len(slave_master)).encode("utf-8"))
         for snode, mnode in slave_master:
-            fh.write("{} {}\n".format(snode, mnode).encode("utf-8"))
-    fh.write("$EndPeriodic\n".encode("utf-8"))
+            fh.write(f"{snode} {mnode}\n".encode("utf-8"))
+    fh.write(b"$EndPeriodic\n")
     return

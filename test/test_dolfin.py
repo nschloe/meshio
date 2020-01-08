@@ -4,8 +4,6 @@ import pytest
 import helpers
 import meshio
 
-lxml = pytest.importorskip("lxml")
-
 
 @pytest.mark.parametrize(
     "mesh",
