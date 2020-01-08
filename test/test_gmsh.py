@@ -45,7 +45,7 @@ def gmsh_periodic():
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test_gmsh2(mesh, binary):
+def test_gmsh22(mesh, binary):
     writer = partial(meshio.gmsh.write, fmt_version="2", binary=binary)
     helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
 

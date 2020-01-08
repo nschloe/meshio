@@ -231,7 +231,7 @@ def add_cell_data(mesh, dim, num_tags=2, dtype=numpy.float):
     for k in range(num_tags):
         shape = tuple() if dim == 1 else (dim,)
         cell_data[string.ascii_lowercase[k]] = [
-            (cell_type, numpy.random.rand(*((len(cells),) + shape)).astype(dtype))
+            numpy.random.rand(*((len(cells),) + shape)).astype(dtype)
             for cell_type, cells in mesh.cells
         ]
 
@@ -277,7 +277,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     for cells0, cells1 in zip(input_mesh.cells, mesh.cells):
         assert cells0.type == cells1.type
-        assert numpy.allclose(cells0.data, cells1.data)
+        assert numpy.all(cells0.data == cells1.data)
 
     for key in input_mesh.point_data.keys():
         assert numpy.allclose(
@@ -286,8 +286,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     for name, cell_type_data in input_mesh.cell_data.items():
         for d0, d1 in zip(cell_type_data, mesh.cell_data[name]):
-            assert d0[0] == d1[0]
-            assert numpy.allclose(d0[1], d1[1], atol=atol, rtol=0.0)
+            assert numpy.allclose(d0, d1, atol=atol, rtol=0.0)
 
     for name, data in input_mesh.field_data.items():
         assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)

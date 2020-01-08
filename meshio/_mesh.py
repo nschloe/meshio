@@ -46,11 +46,8 @@ class Mesh:
         if self.point_data:
             lines.append("  Point data: {}".format(", ".join(self.point_data.keys())))
 
-        cell_data_keys = set()
-        for cell_type in self.cell_data:
-            cell_data_keys = cell_data_keys.union(self.cell_data[cell_type].keys())
-        if cell_data_keys:
-            lines.append("  Cell data: {}".format(", ".join(cell_data_keys)))
+        if self.cell_data:
+            lines.append("  Cell data: {}".format(", ".join(self.cell_data.keys())))
 
         return "\n".join(lines)
 
