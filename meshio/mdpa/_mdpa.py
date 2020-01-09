@@ -13,7 +13,7 @@ from .._common import num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh, Cells
+from .._mesh import Cells, Mesh
 
 ## We check if we can read/write the mesh natively from Kratos
 # TODO: Implement native reading

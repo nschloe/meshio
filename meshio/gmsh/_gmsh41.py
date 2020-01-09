@@ -10,7 +10,7 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 from .common import (
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
@@ -36,7 +36,6 @@ def read_buffer(f, is_ascii, data_size):
 
     # Initialize the optional data fields
     points = []
-    cells = {}
     field_data = {}
     cell_data_raw = {}
     cell_tags = {}
@@ -283,12 +282,12 @@ def write4_1(filename, mesh, binary=True):
         )
 
     if binary:
-        for key, value in mesh.cells.items():
+        for k, (key, value) in enumerate(mesh.cells):
             if value.dtype != c_int:
                 logging.warning(
                     "Binary Gmsh needs c_size_t (got %s). Converting.", value.dtype
                 )
-                mesh.cells[key] = value.astype(c_size_t)
+                mesh.cells[k] = Cells(key, value.astype(c_size_t))
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -438,7 +437,7 @@ def _write_elements(fh, cells, binary):
         ).tofile(fh)
 
         tag0 = 1
-        for cell_type, node_idcs in cells.items():
+        for cell_type, node_idcs in cells:
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
             dim = _geometric_dimension[cell_type]

@@ -68,13 +68,10 @@ def read_buffer(f, is_ascii, data_size):
     cell_data = cell_data_from_raw(cells, cell_data_raw)
 
     # merge cell_tags into cell_data
-    for key, tag_dict in cell_tags.items():
-        if key not in cell_data:
-            cell_data[key] = {}
-        for name, item_list in tag_dict.items():
-            if name in cell_data[key]:
-                raise ReadError()
-            cell_data[key][name] = item_list
+    for name, tag_dict in cell_tags.items():
+        if name not in cell_data:
+            cell_data[name] = []
+        cell_data[name] += list(tag_dict.values())
 
     return Mesh(
         points,
@@ -346,11 +343,11 @@ def _write_elements(fh, cells, tag_data, binary):
     fh.write(f"{total_num_cells}\n".encode("utf-8"))
 
     consecutive_index = 0
-    for cell_type, node_idcs in cells:
+    for k, (cell_type, node_idcs) in enumerate(cells):
         tags = []
-        for key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
+        for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
             try:
-                tags.append(tag_data[key][cell_type])
+                tags.append(tag_data[name][k])
             except KeyError:
                 pass
         fcd = numpy.concatenate([tags]).astype(c_int).T
