@@ -109,7 +109,7 @@ def _read_cell_data(filename, cell_type):
 
         if name not in cell_data:
             cell_data[name] = []
-        cell_data[name].append((cell_type, data))
+        cell_data[name].append(data)
 
     return cell_data
 
@@ -223,9 +223,7 @@ def write(filename, mesh):
     _write_mesh(filename, mesh.points, cell_type, mesh.cells)
 
     for name, lst in mesh.cell_data.items():
-        for ct, data in lst:
-            if cell_type != ct:
-                continue
+        for data in lst:
             cell_data_filename = "{}_{}.xml".format(os.path.splitext(filename)[0], name)
             dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
             _write_cell_data(cell_data_filename, dim, numpy.array(data))
