@@ -13,7 +13,7 @@ from .._common import num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Mesh, Cells
 
 ## We check if we can read/write the mesh natively from Kratos
 # TODO: Implement native reading
@@ -159,9 +159,10 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
         if t is None:
             t = inverse_num_nodes_per_cell[num_nodes_per_elem]
 
-        if t not in cells:
-            cells[t] = []
-        cells[t].append(data[-num_nodes_per_elem:])
+        if len(cells) == 0 or t != cells[-1].type:
+            cells.append(Cells(t, []))
+        # Subtract one to account for the fact that python indices are 0-based.
+        cells[-1].data.append(numpy.array(data[-num_nodes_per_elem:]) - 1)
 
         # Using the property id as tag
         if t not in cell_tags:
@@ -169,8 +170,9 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
         cell_tags[t].append([data[1]])
 
     # convert to numpy arrays
-    for key in cells:
-        cells[key] = numpy.array(cells[key], dtype=int)
+    for k, c in enumerate(cells):
+        cells[k] = Cells(c.type, numpy.array(c.data, dtype=int))
+
     # Cannot convert cell_tags[key] to numpy array: There may be a
     # different number of tags for each cell.
 
@@ -181,11 +183,6 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
 def _prepare_cells(cells, cell_tags):
     # Declaring has additional data tag
     has_additional_tag_data = False
-
-    # Subtract one to account for the fact that python indices are
-    # 0-based.
-    for key in cells:
-        cells[key] -= 1
 
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {}
@@ -285,7 +282,6 @@ def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
         data = data[:, 0]
 
     data_dict[string_tags[0]] = data
-    return
 
 
 def read_buffer(f):
@@ -294,7 +290,7 @@ def read_buffer(f):
 
     # Initialize the optional data fields
     points = []
-    cells = {}
+    cells = []
     field_data = {}
     cell_data = {}
     # cell_data_raw = {}
@@ -395,7 +391,7 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
     wrong_dimension_name = "3D" if dimension == 2 else "2D"
     consecutive_index = 0
     aux_cell_type = None
-    for cell_type, node_idcs in cells.items():
+    for cell_type, node_idcs in cells:
         # NOTE: The names of the dummy conditions are not regular, require extra work
         # local_dimension = local_dimension_types[cell_type]
         # if (local_dimension < dimension):
@@ -444,7 +440,6 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
         consecutive_index += len(node_idcs)
 
     fh.write(b"End Elements\n\n")
-    return
 
 
 def _write_data(fh, tag, name, data, binary):
@@ -470,7 +465,6 @@ def _write_data(fh, tag, name, data, binary):
             fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
     fh.write(("End " + tag + " " + name + "\n\n").encode("utf-8"))
-    return
 
 
 def write(filename, mesh, binary=False):
@@ -551,8 +545,8 @@ def write(filename, mesh, binary=False):
 
         # We identity which dimension are we
         dimension = 2
-        for cell_type in cells.keys():
-            name_elem = _meshio_to_mdpa_type[cell_type]
+        for c in cells:
+            name_elem = _meshio_to_mdpa_type[c.type]
             if local_dimension_types[name_elem] == 3:
                 dimension = 3
                 break
