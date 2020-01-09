@@ -102,8 +102,8 @@ tri_quad_mesh = meshio.Mesh(
     )
     / 3.0,
     [
-        ("triangle", numpy.array([[0, 1, 4], [0, 4, 5]])),
         ("quad", numpy.array([[1, 2, 3, 4]])),
+        ("triangle", numpy.array([[0, 1, 4], [0, 4, 5]])),
     ],
 )
 

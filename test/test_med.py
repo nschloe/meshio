@@ -40,7 +40,6 @@ def test_generic_io():
     helpers.generic_io("test.med")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.med")
-    return
 
 
 def test_reference_file_with_mixed_cells():
@@ -53,7 +52,7 @@ def test_reference_file_with_mixed_cells():
 
     # Cells
     ref_num_cells = {"pyramid": 18, "quad": 18, "line": 17, "tetra": 63, "triangle": 4}
-    assert {k: len(v) for k, v in mesh.cells.items()} == ref_num_cells
+    assert {k: len(v) for k, v in mesh.cells} == ref_num_cells
 
     # Point tags
     assert mesh.point_data["point_tags"].sum() == 52
@@ -69,7 +68,7 @@ def test_reference_file_with_mixed_cells():
         "triangle": -30,
     }
     assert {
-        k: sum(v) for k, v in mesh.cell_data["cell_tags"].items()
+        c.type: sum(d) for c, d in zip(mesh.cells, mesh.cell_data["cell_tags"])
     } == ref_sum_cell_tags
     ref_cell_tags_info = {
         -6: ["Top circle"],

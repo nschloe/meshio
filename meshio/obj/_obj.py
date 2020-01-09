@@ -54,20 +54,21 @@ def read_buffer(f):
     triangle = numpy.array([f for f in faces if len(f) == 3])
     quad = numpy.array([f for f in faces if len(f) == 4])
 
-    cells = {}
+    cells = []
     if len(triangle) > 0:
-        cells["triangle"] = triangle - 1
+        cells += [("triangle", triangle - 1)]
     if len(quad) > 0:
-        cells["quad"] = quad - 1
+        cells += [("quad", quad - 1)]
 
     return Mesh(numpy.array(points), cells)
 
 
 def write(filename, mesh):
-    if "triangle" not in mesh.cells and "quad" not in mesh.cells:
-        raise WriteError(
-            "Wavefront .obj files can only contain triangle or quad cells."
-        )
+    for c in mesh.cells:
+        if c.type not in ["triangle", "quad"]:
+            raise WriteError(
+                "Wavefront .obj files can only contain triangle or quad cells."
+            )
 
     with open_file(filename, "w") as f:
         f.write(

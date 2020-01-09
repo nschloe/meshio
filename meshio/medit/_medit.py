@@ -26,7 +26,7 @@ def read(filename):
 
 def read_buffer(f):
     dim = 0
-    cells = {}
+    cells = []
     point_data = {}
     cell_data = {}
 
@@ -69,7 +69,7 @@ def read_buffer(f):
             points = out[:, :dim]
             point_data["medit:ref"] = out[:, dim].astype(int)
         elif items[0] in meshio_from_medit:
-            meshio_name, points_per_cell = meshio_from_medit[items[0]]
+            meshio_type, points_per_cell = meshio_from_medit[items[0]]
             # The first value is the number of elements
             num_cells = int(f.readline())
 
@@ -78,8 +78,8 @@ def read_buffer(f):
             ).reshape(num_cells, points_per_cell + 1)
 
             # adapt for 0-base
-            cells[meshio_name] = out[:, :points_per_cell] - 1
-            cell_data[meshio_name] = {"medit:ref": out[:, -1]}
+            cells.append((meshio_type, out[:, :points_per_cell] - 1))
+            cell_data["medit:ref"] = [(out[:, -1])]
         elif items[0] == "Normals":
             # those are just discarded
             num_normals = int(f.readline())
@@ -132,7 +132,7 @@ def write(filename, mesh):
             "hexahedron": ("Hexahedra", 8),
         }
 
-        for key, data in mesh.cells.items():
+        for key, data in mesh.cells:
             try:
                 medit_name, num = medit_from_meshio[key]
             except KeyError:
