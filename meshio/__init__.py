@@ -2,6 +2,7 @@ from . import (
     _cli,
     abaqus,
     ansys,
+    avsucd,
     cgns,
     dolfin,
     exodus,
@@ -34,6 +35,7 @@ from ._mesh import Mesh
 __all__ = [
     "abaqus",
     "ansys",
+    "avsucd",
     "cgns",
     "dolfin",
     "exodus",
