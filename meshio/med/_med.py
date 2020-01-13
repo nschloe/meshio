@@ -261,7 +261,7 @@ def write(filename, mesh, add_global_ids=True):
     # Cells (mailles in french)
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
-    for cell_type, cells in mesh.cells:
+    for k, (cell_type, cells) in enumerate(mesh.cells):
         med_type = meshio_to_med_type[cell_type]
         med_cells = cells_group.create_group(med_type)
         med_cells.attrs.create("CGT", 1)
@@ -273,12 +273,11 @@ def write(filename, mesh, add_global_ids=True):
 
         # Cell tags
         if "cell_tags" in mesh.cell_data:  # works only for med -> med
-            if cell_type in mesh.cell_data["cell_tags"]:
-                family = med_cells.create_dataset(
-                    "FAM", data=mesh.cell_data["cell_tags"][cell_type]
-                )
-                family.attrs.create("CGT", 1)
-                family.attrs.create("NBR", len(cells))
+            family = med_cells.create_dataset(
+                "FAM", data=mesh.cell_data["cell_tags"][k]
+            )
+            family.attrs.create("CGT", 1)
+            family.attrs.create("NBR", len(cells))
 
     # Information about point and cell sets (familles in french)
     fas = f.create_group("FAS")
