@@ -23,18 +23,6 @@ meshio_to_avsucd_type = {
 avsucd_to_meshio_type = {v: k for k, v in meshio_to_avsucd_type.items()}
 
 
-avsucd_to_meshio_order = {
-    "vertex": [0],
-    "line": [0, 1],
-    "triangle": [0, 1, 2],
-    "quad": [0, 1, 2, 3],
-    "tetra": [0, 1, 3, 2],
-    "pyramid": [4, 0, 1, 2, 3],
-    "wedge": [3, 4, 5, 0, 1, 2],
-    "hexahedron": [4, 5, 6, 7, 0, 1, 2, 3],
-}
-
-
 def read(filename):
     with open_file(filename, "r") as f:
         out = read_buffer(f)
@@ -102,7 +90,7 @@ def _read_cells(f, num_cells, point_ids):
         count[cell_type] += 1
 
     for k, v in cells.items():
-        cells[k] = numpy.array(v)[:, avsucd_to_meshio_order[k]]
+        cells[k] = numpy.array(v)
     return cell_ids, cells, cell_data
 
 
