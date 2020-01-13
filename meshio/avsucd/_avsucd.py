@@ -114,7 +114,7 @@ def _read_node_data(f, num_nodes, point_ids):
     point_data = {}
     for i, dsize in enumerate(node_data_size):
         line = f.readline().strip().split(",")
-        labels[i] = line[0].strip()
+        labels[i] = line[0].strip().replace(" ", "_")
         point_data[labels[i]] = numpy.empty(num_nodes) if dsize == 1 else numpy.empty((num_nodes, dsize))
 
     for _ in range(num_nodes):
@@ -138,7 +138,7 @@ def _read_cell_data(f, num_cells, cells, cell_ids):
     cell_data = {}
     for i, dsize in enumerate(cell_data_size):
         line = f.readline().strip().split(",")
-        labels[i] = line[0].strip()
+        labels[i] = line[0].strip().replace(" ", "_")
         cell_data[labels[i]] = {k: numpy.empty(len(v)) if dsize == 1 else numpy.empty((len(v), dsize)) for k, v in cells.items()}
 
     for _ in range(num_cells):
