@@ -71,7 +71,7 @@ def _read_nodes(f, num_nodes):
 def _read_cells(f, num_cells, point_ids):
     cells = {}
     cell_ids = {}
-    cell_data = {"avsucd:mat": {}}
+    cell_data = {"avsucd:material": {}}
     count = {k: 0 for k in meshio_to_avsucd_type.keys()}
     for _ in range(num_cells):
         line = f.readline().strip().split()
@@ -81,10 +81,10 @@ def _read_cells(f, num_cells, point_ids):
 
         if cell_type not in cells:
             cells[cell_type] = [corner]
-            cell_data["avsucd:mat"][cell_type] = [cell_mat]
+            cell_data["avsucd:material"][cell_type] = [cell_mat]
         else:
             cells[cell_type].append(corner)
-            cell_data["avsucd:mat"][cell_type].append(cell_mat)
+            cell_data["avsucd:material"][cell_type].append(cell_mat)
 
         cell_ids[cell_id] = (cell_type, count[cell_type])
         count[cell_type] += 1
