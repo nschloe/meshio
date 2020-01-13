@@ -11,6 +11,8 @@ from .._mesh import Mesh
 
 
 meshio_to_avsucd_type = {
+    "vertex": "pt",
+    "line": "line",
     "triangle": "tri",
     "quad": "quad",
     "tetra": "tet",
@@ -22,6 +24,8 @@ avsucd_to_meshio_type = {v: k for k, v in meshio_to_avsucd_type.items()}
 
 
 avsucd_to_meshio_order = {
+    "vertex": [0],
+    "line": [0, 1],
     "triangle": [0, 1, 2],
     "quad": [0, 1, 2, 3],
     "tetra": [0, 1, 3, 2],
