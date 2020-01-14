@@ -1,6 +1,3 @@
-import os
-
-import numpy
 import pytest
 
 import helpers
