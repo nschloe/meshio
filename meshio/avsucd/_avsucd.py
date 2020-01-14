@@ -2,12 +2,17 @@
 I/O for AVS-UCD format, cf.
 <https://lanl.github.io/LaGriT/pages/docs/read_avs.html>.
 """
+import logging
+
 import numpy
 
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
+
+
+meshio_data = {"avsucd:material", "flac3d:zone", "gmsh:physical", "medit:ref"}
 
 
 meshio_to_avsucd_type = {
@@ -149,7 +154,121 @@ def _read_cell_data(f, num_cells, cells, cell_ids):
 
 
 def write(filename, mesh):
-    pass
+    if mesh.points.shape[1] == 2:
+        logging.warning(
+            "AVS-UCD requires 3D points, but 2D points given. "
+            "Appending 0 third component."
+        )
+        mesh.points = numpy.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        )
+
+    with open_file(filename, "w") as f:
+        # Write first line
+        num_nodes = len(mesh.points)
+        num_cells = sum(len(v) for v in mesh.cells.values())
+        num_node_data = [
+            1 if v.ndim == 1 else v.shape[1] for v in mesh.point_data.values()
+        ]
+        num_cell_data = [
+            1 if vv.ndim == 1 else vv.shape[1]
+            for k, v in mesh.cell_data.items()
+            for vv in v.values()
+            if k not in meshio_data
+        ]
+        num_node_data_sum = sum(num_node_data)
+        num_cell_data_sum = sum(num_cell_data)
+        f.write(
+            f"{num_nodes} {num_cells} {num_node_data_sum} {num_cell_data_sum} 0\n".format()
+        )
+
+        # Write nodes
+        _write_nodes(f, mesh.points)
+
+        # Write cells
+        _write_cells(f, mesh.cells, mesh.cell_data, num_cells)
+
+        # Write node data
+        if num_node_data_sum:
+            _write_node_data(
+                f, mesh.point_data, num_nodes, num_node_data, num_node_data_sum
+            )
+
+        # Write cell data
+        if num_cell_data_sum:
+            _write_cell_data(
+                f, mesh.cell_data, num_cells, num_cell_data, num_cell_data_sum
+            )
+
+
+def _write_nodes(f, points):
+    for i, (x, y, z) in enumerate(points):
+        f.write(f"{i+1} {x} {y} {z}\n")
+
+
+def _write_cells(f, cells, cell_data, num_cells):
+    # Interoperability with other formats
+    mat_data = None
+    for k in cell_data.keys():
+        if k in meshio_data:
+            mat_data = k
+            break
+
+    # Material array
+    if mat_data:
+        material = numpy.concatenate([v for v in cell_data[mat_data].values()])
+    else:
+        material = numpy.zeros(num_cells, dtype = int)
+
+    # Loop over cells
+    i = 0
+    for k, v in cells.items():
+        for cell in v:
+            cell_str = " ".join(str(c + 1) for c in cell)
+            f.write(f"{i+1} {int(material[i])} {meshio_to_avsucd_type[k]} {cell_str}\n")
+            i += 1
+
+
+def _write_node_data(f, point_data, num_nodes, num_node_data, num_node_data_sum):
+    num_node_data_str = " ".join(str(i) for i in num_node_data)
+    f.write(f"{len(num_node_data)} {num_node_data_str}\n")
+
+    for label in point_data.keys():
+        f.write(f"{label}, real\n")
+
+    point_data_array = numpy.hstack(
+        [v[:, None] if v.ndim == 1 else v for v in point_data.values()]
+    )
+    point_data_array = numpy.hstack(
+        (numpy.arange(1, num_nodes + 1)[:, None], point_data_array)
+    )
+    numpy.savetxt(
+        f, point_data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_node_data_sum
+    )
+
+
+def _write_cell_data(f, cell_data, num_cells, num_cell_data, num_cell_data_sum):
+    num_cell_data_str = " ".join(str(i) for i in num_cell_data)
+    f.write(f"{len(num_cell_data)} {num_cell_data_str}\n")
+
+    for label in cell_data.keys():
+        if label not in meshio_data:
+            f.write(f"{label}, real\n")
+
+    cell_data_array = numpy.hstack(
+        [
+            vv[:, None] if vv.ndim == 1 else vv
+            for k, v in cell_data.items()
+            for vv in v.values()
+            if k not in meshio_data
+        ]
+    )
+    cell_data_array = numpy.hstack(
+        (numpy.arange(1, num_cells + 1)[:, None], cell_data_array)
+    )
+    numpy.savetxt(
+        f, cell_data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_cell_data_sum
+    )
 
 
 register("avsucd", [".inp"], read, {"avsucd": write})
