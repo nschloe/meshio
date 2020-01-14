@@ -6,7 +6,6 @@ import logging
 
 import numpy
 
-from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
