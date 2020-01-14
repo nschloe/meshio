@@ -11,7 +11,6 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
 
-
 meshio_data = {"avsucd:material", "flac3d:zone", "gmsh:physical", "medit:ref"}
 
 
@@ -218,7 +217,7 @@ def _write_cells(f, cells, cell_data, num_cells):
     if mat_data:
         material = numpy.concatenate([v for v in cell_data[mat_data].values()])
     else:
-        material = numpy.zeros(num_cells, dtype = int)
+        material = numpy.zeros(num_cells, dtype=int)
 
     # Loop over cells
     i = 0
