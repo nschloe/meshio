@@ -51,14 +51,16 @@ def read_buffer(f):
     if num_cell_data:
         cell_data.update(_read_cell_data(f, num_cells, cells, cell_ids))
 
+    # Convert cell_data to array
+    for k, v in cell_data.items():
+        for kk, vv in v.items():
+            cell_data[k][kk] = numpy.array(vv)
+
     return Mesh(
         points,
         cells,
         point_data=point_data,
-        cell_data={
-            k: {kk: numpy.array(vv) for kk, vv in v.items()}
-            for k, v in cell_data.items()
-        },
+        cell_data=cell_data,
     )
 
 
