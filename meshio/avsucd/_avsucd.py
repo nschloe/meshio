@@ -271,4 +271,4 @@ def _write_cell_data(f, cell_data, num_cells, num_cell_data, num_cell_data_sum):
     )
 
 
-register("avsucd", [".inp"], read, {"avsucd": write})
+register("avsucd", [], read, {"avsucd": write})
