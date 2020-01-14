@@ -56,12 +56,7 @@ def read_buffer(f):
         for kk, vv in v.items():
             cell_data[k][kk] = numpy.array(vv)
 
-    return Mesh(
-        points,
-        cells,
-        point_data=point_data,
-        cell_data=cell_data,
-    )
+    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
 def _read_nodes(f, num_nodes):
@@ -105,7 +100,9 @@ def _read_node_data(f, num_nodes, point_ids):
     for i, dsize in enumerate(node_data_size):
         line = f.readline().strip().split(",")
         labels[i] = line[0].strip().replace(" ", "_")
-        point_data[labels[i]] = numpy.empty(num_nodes) if dsize == 1 else numpy.empty((num_nodes, dsize))
+        point_data[labels[i]] = (
+            numpy.empty(num_nodes) if dsize == 1 else numpy.empty((num_nodes, dsize))
+        )
 
     for _ in range(num_nodes):
         line = f.readline().strip().split()
@@ -113,9 +110,11 @@ def _read_node_data(f, num_nodes, point_ids):
         j = 0
         for i, dsize in enumerate(node_data_size):
             if dsize == 1:
-                point_data[labels[i]][pid] = float(line[j+1])
+                point_data[labels[i]][pid] = float(line[j + 1])
             else:
-                point_data[labels[i]][pid] = [float(val) for val in line[j+1:j+1+dsize]]
+                point_data[labels[i]][pid] = [
+                    float(val) for val in line[j + 1 : j + 1 + dsize]
+                ]
             j += dsize
     return point_data
 
@@ -129,7 +128,10 @@ def _read_cell_data(f, num_cells, cells, cell_ids):
     for i, dsize in enumerate(cell_data_size):
         line = f.readline().strip().split(",")
         labels[i] = line[0].strip().replace(" ", "_")
-        cell_data[labels[i]] = {k: numpy.empty(len(v)) if dsize == 1 else numpy.empty((len(v), dsize)) for k, v in cells.items()}
+        cell_data[labels[i]] = {
+            k: numpy.empty(len(v)) if dsize == 1 else numpy.empty((len(v), dsize))
+            for k, v in cells.items()
+        }
 
     for _ in range(num_cells):
         line = f.readline().strip().split()
@@ -137,9 +139,11 @@ def _read_cell_data(f, num_cells, cells, cell_ids):
         j = 0
         for i, dsize in enumerate(cell_data_size):
             if dsize == 1:
-                cell_data[labels[i]][cell_type][cid] = float(line[j+1])
+                cell_data[labels[i]][cell_type][cid] = float(line[j + 1])
             else:
-                cell_data[labels[i]][cell_type][cid] = [float(val) for val in line[j+1:j+1+dsize]]
+                cell_data[labels[i]][cell_type][cid] = [
+                    float(val) for val in line[j + 1 : j + 1 + dsize]
+                ]
             j += dsize
     return cell_data
 
