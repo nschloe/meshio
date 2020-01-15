@@ -153,6 +153,8 @@ def write(filename, mesh):
                 labels = mesh.cell_data[key]["gmsh:physical"]
             elif key in mesh.cell_data and "flac3d:zone" in mesh.cell_data[key]:
                 labels = mesh.cell_data[key]["flac3d:zone"]
+            elif key in mesh.cell_data and "avsucd:material" in mesh.cell_data[key]:
+                labels = mesh.cell_data[key]["avsucd:material"]
             else:
                 labels = numpy.ones(len(data), dtype=int)
 
