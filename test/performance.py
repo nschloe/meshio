@@ -144,6 +144,7 @@ def read_write(plot=False):
         #     meshio.ansys.read,
         #     ["out.ans"],
         # ),
+        "AVS-UCD": (meshio.avsucd.write, meshio.avsucd.read, ["out.ucd"]),
         "CGNS": (meshio.cgns.write, meshio.cgns.read, ["out.cgns"]),
         "Dolfin-XML": (meshio.dolfin.write, meshio.dolfin.read, ["out.xml"]),
         "FLAC3D": (meshio.flac3d.write, meshio.flac3d.read, ["out.f3grid"]),
