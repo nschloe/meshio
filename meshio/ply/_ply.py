@@ -12,7 +12,7 @@ import numpy
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 # Reference dtypes
 ply_to_numpy_dtype = {
@@ -84,6 +84,8 @@ def read_buffer(f):
 
     m = re.match("element face (\\d+)", line)
     num_cells = int(m.groups()[0])
+
+    assert num_cells > 0
 
     # read property lists
     line = _fast_forward(f)
@@ -196,14 +198,11 @@ def _read_ascii(
                 cell_data[name].append(data)
             i += n + 1
 
-    cells = {}
+    cells = []
     if len(triangles) > 0:
-        cells["triangle"] = numpy.array(triangles)
-        # cell_data = {"triangle": cell_data}
-
+        cells.append(Cells("triangle", numpy.array(triangles)))
     if len(quads) > 0:
-        cells["quad"] = numpy.array(quads)
-        # cell_data = {"quad": cell_data}
+        cells.append(Cells("quad", numpy.array(quads)))
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
@@ -272,21 +271,18 @@ def _read_binary(
         for dtypes in dt[1:]:
             pass
 
-    cells = {}
+    cells = []
     if len(triangles) > 0:
-        cells["triangle"] = numpy.array(triangles)
+        cells.append(Cells("triangle", numpy.array(triangles)))
     if len(quads) > 0:
-        cells["quad"] = numpy.array(quads)
+        cells.append(Cells("quad", numpy.array(quads)))
 
     return Mesh(verts, cells, point_data=point_data, cell_data={})
 
 
 def write(filename, mesh, binary=True):  # noqa: C901
     for key in mesh.cells:
-        if key not in [
-            "triangle",
-            "quad",
-        ]:
+        if not any(c.type in ["triangle", "quad"] for c in mesh.cells):
             raise WriteError("Can only deal with triangular and quadrilateral faces")
 
     with open_file(filename, "wb") as fh:
@@ -328,19 +324,18 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write(f"property {type_name} {key}\n".encode("utf-8"))
 
         num_cells = 0
-        if "triangle" in mesh.cells:
-            num_cells += mesh.cells["triangle"].shape[0]
-        if "quad" in mesh.cells:
-            num_cells += mesh.cells["quad"].shape[0]
+        for cell_type, c in mesh.cells:
+            if cell_type in ["triangle", "quad"]:
+                num_cells += c.data.shape[0]
         fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
 
         # possibly cast down to int32
         cells = mesh.cells
         has_cast = False
-        for key in mesh.cells:
-            if mesh.cells[key].dtype == numpy.int64:
+        for k, (cell_type, data) in enumerate(mesh.cells):
+            if data.dtype == numpy.int64:
                 has_cast = True
-                cells[key] = mesh.cells[key].astype(numpy.int32)
+                mesh.cells[k] = Cells(cell_type, data.astype(numpy.int32))
 
         if has_cast:
             warnings.warn(
@@ -351,7 +346,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
         # assert that all cell dtypes are equal
         cell_dtype = None
-        for cell in cells.values():
+        for _, cell in cells:
             if cell_dtype is None:
                 cell_dtype = cell.dtype
             if cell.dtype != cell_dtype:
@@ -372,13 +367,12 @@ def write(filename, mesh, binary=True):  # noqa: C901
             out.tofile(fh)
 
             # cells
-            for key in ["triangle", "quad"]:
-                if key not in cells:
+            for cell_type, data in cells:
+                if cell_type not in ["triangle", "quad"]:
                     continue
-                dat = cells[key]
                 # prepend with count
-                count = numpy.full(dat.shape[0], dat.shape[1], dtype=dat.dtype)
-                out = numpy.column_stack([count, dat])
+                count = numpy.full(data.shape[0], data.shape[1], dtype=data.dtype)
+                out = numpy.column_stack([count, data])
                 out.tofile(fh)
         else:
             # vertices
@@ -392,12 +386,11 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write(out.encode("utf-8"))
 
             # cells
-            for key in ["triangle", "quad"]:
-                if key not in cells:
+            for cell_type, data in cells:
+                if cell_type not in ["triangle", "quad"]:
                     continue
-                dat = cells[key]
                 out = numpy.column_stack(
-                    [numpy.full(dat.shape[0], dat.shape[1], dtype=dat.dtype), dat]
+                    [numpy.full(data.shape[0], data.shape[1], dtype=data.dtype), data]
                 )
                 # savetxt is slower
                 # numpy.savetxt(fh, out, "%d  %d %d %d")
