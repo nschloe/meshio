@@ -102,16 +102,15 @@ def read(filename):
 def read_buffer(f):
     # Initialize the optional data fields
     cells = {}
-    nsets = {}
-    elsets = {}
+    point_sets = {}
+    cell_sets = {}
     field_data = {}
     cell_data = {}
     point_data = {}
 
     line = f.readline()
     while True:
-        if not line:
-            # EOF
+        if not line:  # EOF
             break
 
         # Comments
@@ -121,51 +120,59 @@ def read_buffer(f):
 
         keyword = line.strip("*")
         if keyword.upper().startswith("NODE"):
-            points, point_gids, line = _read_nodes(f)
+            points, point_ids, line = _read_nodes(f)
         elif keyword.upper().startswith("ELEMENT"):
-            key, idx, line = _read_cells(f, keyword, point_gids)
+            key, idx, line = _read_cells(f, keyword, point_ids)
             cells[key] = idx
         elif keyword.upper().startswith("NSET"):
             params_map = get_param_map(keyword, required_keys=["NSET"])
-            setids, line = read_set(f, params_map)
+            set_ids, line = _read_set(f, params_map)
             name = params_map["NSET"]
-            if name not in nsets:
-                nsets[name] = []
-            nsets[name].append(setids)
+            point_sets[name] = numpy.array(
+                [point_ids[point_id] for point_id in set_ids], dtype="int32"
+            )
         elif keyword.upper().startswith("ELSET"):
             params_map = get_param_map(keyword, required_keys=["ELSET"])
-            setids, line = read_set(f, params_map)
+            setids, line = _read_set(f, params_map)
             name = params_map["ELSET"]
-            if name not in elsets:
-                elsets[name] = []
-            elsets[name].append(setids)
+            if name not in cell_sets:
+                cell_sets[name] = []
+            cell_sets[name].append(setids)
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
 
     return Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        field_data=field_data,
+        point_sets=point_sets,
     )
 
 
 def _read_nodes(f):
     points = []
-    point_gids = {}
+    point_ids = {}
     index = 0
     while True:
         line = f.readline()
         if line.startswith("*"):
             break
-        entries = line.strip().split(",")
-        gid, x = entries[0], entries[1:]
-        point_gids[int(gid)] = index
-        points.append([float(xx) for xx in x])
+        if line.strip() == "":
+            continue
+
+        line = line.strip().split(",")
+        point_id, coords = line[0], line[1:]
+        point_ids[int(point_id)] = index
+        points.append([float(x) for x in coords])
         index += 1
 
-    return numpy.array(points, dtype=float), point_gids, line
+    return numpy.array(points, dtype=float), point_ids, line
 
 
-def _read_cells(f, line0, point_gids):
+def _read_cells(f, line0, point_ids):
     sline = line0.split(",")[1:]
 
     etype_sline = sline[0].upper()
@@ -181,13 +188,16 @@ def _read_cells(f, line0, point_gids):
     cells, idx = [], []
     while True:
         line = f.readline()
-        if line.startswith("*") or line == "":
+        if line.startswith("*"):
             break
+        if line.strip() == "":
+            continue
+
         line = line.strip()
         idx += [int(k) for k in filter(None, line.split(","))]
         if not line.endswith(","):
             # the first item is just a running index
-            cells.append([point_gids[k] for k in idx[1:]])
+            cells.append([point_ids[k] for k in idx[1:]])
             idx = []
     return cell_type, numpy.array(cells), line
 
@@ -231,14 +241,15 @@ def get_param_map(word, required_keys=None):
     return param_map
 
 
-def read_set(f, params_map):
+def _read_set(f, params_map):
     set_ids = []
     while True:
         line = f.readline()
-        if not line:
-            break
         if line.startswith("*"):
             break
+        if line.strip() == "":
+            continue
+
         set_ids += [int(k) for k in line.strip().strip(",").split(",")]
 
     if "generate" in params_map:
