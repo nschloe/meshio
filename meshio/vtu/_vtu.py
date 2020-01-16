@@ -457,7 +457,7 @@ def write(filename, mesh, binary=True):
 
     grid = ET.SubElement(vtk_file, "UnstructuredGrid")
 
-    total_num_cells = sum([len(c) for c in mesh.cells.values()])
+    total_num_cells = sum([len(c.data) for c in mesh.cells])
     piece = ET.SubElement(
         grid,
         "Piece",
@@ -474,18 +474,18 @@ def write(filename, mesh, binary=True):
         cls = ET.SubElement(piece, "Cells")
 
         # create connectivity, offset, type arrays
-        connectivity = numpy.concatenate([v.reshape(-1) for v in mesh.cells.values()])
+        connectivity = numpy.concatenate([v.data.reshape(-1) for v in mesh.cells])
 
         # offset (points to the first element of the next cell)
         offsets = [
-            v.shape[1] * numpy.arange(1, v.shape[0] + 1) for v in mesh.cells.values()
+            v.data.shape[1] * numpy.arange(1, v.data.shape[0] + 1) for v in mesh.cells
         ]
         for k in range(1, len(offsets)):
             offsets[k] += offsets[k - 1][-1]
         offsets = numpy.concatenate(offsets)
         # types
         types = numpy.concatenate(
-            [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in mesh.cells.items()]
+            [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in mesh.cells]
         )
 
         numpy_to_xml_array(cls, "connectivity", "{:d}", connectivity)

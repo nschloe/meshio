@@ -10,7 +10,7 @@ import numpy
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 
 def read(filename):
@@ -122,7 +122,7 @@ def data_from_facets(facets):
     k = numpy.argsort(idx)
     points = pts[idx[k]]
     inv_k = numpy.argsort(k)
-    cells = {"triangle": inv_k[inv].reshape(-1, 3)}
+    cells = [Cells("triangle", inv_k[inv].reshape(-1, 3))]
     return points, cells
 
 
@@ -138,8 +138,9 @@ def _read_binary(f, num_triangles):
     )
     # discard normals, attribute count
     facets = out["facet"]
-    if not numpy.all(out["attr count"] == 0):
-        raise ReadError()
+    # if not numpy.all(out["attr count"] == 0):
+    #     print(out["attr count"])
+    #     raise ReadError("Nonzero attr count")
 
     points, cells = data_from_facets(facets)
     return Mesh(points, cells)

@@ -43,4 +43,4 @@ def test_reference_file(filename):
         "pyramid": 1180,
         "tetra": 5309,
     }
-    assert {k: v.sum() for k, v in mesh.cells.items()} == ref_num_cells
+    assert {k: v.sum() for k, v in mesh.cells} == ref_num_cells
