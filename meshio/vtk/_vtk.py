@@ -11,36 +11,48 @@ from .._common import meshio_to_vtk_type, raw_from_cell_data, vtk_to_meshio_type
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
-vtk_type_to_numnodes = {
-    0: 0,  # empty
-    1: 1,  # vertex
-    3: 2,  # line
-    5: 3,  # triangle
-    9: 4,  # quad
-    10: 4,  # tetra
-    12: 8,  # hexahedron
-    13: 6,  # wedge
-    14: 5,  # pyramid
-    15: 10,  # penta_prism
-    16: 12,  # hexa_prism
-    21: 3,  # line3
-    22: 6,  # triangle6
-    23: 8,  # quad8
-    24: 10,  # tetra10
-    25: 20,  # hexahedron20
-    26: 15,  # wedge15
-    27: 13,  # pyramid13
-    28: 9,  # quad9
-    29: 27,  # hexahedron27
-    30: 6,  # quad6
-    31: 12,  # wedge12
-    32: 18,  # wedge18
-    33: 24,  # hexahedron24
-    34: 7,  # triangle7
-    35: 4,  # line4
-}
+vtk_type_to_numnodes = numpy.array(
+    [
+        0,  # empty
+        1,  # vertex
+        -1,  # poly_vertex
+        2,  # line
+        -1,  # poly_line
+        3,  # triangle
+        -1,  # triangle_strip
+        -1,  # polygon
+        -1,  # pixel
+        4,  # quad
+        4,  # tetra
+        -1,  # voxel
+        8,  # hexahedron
+        6,  # wedge
+        5,  # pyramid
+        10,  # penta_prism
+        12,  # hexa_prism
+        -1,
+        -1,
+        -1,
+        -1,
+        3,  # line3
+        6,  # triangle6
+        8,  # quad8
+        10,  # tetra10
+        20,  # hexahedron20
+        15,  # wedge15
+        13,  # pyramid13
+        9,  # quad9
+        27,  # hexahedron27
+        6,  # quad6
+        12,  # wedge12
+        18,  # wedge18
+        24,  # hexahedron24
+        7,  # triangle7
+        4,  # line4
+    ]
+)
 
 
 # These are all VTK data types. One sometimes finds 'vtktypeint64', but
@@ -497,20 +509,15 @@ def _skip_meta(f):
 
 def translate_cells(data, types, cell_data_raw):
     # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
-    # Translate it into the cells dictionary.
+    # Translate it into the cells array.
     # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+    has_polygon = numpy.any(types == meshio_to_vtk_type["polygon"])
 
-    # Collect types into bins.
-    # See <https://stackoverflow.com/q/47310359/353337> for better alternatives.
-    bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
-    has_polygon = meshio_to_vtk_type["polygon"] in bins
-
-    # Deduct offsets from the cell types. This is much faster than manually going
-    # through the data array. Slight disadvantage: This doesn't work for cells with a
-    # custom number of points.
-    numnodes = numpy.empty(len(types), dtype=int)
+    cells = []
+    cell_data = {}
     if has_polygon:
+        numnodes = numpy.empty(len(types), dtype=int)
         # If some polygons are in the VTK file, loop over the cells
         nbcells = len(types)
         offsets = numpy.empty(len(types), dtype=int)
@@ -518,19 +525,12 @@ def translate_cells(data, types, cell_data_raw):
         for idx in range(nbcells - 1):
             numnodes[idx] = data[offsets[idx]]
             offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
+
         idx = nbcells - 1
         numnodes[idx] = data[offsets[idx]]
-    else:
-        for tpe, idx in bins.items():
-            numnodes[idx] = vtk_type_to_numnodes[tpe]
-        offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
+        if not numpy.all(numnodes == data[offsets]):
+            raise ReadError()
 
-    if not numpy.all(numnodes == data[offsets]):
-        raise ReadError()
-
-    cells = []
-    cell_data = {}
-    if has_polygon:
         # TODO: cell_data
         for idx in range(nbcells):
             nbedges = data[offsets[idx]]
@@ -538,25 +538,42 @@ def translate_cells(data, types, cell_data_raw):
             end = start + numnodes[idx]
             cell = data[start:end]
             if nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["triangle"]]:
-                key = "triangle"
+                cell_type = "triangle"
             elif nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["quad"]]:
-                key = "quad"
+                cell_type = "quad"
             else:
-                key = "polygon" + str(nbedges)
+                cell_type = "polygon" + str(nbedges)
 
-            cells.append((key, numpy.reshape(cell, (1, -1))))
+            if len(cells) > 0 and cells[-1].type == cell_type:
+                cells[-1].data.append(cell)
+            else:
+                cells.append(Cells(cell_type, [cell]))
+
+        # convert data to numpy arrays
+        for k, c in enumerate(cells):
+            cells[k] = Cells(c.type, numpy.array(c.data))
     else:
-        for tpe, b in bins.items():
-            meshio_type = vtk_to_meshio_type[tpe]
-            n = data[offsets[b[0]]]
-            if not (data[offsets[b]] == n).all():
-                raise ReadError()
-            indices = numpy.add.outer(offsets[b], numpy.arange(1, n + 1))
-            cells.append((meshio_type, data[indices]))
+        # Deduct offsets from the cell types. This is much faster than manually going
+        # through the data array. Slight disadvantage: This doesn't work for cells with
+        # a custom number of points.
+        numnodes = vtk_type_to_numnodes[types]
+        offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
+
+        if not numpy.all(numnodes == data[offsets]):
+            raise ReadError()
+
+        b = numpy.concatenate(
+            [[0], numpy.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
+        )
+        for start, end in zip(b[:-1], b[1:]):
+            meshio_type = vtk_to_meshio_type[types[start]]
+            n = data[offsets[start]]
+            indices = numpy.add.outer(offsets[start:end], numpy.arange(1, n + 1))
+            cells.append(Cells(meshio_type, data[indices]))
             for name in cell_data_raw:
                 if name not in cell_data:
                     cell_data[name] = {}
-                cell_data[name][meshio_type] = cell_data_raw[name][b]
+                cell_data[name][meshio_type] = cell_data_raw[name][start:end]
 
     return cells, cell_data
 
