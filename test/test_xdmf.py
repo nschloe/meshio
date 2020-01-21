@@ -94,7 +94,7 @@ def test_information_xdmf():
             [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
         )
         / 3,
-        {"triangle": numpy.array([[0, 1, 2], [0, 2, 3]])},
+        [("triangle", numpy.array([[0, 1, 2], [0, 2, 3]]))],
         field_data={
             "bottom": numpy.array([1, 1]),
             "right": numpy.array([2, 1]),

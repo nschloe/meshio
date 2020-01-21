@@ -428,7 +428,8 @@ class XdmfWriter:
             )
             data_item.text = self.numpy_to_xml_string(cells[0].data)
 
-        elif len(cells) > 1:
+        else:
+            assert len(cells) > 1
             total_num_cells = sum(c.data.shape[0] for c in cells)
             topo = ET.SubElement(
                 grid,
