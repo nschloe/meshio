@@ -5,7 +5,7 @@ I/O for MED/Salome, cf.
 import numpy
 
 from .._common import num_nodes_per_cell
-from .._exceptions import ReadError
+from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from .._mesh import Mesh
 
@@ -259,6 +259,8 @@ def write(filename, mesh, add_global_ids=True):
         family.attrs.create("NBR", len(mesh.points))
 
     # Cells (mailles in french)
+    if len(mesh.cells) != len(numpy.unique([c.type for c in mesh.cells])):
+        WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
     for k, (cell_type, cells) in enumerate(mesh.cells):
