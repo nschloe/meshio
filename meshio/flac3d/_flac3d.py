@@ -27,7 +27,7 @@ meshio_only = {
 }
 
 
-meshio_data = {"flac3d:zone", "gmsh:physical", "medit:ref"}
+meshio_data = {"avsucd:material", "flac3d:zone", "gmsh:physical", "medit:ref"}
 
 
 numnodes_to_meshio_type = {
