@@ -102,6 +102,25 @@ tri_quad_mesh = meshio.Mesh(
     )
     / 3.0,
     [
+        ("triangle", numpy.array([[0, 1, 4], [0, 4, 5]])),
+        ("quad", numpy.array([[1, 2, 3, 4]])),
+    ],
+)
+
+# same as tri_quad_mesh with reversed cell type order
+quad_tri_mesh = meshio.Mesh(
+    numpy.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [2.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ]
+    )
+    / 3.0,
+    [
         ("quad", numpy.array([[1, 2, 3, 4]])),
         ("triangle", numpy.array([[0, 1, 4], [0, 4, 5]])),
     ],
