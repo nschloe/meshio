@@ -6,7 +6,6 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
-from .._mesh import Cells
 from .common import (
     attribute_type,
     dtype_to_format_string,
