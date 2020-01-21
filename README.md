@@ -61,7 +61,7 @@ mesh = meshio.read(
     filename,  # string, os.PathLike, or a buffer/open file
     file_format="stl"  # optional if filename is a path; inferred from extension
 )
-# mesh.points, mesh.cells, ...
+# mesh.points, mesh.cells, mesh.cells_dict, ...
 
 # mesh.vtk.read() is also possible
 ```
@@ -72,11 +72,9 @@ points = numpy.array([
     [0.0, 1.0, 0.0],
     [0.0, 0.0, 1.0],
     ])
-cells = {
-    "triangle": numpy.array([
-        [0, 1, 2]
-        ])
-    }
+cells = [
+    ("triangle", numpy.array([[0, 1, 2]]))
+]
 meshio.write_points_cells(
     "foo.vtk",
     points,
