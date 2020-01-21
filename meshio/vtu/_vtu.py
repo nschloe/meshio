@@ -18,7 +18,7 @@ from .._common import (
 )
 from .._exceptions import ReadError
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 
 def num_bytes_to_num_base64_chars(num_bytes):
@@ -28,25 +28,29 @@ def num_bytes_to_num_base64_chars(num_bytes):
 
 
 def _cells_from_data(connectivity, offsets, types, cell_data_raw):
-    # Translate it into the cells dictionary.
+    # Translate it into the Cells array.
     # `connectivity` is a one-dimensional vector with
     # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
     if len(offsets) != len(types):
         raise ReadError()
 
-    cells = {}
+    b = numpy.concatenate(
+        [[0], numpy.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
+    )
+
+    cells = []
     cell_data = {}
-    for vtk_type in numpy.unique(types):
-        meshio_type = vtk_to_meshio_type[vtk_type]
+    for start, end in zip(b[:-1], b[1:]):
+        meshio_type = vtk_to_meshio_type[types[start]]
         n = num_nodes_per_cell[meshio_type]
-        # The offsets point to the _end_ of the indices
-        b = types == vtk_type
-        indices = numpy.add.outer(offsets[b], numpy.arange(-n, 0, dtype=offsets.dtype))
-        cells[meshio_type] = connectivity[indices]
+        indices = numpy.add.outer(
+            offsets[start:end], numpy.arange(-n, 0, dtype=offsets.dtype)
+        )
+        cells.append(Cells(meshio_type, connectivity[indices]))
         for name, d in cell_data_raw.items():
             if name not in cell_data:
-                cell_data[name] = {}
-            cell_data[name][meshio_type] = d[b]
+                cell_data[name] = []
+            cell_data[name].append(d[start:end])
 
     return cells, cell_data
 
@@ -55,33 +59,15 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
     if len(point_offsets) != len(cells):
         raise ReadError()
 
-    out_cells = {}
-    out_cell_data = {}
+    out_cells = []
     for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
         cls, cell_data = _cells_from_data(
             cls["connectivity"], cls["offsets"], cls["types"], cdr
         )
-        for key in cls:
-            if key not in out_cells:
-                out_cells[key] = []
-            out_cells[key].append(cls[key] + offset)
+        for c in cls:
+            out_cells.append(Cells(c.type, c.data + offset))
 
-            if key not in out_cell_data:
-                out_cell_data[key] = {}
-
-            for name in cell_data:
-                if name not in out_cell_data:
-                    out_cell_data[name] = {}
-                if key not in out_cell_data[name]:
-                    out_cell_data[name][key] = []
-                out_cell_data[name][key].append(cell_data[name][key])
-
-    for key in out_cells:
-        out_cells[key] = numpy.concatenate(out_cells[key])
-        for name in out_cell_data[key]:
-            out_cell_data[key][name] = numpy.concatenate(out_cell_data[key][name])
-
-    return out_cells, out_cell_data
+    return out_cells, cell_data
 
 
 def get_grid(root):
@@ -395,8 +381,8 @@ def write(filename, mesh, binary=True):
     for key, data in mesh.point_data.items():
         mesh.point_data[key] = data.astype(data.dtype.newbyteorder("="))
     for data in mesh.cell_data.values():
-        for key, dat in data.items():
-            data[key] = dat.astype(dat.dtype.newbyteorder("="))
+        for k, dat in enumerate(data):
+            data[k] = dat.astype(dat.dtype.newbyteorder("="))
     for key, data in mesh.field_data.items():
         mesh.field_data[key] = data.astype(data.dtype.newbyteorder("="))
 

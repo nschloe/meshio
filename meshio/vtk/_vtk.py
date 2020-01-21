@@ -570,10 +570,10 @@ def translate_cells(data, types, cell_data_raw):
             n = data[offsets[start]]
             indices = numpy.add.outer(offsets[start:end], numpy.arange(1, n + 1))
             cells.append(Cells(meshio_type, data[indices]))
-            for name in cell_data_raw:
+            for name, d in cell_data_raw.items():
                 if name not in cell_data:
                     cell_data[name] = []
-                cell_data[name].append(cell_data_raw[name][start:end])
+                cell_data[name].append(d[start:end])
 
     return cells, cell_data
 

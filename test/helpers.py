@@ -277,7 +277,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     for cells0, cells1 in zip(input_mesh.cells, mesh.cells):
         assert cells0.type == cells1.type
-        assert numpy.all(cells0.data == cells1.data)
+        assert numpy.array_equal(cells0.data, cells1.data)
 
     for key in input_mesh.point_data.keys():
         assert numpy.allclose(
