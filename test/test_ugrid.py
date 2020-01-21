@@ -75,43 +75,47 @@ def test_reference_file(
     mesh = meshio.read(filename)
     assert mesh.points.shape[0] == ref_num_points
     assert mesh.points.shape[1] == 3
-    print(mesh)
+
     # validate element counts
     if ref_num_triangle > 0:
-        assert mesh.cells["triangle"].shape[0] == ref_num_triangle
-        assert mesh.cells["triangle"].shape[1] == 3
+        for c in mesh.cells:
+            if c.type == "triangle":
+                assert c.data.shape == (ref_num_triangle, 3)
     else:
-        assert "triangle" not in mesh.cells.keys()
+        assert not any(c.type == "triangle" for c in mesh.cells)
+
     if ref_num_quad > 0:
-        assert mesh.cells["quad"].shape[0] == ref_num_quad
-        assert mesh.cells["quad"].shape[1] == 4
+        assert mesh.cells[0].type == "quad"
+        assert mesh.cells[0].data.shape == (ref_num_quad, 4)
     else:
-        assert "quad" not in mesh.cells.keys()
+        assert not any(c.type == "quad" for c in mesh.cells)
+
     if ref_num_tet > 0:
-        assert mesh.cells["tetra"].shape[0] == ref_num_tet
-        assert mesh.cells["tetra"].shape[1] == 4
+        assert mesh.cells[1].type == "tetra"
+        assert mesh.cells[1].data.shape == (ref_num_tet, 4)
     else:
-        assert "tetra" not in mesh.cells.keys()
+        assert not any(c.type == "tetra" for c in mesh.cells)
+
     if ref_num_wedge > 0:
-        assert mesh.cells["wedge"].shape[0] == ref_num_wedge
-        assert mesh.cells["wedge"].shape[1] == 6
+        assert mesh.cells[2].type == "wedge"
+        assert mesh.cells[2].data.shape == (ref_num_wedge, 6)
     else:
-        assert "wedge" not in mesh.cells.keys()
+        assert not any(c.type == "wedge" for c in mesh.cells)
+
     if ref_num_hex > 0:
-        assert mesh.cells["hexahedron"].shape[0] == ref_num_hex
-        assert mesh.cells["hexahedron"].shape[1] == 8
+        assert mesh.cells[3].type == "hexahedron"
+        assert mesh.cells[3].data.shape == (ref_num_hex, 8)
     else:
-        assert "hexahedron" not in mesh.cells.keys()
+        assert not any(c.type == "hexahedron" for c in mesh.cells)
 
     # validate boundary tags
 
     # gather tags
     all_tags = []
-    for surf_element in ["triangle", "quad"]:
-        if surf_element in mesh.cells:
-            assert surf_element in mesh.cell_data.keys()
-            assert "ugrid:ref" in mesh.cell_data[surf_element].keys()
-            all_tags.append(mesh.cell_data[surf_element]["ugrid:ref"])
+    for k, c in enumerate(mesh.cells):
+        if c.type not in ["triangle", "quad"]:
+            continue
+        all_tags.append(mesh.cell_data["ugrid:ref"][k])
 
     all_tags = numpy.concatenate(all_tags)
 
@@ -163,10 +167,10 @@ def test_volume(filename, volume, accuracy):
 
     mesh = meshio.read(filename)
 
-    assert mesh.cells["pyramid"].shape[1] == 5
-    assert mesh.cells["pyramid"].shape[0] == 6
+    assert mesh.cells[0].type == "pyramid"
+    assert mesh.cells[0].data.shape == (6, 5)
     vol = 0.0
-    for _cell in mesh.cells["pyramid"]:
+    for _cell in mesh.cells[0].data:
         cell = numpy.array([mesh.points[i] for i in _cell])
         v = _pyramid_volume(cell)
         vol += v
