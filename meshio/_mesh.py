@@ -119,7 +119,7 @@ class Mesh:
         assert len(self.cells) == len(
             numpy.unique([c.type for c in self.cells])
         ), "More than one block of the same type. Cannot create dictionary."
-        return {cell_type: data for cell_type, data in self.cells}
+        return dict(self.cells)
 
     @classmethod
     def read(cls, path_or_buf, file_format=None):
