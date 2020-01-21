@@ -7,7 +7,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh, Cells
+from .._mesh import Cells, Mesh
 
 abaqus_to_meshio_type = {
     # trusses
