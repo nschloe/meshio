@@ -60,7 +60,7 @@ class XdmfReader:
                 return self._read_data_item(
                     root.find(".//" + "/".join(xpath.split("/")[2:])), root
                 )
-            raise ValueError("Can't read XPath {}.".format(xpath))
+            raise ValueError(f"Can't read XPath {xpath}.")
 
         dims = [int(d) for d in data_item.get("Dimensions").split()]
 
