@@ -45,7 +45,7 @@ meshio can read and write all of the following and smoothly converts between the
 
 Install with
 ```
-pip3 install meshio[all] --user
+pip3 install meshio[all]
 ```
 and simply call
 ```
@@ -146,14 +146,14 @@ tetrahedra.  The red lines mark the size of the mesh in memory.
 meshio is [available from the Python Package Index](https://pypi.org/project/meshio/),
 so simply do
 ```
-pip3 install meshio --user
+pip3 install meshio
 ```
 to install.
 
 Additional dependencies (`netcdf4`, `h5py`) are required for some of the output formats
 and can be pulled in by
 ```
-pip install meshio[all] --user
+pip install meshio[all]
 ```
 
 You can also install meshio from [anaconda](https://anaconda.org/conda-forge/meshio):
