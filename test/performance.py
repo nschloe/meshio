@@ -128,7 +128,7 @@ def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
 
 def read_write(plot=False):
     mesh = generate_mesh()
-    mem_size = mesh.points.nbytes + mesh.cells["tetra"].nbytes
+    mem_size = mesh.points.nbytes + mesh.cells[0].data.nbytes
     mem_size /= 1024.0 ** 2
     print(f"mem_size: {mem_size:.2f} MB")
 
