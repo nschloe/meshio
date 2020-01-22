@@ -8,7 +8,7 @@ import numpy
 
 from .. import __about__
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 # def _int_to_bool_list(num):
 #     # From <https://stackoverflow.com/a/33608387/353337>.
@@ -39,13 +39,13 @@ def read(filename):
     # assert all(point_gids == range(point_start_gid, point_end_gid + 1))
 
     h5m_to_meshio_type = {"Edge2": "line", "Tri3": "triangle", "Tet4": "tetra"}
-    cells = {}
+    cells = []
     cell_data = {}
     for h5m_type, data in dset["elements"].items():
         meshio_type = h5m_to_meshio_type[h5m_type]
         conn = data["connectivity"]
         # Note that the indices are off by 1 in h5m.
-        cells[meshio_type] = conn[()] - 1
+        cells.append(Cells(meshio_type, conn[()] - 1))
 
         # TODO bring cell data back
         # if 'tags' in data:
@@ -207,7 +207,7 @@ def write(filename, mesh, add_global_ids=True):
         "triangle": {"name": "Tri3", "type": 2},
         "tetra": {"name": "Tet4", "type": 5},
     }
-    for key, data in mesh.cells.items():
+    for key, data in mesh.cells:
         if key not in meshio_to_h5m_type:
             logging.warning("Unsupported H5M element type '%s'. Skipping.", key)
             continue

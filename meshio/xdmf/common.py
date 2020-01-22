@@ -1,6 +1,7 @@
 import numpy
 
 from .._exceptions import ReadError
+from .._mesh import Cells
 
 numpy_to_xdmf_dtype = {
     "int32": ("Int", "4"),
@@ -124,23 +125,19 @@ def translate_mixed_cells(data):
         r += 1
         r += xdmf_idx_to_num_nodes[xdmf_type]
 
+    types = numpy.array(types)
     offsets = numpy.array(offsets)
 
-    # Collect types into bins.
-    # See <https://stackoverflow.com/q/47310359/353337> for better
-    # alternatives.
-    uniques = numpy.unique(types)
-    bins = {u: numpy.where(types == u)[0] for u in uniques}
-
-    cells = {}
-    for tpe, b in bins.items():
-        meshio_type = xdmf_idx_to_meshio_type[tpe]
-        if not (data[offsets[b]] == tpe).all():
-            raise ReadError()
-        n = xdmf_idx_to_num_nodes[tpe]
-        point_offsets = offsets[b] + (2 if tpe == 2 else 1)
+    b = numpy.concatenate(
+        [[0], numpy.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
+    )
+    cells = []
+    for start, end in zip(b[:-1], b[1:]):
+        meshio_type = xdmf_idx_to_meshio_type[types[start]]
+        n = xdmf_idx_to_num_nodes[types[start]]
+        point_offsets = offsets[start:end] + (2 if types[start] == 2 else 1)
         indices = numpy.array([numpy.arange(n) + o for o in point_offsets])
-        cells[meshio_type] = data[indices]
+        cells.append(Cells(meshio_type, data[indices]))
 
     return cells
 

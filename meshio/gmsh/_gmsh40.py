@@ -10,7 +10,7 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 from .common import (
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
@@ -30,7 +30,6 @@ c_double = numpy.dtype("d")
 def read_buffer(f, is_ascii, data_size):
     # Initialize the optional data fields
     points = []
-    cells = {}
     field_data = {}
     cell_data_raw = {}
     cell_tags = {}
@@ -176,7 +175,6 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     num_entity_blocks, total_num_elements = fromfile(f, c_ulong, 2)
 
     data = []
-    cell_data = {}
 
     for k in range(num_entity_blocks):
         # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
@@ -210,27 +208,14 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     # Note that the first column in the data array is the element tag; discard it.
     data = [(physical_tag, tpe, itags[d[:, 1:]]) for physical_tag, tpe, d in data]
 
-    cells = {}
+    cells = []
+    cell_data = {"gmsh:physical": []}
     for physical_tag, key, values in data:
-        if key in cells:
-            cells[key] = numpy.concatenate([cells[key], values])
-            if physical_tag:
-                if key not in cell_data:
-                    cell_data[key] = {}
-                cell_data[key]["gmsh:physical"] = numpy.concatenate(
-                    [
-                        cell_data[key]["gmsh:physical"],
-                        physical_tag[0] * numpy.ones(len(values), int),
-                    ]
-                )
-        else:
-            cells[key] = values
-            if physical_tag:
-                if key not in cell_data:
-                    cell_data[key] = {}
-                cell_data[key]["gmsh:physical"] = physical_tag[0] * numpy.ones(
-                    len(values), int
-                )
+        cells.append((key, values))
+        if physical_tag:
+            cell_data["gmsh:physical"].append(
+                physical_tag[0] * numpy.ones(len(values), int)
+            )
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     if "tetra10" in cells:
@@ -292,14 +277,14 @@ def write(filename, mesh, binary=True):
         )
 
     if binary:
-        for key, value in mesh.cells.items():
+        for k, (key, value) in enumerate(mesh.cells):
             if value.dtype != c_int:
                 logging.warning(
                     "Binary Gmsh needs c_int (typically numpy.int32) integers "
                     "(got %s). Converting.",
                     value.dtype,
                 )
-                mesh.cells[key] = numpy.array(value, dtype=c_int)
+                mesh.cells[k] = Cells(key, numpy.array(value, dtype=c_int))
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -331,8 +316,6 @@ def write(filename, mesh, binary=True):
         cell_data_raw = raw_from_cell_data(mesh.cell_data)
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, binary)
-
-    return
 
 
 def _write_nodes(fh, points, binary):
@@ -375,7 +358,6 @@ def _write_nodes(fh, points, binary):
             )
 
     fh.write(b"$EndNodes\n")
-    return
 
 
 def _write_elements(fh, cells, binary):
@@ -384,11 +366,11 @@ def _write_elements(fh, cells, binary):
     fh.write(b"$Elements\n")
 
     if binary:
-        total_num_cells = sum([data.shape[0] for _, data in cells.items()])
+        total_num_cells = sum([data.shape[0] for _, data in cells])
         numpy.array([len(cells), total_num_cells], dtype=c_ulong).tofile(fh)
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells.items():
+        for cell_type, node_idcs in cells:
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             numpy.array(
                 [1, _geometric_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
@@ -415,11 +397,11 @@ def _write_elements(fh, cells, binary):
         fh.write(b"\n")
     else:
         # count all cells
-        total_num_cells = sum([data.shape[0] for _, data in cells.items()])
+        total_num_cells = sum([data.shape[0] for _, data in cells])
         fh.write("{} {}\n".format(len(cells), total_num_cells).encode("utf-8"))
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells.items():
+        for cell_type, node_idcs in cells:
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             fh.write(
                 "{} {} {} {}\n".format(
@@ -438,7 +420,6 @@ def _write_elements(fh, cells, binary):
                 consecutive_index += 1
 
     fh.write(b"$EndElements\n")
-    return
 
 
 def _write_periodic(fh, periodic, binary):

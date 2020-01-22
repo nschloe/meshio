@@ -10,7 +10,7 @@ import numpy
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 
 def read(filename):
@@ -46,7 +46,7 @@ def read_buffer(f):
     )
     if not numpy.all(data[:, 0] == 3):
         raise ReadError("Can only read triangular faces")
-    cells = {"triangle": data[:, 1:]}
+    cells = [Cells("triangle", data[:, 1:])]
 
     return verts, cells
 
@@ -61,10 +61,10 @@ def write(filename, mesh):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    if "triangle" not in mesh.cells:
+    if not any(c.type == "triangle" for c in mesh.cells):
         raise WriteError("Can only deal with triangular faces")
 
-    tri = mesh.cells["triangle"]
+    tri = numpy.concatenate([c.data for c in mesh.cells if c.type == "triangle"])
 
     with open_file(filename, "wb") as fh:
         fh.write(b"OFF\n")

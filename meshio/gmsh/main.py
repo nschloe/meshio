@@ -4,8 +4,8 @@ from .._exceptions import ReadError
 from .._helpers import register
 from . import _gmsh22, _gmsh40, _gmsh41
 
-_readers = {"2": _gmsh22, "4": _gmsh40, "4.0": _gmsh40, "4.1": _gmsh41}
-_writers = {"2": _gmsh22, "4": _gmsh41, "4.0": _gmsh40, "4.1": _gmsh41}
+_readers = {"2": _gmsh22, "2.2": _gmsh22, "4": _gmsh40, "4.0": _gmsh40, "4.1": _gmsh41}
+_writers = {"2": _gmsh22, "2.2": _gmsh22, "4": _gmsh41, "4.0": _gmsh40, "4.1": _gmsh41}
 
 
 def read(filename):

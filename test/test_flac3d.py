@@ -22,12 +22,22 @@ def test_reference_file():
     mesh = meshio.read(filename)
 
     # Points
-    assert numpy.isclose(mesh.points.sum(), 306.9999999999999)
+    assert numpy.isclose(mesh.points.sum(), 307.0)
 
     # Cells
-    ref_num_cells = {"tetra": 3, "pyramid": 15, "wedge": 15, "hexahedron": 75}
-    assert {k: len(v) for k, v in mesh.cells.items()} == ref_num_cells
-
+    ref_num_cells = [
+        ("hexahedron", 45),
+        ("pyramid", 9),
+        ("hexahedron", 18),
+        ("wedge", 9),
+        ("hexahedron", 6),
+        ("wedge", 3),
+        ("hexahedron", 6),
+        ("wedge", 3),
+        ("pyramid", 6),
+        ("tetra", 3),
+    ]
+    assert [(k, len(v)) for k, v in mesh.cells] == ref_num_cells
     # Cell data
     ref_sum_cell_data = {"tetra": 9, "pyramid": 36, "wedge": 54, "hexahedron": 171}
     assert {

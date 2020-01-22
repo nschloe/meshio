@@ -5,7 +5,7 @@ I/O for MED/Salome, cf.
 import numpy
 
 from .._common import num_nodes_per_cell
-from .._exceptions import ReadError
+from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from .._mesh import Mesh
 
@@ -86,20 +86,20 @@ def read(filename):
         point_tags = _read_families(fas["NOEUD"])
 
     # Cells
-    cells = {}
+    cells = []
     med_cells = mesh["MAI"]
     for med_cell_type, med_cell_type_group in med_cells.items():
         cell_type = med_to_meshio_type[med_cell_type]
         nod = med_cell_type_group["NOD"]
         n_cells = nod.attrs["NBR"]
-        cells[cell_type] = nod[()].reshape(n_cells, -1, order="F") - 1
+        cells += [(cell_type, nod[()].reshape(n_cells, -1, order="F") - 1)]
 
         # Cell tags
         if "FAM" in med_cell_type_group:
             tags = med_cell_type_group["FAM"][()]
             if "cell_tags" not in cell_data:
-                cell_data["cell_tags"] = {}
-            cell_data["cell_tags"][cell_type] = tags  # replacing previous "cell_tags"
+                cell_data["cell_tags"] = []
+            cell_data["cell_tags"].append(tags)
 
     # Information for cell tags
     cell_tags = {}
@@ -162,7 +162,7 @@ def _read_nodal_data(med_data, profiles):
 
 
 def _read_cell_data(cell_data, name, supp, med_data, profiles):
-    med_type = supp.partition(".")[2]
+    # med_type = supp.partition(".")[2]
     profile = med_data[supp].attrs["PFL"]
     data_profile = med_data[supp][profile]
     n_cells = data_profile.attrs["NBR"]
@@ -187,9 +187,8 @@ def _read_cell_data(cell_data, name, supp, med_data, profiles):
             values = values[:, 0]
 
     if name not in cell_data:
-        cell_data[name] = {}
-    key = med_to_meshio_type[med_type]
-    cell_data[name][key] = values
+        cell_data[name] = []
+    cell_data[name].append(values)
 
     return cell_data
 
@@ -260,9 +259,11 @@ def write(filename, mesh, add_global_ids=True):
         family.attrs.create("NBR", len(mesh.points))
 
     # Cells (mailles in french)
+    if len(mesh.cells) != len(numpy.unique([c.type for c in mesh.cells])):
+        WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
-    for cell_type, cells in mesh.cells.items():
+    for k, (cell_type, cells) in enumerate(mesh.cells):
         med_type = meshio_to_med_type[cell_type]
         med_cells = cells_group.create_group(med_type)
         med_cells.attrs.create("CGT", 1)
@@ -274,12 +275,11 @@ def write(filename, mesh, add_global_ids=True):
 
         # Cell tags
         if "cell_tags" in mesh.cell_data:  # works only for med -> med
-            if cell_type in mesh.cell_data["cell_tags"]:
-                family = med_cells.create_dataset(
-                    "FAM", data=mesh.cell_data["cell_tags"][cell_type]
-                )
-                family.attrs.create("CGT", 1)
-                family.attrs.create("NBR", len(cells))
+            family = med_cells.create_dataset(
+                "FAM", data=mesh.cell_data["cell_tags"][k]
+            )
+            family.attrs.create("CGT", 1)
+            family.attrs.create("NBR", len(cells))
 
     # Information about point and cell sets (familles in french)
     fas = f.create_group("FAS")
@@ -319,11 +319,11 @@ def write(filename, mesh, add_global_ids=True):
     for name, d in mesh.cell_data.items():
         if name == "cell_tags":  # ignore cell_tags already written under FAS
             continue
-        for cell_type, data in d.items():
+        for cell, data in zip(mesh.cells, d):
             # Determine the nature of the cell data
             # Either shape = (n_data, ) or (n_data, n_components) -> ELEM
             # or shape = (n_data, n_gauss_points, n_components) -> ELNO or ELGA
-            med_type = meshio_to_med_type[cell_type]
+            med_type = meshio_to_med_type[cell.type]
             if data.ndim <= 2:
                 supp = "ELEM"
             elif data.shape[1] == num_nodes_per_cell[cell_type]:

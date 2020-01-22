@@ -191,8 +191,10 @@ class TimeSeriesReader:
             precision = "4"
 
         if data_item.get("Format") == "XML":
-            return numpy.array(
-                data_item.text.split(), dtype=xdmf_to_numpy_type[(data_type, precision)]
+            return numpy.fromstring(
+                data_item.text,
+                dtype=xdmf_to_numpy_type[(data_type, precision)],
+                sep=" ",
             ).reshape(dims)
         elif data_item.get("Format") == "Binary":
             return numpy.fromfile(
@@ -301,6 +303,11 @@ class TimeSeriesWriter:
 
         if point_data:
             self.point_data(point_data, grid)
+
+        # permit old dict strucutre, convert it to list of tuples
+        for name, entry in cell_data.items():
+            if isinstance(entry, dict):
+                cell_data[name] = numpy.array(list(entry.values()))
         if cell_data:
             self.cell_data(cell_data, grid)
 
@@ -352,8 +359,8 @@ class TimeSeriesWriter:
 
     def cells(self, cells, grid):
         if len(cells) == 1:
-            meshio_type = list(cells.keys())[0]
-            num_cells = len(cells[meshio_type])
+            meshio_type = cells[0].type
+            num_cells = len(cells[0].data)
             xdmf_type = meshio_to_xdmf_type[meshio_type][0]
             topo = ET.SubElement(
                 grid,
@@ -361,8 +368,8 @@ class TimeSeriesWriter:
                 TopologyType=xdmf_type,
                 NumberOfElements=str(num_cells),
             )
-            dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype.name]
-            dim = "{} {}".format(*cells[meshio_type].shape)
+            dt, prec = numpy_to_xdmf_dtype[cells[0].data.dtype.name]
+            dim = "{} {}".format(*cells[0].data.shape)
             data_item = ET.SubElement(
                 topo,
                 "DataItem",
@@ -371,7 +378,7 @@ class TimeSeriesWriter:
                 Format=self.data_format,
                 Precision=prec,
             )
-            data_item.text = self.numpy_to_xml_string(cells[meshio_type])
+            data_item.text = self.numpy_to_xml_string(cells[0].data)
         elif len(cells) > 1:
             total_num_cells = sum(c.shape[0] for c in cells.values())
             topo = ET.SubElement(

@@ -11,7 +11,7 @@ from ..__about__ import __version__
 from .._common import num_nodes_per_cell
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 CHUNK_SIZE = 8
 nastran_to_meshio_type = {
@@ -67,8 +67,8 @@ def read_buffer(f):
     # Reading data
     points = []
     points_id = []
-    cells = {}
-    cells_id = {}
+    cells = []
+    cells_id = []
     cell = None
     cell_type = None
     keyword_prev = None
@@ -89,12 +89,12 @@ def read_buffer(f):
             elif cell_type == "hexahedron":
                 cell_type = "hexahedron20"
 
-        try:
-            cells[cell_type].append(cell)
-            cells_id[cell_type].append(cell_id)
-        except KeyError:
-            cells[cell_type] = [cell]
-            cells_id[cell_type] = [cell_id]
+        if len(cells) > 0 and cells[-1].type == cell_type:
+            cells[-1].data.append(cell)
+            cells_id[-1].append(cell_id)
+        else:
+            cells.append(Cells(cell_type, [cell]))
+            cells_id.append([cell_id])
 
     while True:
         line = f.readline()
@@ -148,16 +148,16 @@ def read_buffer(f):
     # Convert to numpy arrays
     points = numpy.array(points)
     points_id = numpy.array(points_id, dtype=int)
-    for cell_type in cells:
-        cells[cell_type] = numpy.array(cells[cell_type], dtype=int)
-        cells_id[cell_type] = numpy.array(cells_id[cell_type], dtype=int)
+    for k, (c, cid) in enumerate(zip(cells, cells_id)):
+        cells[k] = Cells(c.type, numpy.array(c.data, dtype=int))
+        cells_id[k] = numpy.array(cid, dtype=int)
 
     # Convert to natural point ordering
     # https://stackoverflow.com/questions/16992713/translate-every-element-in-numpy-array-according-to-key
     points_id_dict = dict(zip(points_id, numpy.arange(len(points), dtype=int)))
     points_id_get = numpy.vectorize(points_id_dict.__getitem__)
-    for cell_type in cells:
-        cells[cell_type] = points_id_get(cells[cell_type])
+    for k, c in enumerate(cells):
+        cells[k] = Cells(c.type, points_id_get(c.data))
 
     # Construct the mesh object
     mesh = Mesh(points, cells)
@@ -190,7 +190,7 @@ def write(filename, mesh):
 
         # Cells
         cell_id = 0
-        for cell_type, cells in mesh.cells.items():
+        for cell_type, cells in mesh.cells:
             nastran_type = meshio_to_nastran_type[cell_type].replace("_", "")
             for cell in cells:
                 cell_id += 1

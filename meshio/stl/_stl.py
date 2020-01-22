@@ -10,7 +10,7 @@ import numpy
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 
 def read(filename):
@@ -122,7 +122,7 @@ def data_from_facets(facets):
     k = numpy.argsort(idx)
     points = pts[idx[k]]
     inv_k = numpy.argsort(k)
-    cells = {"triangle": inv_k[inv].reshape(-1, 3)}
+    cells = [Cells("triangle", inv_k[inv].reshape(-1, 3))]
     return points, cells
 
 
@@ -138,15 +138,16 @@ def _read_binary(f, num_triangles):
     )
     # discard normals, attribute count
     facets = out["facet"]
-    if not numpy.all(out["attr count"] == 0):
-        raise ReadError()
+    # if not numpy.all(out["attr count"] == 0):
+    #     print(out["attr count"])
+    #     raise ReadError("Nonzero attr count")
 
     points, cells = data_from_facets(facets)
     return Mesh(points, cells)
 
 
 def write(filename, mesh, binary=False):
-    if "triangle" not in mesh.cells:
+    if not any(c.type == "triangle" for c in mesh.cells):
         raise WriteError(
             "STL can only write triangle cells (not {}).".format(
                 ", ".join(list(mesh.cells.keys()))
@@ -182,32 +183,29 @@ def _compute_normals(pts):
 
 
 def _write_ascii(filename, points, cells):
-    pts = points[cells["triangle"]]
-    normals = _compute_normals(pts)
-
     with open_file(filename, "wb") as fh:
         fh.write(b"solid\n")
+        for c in filter(lambda c: c.type == "triangle", cells):
+            pts = points[c.data]
+            normals = _compute_normals(pts)
 
-        for local_pts, normal in zip(pts, normals):
-            # facet normal 0.455194 -0.187301 -0.870469
-            #  outer loop
-            #   vertex 266.36 234.594 14.6145
-            #   vertex 268.582 234.968 15.6956
-            #   vertex 267.689 232.646 15.7283
-            #  endloop
-            # endfacet
-            out = ["facet normal {} {} {}".format(*normal), " outer loop"]
-            for pt in local_pts:
-                out += ["  vertex {} {} {}".format(*pt)]
-            out += [" endloop", "endfacet"]
-            fh.write(("\n".join(out) + "\n").encode("utf-8"))
-
+            for local_pts, normal in zip(pts, normals):
+                # facet normal 0.455194 -0.187301 -0.870469
+                #  outer loop
+                #   vertex 266.36 234.594 14.6145
+                #   vertex 268.582 234.968 15.6956
+                #   vertex 267.689 232.646 15.7283
+                #  endloop
+                # endfacet
+                out = ["facet normal {} {} {}".format(*normal), " outer loop"]
+                for pt in local_pts:
+                    out += ["  vertex {} {} {}".format(*pt)]
+                out += [" endloop", "endfacet"]
+                fh.write(("\n".join(out) + "\n").encode("utf-8"))
         fh.write(b"endsolid\n")
 
 
 def _binary(filename, points, cells):
-    pts = points[cells["triangle"]]
-    normals = _compute_normals(pts)
 
     with open_file(filename, "wb") as fh:
         # 80 character header data
@@ -215,11 +213,14 @@ def _binary(filename, points, cells):
         msg += (79 - len(msg)) * "X"
         msg += "\n"
         fh.write(msg.encode("utf-8"))
-        fh.write(numpy.uint32(len(cells["triangle"])))
-        for pt, normal in zip(pts, normals):
-            fh.write(normal.astype(numpy.float32))
-            fh.write(pt.astype(numpy.float32))
-            fh.write(numpy.uint16(0))
+        for c in filter(lambda c: c.type == "triangle", cells):
+            pts = points[c.data]
+            normals = _compute_normals(pts)
+            fh.write(numpy.uint32(len(c.data)))
+            for pt, normal in zip(pts, normals):
+                fh.write(normal.astype(numpy.float32))
+                fh.write(pt.astype(numpy.float32))
+                fh.write(numpy.uint16(0))
 
 
 register(

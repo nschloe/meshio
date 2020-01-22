@@ -30,7 +30,7 @@ from . import (
 from .__about__ import __author__, __author_email__, __version__, __website__
 from ._exceptions import ReadError, WriteError
 from ._helpers import read, write, write_points_cells
-from ._mesh import Mesh
+from ._mesh import Cells, Mesh
 
 __all__ = [
     "abaqus",
@@ -64,6 +64,7 @@ __all__ = [
     "write",
     "write_points_cells",
     "Mesh",
+    "Cells",
     "ReadError",
     "WriteError",
     "__version__",

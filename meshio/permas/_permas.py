@@ -9,7 +9,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 permas_to_meshio_type = {
     "PLOT1": "vertex",
@@ -66,7 +66,7 @@ def read(filename):
 
 def read_buffer(f):
     # Initialize the optional data fields
-    cells = {}
+    cells = []
     nsets = {}
     elsets = {}
     field_data = {}
@@ -88,7 +88,7 @@ def read_buffer(f):
             points, point_gids = _read_nodes(f)
         elif keyword.startswith("ELEMENT"):
             key, idx = _read_cells(f, keyword, point_gids)
-            cells[key] = idx
+            cells.append(Cells(key, idx))
         elif keyword.startswith("NSET"):
             params_map = get_param_map(keyword, required_keys=["NSET"])
             setids = read_set(f, params_map)
@@ -243,7 +243,7 @@ def write(filename, mesh):
         tria6_order = [0, 3, 1, 4, 2, 5]
         tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]
         quad9_order = [0, 4, 1, 7, 8, 5, 3, 6, 2]
-        for cell_type, node_idcs in mesh.cells.items():
+        for cell_type, node_idcs in mesh.cells:
             f.write("!\n")
             f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_type] + "\n")
             if cell_type == "tetra10":

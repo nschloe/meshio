@@ -11,7 +11,7 @@ import numpy
 from .._common import CDATA, cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -60,7 +60,7 @@ class XdmfReader:
                 return self._read_data_item(
                     root.find(".//" + "/".join(xpath.split("/")[2:])), root
                 )
-            raise ValueError("Can't read XPath {}.".format(xpath))
+            raise ValueError(f"Can't read XPath {xpath}.")
 
         dims = [int(d) for d in data_item.get("Dimensions").split()]
 
@@ -218,7 +218,7 @@ class XdmfReader:
             raise ReadError()
 
         points = None
-        cells = {}
+        cells = []
         point_data = {}
         cell_data_raw = {}
         field_data = {}
@@ -307,6 +307,69 @@ class XdmfReader:
                     else:
                         raise ReadError("Unknown section '{}'.".format(c.tag))
 
+        for c in grid:
+            if c.tag == "Topology":
+                data_items = list(c)
+                if len(data_items) != 1:
+                    raise ReadError()
+                data_item = data_items[0]
+
+                data = self._read_data_item(data_item)
+
+                # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
+                # Allow both.
+                if c.get("Type"):
+                    if c.get("TopologyType"):
+                        raise ReadError()
+                    cell_type = c.get("Type")
+                else:
+                    cell_type = c.get("TopologyType")
+
+                if cell_type == "Mixed":
+                    cells = translate_mixed_cells(data)
+                else:
+                    cells.append(Cells(xdmf_to_meshio_type[cell_type], data))
+
+            elif c.tag == "Geometry":
+                try:
+                    geometry_type = c.get("GeometryType")
+                except KeyError:
+                    pass
+                else:
+                    if geometry_type not in ["XY", "XYZ"]:
+                        raise ReadError()
+
+                data_items = list(c)
+                if len(data_items) != 1:
+                    raise ReadError()
+                data_item = data_items[0]
+                points = self._read_data_item(data_item)
+
+            elif c.tag == "Information":
+                c_data = c.text
+                if not c_data:
+                    raise ReadError()
+                field_data = self.read_information(c_data)
+
+            elif c.tag == "Attribute":
+                # Don't be too strict here: FEniCS, for example, calls this
+                # 'AttributeType'.
+                # assert c.attrib['Type'] == 'None'
+
+                data_items = list(c)
+                if len(data_items) != 1:
+                    raise ReadError()
+                data_item = data_items[0]
+
+                data = self._read_data_item(data_item)
+
+                name = c.get("Name")
+                if c.get("Center") == "Node":
+                    point_data[name] = data
+                else:
+                    if c.get("Center") != "Cell":
+                        raise ReadError()
+                    cell_data_raw[name] = data
             else:
                 raise ReadError(f"Unknown section '{c.tag}'.")
 
@@ -415,8 +478,8 @@ class XdmfWriter:
 
     def cells(self, cells, grid):
         if len(cells) == 1:
-            meshio_type = list(cells.keys())[0]
-            num_cells = len(cells[meshio_type])
+            meshio_type = cells[0].type
+            num_cells = len(cells[0].data)
             xdmf_type = meshio_to_xdmf_type[meshio_type][0]
             topo = ET.SubElement(
                 grid,
@@ -424,8 +487,8 @@ class XdmfWriter:
                 TopologyType=xdmf_type,
                 NumberOfElements=str(num_cells),
             )
-            dt, prec = numpy_to_xdmf_dtype[cells[meshio_type].dtype.name]
-            dim = "{} {}".format(*cells[meshio_type].shape)
+            dt, prec = numpy_to_xdmf_dtype[cells[0].data.dtype.name]
+            dim = "{} {}".format(*cells[0].data.shape)
             data_item = ET.SubElement(
                 topo,
                 "DataItem",
@@ -434,22 +497,20 @@ class XdmfWriter:
                 Format=self.data_format,
                 Precision=prec,
             )
-            data_item.text = self.numpy_to_xml_string(cells[meshio_type])
-        elif len(cells) > 1:
+            data_item.text = self.numpy_to_xml_string(cells[0].data)
 
-            total_num_cells = sum(c.shape[0] for c in cells.values())
+        else:
+            assert len(cells) > 1
+            total_num_cells = sum(c.data.shape[0] for c in cells)
             topo = ET.SubElement(
                 grid,
                 "Topology",
                 TopologyType="Mixed",
                 NumberOfElements=str(total_num_cells),
             )
-            total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
-            dim = str(
-                total_num_cell_items
-                + total_num_cells
-                + (cells["line"].shape[0] if "line" in cells else 0)
-            )
+            total_num_cell_items = sum(numpy.prod(c.data.shape) for c in cells)
+            num_lines = sum(c.data.shape[0] for c in cells if c.type == "line")
+            dim = str(total_num_cell_items + total_num_cells + num_lines)
             cd = numpy.concatenate(
                 [
                     numpy.hstack(
@@ -461,7 +522,7 @@ class XdmfWriter:
                             value,
                         ]
                     ).flatten()
-                    for key, value in cells.items()
+                    for key, value in cells
                 ]
             )
             dt, prec = numpy_to_xdmf_dtype[cd.dtype.name]

@@ -1,4 +1,9 @@
+import collections
+import warnings
+
 import numpy
+
+Cells = collections.namedtuple("Cells", ["type", "data"])
 
 
 class Mesh:
@@ -15,7 +20,16 @@ class Mesh:
         info=None,
     ):
         self.points = points
-        self.cells = cells
+        if isinstance(cells, dict):
+            warnings.warn(
+                "cell dictionaries are deprecated, use list of tuples, e.g., "
+                '[("triangle", [[0, 1, 2], ...])]',
+                DeprecationWarning,
+            )
+            # old dict, deprecated
+            self.cells = [Cells(cell_type, data) for cell_type, data in cells.items()]
+        else:
+            self.cells = [Cells(cell_type, data) for cell_type, data in cells]
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
         self.field_data = {} if field_data is None else field_data
@@ -31,7 +45,7 @@ class Mesh:
         ]
         if len(self.cells) > 0:
             lines.append("  Number of cells:")
-            for tpe, elems in self.cells.items():
+            for tpe, elems in self.cells:
                 lines.append("    {}: {}".format(tpe, len(elems)))
         else:
             lines.append("  No cells.")
@@ -42,41 +56,34 @@ class Mesh:
         if self.point_data:
             lines.append("  Point data: {}".format(", ".join(self.point_data.keys())))
 
-        cell_data_keys = set()
-        for cell_type in self.cell_data:
-            cell_data_keys = cell_data_keys.union(self.cell_data[cell_type].keys())
-        if cell_data_keys:
-            lines.append("  Cell data: {}".format(", ".join(cell_data_keys)))
+        if self.cell_data:
+            lines.append("  Cell data: {}".format(", ".join(self.cell_data.keys())))
 
         return "\n".join(lines)
 
     def prune(self):
-        prune_list = []
+        prune_list = ["vertex", "line", "line3"]
+        if any([c.type in ["tetra", "tetra10"] for c in self.cells]):
+            prune_list += ["triangle", "triangle6"]
 
-        for cell_type in ["vertex", "line", "line3"]:
-            if cell_type in self.cells:
-                prune_list.append(cell_type)
+        new_cells = []
+        new_cell_data = {}
+        for c in self.cells:
+            if c.type not in prune_list:
+                new_cells.append(c)
+                for name, data in self.cell_data:
+                    if name not in new_cell_data:
+                        new_cell_data[name] = []
+                    new_cell_data[name].append(data)
 
-        self.cells.pop("vertex", None)
-        self.cells.pop("line", None)
-        self.cells.pop("line3", None)
-        if "tetra" in self.cells or "tetra10" in self.cells:
-            # remove_lower_order_cells
-            for cell_type in ["triangle", "triangle6"]:
-                if cell_type in self.cells:
-                    prune_list.append(cell_type)
-
-        for cell_type in prune_list:
-            self.cells.pop(cell_type, None)
-            self.cell_data.pop(cell_type, None)
+        self.cells = new_cells
+        self.cell_data = new_cell_data
 
         print("Pruned cell types: {}".format(", ".join(prune_list)))
 
         # remove_orphaned_nodes.
         # find which nodes are not mentioned in the cells and remove them
-        all_cells_flat = numpy.concatenate(
-            [vals for vals in self.cells.values()]
-        ).flatten()
+        all_cells_flat = numpy.concatenate([c.data for c in self.cells]).flatten()
         orphaned_nodes = numpy.setdiff1d(numpy.arange(len(self.points)), all_cells_flat)
         self.points = numpy.delete(self.points, orphaned_nodes, axis=0)
         # also adapt the point data
@@ -95,10 +102,10 @@ class Mesh:
             diff[numpy.argwhere(all_cells_flat > orphan)] += 1
         all_cells_flat -= diff
         k = 0
-        for key in self.cells:
-            s = self.cells[key].shape
+        for k, c in enumerate(self.cells):
+            s = c.data.shape
             n = numpy.prod(s)
-            self.cells[key] = all_cells_flat[k : k + n].reshape(s)
+            self.cells[k] = Cells(c.type, all_cells_flat[k : k + n].reshape(s))
             k += n
 
     def write(self, path_or_buf, file_format=None, **kwargs):
@@ -106,6 +113,13 @@ class Mesh:
         from ._helpers import write
 
         write(path_or_buf, self, file_format, **kwargs)
+
+    @property
+    def cells_dict(self):
+        assert len(self.cells) == len(
+            numpy.unique([c.type for c in self.cells])
+        ), "More than one block of the same type. Cannot create dictionary."
+        return dict(self.cells)
 
     @classmethod
     def read(cls, path_or_buf, file_format=None):

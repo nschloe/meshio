@@ -10,7 +10,7 @@ import numpy
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 
 def read(filename):
@@ -68,7 +68,7 @@ def read(filename):
         cells = cells[:, 1:5]
         cells -= node_index_base
 
-    return Mesh(points, {"tetra": cells})
+    return Mesh(points, [Cells("tetra", cells)])
 
 
 def write(filename, mesh):
@@ -92,22 +92,23 @@ def write(filename, mesh):
         for k, pt in enumerate(mesh.points):
             fh.write("{} {:.15e} {:.15e} {:.15e}\n".format(k, pt[0], pt[1], pt[2]))
 
-    if "tetra" not in mesh.cells:
+    if not any(c.type == "tetra" for c in mesh.cells):
         raise WriteError("TegGen only supports tetrahedra")
 
-    if len(mesh.cells) > 1:
+    if any(c.type != "tetra" for c in mesh.cells):
         logging.warning(
             "TetGen only supports tetrahedra, but mesh has {}. Skipping those.".format(
-                ", ".join([key for key in mesh.keys() if key != "tetra"])
+                ", ".join([c.type for c in mesh.cells if c.type != "tetra"])
             )
         )
 
     # write cells
     with open(ele_filename, "w") as fh:
         fh.write(f"# This file was created by meshio v{__version__}\n")
-        fh.write("{} {} {}\n".format(mesh.cells["tetra"].shape[0], 4, 0))
-        for k, tet in enumerate(mesh.cells["tetra"]):
-            fh.write("{} {} {} {} {}\n".format(k, tet[0], tet[1], tet[2], tet[3]))
+        for cell_type, data in filter(lambda c: c.type == "tetra", mesh.cells):
+            fh.write("{} {} {}\n".format(data.shape[0], 4, 0))
+            for k, tet in enumerate(data):
+                fh.write("{} {} {} {} {}\n".format(k, tet[0], tet[1], tet[2], tet[3]))
 
 
 register("tetgen", [".ele", ".node"], read, {"tetgen": write})

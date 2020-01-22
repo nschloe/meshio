@@ -113,8 +113,8 @@ def info(argv=None):
 
     # check if the cell arrays are consistent with the points
     is_consistent = True
-    for cells in mesh.cells.values():
-        if numpy.any(cells > mesh.points.shape[0]):
+    for cells in mesh.cells:
+        if numpy.any(cells.data > mesh.points.shape[0]):
             print("\nATTENTION: Inconsistent mesh. Cells refer to nonexistent points.")
             is_consistent = False
             break
@@ -122,8 +122,8 @@ def info(argv=None):
     # check if there are redundant points
     if is_consistent:
         point_is_used = numpy.zeros(mesh.points.shape[0], dtype=bool)
-        for cells in mesh.cells.values():
-            point_is_used[cells] = True
+        for cells in mesh.cells:
+            point_is_used[cells.data] = True
         if numpy.any(~point_is_used):
             print("ATTENTION: Some points are not part of any cell.")
 

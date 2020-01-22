@@ -88,7 +88,7 @@ def read_buffer(f):
     """
     points = []
     point_ids = {}
-    cells = {}
+    cells = []
     mapper = {}
     field_data = {}
     slots = set()
@@ -107,10 +107,10 @@ def read_buffer(f):
         elif line[0] == "Z":
             cid, cell = _read_cell(line, point_ids)
             cell_type = numnodes_to_meshio_type[len(cell)]
-            if cell_type in cells:
-                cells[cell_type].append(cell)
+            if len(cells) > 0 and cell_type == cells[-1][0]:
+                cells[-1][1].append(cell)
             else:
-                cells[cell_type] = [cell]
+                cells.append((cell_type, [cell]))
             mapper[cid] = [count[cell_type], len(cell)]
             count[cell_type] += 1
         elif line[0] == "ZGROUP":
@@ -133,9 +133,7 @@ def read_buffer(f):
 
     return Mesh(
         points=numpy.array(points),
-        cells={
-            k: numpy.array(v)[:, flac3d_to_meshio_order[k]] for k, v in cells.items()
-        },
+        cells=[(k, numpy.array(v)[:, flac3d_to_meshio_order[k]]) for k, v in cells],
         cell_data=cell_data,
         field_data=field_data,
     )
@@ -184,7 +182,7 @@ def write(filename, mesh):
     """
     Write FLAC3D f3grid grid file (only ASCII).
     """
-    if not any(cell_type in meshio_only.keys() for cell_type in mesh.cells.keys()):
+    if not any(c.type in meshio_only.keys() for c in mesh.cells):
         raise WriteError("FLAC3D format only supports 3D cells")
 
     with open_file(filename, "w") as f:
@@ -237,7 +235,7 @@ def _translate_zones(points, cells):
         return a[:, 0] * c0 + a[:, 1] * c1 + a[:, 2] * c2
 
     zones = {}
-    for key, idx in cells.items():
+    for key, idx in cells:
         if key not in meshio_only.keys():
             continue
 

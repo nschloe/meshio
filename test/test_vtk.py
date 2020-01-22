@@ -58,7 +58,8 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     tol = 1.0e-2
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * ref_sum
-    assert len(mesh.cells["triangle"]) == ref_num_cells
+    assert mesh.cells[0].type == "triangle"
+    assert len(mesh.cells[0].data) == ref_num_cells
     writer = partial(meshio.vtk.write, binary=binary)
     helpers.write_read(writer, meshio.vtk.read, mesh, 1.0e-15)
 
@@ -80,8 +81,8 @@ def test_structured(filename, ref_cells, ref_num_cells, ref_num_pnt):
 
     mesh = meshio.read(filename)
     assert len(mesh.cells) == 1
-    assert ref_cells in mesh.cells
-    assert len(mesh.cells[ref_cells]) == ref_num_cells
+    assert ref_cells == mesh.cells[0].type
+    assert len(mesh.cells[0].data) == ref_num_cells
     assert len(mesh.points) == ref_num_pnt
 
 

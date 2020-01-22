@@ -24,5 +24,6 @@ def test_cli():
     atol = 1.0e-15
     assert numpy.allclose(input_mesh.points, mesh.points, atol=atol, rtol=0.0)
 
-    for cell_type, data in input_mesh.cells.items():
-        assert numpy.allclose(data, mesh.cells[cell_type])
+    for cells0, cells1 in zip(input_mesh.cells, mesh.cells):
+        assert cells0.type == cells1.type
+        assert numpy.allclose(cells0.data, cells1.data)
