@@ -191,8 +191,10 @@ class TimeSeriesReader:
             precision = "4"
 
         if data_item.get("Format") == "XML":
-            return numpy.array(
-                data_item.text.split(), dtype=xdmf_to_numpy_type[(data_type, precision)]
+            return numpy.fromstring(
+                data_item.text,
+                dtype=xdmf_to_numpy_type[(data_type, precision)],
+                sep=" ",
             ).reshape(dims)
         elif data_item.get("Format") == "Binary":
             return numpy.fromfile(
