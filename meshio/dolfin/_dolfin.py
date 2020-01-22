@@ -32,8 +32,10 @@ def _read_mesh(filename):
             pass
         elif elem.tag == "mesh":
             dim = int(elem.attrib["dim"])
-            cell_type, npc = dolfin_to_meshio_type[elem.attrib["celltype"]]
-            cell_tags = [f"v{i}" for i in range(npc)]
+            cell_type, num_nodes_per_cell = dolfin_to_meshio_type[
+                elem.attrib["celltype"]
+            ]
+            cell_tags = [f"v{i}" for i in range(num_nodes_per_cell)]
         elif elem.tag == "vertices":
             points = numpy.empty((int(elem.attrib["size"]), dim))
             keys = ["x", "y"]
@@ -43,10 +45,17 @@ def _read_mesh(filename):
             k = int(elem.attrib["index"])
             points[k] = [elem.attrib[key] for key in keys]
         elif elem.tag == "cells":
-            cells = {cell_type: numpy.empty((int(elem.attrib["size"]), npc), dtype=int)}
+            cells = [
+                (
+                    cell_type,
+                    numpy.empty(
+                        (int(elem.attrib["size"]), num_nodes_per_cell), dtype=int
+                    ),
+                )
+            ]
         elif elem.tag in ["triangle", "tetrahedron"]:
             k = int(elem.attrib["index"])
-            cells[cell_type][k] = [elem.attrib[t] for t in cell_tags]
+            cells[0][1][k] = [elem.attrib[t] for t in cell_tags]
         else:
             logging.warning("Unknown entry %s. Ignoring.", elem.tag)
 
@@ -61,6 +70,7 @@ def _read_cell_data(filename, cell_type):
         "float": numpy.dtype("float"),
         "uint": numpy.dtype("uint"),
     }
+    print("_read_cell_data")
 
     cell_data = {}
     dir_name = os.path.dirname(filename)
@@ -98,8 +108,8 @@ def _read_cell_data(filename, cell_type):
             data[idx] = child.attrib["value"]
 
         if name not in cell_data:
-            cell_data[name] = {}
-        cell_data[name][cell_type] = data
+            cell_data[name] = []
+        cell_data[name].append(data)
 
     return cell_data
 
@@ -111,7 +121,7 @@ def read(filename):
 
 
 def _write_mesh(filename, points, cell_type, cells):
-    stripped_cells = {cell_type: cells[cell_type]}
+    stripped_cells = [c for c in cells if c.type == cell_type]
 
     dolfin = ET.Element("dolfin", nsmap={"dolfin": "https://fenicsproject.org/"})
 
@@ -144,12 +154,12 @@ def _write_mesh(filename, points, cell_type, cells):
         ET.SubElement(vertices, "vertex", index=str(k), **coords)
 
     num_cells = 0
-    for cls in stripped_cells.values():
-        num_cells += len(cls)
+    for c in stripped_cells:
+        num_cells += len(c.data)
 
     xcells = ET.SubElement(mesh, "cells", size=str(num_cells))
     idx = 0
-    for ct, cls in stripped_cells.items():
+    for ct, cls in stripped_cells:
         for cell in cls:
             cell_entry = ET.SubElement(
                 xcells, meshio_to_dolfin_type[ct], index=str(idx)
@@ -180,6 +190,8 @@ def _numpy_type_to_dolfin_type(dtype):
 def _write_cell_data(filename, dim, cell_data):
     dolfin = ET.Element("dolfin", nsmap={"dolfin": "https://fenicsproject.org/"})
 
+    print("_write_cell_data")
+
     mesh_function = ET.SubElement(
         dolfin,
         "mesh_function",
@@ -198,9 +210,9 @@ def _write_cell_data(filename, dim, cell_data):
 def write(filename, mesh):
     logging.warning("Dolfin's XML is a legacy format. Consider using XDMF instead.")
 
-    if "tetra" in mesh.cells:
+    if any("tetra" == c.type for c in mesh.cells):
         cell_type = "tetra"
-    elif "triangle" in mesh.cells:
+    elif any("triangle" == c.type for c in mesh.cells):
         cell_type = "triangle"
     else:
         raise WriteError(
@@ -210,13 +222,11 @@ def write(filename, mesh):
 
     _write_mesh(filename, mesh.points, cell_type, mesh.cells)
 
-    for name, dictionary in mesh.cell_data.items():
-        if cell_type not in dictionary:
-            continue
-        data = dictionary[cell_type]
-        cell_data_filename = "{}_{}.xml".format(os.path.splitext(filename)[0], name)
-        dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
-        _write_cell_data(cell_data_filename, dim, numpy.array(data))
+    for name, lst in mesh.cell_data.items():
+        for data in lst:
+            cell_data_filename = "{}_{}.xml".format(os.path.splitext(filename)[0], name)
+            dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
+            _write_cell_data(cell_data_filename, dim, numpy.array(data))
 
 
 register("dolfin-xml", [".xml"], read, {"dolfin-xml": write})

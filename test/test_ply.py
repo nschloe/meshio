@@ -25,8 +25,8 @@ def test_ply(mesh, binary):
     def writer(*args, **kwargs):
         return meshio.ply.write(*args, binary=binary, **kwargs)
 
-    for key in mesh.cells:
-        mesh.cells[key] = mesh.cells[key].astype(numpy.int32)
+    for k, c in enumerate(mesh.cells):
+        mesh.cells[k] = meshio.Cells(c.type, c.data.astype(numpy.int32))
 
     helpers.write_read(writer, meshio.ply.read, mesh, 1.0e-12)
 
@@ -42,4 +42,5 @@ def test_reference_file(filename, ref_sum, ref_num_cells):
     tol = 1.0e-2
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * abs(ref_sum)
-    assert len(mesh.cells["triangle"]) == ref_num_cells
+    assert mesh.cells[0].type == "triangle"
+    assert len(mesh.cells[0].data) == ref_num_cells

@@ -10,7 +10,7 @@ import numpy as np
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 
 def write(filename, mesh):
@@ -18,21 +18,20 @@ def write(filename, mesh):
         write_buffer(f, mesh)
 
 
-def write_buffer(file, mesh):
+def write_buffer(f, mesh):
     """Store a mesh in Neuroglancer pre-computed format.
     :param file: a file-like object opened in binary mode (its ``write`` method
         will be called with :class:`bytes` objects).
     :param meshio.Mesh mesh: Mesh object to write
     """
     vertices = np.asarray(mesh.points, "<f")
-    try:
-        triangles = np.asarray(mesh.cells["triangle"], "<I")
-    except KeyError:
+    if not any(c.type == "triangle" for c in mesh.cells):
         raise WriteError("Neuroglancer files can only contain triangle cells.")
 
-    file.write(struct.pack("<I", vertices.shape[0]))
-    file.write(vertices.tobytes(order="C"))
-    file.write(triangles.tobytes(order="C"))
+    f.write(struct.pack("<I", vertices.shape[0]))
+    f.write(vertices.tobytes(order="C"))
+    for c in filter(lambda c: c.type == "triangle", mesh.cells):
+        f.write(np.asarray(c.data, "<I").tobytes(order="C"))
 
 
 def read(filename):
@@ -68,7 +67,8 @@ def read_buffer(file):
     triangles = np.reshape(flat_triangles, (-1, 3)).copy(order="C")  # TODO remove copy
     if np.any(triangles > num_vertices):
         raise ReadError("The mesh references nonexistent vertices")
-    return Mesh(vertices, {"triangle": triangles})
+
+    return Mesh(vertices, [Cells("triangle", triangles)])
 
 
 register("neuroglancer", [], read, {"neuroglancer": write})

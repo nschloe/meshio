@@ -45,7 +45,7 @@ def gmsh_periodic():
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test_gmsh2(mesh, binary):
+def test_gmsh22(mesh, binary):
     writer = partial(meshio.gmsh.write, fmt_version="2", binary=binary)
     helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
 
@@ -118,7 +118,7 @@ def test_generic_io():
 
 @pytest.mark.parametrize(
     "filename, ref_sum, ref_num_cells",
-    [("insulated-2.2.msh", 2.001762136876221, {"line": 21, "triangle": 111})],
+    [("insulated-2.2.msh", 2.001762136876221, [21, 111])],
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_reference_file(filename, ref_sum, ref_num_cells, binary):
@@ -128,13 +128,10 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     tol = 1.0e-2
     s = mesh.points.sum()
     assert abs(s - ref_sum) < tol * ref_sum
-    assert {k: len(v) for k, v in mesh.cells.items()} == ref_num_cells
-    assert {
-        k: len(v) for k, v in mesh.cell_data["gmsh:geometrical"].items()
-    } == ref_num_cells
-    assert {
-        k: len(v) for k, v in mesh.cell_data["gmsh:physical"].items()
-    } == ref_num_cells
+    assert [c.type for c in mesh.cells] == ["line", "triangle"]
+    assert [len(c.data) for c in mesh.cells] == ref_num_cells
+    assert list(map(len, mesh.cell_data["gmsh:geometrical"])) == ref_num_cells
+    assert list(map(len, mesh.cell_data["gmsh:physical"])) == ref_num_cells
 
     writer = partial(meshio.gmsh.write, fmt_version="2", binary=binary)
     helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)

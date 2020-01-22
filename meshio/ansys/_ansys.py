@@ -299,7 +299,7 @@ def read(filename):  # noqa: C901
     point_data = {}
 
     points = []
-    cells = {}
+    cells = []
 
     first_point_index_overall = None
     last_point_index = None
@@ -346,16 +346,13 @@ def read(filename):  # noqa: C901
                 # (2012 (zone-id first-index last-index type element-type))
                 key, data = _read_cells(f, line)
                 if data is not None:
-                    cells[key] = data
+                    cells.append((key, data))
 
             elif re.match("(|20|30)13", index):
                 data = _read_faces(f, line)
 
                 for key in data:
-                    if key in cells:
-                        cells[key] = numpy.concatenate([cells[key], data[key]])
-                    else:
-                        cells[key] = data[key]
+                    cells.append((key, data[key]))
 
             elif index == "39":
                 logging.warning("Zone specification not supported yet. Skipping.")
@@ -381,8 +378,8 @@ def read(filename):  # noqa: C901
     points = numpy.concatenate(points)
 
     # Gauge the cells with the first point_index.
-    for key in cells:
-        cells[key] = cells[key] - first_point_index_overall
+    for k, c in enumerate(cells):
+        cells[k] = (c[0], c[1] - first_point_index_overall)
 
     return Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
@@ -444,7 +441,7 @@ def write(filename, mesh, binary=True):
             numpy.dtype("int32"): "2012",
             numpy.dtype("int64"): "3012",
         }
-        for cell_type, values in mesh.cells.items():
+        for cell_type, values in mesh.cells:
             key = binary_dtypes[values.dtype] if binary else "12"
             last_index = first_index + len(values) - 1
             fh.write(

@@ -8,7 +8,7 @@ import numpy
 
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 meshio_data = {"avsucd:material", "flac3d:zone", "gmsh:physical", "medit:ref"}
 
@@ -54,11 +54,6 @@ def read_buffer(f):
     if num_cell_data:
         cell_data.update(_read_cell_data(f, num_cells, cells, cell_ids))
 
-    # Convert cell_data to array
-    for k, v in cell_data.items():
-        for kk, vv in v.items():
-            cell_data[k][kk] = numpy.array(vv)
-
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
@@ -69,28 +64,31 @@ def _read_nodes(f, num_nodes):
 
 
 def _read_cells(f, num_cells, point_ids):
-    cells = {}
+    cells = []
     cell_ids = {}
-    cell_data = {"avsucd:material": {}}
+    cell_data = {"avsucd:material": []}
     count = {k: 0 for k in meshio_to_avsucd_type.keys()}
     for _ in range(num_cells):
         line = f.readline().strip().split()
-        cell_id, cell_mat = int(line[0]), int(line[1])
+        cell_id = int(line[0])
+        cell_mat = int(line[1])
         cell_type = avsucd_to_meshio_type[line[2]]
         corner = [point_ids[int(pid)] for pid in line[3:]]
 
-        if cell_type not in cells:
-            cells[cell_type] = [corner]
-            cell_data["avsucd:material"][cell_type] = [cell_mat]
+        if len(cells) > 0 and cells[-1].type == cell_type:
+            cells[-1].data.append(corner)
+            cell_data["avsucd:material"][-1].append(cell_mat)
         else:
-            cells[cell_type].append(corner)
-            cell_data["avsucd:material"][cell_type].append(cell_mat)
+            cells.append(Cells(cell_type, [corner]))
+            cell_data["avsucd:material"].append([cell_mat])
 
         cell_ids[cell_id] = (cell_type, count[cell_type])
         count[cell_type] += 1
 
-    for k, v in cells.items():
-        cells[k] = numpy.array(v)
+    # convert to numpy arrays
+    for k, c in enumerate(cells):
+        cells[k] = Cells(c.type, numpy.array(c.data))
+        cell_data["avsucd:material"][k] = numpy.array(cell_data["avsucd:material"][k])
     return cell_ids, cells, cell_data
 
 
@@ -164,7 +162,7 @@ def write(filename, mesh):
     with open_file(filename, "w") as f:
         # Write first line
         num_nodes = len(mesh.points)
-        num_cells = sum(len(v) for v in mesh.cells.values())
+        num_cells = sum(len(c.data) for c in mesh.cells)
         num_node_data = [
             1 if v.ndim == 1 else v.shape[1] for v in mesh.point_data.values()
         ]
@@ -220,7 +218,7 @@ def _write_cells(f, cells, cell_data, num_cells):
 
     # Loop over cells
     i = 0
-    for k, v in cells.items():
+    for k, v in cells:
         for cell in v:
             cell_str = " ".join(str(c + 1) for c in cell)
             f.write(f"{i+1} {int(material[i])} {meshio_to_avsucd_type[k]} {cell_str}\n")

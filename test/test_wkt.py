@@ -26,4 +26,5 @@ def test_reference_file(filename, ref_sum, ref_num_cells):
     tol = 1.0e-5
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * abs(ref_sum)
-    assert len(mesh.cells["triangle"]) == ref_num_cells
+    assert mesh.cells[0].type == "triangle"
+    assert len(mesh.cells[0].data) == ref_num_cells

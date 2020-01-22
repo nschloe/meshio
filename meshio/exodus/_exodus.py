@@ -82,7 +82,7 @@ def read(filename):  # noqa: C901
     cell_data_names = []
     pd = {}
     cd = {}
-    cells = {}
+    cells = []
     ns_names = []
     # eb_names = []
     ns = []
@@ -99,10 +99,7 @@ def read(filename):  # noqa: C901
                 info += [b"".join(c).decode("UTF-8") for c in val[:]]
         elif key[:7] == "connect":
             meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
-            if meshio_type in cells:
-                cells[meshio_type] = numpy.vstack([cells[meshio_type], value[:] - 1])
-            else:
-                cells[meshio_type] = value[:] - 1
+            cells.append((meshio_type, value[:] - 1))
         elif key == "coord":
             points = nc.variables["coord"][:].T
         elif key == "coordx":
@@ -165,7 +162,7 @@ def read(filename):  # noqa: C901
 
     cell_data = {}
     k = 0
-    for cell_type, cell in cells.items():
+    for cell_type, cell in cells:
         n = len(cell)
         cell_data[cell_type] = {}
         for name, data in zip(cell_data_names, cd.values()):
@@ -278,7 +275,7 @@ def write(filename, mesh):
     rootgrp.floating_point_word_size = 8
 
     # set dimensions
-    total_num_elems = sum([v.shape[0] for v in mesh.cells.values()])
+    total_num_elems = sum([c.data.shape[0] for c in mesh.cells])
     rootgrp.createDimension("num_nodes", len(mesh.points))
     rootgrp.createDimension("num_dim", mesh.points.shape[1])
     rootgrp.createDimension("num_elem", total_num_elems)
@@ -311,7 +308,7 @@ def write(filename, mesh):
     data = rootgrp.createVariable("eb_prop1", "i4", "num_el_blk")
     for k in range(len(mesh.cells)):
         data[k] = k
-    for k, (key, values) in enumerate(mesh.cells.items()):
+    for k, (key, values) in enumerate(mesh.cells):
         dim1 = "num_el_in_blk{}".format(k + 1)
         dim2 = "num_nod_per_el{}".format(k + 1)
         rootgrp.createDimension(dim1, values.shape[0])

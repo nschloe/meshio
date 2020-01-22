@@ -9,7 +9,7 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 from .common import (
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_type,
@@ -30,7 +30,7 @@ def read_buffer(f, is_ascii, data_size):
 
     # Initialize the optional data fields
     points = []
-    cells = {}
+    cells = []
     field_data = {}
     cell_data_raw = {}
     cell_tags = {}
@@ -68,13 +68,10 @@ def read_buffer(f, is_ascii, data_size):
     cell_data = cell_data_from_raw(cells, cell_data_raw)
 
     # merge cell_tags into cell_data
-    for key, tag_dict in cell_tags.items():
-        if key not in cell_data:
-            cell_data[key] = {}
-        for name, item_list in tag_dict.items():
-            if name in cell_data[key]:
-                raise ReadError()
-            cell_data[key][name] = item_list
+    for name, tag_dict in cell_tags.items():
+        if name not in cell_data:
+            cell_data[name] = []
+        cell_data[name] += list(tag_dict.values())
 
     return Mesh(
         points,
@@ -125,11 +122,6 @@ def _read_cells(f, cells, is_ascii):
     while line.strip() != "$EndElements":
         line = f.readline().decode("utf-8")
 
-    # Subtract one to account for the fact that python indices are
-    # 0-based.
-    for key in cells:
-        cells[key] -= 1
-
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {"gmsh:physical": {}, "gmsh:geometrical": {}}
     for cell_type in cell_tags:
@@ -166,9 +158,9 @@ def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
         t = _gmsh_to_meshio_type[data[1]]
         num_nodes_per_elem = num_nodes_per_cell[t]
 
-        if t not in cells:
-            cells[t] = []
-        cells[t].append(data[-num_nodes_per_elem:])
+        if len(cells) == 0 or t != cells[-1][0]:
+            cells.append((t, []))
+        cells[-1][1].append(data[-num_nodes_per_elem:])
 
         # data[2] gives the number of tags. The gmsh manual
         # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format>
@@ -189,8 +181,9 @@ def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
             cell_tags[t].append(data[3 : 3 + num_tags])
 
     # convert to numpy arrays
-    for key in cells:
-        cells[key] = numpy.array(cells[key], dtype=int)
+    # Subtract one to account for the fact that python indices are 0-based.
+    for k, c in enumerate(cells):
+        cells[k] = (c[0], numpy.array(c[1], dtype=int) - 1)
     # Cannot convert cell_tags[key] to numpy array: There may be a different number of
     # tags for each cell.
 
@@ -212,9 +205,9 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells):
         count = shape[0] * shape[1]
         data = numpy.fromfile(f, count=count, dtype=c_int).reshape(shape)
 
-        if t not in cells:
-            cells[t] = []
-        cells[t].append(data[:, -num_nodes_per_elem:])
+        if len(cells) == 0 or t != cells[-1][1]:
+            cells.append((t, []))
+        cells[-1][1].append(data[:, -num_nodes_per_elem:])
 
         if t not in cell_tags:
             cell_tags[t] = []
@@ -223,8 +216,8 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells):
         num_elems += num_elems0
 
     # collect cells
-    for key in cells:
-        cells[key] = numpy.vstack(cells[key])
+    for k, c in enumerate(cells):
+        cells[k] = (c[0], numpy.vstack(c[1]) - 1)
 
     # collect cell tags
     for key in cell_tags:
@@ -273,13 +266,13 @@ def write(filename, mesh, binary=True):
         )
 
     if binary:
-        for key, value in mesh.cells.items():
+        for k, (key, value) in enumerate(mesh.cells):
             if value.dtype != c_int:
                 logging.warning(
                     "Binary Gmsh needs 32-bit integers (got %s). Converting.",
                     value.dtype,
                 )
-                mesh.cells[key] = numpy.array(value, dtype=c_int)
+                mesh.cells[k] = Cells(key, numpy.array(value, dtype=c_int))
 
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -323,8 +316,6 @@ def write(filename, mesh, binary=True):
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, binary)
 
-    return
-
 
 def _write_nodes(fh, points, binary):
     fh.write(b"$Nodes\n")
@@ -342,22 +333,21 @@ def _write_nodes(fh, points, binary):
                 "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
             )
     fh.write(b"$EndNodes\n")
-    return
 
 
 def _write_elements(fh, cells, tag_data, binary):
     # write elements
     fh.write(b"$Elements\n")
     # count all cells
-    total_num_cells = sum([data.shape[0] for _, data in cells.items()])
+    total_num_cells = sum([c.data.shape[0] for c in cells])
     fh.write(f"{total_num_cells}\n".encode("utf-8"))
 
     consecutive_index = 0
-    for cell_type, node_idcs in cells.items():
+    for k, (cell_type, node_idcs) in enumerate(cells):
         tags = []
-        for key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
+        for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
             try:
-                tags.append(tag_data[key][cell_type])
+                tags.append(tag_data[name][k])
             except KeyError:
                 pass
         fcd = numpy.concatenate([tags]).astype(c_int).T
@@ -398,7 +388,6 @@ def _write_elements(fh, cells, tag_data, binary):
     if binary:
         fh.write(b"\n")
     fh.write(b"$EndElements\n")
-    return
 
 
 def _write_periodic(fh, periodic):
@@ -417,4 +406,3 @@ def _write_periodic(fh, periodic):
         for snode, mnode in slave_master:
             fh.write(f"{snode} {mnode}\n".encode("utf-8"))
     fh.write(b"$EndPeriodic\n")
-    return

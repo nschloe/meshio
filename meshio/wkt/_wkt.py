@@ -7,7 +7,7 @@ import numpy as np
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import Cells, Mesh
 
 float_pattern = r"[+-]?(?:\d+\.?\d*|\d*\.?\d+)"
 float_re = re.compile(float_pattern)
@@ -57,7 +57,7 @@ def read_str(s):
 
     tri_arr = np.array(tri_idxs, np.uint64)
 
-    return Mesh(point_arr, {"triangle": tri_arr})
+    return Mesh(point_arr, [Cells("triangle", tri_arr)])
 
 
 def arr_to_str(arr):
@@ -75,10 +75,14 @@ def write(filename, mesh):
 
 
 def write_buffer(f, mesh):
-    try:
-        tris = mesh.cells["triangle"]
-    except KeyError:
+    tris = None
+    for c in mesh.cells:
+        if c.type == "triangle":
+            tris = c.data
+
+    if tris is None:
         raise WriteError("WKT meshes can only have triangles")
+
     f.write("TIN (")
 
     joiner = ""

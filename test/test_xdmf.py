@@ -75,7 +75,7 @@ def test_time_series():
         ]
         for t, pd in zip(times, point_data):
             writer.write_data(
-                t, point_data=pd, cell_data={"triangle": {"a": [3.0, 4.2]}}
+                t, point_data=pd, cell_data={"a": {"triangle": [3.0, 4.2]}}
             )
 
     # read it back in
@@ -94,7 +94,7 @@ def test_information_xdmf():
             [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
         )
         / 3,
-        {"triangle": numpy.array([[0, 1, 2], [0, 2, 3]])},
+        [("triangle", numpy.array([[0, 1, 2], [0, 2, 3]]))],
         field_data={
             "bottom": numpy.array([1, 1]),
             "right": numpy.array([2, 1]),
@@ -105,11 +105,10 @@ def test_information_xdmf():
     # write the data
     points, cells, field_data = mesh_out.points, mesh_out.cells, mesh_out.field_data
 
+    assert cells[0].type == "triangle"
     meshio.write(
         "mesh.xdmf",
-        meshio.Mesh(
-            points=points, cells={"triangle": cells["triangle"]}, field_data=field_data
-        ),
+        meshio.Mesh(points=points, cells=[cells[0]], field_data=field_data),
     )
 
     # read it back in
