@@ -42,9 +42,7 @@ def read(filename):
 
 # numpy.loadtxt is super slow
 # Code adapted from <https://stackoverflow.com/a/8964779/353337>.
-def iter_loadtxt(
-    infile, delimiter=" ", skiprows=0, comments=["#"], dtype=float, usecols=None
-):
+def iter_loadtxt(infile, skiprows=0, comments=["#"], dtype=float, usecols=None):
     def iter_func():
         for _ in range(skiprows):
             next(infile)
@@ -52,7 +50,7 @@ def iter_loadtxt(
             line = line.decode("utf-8").strip()
             if line.startswith(comments):
                 continue
-            items = line.split(delimiter)
+            items = line.split()
             usecols_ = range(len(items)) if usecols is None else usecols
             for idx in usecols_:
                 yield dtype(items[idx])
