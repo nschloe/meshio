@@ -220,7 +220,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         cells.append((key, values))
         if physical_tag:
             if "gmsh:physical" not in cell_data:
-                cell_data["gmsh:physical"] = {}
+                cell_data["gmsh:physical"] = []
             cell_data["gmsh:physical"].append(
                 (key, physical_tag[0] * numpy.ones(len(values), int))
             )
