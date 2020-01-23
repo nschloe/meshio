@@ -64,6 +64,7 @@ def read_buffer(f):
 
 
 def write(filename, mesh):
+
     for c in mesh.cells:
         if c.type not in ["triangle", "quad"]:
             raise WriteError(
@@ -78,12 +79,12 @@ def write(filename, mesh):
         )
         for p in mesh.points:
             f.write("v {} {} {}\n".format(p[0], p[1], p[2]))
-        if "triangle" in mesh.cells:
-            for c in mesh.cells["triangle"]:
-                f.write("f {} {} {}\n".format(*(c + 1)))
-        if "quad" in mesh.cells:
-            for c in mesh.cells["quad"]:
-                f.write("f {} {} {} {}\n".format(*(c + 1)))
+        for cell_type, cell_array in mesh.cells:
+            fmt = "f {} {} {}"
+            if cell_type == "quad":
+                fmt += " {}"
+            for c in cell_array:
+                f.write(f"{fmt}\n".format(*(c + 1)))
 
 
 register("obj", [".obj"], read, {"obj": write})
