@@ -244,7 +244,7 @@ def _translate_zones(points, cells):
         det = slicing_summing(tmp[1] - tmp[0], tmp[2] - tmp[0], tmp[3] - tmp[0])
         # Reorder corner points
         data = numpy.where(
-            (det > 0)[:,None],
+            (det > 0)[:, None],
             idx[:, meshio_to_flac3d_order[key]],
             idx[:, meshio_to_flac3d_order_2[key]],
         )
@@ -275,13 +275,12 @@ def _translate_zgroups(cells, cell_data, field_data):
 
     num_cells = sum(len(c.data) for c in cells)
     zone_data = (
-        numpy.concatenate(cell_data[mat_data]) if mat_data
+        numpy.concatenate(cell_data[mat_data])
+        if mat_data
         else numpy.zeros(num_cells, dtype=int)
     )
 
-    zgroups = {
-        k: numpy.nonzero(zone_data == k)[0] + 1 for k in numpy.unique(zone_data)
-    }
+    zgroups = {k: numpy.nonzero(zone_data == k)[0] + 1 for k in numpy.unique(zone_data)}
 
     labels = {k: str(k) for k in zgroups.keys()}
     labels[0] = "None"
