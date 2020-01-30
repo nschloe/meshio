@@ -3,7 +3,6 @@ I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2+), cf.
 <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 """
 import logging
-import struct
 from functools import partial
 
 import numpy
@@ -12,7 +11,9 @@ from .._common import cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._mesh import Cells, Mesh
 from .common import (
+    _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
+    _meshio_to_gmsh_order,
     _meshio_to_gmsh_type,
     _read_data,
     _read_physical_names,
@@ -222,16 +223,9 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
             if "gmsh:physical" not in cell_data:
                 cell_data["gmsh:physical"] = []
             cell_data["gmsh:physical"].append(
-                (key, physical_tag[0] * numpy.ones(len(values), int))
+                physical_tag[0] * numpy.ones(len(values), int)
             )
-
-    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
-    if "tetra10" in cells:
-        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
-    if "hexahedron20" in cells:
-        cells["hexahedron20"] = cells["hexahedron20"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16, 9, 17, 10, 18, 19, 12, 15, 13, 14]
-        ]
+    cells[:] = _gmsh_to_meshio_order(cells)
 
     return cells, cell_data
 
@@ -289,14 +283,7 @@ def write4_1(filename, mesh, binary=True):
                 )
                 mesh.cells[k] = Cells(key, value.astype(c_size_t))
 
-    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
-    cells = mesh.cells.copy()
-    if "tetra10" in cells:
-        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
-    if "hexahedron20" in cells:
-        cells["hexahedron20"] = cells["hexahedron20"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 14, 15]
-        ]
+    cells = _meshio_to_gmsh_order(mesh.cells)
 
     with open(filename, "wb") as fh:
         file_type = 1 if binary else 0
@@ -304,7 +291,7 @@ def write4_1(filename, mesh, binary=True):
         fh.write(b"$MeshFormat\n")
         fh.write(f"4.1 {file_type} {data_size}\n".encode("utf-8"))
         if binary:
-            fh.write(struct.pack("i", 1))
+            numpy.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
         fh.write(b"$EndMeshFormat\n")
 
@@ -365,7 +352,7 @@ def _write_nodes(fh, points, cells, binary):
     # TODO Not sure what to do if there are multiple element types present.
     if len(cells) != 1:
         raise WriteError("Can only deal with one cell type for now")
-    dim_entity = _geometric_dimension[cells[0].type]
+    dim_entity = _geometric_dimension[cells[0][0]]
     entity_tag = 0
 
     # write all points as one big block
@@ -426,7 +413,7 @@ def _write_elements(fh, cells, binary):
     """
     fh.write(b"$Elements\n")
 
-    total_num_cells = sum(len(c.data) for c in cells)
+    total_num_cells = sum(len(c) for _, c in cells)
     num_blocks = len(cells)
     min_element_tag = 1
     max_element_tag = total_num_cells
