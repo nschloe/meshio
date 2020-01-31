@@ -39,7 +39,5 @@ def test_reference_file():
     ]
     assert [(k, len(v)) for k, v in mesh.cells] == ref_num_cells
     # Cell data
-    ref_sum_cell_data = {"tetra": 9, "pyramid": 36, "wedge": 54, "hexahedron": 171}
-    assert {
-        k: v["flac3d:zone"].sum() for k, v in mesh.cell_data.items()
-    } == ref_sum_cell_data
+    ref_sum_cell_data = [45, 9, 18, 9, 6, 3, 6, 3, 6, 3]
+    assert [len(arr) for arr in mesh.cell_data["flac3d:zone"]] == ref_sum_cell_data

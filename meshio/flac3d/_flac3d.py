@@ -95,7 +95,7 @@ def read_buffer(f):
 
     pidx = 0
     zidx = 0
-    count = {k: 0 for k in flac3d_to_meshio_order.keys()}
+    count = 0
     line = f.readline()
     while line:
         line = line.rstrip().split()
@@ -111,8 +111,8 @@ def read_buffer(f):
                 cells[-1][1].append(cell)
             else:
                 cells.append((cell_type, [cell]))
-            mapper[cid] = [count[cell_type], len(cell)]
-            count[cell_type] += 1
+            mapper[cid] = [count]
+            count += 1
         elif line[0] == "ZGROUP":
             name, data, slot = _read_zgroup(f, line)
             zidx += 1
@@ -125,9 +125,11 @@ def read_buffer(f):
         line = f.readline()
 
     if zidx:
-        cell_data = {k: {"flac3d:zone": numpy.zeros(v)} for k, v in count.items() if v}
-        for i, numnodes, zid in mapper.values():
-            cell_data[numnodes_to_meshio_type[numnodes]]["flac3d:zone"][i] = zid
+        n_cells = numpy.cumsum([len(c[1]) for c in cells])
+        cell_data = numpy.empty(n_cells[-1])
+        for cid, zid in mapper.values():
+            cell_data[cid] = zid
+        cell_data = {"flac3d:zone": numpy.split(cell_data, n_cells[:-1])}
     else:
         cell_data = {}
 
@@ -194,9 +196,7 @@ def write(filename, mesh):
         _write_cells(f, mesh.points, mesh.cells)
 
         if mesh.cell_data:
-            if {kk for v in mesh.cell_data.values() for kk in v.keys()}.intersection(
-                meshio_data
-            ):
+            if set(list(mesh.cell_data)).intersection(meshio_data):
                 f.write("* ZONE GROUPS\n")
                 _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
 
@@ -214,8 +214,7 @@ def _write_cells(f, points, cells):
     """
     zones = _translate_zones(points, cells)
     i = 1
-    for meshio_type, zone in zones.items():
-        meshio_type = meshio_only[meshio_type]
+    for meshio_type, zone in zones:
         fmt = "Z {} {} " + " ".join(["{}"] * zone.shape[1]) + "\n"
         for entry in zone + 1:
             f.write(fmt.format(meshio_to_flac3d_type[meshio_type], i, *entry))
@@ -234,7 +233,7 @@ def _translate_zones(points, cells):
         c2 = b[:, 0] * c[:, 1] - b[:, 1] * c[:, 0]
         return a[:, 0] * c0 + a[:, 1] * c1 + a[:, 2] * c2
 
-    zones = {}
+    zones = []
     for key, idx in cells:
         if key not in meshio_only.keys():
             continue
@@ -244,9 +243,12 @@ def _translate_zones(points, cells):
         tmp = points[idx[:, meshio_to_flac3d_order[key][:4]].T]
         det = slicing_summing(tmp[1] - tmp[0], tmp[2] - tmp[0], tmp[3] - tmp[0])
         # Reorder corner points
-        zones[key] = numpy.empty((len(idx), meshio_type_to_numnodes[key]), dtype=int)
-        zones[key][det > 0] = idx[:, meshio_to_flac3d_order[key]][det > 0]
-        zones[key][det <= 0] = idx[:, meshio_to_flac3d_order_2[key]][det <= 0]
+        data = numpy.where(
+            (det > 0)[:, None],
+            idx[:, meshio_to_flac3d_order[key]],
+            idx[:, meshio_to_flac3d_order_2[key]],
+        )
+        zones.append((key, data))
 
     return zones
 
@@ -265,23 +267,20 @@ def _translate_zgroups(cells, cell_data, field_data):
     """
     Convert meshio cell_data to FLAC3D zone groups.
     """
-    n_cells = sum([len(v) for k, v in cells.items() if k in meshio_only.keys()])
-    zone_data = numpy.zeros(n_cells, dtype=numpy.int32)
-    idx = 0
-    for k, v in cells.items():
-        if k in meshio_only.keys():
-            if k in cell_data.keys():
-                for kk, vv in cell_data[k].items():
-                    if kk in meshio_data:
-                        zone_data[idx : idx + len(vv)] = vv
-                idx += len(v)
+    mat_data = None
+    for k in cell_data.keys():
+        if k in meshio_data:
+            mat_data = k
+            break
 
-    zgroups = {}
-    for zid, i in enumerate(zone_data):
-        if i in zgroups.keys():
-            zgroups[i].append(zid + 1)
-        else:
-            zgroups[i] = [zid + 1]
+    num_cells = sum(len(c.data) for c in cells)
+    zone_data = (
+        numpy.concatenate(cell_data[mat_data])
+        if mat_data
+        else numpy.zeros(num_cells, dtype=int)
+    )
+
+    zgroups = {k: numpy.nonzero(zone_data == k)[0] + 1 for k in numpy.unique(zone_data)}
 
     labels = {k: str(k) for k in zgroups.keys()}
     labels[0] = "None"
@@ -295,11 +294,10 @@ def _write_zgroup(f, data, ncol=20):
     Write zone group data.
     """
     nrow = len(data) // ncol
-    lines = numpy.reshape(data[: nrow * ncol], (nrow, ncol)).tolist()
-    if data[nrow * ncol :]:
-        lines.append(data[nrow * ncol :])
+    lines = numpy.split(data, numpy.full(nrow, ncol).cumsum())
     for line in lines:
-        f.write(" {}\n".format(" ".join([str(l) for l in line])))
+        if len(line):
+            f.write(" {}\n".format(" ".join([str(l) for l in line])))
 
 
 register("flac3d", [".f3grid"], read, {"flac3d": write})
