@@ -136,6 +136,44 @@ _gmsh_to_meshio_type = {
 _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
 
 
+def _reorder_cells(cells, ordering):
+    cells = cells[:]
+    for i, (cell_type, cell_data) in enumerate(cells):
+        permutation = ordering.get(cell_type)
+        if permutation is not None:
+            cell_data = cell_data[:, permutation]
+            cells[i] = (cell_type, cell_data)
+    return cells
+
+
+def _gmsh_to_meshio_order(cells):
+    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
+    meshio_ordering = {
+        # fmt: off
+        "tetra10": [0, 1, 2, 3, 4, 5, 6, 7, 9, 8],
+        "hexahedron20": [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16,
+            9, 17, 10, 18, 19, 12, 15, 13, 14
+        ],
+        # fmt: on
+    }
+    return _reorder_cells(cells, meshio_ordering)
+
+
+def _meshio_to_gmsh_order(cells):
+    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
+    gmsh_ordering = {
+        # fmt: off
+        "tetra10": [0, 1, 2, 3, 4, 5, 6, 7, 9, 8],
+        "hexahedron20": [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13,
+            9, 16, 18, 19, 17, 10, 12, 14, 15,
+        ],
+        # fmt: on
+    }
+    return _reorder_cells(cells, gmsh_ordering)
+
+
 def _write_physical_names(fh, field_data):
     # Write physical names
     entries = []
