@@ -311,12 +311,7 @@ class XdmfReader:
 
 class XdmfWriter:
     def __init__(
-        self,
-        filename,
-        mesh,
-        data_format="HDF",
-        compression=None,
-        compression_opts=None,
+        self, filename, mesh, data_format="HDF", compression=None, compression_opts=None
     ):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
@@ -438,14 +433,16 @@ class XdmfWriter:
                 NumberOfElements=str(total_num_cells),
             )
             total_num_cell_items = sum(numpy.prod(c.data.shape) for c in cells)
-            num_lines = sum(c.data.shape[0] for c in cells if c.type == "line")
-            dim = str(total_num_cell_items + total_num_cells + num_lines)
+            num_vertices_and_lines = sum(
+                c.data.shape[0] for c in cells if c.type in {"vertex", "line"}
+            )
+            dim = str(total_num_cell_items + total_num_cells + num_vertices_and_lines)
             cd = numpy.concatenate(
                 [
                     numpy.hstack(
                         [
                             numpy.full(
-                                (value.shape[0], 2 if key == "line" else 1),
+                                (value.shape[0], 2 if key in {"vertex", "line"} else 1),
                                 meshio_type_to_xdmf_index[key],
                             ),
                             value,
