@@ -3,7 +3,6 @@ I/O for Gmsh's msh format (version 4.0, as used by Gmsh 4.1.5), cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
 import logging
-import struct
 from functools import partial
 
 import numpy
@@ -12,7 +11,9 @@ from .._common import cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._mesh import Cells, Mesh
 from .common import (
+    _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
+    _meshio_to_gmsh_order,
     _meshio_to_gmsh_type,
     _read_data,
     _read_physical_names,
@@ -101,7 +102,7 @@ def _read_entities(f, is_ascii, data_size):
     for d, n in enumerate(number):
         for _ in range(n):
             tag = int(fromfile(f, c_int, 1)[0])
-            fromfile(f, c_double, 6)  # discard boxMinX…boxMaxZ
+            fromfile(f, c_double, 6)  # discard boxMinX...boxMaxZ
             num_physicals = int(fromfile(f, c_ulong, 1)[0])
             physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
@@ -216,14 +217,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
             cell_data["gmsh:physical"].append(
                 physical_tag[0] * numpy.ones(len(values), int)
             )
-
-    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
-    if "tetra10" in cells:
-        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
-    if "hexahedron20" in cells:
-        cells["hexahedron20"] = cells["hexahedron20"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16, 9, 17, 10, 18, 19, 12, 15, 13, 14]
-        ]
+    cells[:] = _gmsh_to_meshio_order(cells)
 
     return cells, cell_data
 
@@ -286,21 +280,14 @@ def write(filename, mesh, binary=True):
                 )
                 mesh.cells[k] = Cells(key, numpy.array(value, dtype=c_int))
 
-    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
-    cells = mesh.cells.copy()
-    if "tetra10" in cells:
-        cells["tetra10"] = cells["tetra10"][:, [0, 1, 2, 3, 4, 5, 6, 7, 9, 8]]
-    if "hexahedron20" in cells:
-        cells["hexahedron20"] = cells["hexahedron20"][
-            :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 14, 15]
-        ]
+    cells = _meshio_to_gmsh_order(mesh.cells)
 
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
         fh.write((f"$MeshFormat\n4.0 {mode_idx} {size_of_double}\n").encode("utf-8"))
         if binary:
-            fh.write(struct.pack("i", 1))
+            numpy.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
         fh.write(b"$EndMeshFormat\n")
 
