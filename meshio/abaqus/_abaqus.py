@@ -32,6 +32,7 @@ abaqus_to_meshio_type = {
     "B33H": "line3",
     # surfaces
     "CPS4": "quad",
+    "CPS4R": "quad",
     "S4": "quad",
     "S4R": "quad",
     "S4RS": "quad",
@@ -158,7 +159,7 @@ def _read_nodes(f):
     index = 0
     while True:
         line = f.readline()
-        if line.startswith("*"):
+        if not line or line.startswith("*"):
             break
         if line.strip() == "":
             continue
@@ -188,7 +189,7 @@ def _read_cells(f, line0, point_ids):
     cells, idx = [], []
     while True:
         line = f.readline()
-        if line.startswith("*"):
+        if not line or line.startswith("*"):
             break
         if line.strip() == "":
             continue
@@ -222,7 +223,7 @@ def get_param_map(word, required_keys=None):
     param_map = {}
     for wordi in words:
         if "=" not in wordi:
-            key = wordi.strip()
+            key = wordi.strip().upper()
             value = None
         else:
             sword = wordi.split("=")
@@ -245,17 +246,17 @@ def _read_set(f, params_map):
     set_ids = []
     while True:
         line = f.readline()
-        if line.startswith("*"):
+        if not line or line.startswith("*"):
             break
         if line.strip() == "":
             continue
 
         set_ids += [int(k) for k in line.strip().strip(",").split(",")]
 
-    if "generate" in params_map:
+    if "GENERATE" in params_map:
         if len(set_ids) != 3:
             raise ReadError(set_ids)
-        set_ids = numpy.arange(set_ids[0], set_ids[1], set_ids[2])
+        set_ids = numpy.arange(set_ids[0], set_ids[1] + 1, set_ids[2])
     else:
         try:
             set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
