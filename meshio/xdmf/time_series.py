@@ -1,4 +1,5 @@
 import os
+import warnings
 import xml.etree.ElementTree as ET
 from io import BytesIO
 
@@ -6,6 +7,7 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
+from .._mesh import Cells
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -359,6 +361,15 @@ class TimeSeriesWriter:
         data_item.text = self.numpy_to_xml_string(points)
 
     def cells(self, cells, grid):
+        if isinstance(cells, dict):
+            warnings.warn(
+                "cell dictionaries are deprecated, use list of tuples, e.g., "
+                '[("triangle", [[0, 1, 2], ...])]',
+                DeprecationWarning,
+            )
+            cells = [Cells(cell_type, data) for cell_type, data in cells.items()]
+        else:
+            cells = [Cells(cell_type, data) for cell_type, data in cells]
         if len(cells) == 1:
             meshio_type = cells[0].type
             num_cells = len(cells[0].data)
