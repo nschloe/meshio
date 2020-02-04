@@ -132,7 +132,7 @@ def write(filename, mesh):
             "hexahedron": ("Hexahedra", 8),
         }
 
-        for key, data in mesh.cells:
+        for icg, (key, data) in enumerate(mesh.cells):
             try:
                 medit_name, num = medit_from_meshio[key]
             except KeyError:
@@ -145,16 +145,16 @@ def write(filename, mesh):
             fh.write(f"{medit_name}\n".encode("utf-8"))
             fh.write("{}\n".format(len(data)).encode("utf-8"))
 
-            if key in mesh.cell_data and "medit:ref" in mesh.cell_data[key]:
-                labels = mesh.cell_data[key]["medit:ref"]
-            elif key in mesh.cell_data and "gmsh:physical" in mesh.cell_data[key]:
+            if "medit:ref" in mesh.cell_data:
+                labels = mesh.cell_data["medit:ref"][icg]
+            elif "gmsh:physical" in mesh.cell_data:
                 # Translating gmsh data to medit is an important case, so treat it
                 # explicitly here.
-                labels = mesh.cell_data[key]["gmsh:physical"]
-            elif key in mesh.cell_data and "flac3d:zone" in mesh.cell_data[key]:
-                labels = mesh.cell_data[key]["flac3d:zone"]
-            elif key in mesh.cell_data and "avsucd:material" in mesh.cell_data[key]:
-                labels = mesh.cell_data[key]["avsucd:material"]
+                labels = mesh.cell_data["gmsh:physical"][icg]
+            elif "flac3d:zone" in mesh.cell_data:
+                labels = mesh.cell_data["flac3d:zone"][icg]
+            elif "avsucd:material" in mesh.cell_data:
+                labels = mesh.cell_data["avsucd:material"][icg]
             else:
                 labels = numpy.ones(len(data), dtype=int)
 
