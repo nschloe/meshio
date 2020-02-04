@@ -277,7 +277,7 @@ def write(filename, mesh, translate_cell_names=True):
         f.write("Abaqus DataFile Version 6.14\n")
         f.write("written by meshio v{}\n".format(__version__))
         f.write("*Node\n")
-        fmt = ", ".join(["{}"] + ["{!r}"] * mesh.points.shape[1]) + "\n"
+        fmt = ", ".join(["{}"] + ["{:.17g}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):
             f.write(fmt.format(k + 1, *x))
         eid = 0
