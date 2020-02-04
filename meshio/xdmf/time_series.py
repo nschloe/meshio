@@ -263,7 +263,8 @@ class TimeSeriesWriter:
         return self
 
     def __exit__(self, *args):
-        self.h5_file.close()
+        if self.data_format == "HDF":
+            self.h5_file.close()
 
     def write_points_cells(self, points, cells):
         # <Grid Name="mesh" GridType="Uniform">
