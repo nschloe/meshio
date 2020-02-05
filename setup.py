@@ -23,7 +23,7 @@ setup(
     author=about["__original_author__"],
     author_email=about["__original_author_email__"],
     packages=find_packages(),
-    description="I/O for various mesh formats",
+    description="I/O for many mesh formats",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/nschloe/meshio",
