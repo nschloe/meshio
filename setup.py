@@ -46,6 +46,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering",
     ],
+    data_files=[("paraview-plugins", ["tools/paraview-meshio-plugin.py"])],
     entry_points={
         "console_scripts": [
             "meshio-convert = meshio._cli:convert",
