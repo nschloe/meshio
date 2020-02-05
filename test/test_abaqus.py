@@ -28,15 +28,15 @@ def test(mesh):
     helpers.write_read(writer, meshio.abaqus.read, mesh, 1.0e-15)
 
 
-@pytest.mark.parametrize("filename, ref_sum, ref_num_cells", [("UUea.inp", 4950.0, 50)])
-@pytest.mark.parametrize("binary", [False, True])
-def test_reference_file(filename, ref_sum, ref_num_cells, binary):
+@pytest.mark.parametrize(
+    "filename, ref_sum, ref_num_cells, ref_num_cell_sets",
+    [("UUea.inp", 4950.0, 50, 10), ("nle1xf3c.inp", 32.215275528, 12, 2)],
+)
+def test_reference_file(filename, ref_sum, ref_num_cells, ref_num_cell_sets):
     this_dir = os.path.dirname(os.path.abspath(__file__))
     filename = os.path.join(this_dir, "meshes", "abaqus", filename)
     mesh = meshio.read(filename)
-    tol = 1.0e-2
-    s = numpy.sum(mesh.points)
-    assert abs(s - ref_sum) < tol * abs(ref_sum)
-    for cells in mesh.cells:
-        if cells.type == "quad":
-            assert len(cells.data) == ref_num_cells
+
+    assert numpy.isclose(numpy.sum(mesh.points), ref_sum)
+    assert sum([len(cells.data) for cells in mesh.cells]) == ref_num_cells
+    assert len(mesh.cell_sets) == ref_num_cell_sets
