@@ -169,7 +169,7 @@ def write(filename, mesh):
         num_cell_data = [
             1 if vv.ndim == 1 else vv.shape[1]
             for k, v in mesh.cell_data.items()
-            for vv in v.values()
+            for vv in v
             if k not in meshio_data
         ]
         num_node_data_sum = sum(num_node_data)
@@ -212,7 +212,7 @@ def _write_cells(f, cells, cell_data, num_cells):
 
     # Material array
     if mat_data:
-        material = numpy.concatenate([v for v in cell_data[mat_data].values()])
+        material = numpy.concatenate(cell_data[mat_data])
     else:
         material = numpy.zeros(num_cells, dtype=int)
 
@@ -251,16 +251,11 @@ def _write_cell_data(f, cell_data, num_cells, num_cell_data, num_cell_data_sum):
         if label not in meshio_data:
             f.write(f"{label}, real\n")
 
-    cell_data_array = numpy.hstack(
-        [
-            vv[:, None] if vv.ndim == 1 else vv
-            for k, v in cell_data.items()
-            for vv in v.values()
-            if k not in meshio_data
-        ]
+    cell_data_array = numpy.column_stack(
+        [numpy.concatenate(v) for k, v in cell_data.items() if k not in meshio_data]
     )
-    cell_data_array = numpy.hstack(
-        (numpy.arange(1, num_cells + 1)[:, None], cell_data_array)
+    cell_data_array = numpy.column_stack(
+        (numpy.arange(1, num_cells + 1), cell_data_array)
     )
     numpy.savetxt(
         f, cell_data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_cell_data_sum
