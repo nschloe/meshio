@@ -109,7 +109,7 @@ def _read_cells(f, num_cells, point_ids):
 
     # Convert to numpy arrays
     for k, c in enumerate(cells):
-        cells[k] = Cells(c.type, numpy.array(c.data)[:,avsucd_to_meshio_order[c.type]])
+        cells[k] = Cells(c.type, numpy.array(c.data)[:, avsucd_to_meshio_order[c.type]])
         cell_data["avsucd:material"][k] = numpy.array(cell_data["avsucd:material"][k])
     return cell_ids, cells, cell_data
 
@@ -185,9 +185,7 @@ def write(filename, mesh):
         # Write node data
         if num_node_data_sum:
             labels = mesh.point_data.keys()
-            data_array = numpy.column_stack([
-                v for v in mesh.point_data.values()
-            ])
+            data_array = numpy.column_stack([v for v in mesh.point_data.values()])
             _write_data(
                 f, labels, data_array, num_nodes, num_node_data, num_node_data_sum
             )
@@ -195,11 +193,13 @@ def write(filename, mesh):
         # Write cell data
         if num_cell_data_sum:
             labels = [k for k in mesh.cell_data.keys() if k not in meshio_data]
-            data_array = numpy.column_stack([
-                numpy.concatenate(v)
-                for k, v in mesh.cell_data.items()
-                if k not in meshio_data
-            ])
+            data_array = numpy.column_stack(
+                [
+                    numpy.concatenate(v)
+                    for k, v in mesh.cell_data.items()
+                    if k not in meshio_data
+                ]
+            )
             _write_data(
                 f, labels, data_array, num_cells, num_cell_data, num_cell_data_sum
             )
@@ -227,7 +227,7 @@ def _write_cells(f, cells, cell_data, num_cells):
     # Loop over cells
     i = 0
     for k, v in cells:
-        for cell in v[:,meshio_to_avsucd_order[k]]:
+        for cell in v[:, meshio_to_avsucd_order[k]]:
             cell_str = " ".join(str(c + 1) for c in cell)
             f.write(f"{i+1} {int(material[i])} {meshio_to_avsucd_type[k]} {cell_str}\n")
             i += 1
@@ -240,12 +240,8 @@ def _write_data(f, labels, data_array, num_entities, num_data, num_data_sum):
     for label in labels:
         f.write(f"{label}, real\n")
 
-    data_array = numpy.column_stack(
-        (numpy.arange(1, num_entities + 1), data_array)
-    )
-    numpy.savetxt(
-        f, data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_data_sum
-    )
+    data_array = numpy.column_stack((numpy.arange(1, num_entities + 1), data_array))
+    numpy.savetxt(f, data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_data_sum)
 
 
 register("avsucd", [], read, {"avsucd": write})
