@@ -53,6 +53,9 @@ class Mesh:
         if self.point_sets:
             lines.append("  Point sets: {}".format(", ".join(self.point_sets.keys())))
 
+        if self.cell_sets:
+            lines.append("  Cell sets: {}".format(", ".join(self.cell_sets.keys())))
+
         if self.point_data:
             lines.append("  Point data: {}".format(", ".join(self.point_data.keys())))
 

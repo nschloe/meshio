@@ -103,6 +103,7 @@ def read(filename):
 def read_buffer(f):
     # Initialize the optional data fields
     cells = []
+    cell_ids = []
     point_sets = {}
     cell_sets = {}
     field_data = {}
@@ -119,26 +120,31 @@ def read_buffer(f):
             line = f.readline()
             continue
 
-        keyword = line.strip("*")
-        if keyword.upper().startswith("NODE"):
+        keyword = line.partition(",")[0].strip().replace("*", "").upper()
+        if keyword == "NODE":
             points, point_ids, line = _read_nodes(f)
-        elif keyword.upper().startswith("ELEMENT"):
-            key, idx, line = _read_cells(f, keyword, point_ids)
-            cells.append(Cells(key, idx))
-        elif keyword.upper().startswith("NSET"):
-            params_map = get_param_map(keyword, required_keys=["NSET"])
+        elif keyword == "ELEMENT":
+            cell_type, cells_data, ids, line = _read_cells(f, line, point_ids)
+            cells.append(Cells(cell_type, cells_data))
+            cell_ids.append(ids)
+        elif keyword == "NSET":
+            params_map = get_param_map(line, required_keys=["NSET"])
             set_ids, line = _read_set(f, params_map)
             name = params_map["NSET"]
             point_sets[name] = numpy.array(
                 [point_ids[point_id] for point_id in set_ids], dtype="int32"
             )
-        elif keyword.upper().startswith("ELSET"):
-            params_map = get_param_map(keyword, required_keys=["ELSET"])
-            setids, line = _read_set(f, params_map)
+        elif keyword == "ELSET":
+            params_map = get_param_map(line, required_keys=["ELSET"])
+            set_ids, line = _read_set(f, params_map)
             name = params_map["ELSET"]
-            if name not in cell_sets:
-                cell_sets[name] = []
-            cell_sets[name].append(setids - 1)
+            cell_sets[name] = []
+            for cell_ids_ in cell_ids:
+                cell_sets_ = numpy.array(
+                    [cell_ids_[set_id] for set_id in set_ids if set_id in cell_ids_],
+                    dtype="int32",
+                )
+                cell_sets[name].append(cell_sets_)
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
@@ -157,7 +163,7 @@ def read_buffer(f):
 def _read_nodes(f):
     points = []
     point_ids = {}
-    index = 0
+    counter = 0
     while True:
         line = f.readline()
         if not line or line.startswith("*"):
@@ -167,9 +173,9 @@ def _read_nodes(f):
 
         line = line.strip().split(",")
         point_id, coords = line[0], line[1:]
-        point_ids[int(point_id)] = index
+        point_ids[int(point_id)] = counter
         points.append([float(x) for x in coords])
-        index += 1
+        counter += 1
 
     return numpy.array(points, dtype=float), point_ids, line
 
@@ -188,6 +194,8 @@ def _read_cells(f, line0, point_ids):
     cell_type = abaqus_to_meshio_type[etype]
 
     cells, idx = [], []
+    cell_ids = {}
+    counter = 0
     while True:
         line = f.readline()
         if not line or line.startswith("*"):
@@ -198,10 +206,11 @@ def _read_cells(f, line0, point_ids):
         line = line.strip()
         idx += [int(k) for k in filter(None, line.split(","))]
         if not line.endswith(","):
-            # the first item is just a running index
+            cell_ids[idx[0]] = counter
             cells.append([point_ids[k] for k in idx[1:]])
             idx = []
-    return cell_type, numpy.array(cells), line
+            counter += 1
+    return cell_type, numpy.array(cells), cell_ids, line
 
 
 def get_param_map(word, required_keys=None):
@@ -254,15 +263,11 @@ def _read_set(f, params_map):
 
         set_ids += [int(k) for k in line.strip().strip(",").split(",")]
 
+    set_ids = numpy.array(set_ids, dtype="int32")
     if "GENERATE" in params_map:
         if len(set_ids) != 3:
             raise ReadError(set_ids)
-        set_ids = numpy.arange(set_ids[0], set_ids[1] + 1, set_ids[2])
-    else:
-        try:
-            set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
-        except ValueError:
-            raise ReadError(set_ids)
+        set_ids = numpy.arange(set_ids[0], set_ids[1] + 1, set_ids[2], dtype="int32")
     return set_ids, line
 
 
