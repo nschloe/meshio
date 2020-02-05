@@ -141,8 +141,8 @@ def read(filename):  # noqa: C901
         # elif key == "eb_names":
         #     value.set_auto_mask(False)
         #     eb_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-        elif key == "node_ns":
-            ns = value
+        elif key.startswith("node_ns"):  # Expected keys: node_ns1, node_ns2
+            ns.append(value[:] - 1)  # Exodus is 1-based
 
     # merge element block data; can't handle blocks yet
     for k, value in cd.items():
