@@ -126,15 +126,18 @@ with meshio.xdmf.TimeSeriesReader(filename) as reader:
 
 ### ParaView plugin
 
+<img alt="gmsh paraview" src="https://nschloe.github.io/meshio/gmsh-paraview.png" width="60%">
+_A Gmsh file opened with ParaView._
+
 If you have downloaded a binary version of ParaView, you may proceed as follows.
 
  * Make sure that ParaView uses a Python version that supports meshio. (That is at least
    Python 3.)
  * Install meshio
  * Open ParaView
- * Find the file `paraview-meshio-plugin.py` of your meshio installation and load it
-   under _Tools / Manage Plugins / Load New_
- * (_Optional:_ Activate _Auto Load_)
+ * Find the file `paraview-meshio-plugin.py` of your meshio installation (on Linux:
+   `~/.local/paraview-plugins/`) and load it under _Tools / Manage Plugins / Load New_
+ * _Optional:_ Activate _Auto Load_
 
 You can now open all meshio-supported files in ParaView.
 
