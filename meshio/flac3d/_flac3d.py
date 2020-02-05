@@ -125,7 +125,7 @@ def read_buffer(f):
 
     if zidx:
         n_cells = numpy.cumsum([len(c[1]) for c in cells])
-        cell_data = numpy.empty(n_cells[-1])
+        cell_data = numpy.empty(n_cells[-1], dtype=int)
         for cid, zid in mapper.values():
             cell_data[cid] = zid
         cell_data = {"flac3d:zone": numpy.split(cell_data, n_cells[:-1])}
