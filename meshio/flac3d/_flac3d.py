@@ -96,9 +96,8 @@ def read_buffer(f):
     pidx = 0
     zidx = 0
     count = 0
-    line = f.readline()
+    line = f.readline().rstrip().split()
     while line:
-        line = line.rstrip().split()
         if line[0] == "G":
             pid, point = _read_point(line)
             points.append(point)
@@ -122,7 +121,7 @@ def read_buffer(f):
             slots.add(slot)
             if len(slots) > 1:
                 raise ReadError("Multiple slots are not supported")
-        line = f.readline()
+        line = f.readline().rstrip().split()
 
     if zidx:
         n_cells = numpy.cumsum([len(c[1]) for c in cells])
