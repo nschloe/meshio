@@ -172,9 +172,7 @@ def write(filename, mesh):
         ]
         num_node_data_sum = sum(num_node_data)
         num_cell_data_sum = sum(num_cell_data)
-        f.write(
-            f"{num_nodes} {num_cells} {num_node_data_sum} {num_cell_data_sum} 0\n"
-        )
+        f.write(f"{num_nodes} {num_cells} {num_node_data_sum} {num_cell_data_sum} 0\n")
 
         # Write nodes
         _write_nodes(f, mesh.points)
