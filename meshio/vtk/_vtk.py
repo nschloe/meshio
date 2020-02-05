@@ -7,7 +7,7 @@ from functools import reduce
 import numpy
 
 from ..__about__ import __version__
-from .._common import meshio_to_vtk_type, raw_from_cell_data, vtk_to_meshio_type
+from .._common import meshio_to_vtk_type, vtk_to_meshio_type
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
@@ -629,10 +629,10 @@ def write(filename, mesh, binary=True):
             _write_field_data(f, mesh.point_data, binary)
 
         # write cell data
-        for name, data in mesh.cell_data.items():
-            total_num_cells = sum([len(c) for c in data])
+        if mesh.cell_data:
+            total_num_cells = sum(len(c.data) for c in mesh.cells)
             f.write(f"CELL_DATA {total_num_cells}\n".encode("utf-8"))
-            _write_field_data(f, raw_from_cell_data(mesh.cell_data), binary)
+            _write_field_data(f, mesh.cell_data, binary)
 
 
 def _write_points(f, points, binary):
@@ -699,6 +699,8 @@ def _write_cells(f, cells, binary):
 def _write_field_data(f, data, binary):
     f.write(("FIELD FieldData {}\n".format(len(data))).encode("utf-8"))
     for name, values in data.items():
+        if isinstance(values, list):
+            values = numpy.concatenate(values)
         if len(values.shape) == 1:
             num_tuples = values.shape[0]
             num_components = 1
