@@ -26,6 +26,24 @@ meshio_to_avsucd_type = {
 avsucd_to_meshio_type = {v: k for k, v in meshio_to_avsucd_type.items()}
 
 
+meshio_to_avsucd_order = {
+    "vertex": [0],
+    "line": [0, 1],
+    "triangle": [0, 1, 2],
+    "quad": [0, 1, 2, 3],
+    "tetra": [0, 1, 3, 2],
+    "pyramid": [4, 0, 1, 2, 3],
+    "wedge": [3, 4, 5, 0, 1, 2],
+    "hexahedron": [4, 5, 6, 7, 0, 1, 2, 3],
+}
+
+
+avsucd_to_meshio_order = {
+    k: (v if k != "pyramid" else [1, 2, 3, 4, 0])
+    for k, v in meshio_to_avsucd_order.items()
+}
+
+
 def read(filename):
     with open_file(filename, "r") as f:
         out = read_buffer(f)
@@ -85,9 +103,9 @@ def _read_cells(f, num_cells, point_ids):
         cell_ids[cell_id] = (cell_type, count[cell_type])
         count[cell_type] += 1
 
-    # convert to numpy arrays
+    # Convert to numpy arrays
     for k, c in enumerate(cells):
-        cells[k] = Cells(c.type, numpy.array(c.data))
+        cells[k] = Cells(c.type, numpy.array(c.data)[:,avsucd_to_meshio_order[c.type]])
         cell_data["avsucd:material"][k] = numpy.array(cell_data["avsucd:material"][k])
     return cell_ids, cells, cell_data
 
@@ -219,7 +237,7 @@ def _write_cells(f, cells, cell_data, num_cells):
     # Loop over cells
     i = 0
     for k, v in cells:
-        for cell in v:
+        for cell in v[:,meshio_to_avsucd_order[k]]:
             cell_str = " ".join(str(c + 1) for c in cell)
             f.write(f"{i+1} {int(material[i])} {meshio_to_avsucd_type[k]} {cell_str}\n")
             i += 1
