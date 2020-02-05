@@ -1,5 +1,6 @@
-import meshio
 import numpy as np
+
+import meshio
 from paraview.util.vtkAlgorithm import (
     VTKPythonAlgorithmBase,
     smdomain,
