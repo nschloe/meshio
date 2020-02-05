@@ -75,13 +75,21 @@ def write_points_cells(
     point_data=None,
     cell_data=None,
     field_data=None,
+    point_sets=None,
+    cell_sets=None,
     file_format=None,
     **kwargs,
 ):
     points = numpy.asarray(points)
     cells = [(key, numpy.asarray(value)) for key, value in cells]
     mesh = Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        field_data=field_data,
+        point_sets=point_sets,
+        cell_sets=cell_sets,
     )
     return write(filename, mesh, file_format=file_format, **kwargs)
 
