@@ -254,15 +254,11 @@ def _read_set(f, params_map):
 
         set_ids += [int(k) for k in line.strip().strip(",").split(",")]
 
+    set_ids = numpy.array(set_ids, dtype="int32")
     if "GENERATE" in params_map:
         if len(set_ids) != 3:
             raise ReadError(set_ids)
-        set_ids = numpy.arange(set_ids[0], set_ids[1] + 1, set_ids[2])
-    else:
-        try:
-            set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
-        except ValueError:
-            raise ReadError(set_ids)
+        set_ids = numpy.arange(set_ids[0], set_ids[1] + 1, set_ids[2], dtype="int32")
     return set_ids, line
 
 
