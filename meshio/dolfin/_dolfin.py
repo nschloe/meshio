@@ -125,7 +125,7 @@ def _write_mesh(filename, points, cell_type, cells):
     meshio_to_dolfin_type = {"triangle": "triangle", "tetra": "tetrahedron"}
 
     if any(c.type != cell_type for c in cells):
-        discarded_cell_types = set(c.type for c in cells if c.type != cell_type)
+        discarded_cell_types = {c.type for c in cells if c.type != cell_type}
         logging.warning(
             "DOLFIN XML can only handle one cell type at a time. "
             "Using %s, discarding %s.",

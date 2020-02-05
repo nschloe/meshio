@@ -20,10 +20,10 @@ extras["all"] = list(set(itertools.chain.from_iterable(extras.values())))
 setup(
     name="meshio",
     version=about["__version__"],
-    author=about["__author__"],
-    author_email=about["__author_email__"],
+    author=about["__original_author__"],
+    author_email=about["__original_author_email__"],
     packages=find_packages(),
-    description="I/O for various mesh formats",
+    description="I/O for many mesh formats",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/nschloe/meshio",
@@ -46,6 +46,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering",
     ],
+    data_files=[("paraview-plugins", ["tools/paraview-meshio-plugin.py"])],
     entry_points={
         "console_scripts": [
             "meshio-convert = meshio._cli:convert",
