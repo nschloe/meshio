@@ -128,6 +128,20 @@ def read_buffer(f):
                 point_refs.append(int(pref))
             points_id.append(point_id)
             points.append([_nastran_float(i) for i in chunks[3:6]])
+        elif keyword == "GRID*":  # large field format: 8 + 16*4 + 8
+            point_id = int(chunks[1] + chunks[2])
+            pref = (chunks[3] + chunks[4]).strip()
+            if len(pref) > 0:
+                point_refs.append(int(pref))
+            points_id.append(point_id)
+            line = f.readline().strip()
+            chunks2 = _chunk_string(line)
+            points.append(
+                [
+                    _nastran_float(i + j)
+                    for i, j in [chunks[5:7], chunks[7:9], chunks2[1:3]]
+                ]
+            )
 
         # Cells
         elif keyword in nastran_to_meshio_type:
