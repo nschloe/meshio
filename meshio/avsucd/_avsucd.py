@@ -6,6 +6,7 @@ import logging
 
 import numpy
 
+from ..__about__ import __version__ as version
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Cells, Mesh
@@ -154,6 +155,9 @@ def write(filename, mesh):
         )
 
     with open_file(filename, "w") as f:
+        # Write meshio version
+        f.write(f"# Written by meshio v{version}\n")
+
         # Write first line
         num_nodes = len(mesh.points)
         num_cells = sum(len(c.data) for c in mesh.cells)
