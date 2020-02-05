@@ -124,6 +124,21 @@ with meshio.xdmf.TimeSeriesReader(filename) as reader:
         t, point_data, cell_data = reader.read_data(k)
 ```
 
+### ParaView plugin
+
+If you have downloaded a binary version of ParaView, you may proceed as follows.
+
+ * Make sure that ParaView uses a Python version that supports meshio. (That is at least
+   Python 3.)
+ * Install meshio
+ * Open ParaView
+ * Find the file `paraview-meshio-plugin.py` of your meshio installation and load it
+   under _Tools / Manage Plugins / Load New_
+ * (_Optional:_ Activate _Auto Load_)
+
+You can now open all meshio-supported files in ParaView.
+
+
 ### Performance comparison
 
 The comparisons here are for a tetrahedral mesh with about 400k points and 2M

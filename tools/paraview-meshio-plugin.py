@@ -81,16 +81,16 @@ class MeshioReader(VTKPythonAlgorithmBase):
         cell_types = np.array([], dtype=np.ubyte)
         cell_offsets = np.array([], dtype=int)
         cell_conn = np.array([], dtype=int)
-        for meshio_type in cells:
+        for meshio_type, data in cells:
             vtk_type = meshio_to_vtk_type[meshio_type]
-            ncells, npoints = cells[meshio_type].shape
+            ncells, npoints = data.shape
             cell_types = np.hstack(
                 [cell_types, np.full(ncells, vtk_type, dtype=np.ubyte)]
             )
             offsets = len(cell_conn) + (1 + npoints) * np.arange(ncells, dtype=int)
             cell_offsets = np.hstack([cell_offsets, offsets])
             conn = np.hstack(
-                [npoints * np.ones((ncells, 1), dtype=int), cells[meshio_type]]
+                [npoints * np.ones((ncells, 1), dtype=int), data]
             ).flatten()
             cell_conn = np.hstack([cell_conn, conn])
         output.SetCells(cell_types, cell_offsets, cell_conn)
@@ -100,24 +100,9 @@ class MeshioReader(VTKPythonAlgorithmBase):
             output.PointData.append(array, name)
 
         # Cell data
-        def celldata_array(name):
-            array = None
-            for celltype in mesh.cells:
-                values = mesh.cell_data[celltype][name]
-                if array is None:
-                    array = values
-                else:
-                    array = np.concatenate([array, values])
-            return array
-
-        celldata_names = [
-            set(cell_data.keys()) for cell_data in mesh.cell_data.values()
-        ]
-        celldata_names = (
-            set.intersection(*celldata_names) if len(celldata_names) > 0 else []
-        )
-        for name in celldata_names:
-            array = celldata_array(name)
+        print(mesh.cell_data)
+        for name, data in mesh.cell_data.items():
+            array = np.concatenate(data)
             output.CellData.append(array, name)
 
         # Field data
