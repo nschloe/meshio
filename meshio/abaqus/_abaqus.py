@@ -120,22 +120,22 @@ def read_buffer(f):
             line = f.readline()
             continue
 
-        keyword = line.strip("*")
-        if keyword.upper().startswith("NODE"):
+        keyword = line.partition(",")[0].strip().replace("*", "").upper()
+        if keyword == "NODE":
             points, point_ids, line = _read_nodes(f)
-        elif keyword.upper().startswith("ELEMENT"):
-            cell_type, cells_data, ids, line = _read_cells(f, keyword, point_ids)
+        elif keyword == "ELEMENT":
+            cell_type, cells_data, ids, line = _read_cells(f, line, point_ids)
             cells.append(Cells(cell_type, cells_data))
             cell_ids.append(ids)
-        elif keyword.upper().startswith("NSET"):
-            params_map = get_param_map(keyword, required_keys=["NSET"])
+        elif keyword == "NSET":
+            params_map = get_param_map(line, required_keys=["NSET"])
             set_ids, line = _read_set(f, params_map)
             name = params_map["NSET"]
             point_sets[name] = numpy.array(
                 [point_ids[point_id] for point_id in set_ids], dtype="int32"
             )
-        elif keyword.upper().startswith("ELSET"):
-            params_map = get_param_map(keyword, required_keys=["ELSET"])
+        elif keyword == "ELSET":
+            params_map = get_param_map(line, required_keys=["ELSET"])
             set_ids, line = _read_set(f, params_map)
             name = params_map["ELSET"]
             cell_sets[name] = []
