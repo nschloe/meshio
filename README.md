@@ -14,8 +14,6 @@
 [![PyPi downloads](https://img.shields.io/pypi/dm/meshio.svg?style=flat-square)](https://pypistats.org/packages/meshio)
 [![Slack](https://img.shields.io/static/v1?logo=slack&label=slack&message=chat&color=4a154b&style=flat-square)](https://app.slack.com/client/TTL6Q54A3/CT8655KR7)
 
-https://img.shields.io/static/v1?logo=slack&label=slack&message=chat&color=4a154b&style=flat-square
-
 There are various mesh formats available for representing unstructured meshes.
 meshio can read and write all of the following and smoothly converts between them:
 
