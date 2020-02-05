@@ -705,8 +705,6 @@ def _write_field_data(f, data, binary):
             num_tuples = values.shape[0]
             num_components = 1
         else:
-            if len(values.shape) != 2:
-                raise WriteError("Only one- and two-dimensional field data supported.")
             num_tuples = values.shape[0]
             num_components = values.shape[1]
 
