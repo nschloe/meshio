@@ -72,8 +72,11 @@ def read_buffer(f):
     cell = None
     cell_type = None
     keyword_prev = None
+    point_refs = []
+    cell_refs = []
+    cell_ref = None
 
-    def add_cell(cell, cell_type, keyword_prev):
+    def add_cell(cell, cell_type, cell_ref, keyword_prev):
         cell = list(map(int, cell))
         cell = _convert_to_vtk_ordering(cell, keyword_prev)
 
@@ -92,9 +95,13 @@ def read_buffer(f):
         if len(cells) > 0 and cells[-1].type == cell_type:
             cells[-1].data.append(cell)
             cells_id[-1].append(cell_id)
+            if cell_ref is not None:
+                cell_refs[-1].append(cell_ref)
         else:
             cells.append(Cells(cell_type, [cell]))
             cells_id.append([cell_id])
+            if cell_ref is not None:
+                cell_refs.append([cell_ref])
 
     while True:
         line = f.readline()
@@ -116,6 +123,9 @@ def read_buffer(f):
         # Points
         if keyword == "GRID":
             point_id = int(chunks[1])
+            pref = chunks[2].strip()
+            if len(pref) > 0:
+                point_refs.append(int(pref))
             points_id.append(point_id)
             points.append([_nastran_float(i) for i in chunks[3:6]])
 
@@ -123,11 +133,13 @@ def read_buffer(f):
         elif keyword in nastran_to_meshio_type:
             # Add previous cell and cell_id
             if cell is not None:
-                add_cell(cell, cell_type, keyword_prev)
+                add_cell(cell, cell_type, cell_ref, keyword_prev)
 
             # Current cell
             cell_type = nastran_to_meshio_type[keyword]
             cell_id = int(chunks[1])
+            cell_ref = chunks[2].strip()
+            cell_ref = int(cell_ref) if len(cell_ref) > 0 else None
 
             n_nodes = num_nodes_per_cell[cell_type]
             if keyword in nastran_solid_types or n_nodes > 6:
@@ -143,7 +155,7 @@ def read_buffer(f):
             cell.extend(chunks[1:])
 
     # Add the last cell
-    add_cell(cell, cell_type, keyword_prev)
+    add_cell(cell, cell_type, cell_ref, keyword_prev)
 
     # Convert to numpy arrays
     points = numpy.array(points)
@@ -163,6 +175,10 @@ def read_buffer(f):
     mesh = Mesh(points, cells)
     mesh.points_id = points_id
     mesh.cells_id = cells_id
+    if len(point_refs) > 0:
+        mesh.point_data["nastran:ref"] = point_refs
+    if len(cell_refs) > 0:
+        mesh.cell_data["nastran:ref"] = cell_refs
     return mesh
 
 
@@ -181,20 +197,36 @@ def write(filename, mesh):
         f.write("BEGIN BULK\n")
 
         # Points
-        for point_id, x in enumerate(points):
-            f.write(
-                "GRID, {:d},, {:.15e}, {:.15e}, {:.15e}\n".format(
-                    point_id + 1, x[0], x[1], x[2]
+        point_refs = mesh.point_data.get("nastran:ref", None)
+        if point_refs is not None:
+            for point_id, x in enumerate(points):
+                f.write(
+                    "GRID, {:d}, {:d}, {:.15e}, {:.15e}, {:.15e}\n".format(
+                        point_id + 1, point_refs[point_id], x[0], x[1], x[2]
+                    )
                 )
-            )
+        else:
+            for point_id, x in enumerate(points):
+                f.write(
+                    "GRID, {:d},, {:.15e}, {:.15e}, {:.15e}\n".format(
+                        point_id + 1, x[0], x[1], x[2]
+                    )
+                )
 
         # Cells
         cell_id = 0
-        for cell_type, cells in mesh.cells:
+        cell_refs = mesh.cell_data.get("nastran:ref", None)
+        for ict, (cell_type, cells) in enumerate(mesh.cells):
             nastran_type = meshio_to_nastran_type[cell_type].replace("_", "")
-            for cell in cells:
+            if cell_refs is not None:
+                cell_refs_t = cell_refs[ict]
+            else:
+                cell_ref = ""
+            for ic, cell in enumerate(cells):
+                if cell_refs is not None:
+                    cell_ref = " " + str(int(cell_refs_t[ic]))
                 cell_id += 1
-                cell_info = f"{nastran_type}, {cell_id:d},, "
+                cell_info = f"{nastran_type}, {cell_id:d},{cell_ref}, "
                 cell1 = cell + 1
                 cell1 = _convert_to_nastran_ordering(cell1, nastran_type)
                 conn = ", ".join(str(nid) for nid in cell1[:6])
