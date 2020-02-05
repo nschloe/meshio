@@ -138,7 +138,7 @@ def read_buffer(f):
             name = params_map["ELSET"]
             if name not in cell_sets:
                 cell_sets[name] = []
-            cell_sets[name].append(setids)
+            cell_sets[name].append(setids - 1)
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
@@ -150,6 +150,7 @@ def read_buffer(f):
         cell_data=cell_data,
         field_data=field_data,
         point_sets=point_sets,
+        cell_sets=cell_sets,
     )
 
 
@@ -284,6 +285,27 @@ def write(filename, mesh, translate_cell_names=True):
                 eid += 1
                 nids_strs = (str(nid + 1) for nid in row.tolist())
                 f.write(str(eid) + "," + ",".join(nids_strs) + "\n")
+
+        nnl = 8
+        for ic in range(len(mesh.cells)):
+            for k, v in mesh.cell_sets.items():
+                els = [str(i + 1) for i in v[ic]]
+                f.write("*ELSET, ELSET=%s\n" % k)
+                f.write(
+                    ",\n".join(
+                        ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
+                    )
+                    + "\n"
+                )
+
+        for k, v in mesh.point_sets.items():
+            nds = [str(i + 1) for i in v]
+            f.write("*NSET, NSET=%s\n" % k)
+            f.write(
+                ",\n".join(",".join(nds[i : i + nnl]) for i in range(0, len(nds), nnl))
+                + "\n"
+            )
+
         f.write("*end")
 
 
