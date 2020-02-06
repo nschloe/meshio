@@ -150,7 +150,8 @@ def _read_zone(line, variables):
                 is_end = True
         
         if is_end:
-            zone[key] = zone_key_to_type[key](value)
+            if key in zone_key_to_type.keys():
+                zone[key] = zone_key_to_type[key](value)
             key, value, read_key = "", "", True
             is_end = False
 
