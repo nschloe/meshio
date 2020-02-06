@@ -81,7 +81,7 @@ def read(filename):
 
     # Information for point tags
     point_tags = {}
-    fas = f["FAS"][mesh_name]
+    fas = mesh["FAS"] if "FAS" in mesh else f["FAS"][mesh_name]
     if "NOEUD" in fas:
         point_tags = _read_families(fas["NOEUD"])
 
