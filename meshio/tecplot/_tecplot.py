@@ -47,6 +47,7 @@ def read_buffer(f):
 
         if line.startswith("VARIABLES"):
             variables = _read_variables(line)
+
         elif line.startswith("ZONE"):
             # ZONE can be defined on several lines e.g.
             # ````
@@ -79,6 +80,9 @@ def read_buffer(f):
                 )
 
             break   # Only support one zone, no need to read the rest
+        
+        elif not line:
+            break
 
     data = numpy.split(numpy.concatenate(data), numpy.cumsum(num_data[:-1]))
     data = {k: v for k, v in zip(variables, data)}
