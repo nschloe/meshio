@@ -48,6 +48,26 @@ def read_buffer(f):
         if line.startswith("VARIABLES"):
             variables = _read_variables(line)
         elif line.startswith("ZONE"):
+            # ZONE can be defined on several lines e.g.
+            # ````
+            # ZONE NODES = 62533 , ELEMENTS = 57982
+            # , DATAPACKING=BLOCK, ZONETYPE=FEQUADRILATERAL
+            # , VARLOCATION=([1-2]=NODAL, [3-7]=CELLCENTERED)
+            # ````
+            # is valid (and understood by Paraview and VisIt).
+            lines = [line]
+            i = f.tell()
+            line = f.readline().rstrip().upper()
+            while True:
+                if not line[0].isdigit():
+                    lines += [line]
+                    i = f.tell()
+                    line = f.readline().rstrip().upper()
+                else:
+                    f.seek(i)
+                    break
+            line = "".join(lines)
+
             num_nodes, num_cells, zone_format, zone_type, is_cell_centered = _read_zone(line, variables)
 
             if zone_format == "FEBLOCK":
