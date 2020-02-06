@@ -43,7 +43,7 @@ def read(filename):
 
 def read_buffer(f):
     while True:
-        line = f.readline().rstrip().upper()
+        line = f.readline().strip().upper()
 
         if line.startswith("VARIABLES"):
             variables = _read_variables(line)
@@ -58,12 +58,12 @@ def read_buffer(f):
             # is valid (and understood by Paraview and VisIt).
             lines = [line]
             i = f.tell()
-            line = f.readline().rstrip().upper()
+            line = f.readline().strip().upper()
             while True:
                 if not line[0].isdigit():
                     lines += [line]
                     i = f.tell()
-                    line = f.readline().rstrip().upper()
+                    line = f.readline().strip().upper()
                 else:
                     f.seek(i)
                     break
@@ -80,7 +80,7 @@ def read_buffer(f):
                 )
 
             break   # Only support one zone, no need to read the rest
-        
+
         elif not line:
             break
 
@@ -228,14 +228,14 @@ def _read_zone(line, variables):
 def _read_zone_block(f, num_data, num_cells):
     data, count = [], 0
     while count < num_data:
-        line = f.readline().rstrip().split()
+        line = f.readline().strip().split()
         if line:
             data += [[float(x) for x in line]]
             count += len(line)
 
     cells, count = [], 0
     while count < num_cells:
-        line = f.readline().rstrip().split()
+        line = f.readline().strip().split()
         if line:
             cells += [[[int(x) for x in line]]]
             count += 1
