@@ -71,20 +71,24 @@ def read_buffer(f):
 
             num_nodes, num_cells, zone_format, zone_type, is_cell_centered = _read_zone(line, variables)
 
-            if zone_format == "FEBLOCK":
-                num_data = [num_cells if i else num_nodes for i in is_cell_centered]
-                data, cells = _read_zone_block(f, sum(num_data), num_cells)
-            elif zone_format == "FEPOINT":
-                raise ReadError(
-                    "Tecplot FEPOINT format reader is not implemented yet"
-                )
+            num_data = [num_cells if i else num_nodes for i in is_cell_centered]
+            data, cells = _read_zone_data(
+                f,
+                sum(num_data) if zone_format == "FEBLOCK" else num_nodes,
+                num_cells,
+                zone_format,
+            )
 
             break   # Only support one zone, no need to read the rest
 
         elif not line:
             break
 
-    data = numpy.split(numpy.concatenate(data), numpy.cumsum(num_data[:-1]))
+    data = (
+        numpy.split(numpy.concatenate(data), numpy.cumsum(num_data[:-1]))
+        if zone_format == "FEBLOCK"
+        else numpy.transpose(data)
+    )
     data = {k: v for k, v in zip(variables, data)}
 
     point_data, cell_data = {}, {}
@@ -206,7 +210,7 @@ def _read_zone(line, variables):
 
     # Variable locations
     is_cell_centered = numpy.zeros(len(variables), dtype=int)
-    if "VARLOCATION" in zone.keys():
+    if zone_format == "FEBLOCK" and "VARLOCATION" in zone.keys():
         varlocation = zone.pop("VARLOCATION")[1:-1].split(",")
         for location in varlocation:
             varrange, varloc = location.split("=")
@@ -225,13 +229,13 @@ def _read_zone(line, variables):
     return num_nodes, num_cells, zone_format, zone_type, is_cell_centered
 
 
-def _read_zone_block(f, num_data, num_cells):
+def _read_zone_data(f, num_data, num_cells, zone_format):
     data, count = [], 0
     while count < num_data:
         line = f.readline().strip().split()
         if line:
             data += [[float(x) for x in line]]
-            count += len(line)
+            count += len(line) if zone_format == "FEBLOCK" else 1
 
     cells, count = [], 0
     while count < num_cells:
