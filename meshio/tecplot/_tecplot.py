@@ -60,7 +60,7 @@ def read_buffer(f):
             i = f.tell()
             line = f.readline().strip().upper()
             while True:
-                if not line[0].isdigit():
+                if line and not line[0].isdigit():
                     lines += [line]
                     i = f.tell()
                     line = f.readline().strip().upper()
