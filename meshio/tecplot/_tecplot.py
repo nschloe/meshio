@@ -106,7 +106,7 @@ def _read_zone(line, variables):
 
         if char == "=":
             read_key = False
-            is_varlocation = key.upper() == "VARLOCATION"
+            is_varlocation = key == "VARLOCATION"
 
         if is_varlocation:
             i += 1
@@ -130,7 +130,6 @@ def _read_zone(line, variables):
                 is_end = True
         
         if is_end:
-            key = key.upper()
             zone[key] = zone_key_to_type[key](value)
             key, value, read_key = "", "", True
             is_end = False
@@ -153,14 +152,14 @@ def _read_zone(line, variables):
                 "Element type 'ET' not found"
             )
         zone_format = zone.pop("F")
-        zone_type = zone.pop("ET").upper()
+        zone_type = zone.pop("ET")
     elif "DATAPACKING" in zone.keys():
         if "ZONETYPE" not in zone.keys():
             raise ReadError(
                 "Zone type 'ZONETYPE' not found"
             )
         zone_format = "FE" + zone.pop("DATAPACKING")
-        zone_type = zone.pop("ZONETYPE").upper()
+        zone_type = zone.pop("ZONETYPE")
     else:
         raise ReadError("Data format 'F' or 'DATAPACKING' not found")
 
@@ -186,7 +185,7 @@ def _read_zone(line, variables):
         varlocation = zone.pop("VARLOCATION")[1:-1].split(",")
         for location in varlocation:
             varrange, varloc = location.split("=")
-            varloc = varloc.strip().upper()
+            varloc = varloc.strip()
             if varloc == "CELLCENTERED":
                 varrange = varrange[1:-1].split("-")
                 if len(varrange) == 1:
