@@ -21,6 +21,7 @@ zone_key_to_type = {
     "ET": str,
     "DATAPACKING": str,
     "ZONETYPE": str,
+    "NV": int,
     "VARLOCATION": str,
 }
 
@@ -214,8 +215,8 @@ def _read_zone(line, variables):
             is_end = False
 
         if i >= len(line) - 1:
-            zone[key] = value
-            key, value, read_key = "", "", True
+            if key in zone_key_to_type.keys():
+                zone[key] = zone_key_to_type[key](value)
             break
         else:
             i += 1
@@ -254,21 +255,25 @@ def _read_zone(line, variables):
 
     # Variable locations
     is_cell_centered = numpy.zeros(len(variables), dtype=int)
-    if zone_format == "FEBLOCK" and "VARLOCATION" in zone.keys():
-        varlocation = zone.pop("VARLOCATION")[1:-1].split(",")
-        for location in varlocation:
-            varrange, varloc = location.split("=")
-            varloc = varloc.strip()
-            if varloc == "CELLCENTERED":
-                varrange = varrange[1:-1].split("-")
-                if len(varrange) == 1:
-                    i = int(varrange[0]) - 1
-                    is_cell_centered[i] = 1
-                else:
-                    imin = int(varrange[0]) - 1
-                    imax = int(varrange[1]) - 1
-                    for i in range(imin, imax + 1):
+    if zone_format == "FEBLOCK":
+        if "NV" in zone.keys():
+            node_value = zone.pop("NV")
+            is_cell_centered[node_value:] = 1
+        elif "VARLOCATION" in zone.keys():
+            varlocation = zone.pop("VARLOCATION")[1:-1].split(",")
+            for location in varlocation:
+                varrange, varloc = location.split("=")
+                varloc = varloc.strip()
+                if varloc == "CELLCENTERED":
+                    varrange = varrange[1:-1].split("-")
+                    if len(varrange) == 1:
+                        i = int(varrange[0]) - 1
                         is_cell_centered[i] = 1
+                    else:
+                        imin = int(varrange[0]) - 1
+                        imax = int(varrange[1]) - 1
+                        for i in range(imin, imax + 1):
+                            is_cell_centered[i] = 1
 
     return num_nodes, num_cells, zone_format, zone_type, is_cell_centered
 
