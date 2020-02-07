@@ -2,8 +2,11 @@
 I/O for Tecplot ASCII data format, cf.
 <http://paulbourke.net/dataformats/tp/>.
 """
+import logging
+
 import numpy
 
+from ..__about__ import __version__ as version
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
@@ -32,6 +35,49 @@ tecplot_to_meshio_type = {
     "FETETRAHEDRON": "tetra",
     "BRICK": "hexahedron",
     "FEBRICK": "hexahedron",
+}
+
+
+meshio_to_tecplot_type = {
+    "triangle": "FETRIANGLE",
+    "quad": "FEQUADRILATERAL",
+    "tetra": "FETETRAHEDRON",
+    "pyramid": "FEBRICK",
+    "wedge": "FEBRICK",
+    "hexahedron": "FEBRICK",
+}
+
+
+meshio_only = set(meshio_to_tecplot_type.keys())
+
+
+meshio_to_tecplot_order = {
+    "triangle": [0, 1, 2],
+    "quad": [0, 1, 2, 3],
+    "tetra": [0, 1, 2, 3],
+    "pyramid": [0, 1, 2, 3, 4, 4, 4, 4],
+    "wedge": [0, 1, 4, 3, 2, 2, 5, 5],
+    "hexahedron": [0, 1, 2, 3, 4, 5, 6, 7],
+}
+
+
+meshio_to_tecplot_order_2 = {
+    "triangle": [0, 1, 2, 2],
+    "quad": [0, 1, 2, 3],
+    "tetra": [0, 1, 2, 2, 3, 3, 3, 3],
+    "pyramid": [0, 1, 2, 3, 4, 4, 4, 4],
+    "wedge": [0, 1, 4, 3, 2, 2, 5, 5],
+    "hexahedron": [0, 1, 2, 3, 4, 5, 6, 7],
+}
+
+
+meshio_type_to_ndim = {
+    "triangle": 2,
+    "quad": 2,
+    "tetra": 3,
+    "pyramid": 3,
+    "wedge": 3,
+    "hexahedron": 3,
 }
 
 
@@ -248,7 +294,117 @@ def _read_zone_data(f, num_data, num_cells, zone_format):
 
 
 def write(filename, mesh):
-    pass
+    # Check cell types
+    cell_types = []
+    cell_blocks = []
+    for ic, c in enumerate(mesh.cells):
+        if c.type in meshio_only:
+            cell_types.append(c.type)
+            cell_blocks.append(ic)
+        else:
+            logging.warning(
+                f"Tecplot does not support cell type '{c.type}'. "
+                f"Skipping cell block {ic}."
+            )
+
+    # Define cells and zone type
+    cell_types = numpy.unique(cell_types)
+    if len(cell_types) == 0:
+        raise WriteError("No cell type supported by Tecplot in mesh")
+    elif len(cell_types) == 1:
+        # Nothing much to do except converting pyramids and wedges to hexahedra
+        zone_type = meshio_to_tecplot_type[cell_types[0]]
+        cells = numpy.concatenate([mesh.cells[ic].data[:,meshio_to_tecplot_order[mesh.cells[ic].type]] for ic in cell_blocks])
+    else:
+        # Check if the mesh contains 2D and 3D cells
+        num_dims = [meshio_type_to_ndim[mesh.cells[ic].type] for ic in cell_blocks]
+
+        # Skip 2D cells if yes
+        if len(numpy.unique(num_dims)) == 2:
+            logging.warning(
+                "Mesh contains 2D and 3D cells. Skipping 2D cells."
+            )
+            cell_blocks = [ic for ic, ndim in zip(cell_blocks, num_dims) if ndim == 3]
+
+        # Convert 2D cells to quads / 3D cells to hexahedra
+        zone_type = "FEQUADRILATERAL" if num_dims[0] == 2 else "FEBRICK"
+        cells = numpy.concatenate([mesh.cells[ic].data[:,meshio_to_tecplot_order_2[mesh.cells[ic].type]] for ic in cell_blocks])
+
+    # Define variables
+    variables = ["X", "Y"]
+    data = [mesh.points[:,0], mesh.points[:,1]]
+    varrange = [3, 0]
+
+    if mesh.points.shape[1] == 3:
+        variables += ["Z"]
+        data += [mesh.points[:,2]]
+        varrange[0] += 1
+
+    for k, v in mesh.point_data.items():
+        if v.ndim == 1:
+            variables += [k]
+            data += [v]
+            varrange[0] += 1
+        elif v.ndim == 2:
+            for i, vv in enumerate(v.T):
+                variables += [f"f{i}"]
+                data += [vv]
+                varrange[0] += 1
+    
+    if mesh.cell_data:
+        varrange[1] = varrange[0] - 1
+        for k, v in mesh.cell_data.items():
+            v = numpy.concatenate([v[ic] for ic in cell_blocks])
+            if v.ndim == 1:
+                variables += [k]
+                data += [v]
+                varrange[1] += 1
+            elif v.ndim == 2:
+                for i, vv in enumerate(v.T):
+                    variables += [f"f{i}"]
+                    data += [vv]
+                    varrange[1] += 1
+
+    with open_file(filename, "w") as f:
+        # Title
+        f.write(f'TITLE = "Written by meshio v{version}"\n')
+
+        # Variables
+        variables_str = ", ".join(f'"{var}"' for var in variables)
+        f.write(f"VARIABLES = {variables_str}\n")
+
+        # Zone record
+        num_nodes = len(mesh.points)
+        num_cells = sum(len(mesh.cells[ic].data) for ic in cell_blocks)
+        f.write(f"ZONE NODES = {num_nodes}, ELEMENTS = {num_cells},\n")
+        f.write(f"DATAPACKING = BLOCK, ZONETYPE = {zone_type}")
+        if mesh.cell_data:
+            f.write(",\n")
+            varlocation_str = (
+                f"{varrange[0]}"
+                if varrange[0] == varrange[1]
+                else f"{varrange[0]}-{varrange[1]}"
+            )
+            f.write(f"VARLOCATION = ([{varlocation_str}] = CELLCENTERED)\n")
+        else:
+            f.write("\n")
+
+        # Zone data
+        for arr in data:
+            _write_table(f, arr)
+
+        # Cells
+        cells = numpy.array(cells) + 1
+        for cell in cells:
+            f.write("{}\n".format(" ".join(str(c) for c in cell)))
+
+
+def _write_table(f, data, ncol=20):
+    nrow = len(data) // ncol
+    lines = numpy.split(data, numpy.full(nrow, ncol).cumsum())
+    for line in lines:
+        if len(line):
+            f.write("{}\n".format(" ".join(str(l) for l in line)))
 
 
 register("tecplot", [".dat"], read, {"tecplot": write})
