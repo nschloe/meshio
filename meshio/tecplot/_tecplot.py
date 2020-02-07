@@ -89,12 +89,12 @@ def read(filename):
 
 def read_buffer(f):
     while True:
-        line = f.readline().strip().upper()
+        line = f.readline().strip()
 
-        if line.startswith("VARIABLES"):
+        if line.upper().startswith("VARIABLES"):
             variables = _read_variables(line)
 
-        elif line.startswith("ZONE"):
+        elif line.upper().startswith("ZONE"):
             # ZONE can be defined on several lines e.g.
             # ````
             # ZONE NODES = 62533 , ELEMENTS = 57982
@@ -144,9 +144,17 @@ def read_buffer(f):
         else:
             point_data[variable] = data[variable]
 
-    points = numpy.column_stack((point_data.pop("X"), point_data.pop("Y")))
-    if "Z" in point_data.keys():
-        points = numpy.column_stack((points, point_data.pop("Z")))
+    x = "X" if "X" in point_data.keys() else "x"
+    y = "Y" if "Y" in point_data.keys() else "y"
+    z = (
+        "Z"
+        if "Z" in point_data.keys()
+        else "z" if "z" in point_data.keys()
+        else ""
+    )
+    points = numpy.column_stack((point_data.pop(x), point_data.pop(y)))
+    if z:
+        points = numpy.column_stack((points, point_data.pop(z)))
     cells = [(tecplot_to_meshio_type[zone_type], cells-1)]
 
     return Mesh(points, cells, point_data, cell_data)
@@ -158,9 +166,9 @@ def _read_variables(line):
     variables = [str(var).replace('"', "").strip() for var in line]
 
     # Check that at least X and Y are defined
-    if "X" not in variables:
+    if "X" not in variables and "x" not in variables:
         raise ReadError("Variable 'X' not found")
-    if "Y" not in variables:
+    if "Y" not in variables and "y" not in variables:
         raise ReadError("Variable 'Y' not found")
 
     return variables
