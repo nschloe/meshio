@@ -49,9 +49,11 @@ def read_buffer(f, is_ascii, data_size):
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Nodes":
-            points = _read_nodes(f, is_ascii, data_size)
+            points, point_tags = _read_nodes(f, is_ascii, data_size)
         elif environ == "Elements":
-            has_additional_tag_data, cell_tags = _read_cells(f, cells, is_ascii)
+            has_additional_tag_data, cell_tags = _read_cells(
+                f, cells, point_tags, is_ascii
+            )
         elif environ == "Periodic":
             periodic = _read_periodic(f)
         elif environ == "NodeData":
@@ -93,6 +95,7 @@ def _read_nodes(f, is_ascii, data_size):
     if is_ascii:
         points = numpy.fromfile(f, count=num_nodes * 4, sep=" ").reshape((num_nodes, 4))
         # The first number is the index
+        point_tags = points[:, 0]
         points = points[:, 1:]
     else:
         # binary
@@ -101,15 +104,16 @@ def _read_nodes(f, is_ascii, data_size):
         if not (data["index"] == range(1, num_nodes + 1)).all():
             raise ReadError()
         points = numpy.ascontiguousarray(data["x"])
+        point_tags = data["index"]
 
     # Fast forward to $EndNodes
     line = f.readline().decode("utf-8")
     while line.strip() != "$EndNodes":
         line = f.readline().decode("utf-8")
-    return points
+    return points, point_tags
 
 
-def _read_cells(f, cells, is_ascii):
+def _read_cells(f, cells, point_tags, is_ascii):
     # The first line is the number of elements
     line = f.readline().decode("utf-8")
     total_num_cells = int(line)
@@ -120,6 +124,13 @@ def _read_cells(f, cells, is_ascii):
     else:
         _read_cells_binary(f, cells, cell_tags, total_num_cells)
     cells[:] = _gmsh_to_meshio_order(cells)
+
+    point_tags = numpy.asarray(point_tags, dtype=numpy.int32) - 1
+    remap = -numpy.ones((numpy.max(point_tags) + 1,), dtype=numpy.int32)
+    remap[point_tags] = numpy.arange(point_tags.shape[0])
+
+    for ic, (ct, cd) in enumerate(cells):
+        cells[ic] = (ct, remap[cd])
 
     # Fast forward to $EndElements
     line = f.readline().decode("utf-8")

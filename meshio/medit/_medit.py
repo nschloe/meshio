@@ -28,7 +28,7 @@ def read_buffer(f):
     dim = 0
     cells = []
     point_data = {}
-    cell_data = {}
+    cell_data = {"medit:ref": []}
 
     meshio_from_medit = {
         "Edges": ("line", 2),
@@ -79,7 +79,7 @@ def read_buffer(f):
 
             # adapt for 0-base
             cells.append((meshio_type, out[:, :points_per_cell] - 1))
-            cell_data["medit:ref"] = [(out[:, -1])]
+            cell_data["medit:ref"].append(out[:, -1])
         elif items[0] == "Normals":
             # those are just discarded
             num_normals = int(f.readline())
