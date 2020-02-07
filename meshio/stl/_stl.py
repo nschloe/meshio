@@ -228,6 +228,6 @@ register(
     {
         "stl-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
         "stl-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "stl": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+        "stl": lambda f, m, **kwargs: write(f, m, **{"binary": True, **kwargs}),
     },
 )
