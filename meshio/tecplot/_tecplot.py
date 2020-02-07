@@ -12,7 +12,6 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
 
-
 zone_key_to_type = {
     "N": int,
     "NODES": int,
@@ -115,7 +114,9 @@ def read_buffer(f):
                     break
             line = "".join(lines)
 
-            num_nodes, num_cells, zone_format, zone_type, is_cell_centered = _read_zone(line, variables)
+            num_nodes, num_cells, zone_format, zone_type, is_cell_centered = _read_zone(
+                line, variables
+            )
 
             num_data = [num_cells if i else num_nodes for i in is_cell_centered]
             data, cells = _read_zone_data(
@@ -125,7 +126,7 @@ def read_buffer(f):
                 zone_format,
             )
 
-            break   # Only support one zone, no need to read the rest
+            break  # Only support one zone, no need to read the rest
 
         elif not line:
             break
@@ -146,20 +147,15 @@ def read_buffer(f):
 
     x = "X" if "X" in point_data.keys() else "x"
     y = "Y" if "Y" in point_data.keys() else "y"
-    z = (
-        "Z"
-        if "Z" in point_data.keys()
-        else "z" if "z" in point_data.keys()
-        else ""
-    )
+    z = "Z" if "Z" in point_data.keys() else "z" if "z" in point_data.keys() else ""
     points = numpy.column_stack((point_data.pop(x), point_data.pop(y)))
     if z:
         points = numpy.column_stack((points, point_data.pop(z)))
-    cells = [(tecplot_to_meshio_type[zone_type], cells-1)]
+    cells = [(tecplot_to_meshio_type[zone_type], cells - 1)]
 
     return Mesh(points, cells, point_data, cell_data)
-        
-        
+
+
 def _read_variables(line):
     # Gather variables in a list
     line = line.split("=")[1].split(",")
@@ -210,14 +206,14 @@ def _read_zone(line, variables):
                         value += char
             else:
                 is_end = True
-        
+
         if is_end:
             if key in zone_key_to_type.keys():
                 zone[key] = zone_key_to_type[key](value)
             key, value, read_key = "", "", True
             is_end = False
 
-        if i >= len(line)-1:
+        if i >= len(line) - 1:
             zone[key] = value
             key, value, read_key = "", "", True
             break
@@ -227,20 +223,14 @@ def _read_zone(line, variables):
     # Check that the grid is unstructured
     if "F" in zone.keys():
         if zone["F"] not in {"FEPOINT", "FEBLOCK"}:
-            raise ReadError(
-                "Tecplot reader can only read finite-element type grids"
-            )
+            raise ReadError("Tecplot reader can only read finite-element type grids")
         if "ET" not in zone.keys():
-            raise ReadError(
-                "Element type 'ET' not found"
-            )
+            raise ReadError("Element type 'ET' not found")
         zone_format = zone.pop("F")
         zone_type = zone.pop("ET")
     elif "DATAPACKING" in zone.keys():
         if "ZONETYPE" not in zone.keys():
-            raise ReadError(
-                "Zone type 'ZONETYPE' not found"
-            )
+            raise ReadError("Zone type 'ZONETYPE' not found")
         zone_format = "FE" + zone.pop("DATAPACKING")
         zone_type = zone.pop("ZONETYPE")
     else:
@@ -277,7 +267,7 @@ def _read_zone(line, variables):
                 else:
                     imin = int(varrange[0]) - 1
                     imax = int(varrange[1]) - 1
-                    for i in range(imin, imax+1):
+                    for i in range(imin, imax + 1):
                         is_cell_centered[i] = 1
 
     return num_nodes, num_cells, zone_format, zone_type, is_cell_centered
@@ -297,7 +287,7 @@ def _read_zone_data(f, num_data, num_cells, zone_format):
         if line:
             cells += [[[int(x) for x in line]]]
             count += 1
-    
+
     return data, numpy.concatenate(cells)
 
 
@@ -322,30 +312,38 @@ def write(filename, mesh):
     elif len(cell_types) == 1:
         # Nothing much to do except converting pyramids and wedges to hexahedra
         zone_type = meshio_to_tecplot_type[cell_types[0]]
-        cells = numpy.concatenate([mesh.cells[ic].data[:,meshio_to_tecplot_order[mesh.cells[ic].type]] for ic in cell_blocks])
+        cells = numpy.concatenate(
+            [
+                mesh.cells[ic].data[:, meshio_to_tecplot_order[mesh.cells[ic].type]]
+                for ic in cell_blocks
+            ]
+        )
     else:
         # Check if the mesh contains 2D and 3D cells
         num_dims = [meshio_type_to_ndim[mesh.cells[ic].type] for ic in cell_blocks]
 
         # Skip 2D cells if yes
         if len(numpy.unique(num_dims)) == 2:
-            logging.warning(
-                "Mesh contains 2D and 3D cells. Skipping 2D cells."
-            )
+            logging.warning("Mesh contains 2D and 3D cells. Skipping 2D cells.")
             cell_blocks = [ic for ic, ndim in zip(cell_blocks, num_dims) if ndim == 3]
 
         # Convert 2D cells to quads / 3D cells to hexahedra
         zone_type = "FEQUADRILATERAL" if num_dims[0] == 2 else "FEBRICK"
-        cells = numpy.concatenate([mesh.cells[ic].data[:,meshio_to_tecplot_order_2[mesh.cells[ic].type]] for ic in cell_blocks])
+        cells = numpy.concatenate(
+            [
+                mesh.cells[ic].data[:, meshio_to_tecplot_order_2[mesh.cells[ic].type]]
+                for ic in cell_blocks
+            ]
+        )
 
     # Define variables
     variables = ["X", "Y"]
-    data = [mesh.points[:,0], mesh.points[:,1]]
+    data = [mesh.points[:, 0], mesh.points[:, 1]]
     varrange = [3, 0]
 
     if mesh.points.shape[1] == 3:
         variables += ["Z"]
-        data += [mesh.points[:,2]]
+        data += [mesh.points[:, 2]]
         varrange[0] += 1
 
     for k, v in mesh.point_data.items():
@@ -358,7 +356,7 @@ def write(filename, mesh):
                 variables += [f"f{i}"]
                 data += [vv]
                 varrange[0] += 1
-    
+
     if mesh.cell_data:
         varrange[1] = varrange[0] - 1
         for k, v in mesh.cell_data.items():
