@@ -36,6 +36,7 @@ meshio can read and write all of the following and smoothly converts between the
  [PERMAS](https://www.intes.de),
  [PLY](https://en.wikipedia.org/wiki/PLY_(file_format)),
  [STL](https://en.wikipedia.org/wiki/STL_(file_format)),
+ [Tecplot .dat](http://paulbourke.net/dataformats/tp/),
  [TetGen .node/.ele](https://wias-berlin.de/software/tetgen/fformats.html),
  [SVG](https://www.w3.org/TR/SVG/) (2D only, output only),
  [UGRID](http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html),
