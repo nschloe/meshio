@@ -83,7 +83,6 @@ def first(iterable, condition=lambda x: True):
             {1: 432, 2: 216, 3: 216},
         ),
         ("hch_strct.4.lb8.ugrid", 306, 12, 178, 96, 0, 144, {1: 15, 2: 15, 3: 160}),
-        # ("przgrid.ugrid", 128, 36, 84, 126, 0, 0, {1: 21, 2: 21, 3: 21, 4: 21, 5: 18, 6: 18}),
     ],
 )
 def test_reference_file(
@@ -236,10 +235,7 @@ def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
 
     mesh = meshio.read(filename)
 
-    tria = None
-    for c in mesh.cells:
-        if c.type == "triangle":
-            tria = c
+    tria = first(mesh.cells, lambda c: c.type == "triangle")
     assert tria != None
     total_tri_area = 0
     for _cell in tria.data:
@@ -248,10 +244,7 @@ def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
         total_tri_area += a
     assert numpy.isclose(total_tri_area, area_tria_ref, accuracy)
 
-    quad = None
-    for c in mesh.cells:
-        if c.type == "quad":
-            quad = c
+    quad = first(mesh.cells, lambda c: c.type == "quad")
     assert quad != None
     total_quad_area = 0
     for _cell in quad.data:

@@ -101,7 +101,7 @@ def read_buffer(f, file_type):
         nnodes, 3
     )
 
-    for key in ["triangle","quad"]:
+    for key in ["triangle", "quad"]:
         nitems = ugrid_counts[key][0]
         nvertices = ugrid_counts[key][1]
         if nitems == 0:
