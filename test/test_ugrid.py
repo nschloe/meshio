@@ -188,7 +188,7 @@ def _pyramid_volume(cell):
 
 
 # ugrid node ordering is the same for all elements except the
-# pyramids. In order to make sure we got it right read a cube
+# pyramids. in order to make sure we got it right read a cube
 # split into pyramids and evaluate its volume
 @pytest.mark.parametrize("filename, volume,accuracy", [("pyra_cube.ugrid", 1.0, 1e-15)])
 def test_volume(filename, volume, accuracy):
@@ -225,6 +225,7 @@ def _quad_area(cell):
     return _triangle_area(tri1) + _triangle_area(tri2)
 
 
+# Test whether any of the surface elements is  connected in the wrong way
 @pytest.mark.parametrize(
     "filename, area_tria_ref,area_quad_ref,accuracy",
     [("hch_strct.4.lb8.ugrid", 9587.10463, 74294.529256, 1e-5)],
