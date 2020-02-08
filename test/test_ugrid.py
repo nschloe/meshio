@@ -175,3 +175,56 @@ def test_volume(filename, volume, accuracy):
         v = _pyramid_volume(cell)
         vol += v
     assert numpy.isclose(vol, 1.0, accuracy)
+
+
+def _triangle_area(cell):
+    """
+    Evaluate triangle area using cross product of two edge vectors
+    """
+    u = cell[0] - cell[1]
+    v = cell[0] - cell[2]
+    return numpy.linalg.norm(numpy.cross(u, v)) / 2.0
+
+
+def _quad_area(cell):
+    """
+    Evaluate triangle area using cross product of two edge vectors
+    """
+    tri1 = cell[[0, 1, 2]]
+    tri2 = cell[[2, 3, 0]]
+    return _triangle_area(tri1) + _triangle_area(tri2)
+
+
+@pytest.mark.parametrize(
+    "filename, area_tria_ref,area_quad_ref,accuracy",
+    [("hch_strct.4.lb8.ugrid", 9587.10463, 74294.529256, 1e-5)],
+)
+def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "ugrid", filename)
+
+    mesh = meshio.read(filename)
+
+    tria = None
+    for c in mesh.cells:
+        if c.type == "triangle":
+            tria = c
+    assert tria != None
+    total_tri_area = 0
+    for _cell in tria.data:
+        cell = numpy.array([mesh.points[i] for i in _cell])
+        a = _triangle_area(cell)
+        total_tri_area += a
+    assert numpy.isclose(total_tri_area, area_tria_ref, accuracy)
+
+    quad = None
+    for c in mesh.cells:
+        if c.type == "quad":
+            quad = c
+    assert quad != None
+    total_quad_area = 0
+    for _cell in quad.data:
+        cell = numpy.array([mesh.points[i] for i in _cell])
+        a = _quad_area(cell)
+        total_quad_area += a
+    assert numpy.isclose(total_quad_area, area_quad_ref, accuracy)
