@@ -108,35 +108,35 @@ def test_reference_file(
         assert c is not None
         assert c.data.shape == (ref_num_triangle, 3)
     else:
-        assert first(mesh.cells, lambda c: c.type == "triangle") == None
+        assert first(mesh.cells, lambda c: c.type == "triangle") is None
 
     if ref_num_quad > 0:
         c = first(mesh.cells, lambda c: c.type == "quad")
         assert c is not None
         assert c.data.shape == (ref_num_quad, 4)
     else:
-        assert first(mesh.cells, lambda c: c.type == "quad") == None
+        assert first(mesh.cells, lambda c: c.type == "quad") is None
 
     if ref_num_tet > 0:
         c = first(mesh.cells, lambda c: c.type == "tetra")
         assert c is not None
         assert c.data.shape == (ref_num_tet, 4)
     else:
-        assert first(mesh.cells, lambda c: c.type == "tetra") == None
+        assert first(mesh.cells, lambda c: c.type == "tetra") is None
 
     if ref_num_wedge > 0:
         c = first(mesh.cells, lambda c: c.type == "wedge")
         assert c is not None
         assert c.data.shape == (ref_num_wedge, 6)
     else:
-        assert first(mesh.cells, lambda c: c.type == "wedge") == None
+        assert first(mesh.cells, lambda c: c.type == "wedge") is None
 
     if ref_num_hex > 0:
         c = first(mesh.cells, lambda c: c.type == "hexahedron")
         assert c is not None
         assert c.data.shape == (ref_num_hex, 8)
     else:
-        first(mesh.cells, lambda c: c.type == "hexahedron") == None
+        first(mesh.cells, lambda c: c.type == "hexahedron") is None
 
     # validate boundary tags
 
@@ -237,7 +237,7 @@ def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
     mesh = meshio.read(filename)
 
     tria = first(mesh.cells, lambda c: c.type == "triangle")
-    assert tria != None
+    assert tria is not None
     total_tri_area = 0
     for _cell in tria.data:
         cell = numpy.array([mesh.points[i] for i in _cell])
@@ -246,7 +246,7 @@ def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
     assert numpy.isclose(total_tri_area, area_tria_ref, accuracy)
 
     quad = first(mesh.cells, lambda c: c.type == "quad")
-    assert quad != None
+    assert quad is not None
     total_quad_area = 0
     for _cell in quad.data:
         cell = numpy.array([mesh.points[i] for i in _cell])
