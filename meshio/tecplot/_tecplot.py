@@ -359,7 +359,7 @@ def write(filename, mesh):
                 varrange[0] += 1
             elif v.ndim == 2:
                 for i, vv in enumerate(v.T):
-                    variables += [f"f{i}"]
+                    variables += [f"{k}_{i}"]
                     data += [vv]
                     varrange[0] += 1
         else:
@@ -376,7 +376,7 @@ def write(filename, mesh):
                     varrange[1] += 1
                 elif v.ndim == 2:
                     for i, vv in enumerate(v.T):
-                        variables += [f"f{i}"]
+                        variables += [f"{k}_{i}"]
                         data += [vv]
                         varrange[1] += 1
             else:
