@@ -12,7 +12,7 @@ import meshio
     [
         helpers.tri_mesh,
         helpers.quad_mesh,
-        helpers.quad_tri_mesh,
+        helpers.tri_quad_mesh,
         helpers.tet_mesh,
         helpers.hex_mesh,
     ],
@@ -41,6 +41,32 @@ def test_generic_io():
     helpers.generic_io("test.0.lb8.ugrid")
 
 
+def first(iterable, condition=lambda x: True):
+    """
+    Returns the first item in the `iterable` that
+    satisfies the `condition`.
+
+    If the condition is not given, returns the first item of
+    the iterable.
+
+    returns None if no item satysfing the condition is found.
+
+    original version : https://stackoverflow.com/a/35513376
+
+    >>> first( (1,2,3), condition=lambda x: x % 2 == 0)
+    2
+    >>> first(range(3, 100))
+    3
+    >>> first( () ) is None
+    True
+    """
+
+    try:
+        return next(x for x in iterable if condition(x))
+    except StopIteration:
+        return None
+
+
 # sphere_mixed.1.lb8.ugrid and hch_strct.4.lb8.ugrid created
 # using the codes from http://cfdbooks.com
 @pytest.mark.parametrize(
@@ -57,6 +83,7 @@ def test_generic_io():
             {1: 432, 2: 216, 3: 216},
         ),
         ("hch_strct.4.lb8.ugrid", 306, 12, 178, 96, 0, 144, {1: 15, 2: 15, 3: 160}),
+        # ("przgrid.ugrid", 128, 36, 84, 126, 0, 0, {1: 21, 2: 21, 3: 21, 4: 21, 5: 18, 6: 18}),
     ],
 )
 def test_reference_file(
@@ -78,35 +105,39 @@ def test_reference_file(
 
     # validate element counts
     if ref_num_triangle > 0:
-        for c in mesh.cells:
-            if c.type == "triangle":
-                assert c.data.shape == (ref_num_triangle, 3)
+        c = first(mesh.cells, lambda c: c.type == "triangle")
+        assert c != None
+        assert c.data.shape == (ref_num_triangle, 3)
     else:
-        assert not any(c.type == "triangle" for c in mesh.cells)
+        assert first(mesh.cells, lambda c: c.type == "triangle") == None
 
     if ref_num_quad > 0:
-        assert mesh.cells[0].type == "quad"
-        assert mesh.cells[0].data.shape == (ref_num_quad, 4)
+        c = first(mesh.cells, lambda c: c.type == "quad")
+        assert c != None
+        assert c.data.shape == (ref_num_quad, 4)
     else:
-        assert not any(c.type == "quad" for c in mesh.cells)
+        assert first(mesh.cells, lambda c: c.type == "quad") == None
 
     if ref_num_tet > 0:
-        assert mesh.cells[1].type == "tetra"
-        assert mesh.cells[1].data.shape == (ref_num_tet, 4)
+        c = first(mesh.cells, lambda c: c.type == "tetra")
+        assert c != None
+        assert c.data.shape == (ref_num_tet, 4)
     else:
-        assert not any(c.type == "tetra" for c in mesh.cells)
+        assert first(mesh.cells, lambda c: c.type == "tetra") == None
 
     if ref_num_wedge > 0:
-        assert mesh.cells[2].type == "wedge"
-        assert mesh.cells[2].data.shape == (ref_num_wedge, 6)
+        c = first(mesh.cells, lambda c: c.type == "wedge")
+        assert c != None
+        assert c.data.shape == (ref_num_wedge, 6)
     else:
-        assert not any(c.type == "wedge" for c in mesh.cells)
+        assert first(mesh.cells, lambda c: c.type == "wedge") == None
 
     if ref_num_hex > 0:
-        assert mesh.cells[3].type == "hexahedron"
-        assert mesh.cells[3].data.shape == (ref_num_hex, 8)
+        c = first(mesh.cells, lambda c: c.type == "hexahedron")
+        assert c != None
+        assert c.data.shape == (ref_num_hex, 8)
     else:
-        assert not any(c.type == "hexahedron" for c in mesh.cells)
+        first(mesh.cells, lambda c: c.type == "hexahedron") == None
 
     # validate boundary tags
 
