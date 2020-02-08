@@ -352,29 +352,35 @@ def write(filename, mesh):
         varrange[0] += 1
 
     for k, v in mesh.point_data.items():
-        if v.ndim == 1:
-            variables += [k]
-            data += [v]
-            varrange[0] += 1
-        elif v.ndim == 2:
-            for i, vv in enumerate(v.T):
-                variables += [f"f{i}"]
-                data += [vv]
-                varrange[0] += 1
-
-    if mesh.cell_data:
-        varrange[1] = varrange[0] - 1
-        for k, v in mesh.cell_data.items():
-            v = numpy.concatenate([v[ic] for ic in cell_blocks])
+        if k not in {"X", "Y", "Z", "x", "y", "z"}:
             if v.ndim == 1:
                 variables += [k]
                 data += [v]
-                varrange[1] += 1
+                varrange[0] += 1
             elif v.ndim == 2:
                 for i, vv in enumerate(v.T):
                     variables += [f"f{i}"]
                     data += [vv]
+                    varrange[0] += 1
+        else:
+            logging.warning(f"Skipping point data '{k}'.")
+
+    if mesh.cell_data:
+        varrange[1] = varrange[0] - 1
+        for k, v in mesh.cell_data.items():
+            if k not in {"X", "Y", "Z", "x", "y", "z"}:
+                v = numpy.concatenate([v[ic] for ic in cell_blocks])
+                if v.ndim == 1:
+                    variables += [k]
+                    data += [v]
                     varrange[1] += 1
+                elif v.ndim == 2:
+                    for i, vv in enumerate(v.T):
+                        variables += [f"f{i}"]
+                        data += [vv]
+                        varrange[1] += 1
+            else:
+                logging.warning(f"Skipping cell data '{k}'.")
 
     with open_file(filename, "w") as f:
         # Title
@@ -389,7 +395,7 @@ def write(filename, mesh):
         num_cells = sum(len(mesh.cells[ic].data) for ic in cell_blocks)
         f.write(f"ZONE NODES = {num_nodes}, ELEMENTS = {num_cells},\n")
         f.write(f"DATAPACKING = BLOCK, ZONETYPE = {zone_type}")
-        if mesh.cell_data:
+        if varrange[0] < varrange[1]:
             f.write(",\n")
             varlocation_str = (
                 f"{varrange[0]}"
