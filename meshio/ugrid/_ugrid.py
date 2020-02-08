@@ -101,8 +101,7 @@ def read_buffer(f, file_type):
         nnodes, 3
     )
 
-    # TODO order plays a role here?
-    for key in ["quad", "triangle"]:
+    for key in ["triangle","quad"]:
         nitems = ugrid_counts[key][0]
         nvertices = ugrid_counts[key][1]
         if nitems == 0:
