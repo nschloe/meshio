@@ -96,12 +96,12 @@ def read_buffer(f):
 
         elif line.upper().startswith("ZONE"):
             # ZONE can be defined on several lines e.g.
-            # ````
-            # ZONE NODES = 62533 , ELEMENTS = 57982
-            # , DATAPACKING=BLOCK, ZONETYPE=FEQUADRILATERAL
-            # , VARLOCATION=([1-2]=NODAL, [3-7]=CELLCENTERED)
-            # ````
-            # is valid (and understood by Paraview and VisIt).
+            # ```
+            # ZONE NODES = 62533, ELEMENTS = 57982
+            # , DATAPACKING = BLOCK, ZONETYPE = FEQUADRILATERAL
+            # , VARLOCATION = ([1-2] = NODAL, [3-7] = CELLCENTERED)
+            # ```
+            # is valid (and understood by ParaView and VisIt).
             lines = [line]
             i = f.tell()
             line = f.readline().strip().upper()
@@ -327,7 +327,7 @@ def write(filename, mesh):
         # Check if the mesh contains 2D and 3D cells
         num_dims = [meshio_type_to_ndim[mesh.cells[ic].type] for ic in cell_blocks]
 
-        # Skip 2D cells if yes
+        # Skip 2D cells if it does
         if len(numpy.unique(num_dims)) == 2:
             logging.warning("Mesh contains 2D and 3D cells. Skipping 2D cells.")
             cell_blocks = [ic for ic, ndim in zip(cell_blocks, num_dims) if ndim == 3]
