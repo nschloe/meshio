@@ -105,35 +105,35 @@ def test_reference_file(
     # validate element counts
     if ref_num_triangle > 0:
         c = first(mesh.cells, lambda c: c.type == "triangle")
-        assert c != None
+        assert c is not None
         assert c.data.shape == (ref_num_triangle, 3)
     else:
         assert first(mesh.cells, lambda c: c.type == "triangle") == None
 
     if ref_num_quad > 0:
         c = first(mesh.cells, lambda c: c.type == "quad")
-        assert c != None
+        assert c is not None
         assert c.data.shape == (ref_num_quad, 4)
     else:
         assert first(mesh.cells, lambda c: c.type == "quad") == None
 
     if ref_num_tet > 0:
         c = first(mesh.cells, lambda c: c.type == "tetra")
-        assert c != None
+        assert c is not None
         assert c.data.shape == (ref_num_tet, 4)
     else:
         assert first(mesh.cells, lambda c: c.type == "tetra") == None
 
     if ref_num_wedge > 0:
         c = first(mesh.cells, lambda c: c.type == "wedge")
-        assert c != None
+        assert c is not None
         assert c.data.shape == (ref_num_wedge, 6)
     else:
         assert first(mesh.cells, lambda c: c.type == "wedge") == None
 
     if ref_num_hex > 0:
         c = first(mesh.cells, lambda c: c.type == "hexahedron")
-        assert c != None
+        assert c is not None
         assert c.data.shape == (ref_num_hex, 8)
     else:
         first(mesh.cells, lambda c: c.type == "hexahedron") == None
