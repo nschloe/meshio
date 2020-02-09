@@ -19,10 +19,110 @@ from .._mesh import Mesh
 
 
 def read(filename):
+
     with open_file(filename) as f:
-        mesh = read_buffer(f)
+        if filename[-1] == "b":
+            mesh = read_binary_buffer(f)
+        else:
+            mesh = read_buffer(f)
     return mesh
 
+def read_binary_buffer(f):
+    dim = 0
+    cells = []
+    point_data = {}
+    cell_data = {"medit:ref": []}
+
+    meshio_from_medit = {
+        "GmfVertices":("point",None),
+        "GmfEdges": ("line", 2),
+        "GmfTriangles": ("triangle", 3),
+        "GmfQuadrilaterals": ("quad", 4),
+        "GmfTetrahedra": ("tetra", 4),
+        "GmfPrisms": ("wedge",6),
+        "GmfHexahedra": ("hexahedron", 8),
+    }
+
+    medit_codes = {
+            3:"GmfDimension",
+            4:"GmfVertices",
+            5:"GmfEdges",
+            6:"GmfTriangles",
+            7:"GmfQuadrilaterals",
+            8:"GmfTetrahedra",
+            9:"GmfPrisms",
+            10:"GmfHexahedra",
+            54:"GmfEnd"
+            }
+
+    code = numpy.fromfile(f, count=1, dtype="i4")
+    if code != 1 and code != 16777216:
+        raise ReadError("Invalid code")
+    #TODO endianess
+    
+    version = numpy.fromfile(f, count=1, dtype="i4")
+    if version < 1 or version > 4:
+        raise ReadError("Invalid version")
+    print("vertsion ",version)
+
+    #TODO size
+    itype="i4"
+    ftype="f8"
+    #append endianess
+    points = None
+    cells = []
+    point_data = dict()
+    celldata = None
+    postype="i4"
+
+    print("code " ,code)
+
+    field = numpy.fromfile(f, count=1, dtype="i4")  
+
+    if field != 3 :# =  GmfDimension
+        raise ReadError("Invalid dimension code")
+
+    pos = numpy.fromfile(f, count=1, dtype="i4")  
+
+    dim = numpy.fromfile(f, count=1, dtype="i4")[0]
+    
+    if dim != 2 and dim != 3:
+        raise ReadError("Invalid mesh dimension")
+
+    while True:
+        field = numpy.fromfile(f, count=1, dtype="i4")[0]
+        if field not in medit_codes.keys():
+            pos = numpy.fromfile(f, count=1, dtype="i4")  
+            print("skipping")
+            continue
+        if medit_codes[field] == "GmfEnd":
+            break
+        pos = numpy.fromfile(f, count=1, dtype="i4")  
+
+        meshio_type,ncols = meshio_from_medit[medit_codes[field]]
+        nitems = numpy.fromfile(f, count=1, dtype=itype)[0]
+
+        if meshio_type == "point":
+            ncols = dim + 1
+            print(nitems)
+            print(nitems*ncols)
+            print([dim*ftype,itype])
+            dtype= "".join([dim * (ftype +","),itype])
+            dtype= numpy.dtype(dtype)
+            out = numpy.fromfile(f,count=nitems, dtype=dtype)
+            points = numpy.column_stack((out['f0'],out['f1'],out['f2']))
+            point_data["medit:ref"] = out['f3']
+        else:
+            ncols = ncols+1 # add reference
+            out = numpy.fromfile(f,count=nitems * ncols, dtype=itype).reshape(nitems,ncols)
+            # adapt for 0-base
+            cells.append((meshio_type, out[:, :ncols - 1] - 1))
+            cell_data["medit:ref"].append(out[:, -1])
+
+    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
+
+
+    
 
 def read_buffer(f):
     dim = 0
@@ -166,4 +266,4 @@ def write(filename, mesh):
         fh.write(b"\nEnd\n")
 
 
-register("medit", [".mesh"], read, {"medit": write})
+register("medit", [".mesh",".meshb"], read, {"medit": write})
