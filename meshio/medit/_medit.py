@@ -6,6 +6,8 @@ Check out
 <https://www.ljll.math.upmc.fr/frey/publications/RT-0253.pdf>
 <https://www.math.u-bordeaux.fr/~dobrzyns/logiciels/RT-422/node58.html>
 for something like a specification.
+Latest official up-to-date documentation and reference implementation at
+<https://github.com/LoicMarechal/libMeshb>
 """
 import logging
 from ctypes import c_double, c_float
@@ -17,6 +19,39 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
 
+# map medit element types to meshio
+meshio_from_medit = {
+        "GmfVertices":("point",None),
+        "GmfEdges": ("line", 2),
+        "GmfTriangles": ("triangle", 3),
+        "GmfQuadrilaterals": ("quad", 4),
+        "GmfTetrahedra": ("tetra", 4),
+        "GmfPrisms": ("wedge",6),
+        "GmfHexahedra": ("hexahedron", 8),
+        }
+
+# Key is the enum value of each keyword
+# values follow the design of GmfKwdFmt array of 
+# https://github.com/LoicMarechal/libMeshb/blob/master/sources/libmeshb7.c
+# For each keyword we assign its format as a string of numbers
+# i:integer, f:float, d:dimension
+medit_codes = {
+        3:("GmfDimension","i"),
+        4:("GmfVertices","dri"),
+        5:("GmfEdges","iii"),
+        6:("GmfTriangles","iiii"),
+        7:("GmfQuadrilaterals","iiiii"),
+        8:("GmfTetrahedra","iiiii"),
+        9:("GmfPrisms","iiiiiii"),
+        10:("GmfHexahedra","iiiiiiiii"),
+        40:("GmfVerticesOnGeometricVertices","ii"),
+        41:("GmfVerticesOnGeometricEdges","iirr"),
+        42:("GmfVerticesOnGeometricTriangles","iirrr"),
+        43:("GmfVerticesOnGeometricQuadrilaterals","iirrr"),
+        44:("GmfEdgesOnGeometricEdges","ii"),
+        54:("GmfEnd",""),
+        }
+
 
 def read(filename):
 
@@ -27,33 +62,35 @@ def read(filename):
             mesh = read_buffer(f)
     return mesh
 
+def _produce_dtype(string_type,dim,itype,ftype):
+    """
+    convert a medit_code to a dtype appropriate for building a numpy array
+    """
+    res = ""
+    c = 0 
+    while c < len(string_type):
+        s = string_type[c]
+        if s == "i":
+            res +=itype
+        elif s == "r":
+            res +=ftype
+        elif s == "d":
+            res += str(dim)
+            c+=1
+            continue
+        else:
+            ReadError("Invalid string type")
+        c+=1
+        if c != len(string_type):
+            res+=","
+    return res
+
 def read_binary_buffer(f):
     dim = 0
     cells = []
     point_data = {}
     cell_data = {"medit:ref": []}
 
-    meshio_from_medit = {
-        "GmfVertices":("point",None),
-        "GmfEdges": ("line", 2),
-        "GmfTriangles": ("triangle", 3),
-        "GmfQuadrilaterals": ("quad", 4),
-        "GmfTetrahedra": ("tetra", 4),
-        "GmfPrisms": ("wedge",6),
-        "GmfHexahedra": ("hexahedron", 8),
-    }
-
-    medit_codes = {
-            3:"GmfDimension",
-            4:"GmfVertices",
-            5:"GmfEdges",
-            6:"GmfTriangles",
-            7:"GmfQuadrilaterals",
-            8:"GmfTetrahedra",
-            9:"GmfPrisms",
-            10:"GmfHexahedra",
-            54:"GmfEnd"
-            }
 
     code = numpy.fromfile(f, count=1, dtype="i4")
     if code != 1 and code != 16777216:
@@ -74,7 +111,6 @@ def read_binary_buffer(f):
     point_data = dict()
     celldata = None
     postype="i4"
-
     print("code " ,code)
 
     field = numpy.fromfile(f, count=1, dtype="i4")  
@@ -92,37 +128,46 @@ def read_binary_buffer(f):
     while True:
         field = numpy.fromfile(f, count=1, dtype="i4")[0]
         if field not in medit_codes.keys():
-            pos = numpy.fromfile(f, count=1, dtype="i4")  
-            print("skipping")
-            continue
-        if medit_codes[field] == "GmfEnd":
+            raise ReadError("Unsupported field")
+
+        field_code = medit_codes[field][0]
+
+        if field_code == "GmfEnd":
             break
+
         pos = numpy.fromfile(f, count=1, dtype="i4")  
 
-        meshio_type,ncols = meshio_from_medit[medit_codes[field]]
         nitems = numpy.fromfile(f, count=1, dtype=itype)[0]
 
-        if meshio_type == "point":
-            ncols = dim + 1
-            print(nitems)
-            print(nitems*ncols)
-            print([dim*ftype,itype])
-            dtype= "".join([dim * (ftype +","),itype])
-            dtype= numpy.dtype(dtype)
-            out = numpy.fromfile(f,count=nitems, dtype=dtype)
-            points = numpy.column_stack((out['f0'],out['f1'],out['f2']))
-            point_data["medit:ref"] = out['f3']
-        else:
-            ncols = ncols+1 # add reference
+        field_template = medit_codes[field][1]
+        ncols = len(field_template)
+        all_integers = (field_template.count("i") == ncols)
+        if all_integers:
             out = numpy.fromfile(f,count=nitems * ncols, dtype=itype).reshape(nitems,ncols)
-            # adapt for 0-base
-            cells.append((meshio_type, out[:, :ncols - 1] - 1))
+            if field_code not in meshio_from_medit.keys():
+                msg = ("meshio doesn't know {} type. Skipping.").format(field_code)
+                logging.warning(msg)
+                continue
+
+            meshio_type,ncols = meshio_from_medit[field_code]
+            cells.append((meshio_type, out[:, :ncols] - 1))
             cell_data["medit:ref"].append(out[:, -1])
+
+        else:
+            dtype = numpy.dtype(_produce_dtype(field_template,dim,itype,ftype))
+            out = numpy.fromfile(f,count=nitems, dtype=dtype)
+            if field_code not in meshio_from_medit.keys():
+                msg = ("meshio doesn't know {} type. Skipping.").format(field_code)
+                logging.warning(msg)
+                continue
+
+            elif field_code == "GmfVertices":
+                    points = out['f0']
+                    point_data["medit:ref"] = out['f1']
 
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
-    
 
 def read_buffer(f):
     dim = 0
