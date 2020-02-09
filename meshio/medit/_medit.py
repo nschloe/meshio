@@ -44,12 +44,17 @@ medit_codes = {
         8:("GmfTetrahedra","iiiii"),
         9:("GmfPrisms","iiiiiii"),
         10:("GmfHexahedra","iiiiiiiii"),
+        20:("GmfNormalAtVertices","ii"),
+        21:("GmfNormalAtTriangleVertices", "iii"),
+        22:("GmfNormalAtQuadrilateralVertices","iiii"),
         40:("GmfVerticesOnGeometricVertices","ii"),
         41:("GmfVerticesOnGeometricEdges","iirr"),
         42:("GmfVerticesOnGeometricTriangles","iirrr"),
         43:("GmfVerticesOnGeometricQuadrilaterals","iirrr"),
         44:("GmfEdgesOnGeometricEdges","ii"),
         54:("GmfEnd",""),
+        59:("Tangents","dr"),
+        60:("Normals","dr"),
         }
 
 
