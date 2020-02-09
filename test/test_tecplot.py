@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy
 import pytest
 
@@ -17,7 +19,7 @@ def test_varlocation():
     # number of point and cell data.
     writer = meshio.tecplot.write
     reader = meshio.tecplot.read
-    mesh = helpers.tri_mesh
+    mesh = deepcopy(helpers.tri_mesh)
     num_points = len(mesh.points)
     num_cells = sum(len(c.data) for c in mesh.cells)
 
