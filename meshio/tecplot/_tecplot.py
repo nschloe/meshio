@@ -395,7 +395,7 @@ def write(filename, mesh):
         num_cells = sum(len(mesh.cells[ic].data) for ic in cell_blocks)
         f.write(f"ZONE NODES = {num_nodes}, ELEMENTS = {num_cells},\n")
         f.write(f"DATAPACKING = BLOCK, ZONETYPE = {zone_type}")
-        if varrange[0] < varrange[1]:
+        if varrange[0] <= varrange[1]:
             f.write(",\n")
             varlocation_str = (
                 f"{varrange[0]}"
