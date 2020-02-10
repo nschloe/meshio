@@ -30,7 +30,7 @@ meshio can read and write all of the following and smoothly converts between the
  [MED/Salome](https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html),
  [Nastran](https://help.autodesk.com/view/NSTRN/2019/ENU/?guid=GUID-42B54ACB-FBE3-47CA-B8FE-475E7AD91A00) (bulk data),
  [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed#mesh-representation-of-segmented-object-surfaces),
- [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats) (versions 2 and 4),
+ [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats) (format versions 2.2, 4.0, and 4.1),
  [OBJ](https://en.wikipedia.org/wiki/Wavefront_.obj_file),
  [OFF](https://segeval.cs.princeton.edu/public/off_format.html),
  [PERMAS](https://www.intes.de),
