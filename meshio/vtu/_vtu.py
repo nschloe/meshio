@@ -1,5 +1,7 @@
 """
 I/O for VTU.
+<https://vtk.org/Wiki/VTK_XML_Formats>
+<https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf>
 """
 import base64
 import logging
@@ -254,8 +256,27 @@ class VtuReader:
         )
         self.field_data = field_data
 
-    def read_binary(self, data, data_type):
-        # first read the the block size; it determines the size of the header
+    def read_uncompressed_binary(self, data, data_type):
+        byte_string = base64.b64decode(data)
+
+        dtype = vtu_to_numpy_type[self.header_type]
+        if self.byte_order is not None:
+            dtype = dtype.newbyteorder(
+                "<" if self.byte_order == "LittleEndian" else ">"
+            )
+        num_bytes_per_item = numpy.dtype(dtype).itemsize
+        # num_bytes = numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0]
+
+        # Read the block data; multiple blocks possible here?
+        dtype = vtu_to_numpy_type[data_type]
+        if self.byte_order is not None:
+            dtype = dtype.newbyteorder(
+                "<" if self.byte_order == "LittleEndian" else ">"
+            )
+        return numpy.frombuffer(byte_string[num_bytes_per_item:], dtype=dtype)
+
+    def read_compressed_binary(self, data, data_type):
+        # first read the block size; it determines the size of the header
         dtype = vtu_to_numpy_type[self.header_type]
         if self.byte_order is not None:
             dtype = dtype.newbyteorder(
@@ -267,7 +288,7 @@ class VtuReader:
         num_blocks = numpy.frombuffer(byte_string, dtype)[0]
 
         # read the entire header
-        num_header_items = 3 + num_blocks
+        num_header_items = 3 + int(num_blocks)
         num_header_bytes = num_bytes_per_item * num_header_items
         num_header_chars = num_bytes_to_num_base64_chars(num_header_bytes)
         byte_string = base64.b64decode(data[:num_header_chars])
@@ -313,10 +334,22 @@ class VtuReader:
                 c.text, dtype=vtu_to_numpy_type[c.attrib["type"]], sep=" "
             )
         elif fmt == "binary":
-            data = self.read_binary(c.text.strip(), c.attrib["type"])
+            if "compressor" in c.attrib:
+                assert c.attrib["compressor"] == "vtkZLibDataCompressor"
+                data = self.read_compressed_binary(c.text.strip(), c.attrib["type"])
+            else:
+                data = self.read_uncompressed_binary(c.text.strip(), c.attrib["type"])
         elif fmt == "appended":
             offset = int(c.attrib["offset"])
-            data = self.read_binary(self.appended_data[offset:], c.attrib["type"])
+            if "compressor" in c.attrib:
+                assert c.attrib["compressor"] == "vtkZLibDataCompressor"
+                data = self.read_compressed_binary(
+                    self.appended_data[offset:], c.attrib["type"]
+                )
+            else:
+                data = self.read_uncompressed_binary(
+                    self.appended_data[offset:], c.attrib["type"]
+                )
         else:
             raise ReadError(f"Unknown data format '{fmt}'.")
 
