@@ -25,7 +25,9 @@ test_set = [
 
 
 @pytest.mark.parametrize("mesh", test_set)
-@pytest.mark.parametrize("data_type", [(False, None), (True, None), (True, "zlib")])
+@pytest.mark.parametrize(
+    "data_type", [(False, None), (True, None), (True, "lzma"), (True, "zlib")]
+)
 def test(mesh, data_type):
     binary, compression = data_type
 

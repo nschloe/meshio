@@ -5,6 +5,7 @@ I/O for VTU.
 """
 import base64
 import logging
+import lzma
 import sys
 import zlib
 
@@ -135,7 +136,10 @@ class VtuReader:
             )
 
         if "compressor" in root.attrib:
-            assert root.attrib["compressor"] == "vtkZLibDataCompressor"
+            assert root.attrib["compressor"] in [
+                "vtkLZMADataCompressor",
+                "vtkZLibDataCompressor",
+            ]
             self.compression = root.attrib["compressor"]
         else:
             self.compression = None
@@ -313,11 +317,15 @@ class VtuReader:
         byte_offsets[0] = 0
         numpy.cumsum(block_sizes, out=byte_offsets[1:])
 
+        c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[
+            self.compression
+        ]
+
         # process the compressed data
         block_data = numpy.concatenate(
             [
                 numpy.frombuffer(
-                    zlib.decompress(byte_array[byte_offsets[k] : byte_offsets[k + 1]]),
+                    c.decompress(byte_array[byte_offsets[k] : byte_offsets[k + 1]]),
                     dtype=dtype,
                 )
                 for k in range(num_blocks)
@@ -408,8 +416,12 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
     if binary and compression:
         # TODO lz4, lzma <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>
-        assert compression == "zlib"
-        vtk_file.set("compressor", "vtkZLibDataCompressor")
+        compressions = {
+            "lzma": "vtkLZMADataCompressor",
+            "zlib": "vtkZLibDataCompressor",
+        }
+        assert compression in compressions
+        vtk_file.set("compressor", compressions[compression])
 
     # swap the data to match the system byteorder
     # Don't use byteswap to make sure that the dtype is changed; see
@@ -447,9 +459,10 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                     # necessary because the header, written first, needs to know the
                     # lengths of all blocks. Also, the blocks are encoded _after_ having
                     # been concatenated.
+                    c = {"lzma": lzma, "zlib": zlib}[compression]
                     compressed_blocks = [
-                        # This zlib.compress is the slowest part of the writer
-                        zlib.compress(block)
+                        # This compress is the slowest part of the writer
+                        c.compress(block)
                         for block in _chunk_it(data_bytes, max_block_size)
                     ]
 
