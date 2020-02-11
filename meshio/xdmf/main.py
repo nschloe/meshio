@@ -46,7 +46,7 @@ class XdmfReader:
             return self.read_xdmf2(root)
 
         if version.split(".")[0] != "3":
-            raise ReadError(f"Unknown XDMF version {version}.")
+            raise ReadError("Unknown XDMF version {}.".format(version))
 
         return self.read_xdmf3(root)
 
@@ -60,7 +60,7 @@ class XdmfReader:
                 return self._read_data_item(
                     root.find(".//" + "/".join(xpath.split("/")[2:])), root
                 )
-            raise ValueError(f"Can't read XPath {xpath}.")
+            raise ValueError("Can't read XPath {}.".format(xpath))
 
         dims = [int(d) for d in data_item.get("Dimensions").split()]
 
@@ -199,7 +199,7 @@ class XdmfReader:
                     if c.get("Center") != "Grid":
                         raise ReadError()
             else:
-                raise ReadError(f"Unknown section '{c.tag}'.")
+                raise ReadError("Unknown section '{}'.".format(c.tag))
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -296,7 +296,7 @@ class XdmfReader:
                         raise ReadError()
                     cell_data_raw[name] = data
             else:
-                raise ReadError(f"Unknown section '{c.tag}'.")
+                raise ReadError("Unknown section '{}'.".format(c.tag))
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -366,8 +366,8 @@ class XdmfWriter:
             return bin_filename
 
         if self.data_format != "HDF":
-            raise WriteError(f'Unknown data format "{self.data_format}"')
-        name = f"data{self.data_counter}"
+            raise WriteError('Unknown data format "{}"'.format(self.data_format))
+        name = "data{}".format(self.data_counter)
         self.data_counter += 1
         self.h5_file.create_dataset(
             name,

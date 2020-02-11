@@ -28,7 +28,7 @@ c_double = numpy.dtype("d")
 
 
 def _size_type(data_size):
-    return numpy.dtype(f"u{data_size}")
+    return numpy.dtype("u{}".format(data_size))
 
 
 def read_buffer(f, is_ascii, data_size):
@@ -289,7 +289,7 @@ def write4_1(filename, mesh, binary=True):
         file_type = 1 if binary else 0
         data_size = c_size_t.itemsize
         fh.write(b"$MeshFormat\n")
-        fh.write(f"4.1 {file_type} {data_size}\n".encode("utf-8"))
+        fh.write("4.1 {} {}\n".format(file_type, data_size).encode("utf-8"))
         if binary:
             numpy.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
@@ -389,8 +389,14 @@ def _write_nodes(fh, points, cells, binary):
         points.tofile(fh)
         fh.write(b"\n")
     else:
-        fh.write(f"{num_blocks} {n} {min_tag} {max_tag}\n".encode("utf-8"))
-        fh.write(f"{dim_entity} {entity_tag} {is_parametric} {n}\n".encode("utf-8"))
+        fh.write(
+            "{} {} {} {}\n".format(num_blocks, n, min_tag, max_tag).encode("utf-8")
+        )
+        fh.write(
+            "{} {} {} {}\n".format(dim_entity, entity_tag, is_parametric, n).encode(
+                "utf-8"
+            )
+        )
         numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh, "\n", "%d")
         fh.write(b"\n")
         numpy.savetxt(fh, points, delimiter=" ")
@@ -465,7 +471,9 @@ def _write_elements(fh, cells, binary):
             entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]
-            fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode("utf-8"))
+            fh.write(
+                "{} {} {} {}\n".format(dim, entity_tag, cell_type, n).encode("utf-8")
+            )
 
             numpy.savetxt(
                 fh,

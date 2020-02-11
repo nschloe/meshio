@@ -87,7 +87,7 @@ def write(filename, mesh):
             if cell_type == "quad":
                 fmt += " {}"
             for c in cell_array:
-                f.write(f"{fmt}\n".format(*(c + 1)))
+                f.write("{}\n".format(fmt).format(*(c + 1)))
 
 
 register("obj", [".obj"], read, {"obj": write})

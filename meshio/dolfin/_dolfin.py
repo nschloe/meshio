@@ -35,7 +35,7 @@ def _read_mesh(filename):
             cell_type, num_nodes_per_cell = dolfin_to_meshio_type[
                 elem.attrib["celltype"]
             ]
-            cell_tags = [f"v{i}" for i in range(num_nodes_per_cell)]
+            cell_tags = ["v{}".format(i) for i in range(num_nodes_per_cell)]
         elif elem.tag == "vertices":
             points = numpy.empty((int(elem.attrib["size"]), dim))
             keys = ["x", "y"]
@@ -81,7 +81,7 @@ def _read_cell_data(filename, cell_type):
     for f in os.listdir(dir_name):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
-        out = re.match(f"{basename}_([^\\.]+)\\.xml", f)
+        out = re.match("{}_([^\\.]+)\\.xml".format(basename), f)
         if not out:
             continue
         name = out.group(1)
@@ -135,7 +135,7 @@ def _write_mesh(filename, points, cell_type, cells):
 
     dim = points.shape[1]
     if dim not in [2, 3]:
-        raise WriteError(f"Can only write dimension 2, 3, got {dim}.")
+        raise WriteError("Can only write dimension 2, 3, got {}.".format(dim))
 
     coord_names = ["x", "y"]
     if dim == 3:
@@ -143,30 +143,34 @@ def _write_mesh(filename, points, cell_type, cells):
 
     with open(filename, "w") as f:
         f.write("<dolfin nsmap=\"{'dolfin': 'https://fenicsproject.org/'}\">\n")
-        f.write(f'  <mesh celltype="{meshio_to_dolfin_type[cell_type]}" dim="{dim}">\n')
+        f.write(
+            '  <mesh celltype="{}" dim="{}">\n'.format(
+                meshio_to_dolfin_type[cell_type], dim
+            )
+        )
 
-        f.write(f'    <vertices size="{len(points)}">\n')
+        f.write('    <vertices size="{}">\n'.format(len(points)))
         xyz = "xyz"
         for idx, point in enumerate(points):
-            s = " ".join(f'{xyz[k]}="{p}"' for k, p in enumerate(point))
-            f.write(f'      <vertex index="{idx}" {s} />\n')
-        f.write(f"    </vertices>\n")
+            s = " ".join('{}="{}"'.format(xyz[k], p) for k, p in enumerate(point))
+            f.write('      <vertex index="{}" {} />\n'.format(idx, s))
+        f.write("    </vertices>\n")
 
         num_cells = 0
         for c in stripped_cells:
             num_cells += len(c.data)
 
-        f.write(f'    <cells size="{num_cells}">\n')
+        f.write('    <cells size="{}">\n'.format(num_cells))
         idx = 0
         for ct, cls in stripped_cells:
             type_string = meshio_to_dolfin_type[ct]
             for cell in cls:
-                s = " ".join(f'v{k}="{c}"' for k, c in enumerate(cell))
-                f.write(f'      <{type_string} index="{idx}" {s} />\n')
+                s = " ".join('v{}="{}"'.format(k, c) for k, c in enumerate(cell))
+                f.write('      <{} index="{}" {} />\n'.format(type_string, idx, s))
                 idx += 1
-        f.write(f"    </cells>\n")
-        f.write(f"  </mesh>\n")
-        f.write(f"</dolfin>")
+        f.write("    </cells>\n")
+        f.write("  </mesh>\n")
+        f.write("</dolfin>")
 
 
 def _numpy_type_to_dolfin_type(dtype):

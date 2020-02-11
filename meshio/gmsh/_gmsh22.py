@@ -282,7 +282,9 @@ def write(filename, mesh, binary=True):
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
-        fh.write((f"$MeshFormat\n2.2 {mode_idx} {size_of_double}\n").encode("utf-8"))
+        fh.write(
+            "$MeshFormat\n2.2 {} {}\n".format(mode_idx, size_of_double).encode("utf-8")
+        )
         if binary:
             numpy.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
@@ -336,7 +338,7 @@ def _write_elements(fh, cells, tag_data, binary):
     fh.write(b"$Elements\n")
     # count all cells
     total_num_cells = sum([c.shape[0] for _, c in cells])
-    fh.write(f"{total_num_cells}\n".encode("utf-8"))
+    fh.write("{}\n".format(total_num_cells).encode("utf-8"))
 
     consecutive_index = 0
     for k, (cell_type, node_idcs) in enumerate(cells):
@@ -360,7 +362,9 @@ def _write_elements(fh, cells, tag_data, binary):
             a += 1 + consecutive_index
             array = numpy.hstack([a, fcd, node_idcs + 1])
             if array.dtype != c_int:
-                raise WriteError(f"Wrong dtype (require c_int, got {array.dtype})")
+                raise WriteError(
+                    "Wrong dtype (require c_int, got {})".format(array.dtype)
+                )
             array.tofile(fh)
         else:
             form = (
@@ -389,7 +393,7 @@ def _write_periodic(fh, periodic):
     fh.write(b"$Periodic\n")
     fh.write("{}\n".format(len(periodic)).encode("utf-8"))
     for dim, (stag, mtag), affine, slave_master in periodic:
-        fh.write(f"{dim} {stag} {mtag}\n".encode("utf-8"))
+        fh.write("{} {} {}\n".format(dim, stag, mtag).encode("utf-8"))
         if affine is not None:
             fh.write(b"Affine ")
             affine = numpy.array(affine, dtype=float)
@@ -399,5 +403,5 @@ def _write_periodic(fh, periodic):
         slave_master = slave_master + 1  # Add one, Gmsh is 0-based
         fh.write("{}\n".format(len(slave_master)).encode("utf-8"))
         for snode, mnode in slave_master:
-            fh.write(f"{snode} {mnode}\n".encode("utf-8"))
+            fh.write("{} {}\n".format(snode, mnode).encode("utf-8"))
     fh.write(b"$EndPeriodic\n")

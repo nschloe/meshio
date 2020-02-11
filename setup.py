@@ -35,13 +35,14 @@ setup(
     platforms="any",
     install_requires=["numpy"],
     # For pathlib >= 3.5, f-strings 3.6:
-    python_requires=">=3.6",
+    python_requires=">=3.5",
     extras_require=extras,
     classifiers=[
         about["__status__"],
         about["__license__"],
         "Intended Audience :: Science/Research",
         "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",

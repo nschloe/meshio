@@ -70,7 +70,7 @@ def _get_writer(filetype, filename):
     elif filetype == "xdmf3":
         writer = vtk.vtkXdmf3Writer()
     else:
-        assert filetype == "exodus", f"Unknown file type '{filename}'."
+        assert filetype == "exodus", "Unknown file type '{}'.".format(filename)
         writer = vtk.vtkExodusIIWriter()
         # if the mesh contains vtkmodeldata information, make use of it
         # and write out all time steps.

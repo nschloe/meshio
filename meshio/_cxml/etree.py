@@ -22,7 +22,7 @@ class Element:
         self.attrib[key] = value
 
     def write(self, f):
-        kw_list = [f'{key}="{value}"' for key, value in self.attrib.items()]
+        kw_list = ['{}="{}"'.format(key, value) for key, value in self.attrib.items()]
         f.write("<{}>\n".format(" ".join([self.name] + kw_list)))
         if self.text:
             f.write(self.text)
@@ -32,7 +32,7 @@ class Element:
             f.write("\n")
         for child in self._children:
             child.write(f)
-        f.write(f"</{self.name}>\n")
+        f.write("</{}>\n".format(self.name))
 
 
 class SubElement(Element):
@@ -46,7 +46,7 @@ class Comment:
         self.text = text
 
     def write(self, f):
-        f.write(f"<!--{self.text}-->\n")
+        f.write("<!--{}-->\n".format(self.text))
 
 
 class ElementTree:

@@ -111,7 +111,7 @@ def write(filename, mesh):
 
         # vertices
         fh.write(b"\nVertices\n")
-        fh.write(f"{n}\n".encode("utf-8"))
+        fh.write("{}\n".format(n).encode("utf-8"))
         if "medit:ref" in mesh.point_data:
             labels = mesh.point_data["medit:ref"]
         elif "gmsh:physical" in mesh.point_data:
@@ -142,7 +142,7 @@ def write(filename, mesh):
                 logging.warning(msg)
                 continue
             fh.write(b"\n")
-            fh.write(f"{medit_name}\n".encode("utf-8"))
+            fh.write("{}\n".format(medit_name).encode("utf-8"))
             fh.write("{}\n".format(len(data)).encode("utf-8"))
 
             if "medit:ref" in mesh.cell_data:
