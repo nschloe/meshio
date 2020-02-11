@@ -181,8 +181,18 @@ def read_write(plot=False):
             meshio.vtk.read,
             ["out.vtk"],
         ),
-        "VTU (binary)": (
-            lambda f, m: meshio.vtu.write(f, m, binary=True),
+        "VTU (binary, uncompressed)": (
+            lambda f, m: meshio.vtu.write(f, m, binary=True, compression=None),
+            meshio.vtu.read,
+            ["out.vtu"],
+        ),
+        "VTU (binary, zlib)": (
+            lambda f, m: meshio.vtu.write(f, m, binary=True, compression="zlib"),
+            meshio.vtu.read,
+            ["out.vtu"],
+        ),
+        "VTU (binary, LZMA)": (
+            lambda f, m: meshio.vtu.write(f, m, binary=True, compression="lzma"),
             meshio.vtu.read,
             ["out.vtu"],
         ),
@@ -223,6 +233,8 @@ def read_write(plot=False):
     #     "MDPA": formats["MDPA"],
     # }
 
+    # max_key_length = max(len(key) for key in formats)
+
     elapsed_write = []
     elapsed_read = []
     file_sizes = []
@@ -231,7 +243,7 @@ def read_write(plot=False):
 
     print()
     print(
-        "format                  "
+        "format                      "
         + "write (s)    "
         + "read(s)      "
         + "file size    "
@@ -262,7 +274,7 @@ def read_write(plot=False):
             peak_memory_read.append(tracemalloc.get_traced_memory()[1])
             tracemalloc.stop()
             print(
-                "{:<22}  {:e} {:e} {:e} {:e} {:e}".format(
+                "{:<26}  {:e} {:e} {:e} {:e} {:e}".format(
                     name,
                     elapsed_write[-1],
                     elapsed_read[-1],
