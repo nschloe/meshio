@@ -33,7 +33,7 @@ class TimeSeriesReader:
 
         version = root.get("Version")
         if version.split(".")[0] != "3":
-            raise ReadError(f"Unknown XDMF version {version}.")
+            raise ReadError("Unknown XDMF version {}.".format(version))
 
         domains = list(root)
         if len(domains) != 1:
@@ -302,7 +302,7 @@ class TimeSeriesWriter:
             self.mesh_name
         )
         ET.SubElement(grid, "{http://www.w3.org/2003/XInclude}include", xpointer=ptr)
-        ET.SubElement(grid, "Time", Value=f"{t}")
+        ET.SubElement(grid, "Time", Value=str(t))
 
         if point_data:
             self.point_data(point_data, grid)
@@ -334,7 +334,7 @@ class TimeSeriesWriter:
 
         if self.data_format != "HDF":
             raise WriteError()
-        name = f"data{self.data_counter}"
+        name = "data{}".format(self.data_counter)
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
         return os.path.basename(self.h5_filename) + ":/" + name
