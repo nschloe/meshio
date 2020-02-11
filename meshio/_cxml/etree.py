@@ -10,7 +10,7 @@
 class Element:
     def __init__(self, name, **kwargs):
         self.name = name
-        self.kwargs = kwargs
+        self.attrib = kwargs
         self._children = []
         self.text = None
         self.text_writer = None
@@ -19,10 +19,10 @@ class Element:
         self._children.insert(pos, elem)
 
     def set(self, key, value):
-        self.kwargs[key] = value
+        self.attrib[key] = value
 
     def write(self, f):
-        kw_list = [f'{key}="{value}"' for key, value in self.kwargs.items()]
+        kw_list = [f'{key}="{value}"' for key, value in self.attrib.items()]
         f.write("<{}>\n".format(" ".join([self.name] + kw_list)))
         if self.text:
             f.write(self.text)

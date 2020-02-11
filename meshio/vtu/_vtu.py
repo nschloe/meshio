@@ -6,7 +6,6 @@ I/O for VTU.
 import base64
 import logging
 import sys
-import xml.etree.ElementTree as ET
 import zlib
 
 import numpy
@@ -120,6 +119,8 @@ class VtuReader:
     """
 
     def __init__(self, filename):  # noqa: C901
+        import xml.etree.ElementTree as ET
+
         parser = ET.XMLParser()
         tree = ET.parse(filename, parser)
         root = tree.getroot()
@@ -133,11 +134,11 @@ class VtuReader:
                 "Unknown VTU file version '{}'.".format(root.attrib["version"])
             )
 
-        if (
-            "compressor" in root.attrib
-            and root.attrib["compressor"] != "vtkZLibDataCompressor"
-        ):
-            raise ReadError()
+        if "compressor" in root.attrib:
+            assert root.attrib["compressor"] == "vtkZLibDataCompressor"
+            self.compression = root.attrib["compressor"]
+        else:
+            self.compression = None
 
         self.header_type = (
             root.attrib["header_type"] if "header_type" in root.attrib else "UInt32"
@@ -265,7 +266,7 @@ class VtuReader:
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
         num_bytes_per_item = numpy.dtype(dtype).itemsize
-        # num_bytes = numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0]
+        # total_num_bytes = numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0]
 
         # Read the block data; multiple blocks possible here?
         dtype = vtu_to_numpy_type[data_type]
@@ -334,22 +335,20 @@ class VtuReader:
                 c.text, dtype=vtu_to_numpy_type[c.attrib["type"]], sep=" "
             )
         elif fmt == "binary":
-            if "compressor" in c.attrib:
-                assert c.attrib["compressor"] == "vtkZLibDataCompressor"
-                data = self.read_compressed_binary(c.text.strip(), c.attrib["type"])
-            else:
-                data = self.read_uncompressed_binary(c.text.strip(), c.attrib["type"])
+            reader = (
+                self.read_uncompressed_binary
+                if self.compression is None
+                else self.read_compressed_binary
+            )
+            data = reader(c.text.strip(), c.attrib["type"])
         elif fmt == "appended":
             offset = int(c.attrib["offset"])
-            if "compressor" in c.attrib:
-                assert c.attrib["compressor"] == "vtkZLibDataCompressor"
-                data = self.read_compressed_binary(
-                    self.appended_data[offset:], c.attrib["type"]
-                )
-            else:
-                data = self.read_uncompressed_binary(
-                    self.appended_data[offset:], c.attrib["type"]
-                )
+            reader = (
+                self.read_uncompressed_binary
+                if self.compression is None
+                else self.read_compressed_binary
+            )
+            data = reader(self.appended_data[offset:], c.attrib["type"])
         else:
             raise ReadError(f"Unknown data format '{fmt}'.")
 
@@ -407,7 +406,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     else:
         vtk_file.set("header_type", header_type)
 
-    if compression:
+    if binary and compression:
         # TODO lz4, lzma <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>
         assert compression == "zlib"
         vtk_file.set("compressor", "vtkZLibDataCompressor")
@@ -471,8 +470,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                     header = numpy.array(
                         len(data_bytes), dtype=vtu_to_numpy_type[header_type]
                     )
-                    f.write(base64.b64encode(header.tostring()).decode())
-                    f.write(base64.b64encode(data_bytes).decode())
+                    f.write(base64.b64encode(header.tostring() + data_bytes).decode())
 
         else:
             da.set("format", "ascii")
@@ -544,7 +542,6 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             numpy_to_xml_array(cd, name, "{:.11e}", data)
 
     # write_xml(filename, vtk_file, pretty_xml)
-
     tree = ET.ElementTree(vtk_file)
     tree.write(filename)
 
