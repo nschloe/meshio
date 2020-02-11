@@ -1,4 +1,5 @@
 import os
+import sys
 
 import numpy
 import pytest
@@ -7,6 +8,7 @@ import helpers
 import meshio
 
 
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires Python 3.6 or higher")
 @pytest.mark.parametrize(
     "mesh",
     [
@@ -35,6 +37,7 @@ def test_io(mesh, accuracy, ext):
     helpers.write_read(meshio.ugrid.write, meshio.ugrid.read, mesh, accuracy, ext)
 
 
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires Python 3.6 or higher")
 def test_generic_io():
     helpers.generic_io("test.lb8.ugrid")
     # With additional, insignificant suffix:
@@ -43,6 +46,7 @@ def test_generic_io():
 
 # sphere_mixed.1.lb8.ugrid and hch_strct.4.lb8.ugrid created
 # using the codes from http://cfdbooks.com
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires Python 3.6 or higher")
 @pytest.mark.parametrize(
     "filename, ref_num_points, ref_num_triangle, ref_num_quad, ref_num_wedge, ref_num_tet, ref_num_hex, ref_tag_counts",
     [
@@ -157,9 +161,9 @@ def _pyramid_volume(cell):
     return vol
 
 
-# ugrid node ordering is the same for all elements except the
-# pyramids. In order to make sure we got it right read a cube
-# split into pyramids and evaluate its volume
+# ugrid node ordering is the same for all elements except the pyramids. In order to make
+# sure we got it right read a cube split into pyramids and evaluate its volume
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires Python 3.6 or higher")
 @pytest.mark.parametrize("filename, volume,accuracy", [("pyra_cube.ugrid", 1.0, 1e-15)])
 def test_volume(filename, volume, accuracy):
     this_dir = os.path.dirname(os.path.abspath(__file__))
