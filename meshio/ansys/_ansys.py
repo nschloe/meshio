@@ -389,7 +389,7 @@ def read(filename):  # noqa: C901
 def write(filename, mesh, binary=True):
     with open_file(filename, "wb") as fh:
         # header
-        fh.write((f'(1 "meshio {__version__}")\n').encode("utf8"))
+        fh.write('(1 "meshio {}")\n'.format(__version__).encode("utf8"))
 
         # dimension
         dim = mesh.points.shape[1]

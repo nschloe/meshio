@@ -386,10 +386,10 @@ def write(filename, mesh):
 
     with open_file(filename, "w") as f:
         # Title
-        f.write(f'TITLE = "Written by meshio v{version}"\n')
+        f.write('TITLE = "Written by meshio v{}"\n'.format(version))
 
         # Variables
-        variables_str = ", ".join(f'"{var}"' for var in variables)
+        variables_str = ", ".join('"{}"'.format(var) for var in variables)
         f.write("VARIABLES = {}\n".format(variables_str))
 
         # Zone record

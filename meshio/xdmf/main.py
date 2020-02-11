@@ -366,7 +366,7 @@ class XdmfWriter:
             return bin_filename
 
         if self.data_format != "HDF":
-            raise WriteError(f'Unknown data format "{self.data_format}"')
+            raise WriteError('Unknown data format "{}"'.format(self.data_format))
         name = f"data{self.data_counter}"
         self.data_counter += 1
         self.h5_file.create_dataset(

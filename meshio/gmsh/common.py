@@ -202,7 +202,7 @@ def _write_data(fh, tag, name, data, binary):
     # > the second as the name of the interpolation scheme. The interpolation
     # > scheme is provided in the $InterpolationScheme section (see below).
     fh.write("{}\n".format(1).encode("utf-8"))
-    fh.write(f'"{name}"\n'.encode("utf-8"))
+    fh.write('"{}"\n'.format(name).encode("utf-8"))
     fh.write("{}\n".format(1).encode("utf-8"))
     fh.write("{}\n".format(0.0).encode("utf-8"))
     # three integer tags:

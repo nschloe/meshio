@@ -22,7 +22,7 @@ class Element:
         self.attrib[key] = value
 
     def write(self, f):
-        kw_list = [f'{key}="{value}"' for key, value in self.attrib.items()]
+        kw_list = ['{}="{}"'.format(key, value) for key, value in self.attrib.items()]
         f.write("<{}>\n".format(" ".join([self.name] + kw_list)))
         if self.text:
             f.write(self.text)

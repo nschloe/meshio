@@ -143,26 +143,30 @@ def _write_mesh(filename, points, cell_type, cells):
 
     with open(filename, "w") as f:
         f.write("<dolfin nsmap=\"{'dolfin': 'https://fenicsproject.org/'}\">\n")
-        f.write(f'  <mesh celltype="{meshio_to_dolfin_type[cell_type]}" dim="{dim}">\n')
+        f.write(
+            '  <mesh celltype="{}" dim="{}">\n'.format(
+                meshio_to_dolfin_type[cell_type], dim
+            )
+        )
 
-        f.write(f'    <vertices size="{len(points)}">\n')
+        f.write('    <vertices size="{}">\n'.format(len(points)))
         xyz = "xyz"
         for idx, point in enumerate(points):
-            s = " ".join(f'{xyz[k]}="{p}"' for k, p in enumerate(point))
-            f.write(f'      <vertex index="{idx}" {s} />\n')
+            s = " ".join('{}="{}"'.format(xyz[k], p) for k, p in enumerate(point))
+            f.write('      <vertex index="{}" {} />\n'.format(idx, s))
         f.write("    </vertices>\n")
 
         num_cells = 0
         for c in stripped_cells:
             num_cells += len(c.data)
 
-        f.write(f'    <cells size="{num_cells}">\n')
+        f.write('    <cells size="{}">\n'.format(num_cells))
         idx = 0
         for ct, cls in stripped_cells:
             type_string = meshio_to_dolfin_type[ct]
             for cell in cls:
-                s = " ".join(f'v{k}="{c}"' for k, c in enumerate(cell))
-                f.write(f'      <{type_string} index="{idx}" {s} />\n')
+                s = " ".join('v{}="{}"'.format(k, c) for k, c in enumerate(cell))
+                f.write('      <{} index="{}" {} />\n'.format(type_string, idx, s))
                 idx += 1
         f.write("    </cells>\n")
         f.write("  </mesh>\n")
