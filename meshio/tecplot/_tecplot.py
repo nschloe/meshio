@@ -306,8 +306,10 @@ def write(filename, mesh):
             cell_blocks.append(ic)
         else:
             logging.warning(
-                f"Tecplot does not support cell type '{c.type}'. "
-                f"Skipping cell block {ic}."
+                (
+                    "Tecplot does not support cell type '{}'. "
+                    "Skipping cell block {}."
+                ).format(c.type, ic)
             )
 
     # Define cells and zone type
@@ -359,11 +361,11 @@ def write(filename, mesh):
                 varrange[0] += 1
             elif v.ndim == 2:
                 for i, vv in enumerate(v.T):
-                    variables += [f"{k}_{i}"]
+                    variables += ["{}_{}".format(k, i)]
                     data += [vv]
                     varrange[0] += 1
         else:
-            logging.warning(f"Skipping point data '{k}'.")
+            logging.warning("Skipping point data '{}'.".format(k))
 
     if mesh.cell_data:
         varrange[1] = varrange[0] - 1
@@ -376,11 +378,11 @@ def write(filename, mesh):
                     varrange[1] += 1
                 elif v.ndim == 2:
                     for i, vv in enumerate(v.T):
-                        variables += [f"{k}_{i}"]
+                        variables += ["{}_{}".format(k, i)]
                         data += [vv]
                         varrange[1] += 1
             else:
-                logging.warning(f"Skipping cell data '{k}'.")
+                logging.warning("Skipping cell data '{}'.".format(k))
 
     with open_file(filename, "w") as f:
         # Title
@@ -388,21 +390,21 @@ def write(filename, mesh):
 
         # Variables
         variables_str = ", ".join(f'"{var}"' for var in variables)
-        f.write(f"VARIABLES = {variables_str}\n")
+        f.write("VARIABLES = {}\n".format(variables_str))
 
         # Zone record
         num_nodes = len(mesh.points)
         num_cells = sum(len(mesh.cells[ic].data) for ic in cell_blocks)
-        f.write(f"ZONE NODES = {num_nodes}, ELEMENTS = {num_cells},\n")
-        f.write(f"DATAPACKING = BLOCK, ZONETYPE = {zone_type}")
+        f.write("ZONE NODES = {}, ELEMENTS = {},\n".format(num_nodes, num_cells))
+        f.write("DATAPACKING = BLOCK, ZONETYPE = {}".format(zone_type))
         if varrange[0] <= varrange[1]:
             f.write(",\n")
             varlocation_str = (
-                f"{varrange[0]}"
+                "{}".format(varrange[0])
                 if varrange[0] == varrange[1]
-                else f"{varrange[0]}-{varrange[1]}"
+                else "{}-{}".format(varrange[0], varrange[1])
             )
-            f.write(f"VARLOCATION = ([{varlocation_str}] = CELLCENTERED)\n")
+            f.write("VARLOCATION = ([{}] = CELLCENTERED)\n".format(varlocation_str))
         else:
             f.write("\n")
 

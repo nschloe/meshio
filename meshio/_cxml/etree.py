@@ -32,7 +32,7 @@ class Element:
             f.write("\n")
         for child in self._children:
             child.write(f)
-        f.write(f"</{self.name}>\n")
+        f.write("</{}>\n".format(self.name))
 
 
 class SubElement(Element):
@@ -46,7 +46,7 @@ class Comment:
         self.text = text
 
     def write(self, f):
-        f.write(f"<!--{self.text}-->\n")
+        f.write("<!--{}-->\n".format(self.text))
 
 
 class ElementTree:

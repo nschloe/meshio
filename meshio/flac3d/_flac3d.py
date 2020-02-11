@@ -187,7 +187,7 @@ def write(filename, mesh):
         raise WriteError("FLAC3D format only supports 3D cells")
 
     with open_file(filename, "w") as f:
-        f.write(f"* FLAC3D grid produced by meshio v{version}\n")
+        f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
         f.write("* {}\n".format(time.ctime()))
         f.write("* GRIDPOINTS\n")
         _write_points(f, mesh.points)

@@ -394,8 +394,8 @@ def write(filename, mesh, binary=True):
         # dimension
         dim = mesh.points.shape[1]
         if dim not in [2, 3]:
-            raise WriteError(f"Can only write dimension 2, 3, got {dim}.")
-        fh.write((f"(2 {dim})\n").encode("utf8"))
+            raise WriteError("Can only write dimension 2, 3, got {}.".format(dim))
+        fh.write(("(2 {})\n".format(dim)).encode("utf8"))
 
         # total number of nodes
         first_node_index = 1
@@ -407,7 +407,7 @@ def write(filename, mesh, binary=True):
 
         # total number of cells
         total_num_cells = sum([len(c) for c in mesh.cells])
-        fh.write((f"(12 (0 1 {total_num_cells:x} 0))\n").encode("utf8"))
+        fh.write(("(12 (0 1 {:x} 0))\n".format(total_num_cells)).encode("utf8"))
 
         # Write nodes
         key = "3010" if binary else "10"
@@ -454,7 +454,7 @@ def write(filename, mesh, binary=True):
             if binary:
                 (values + first_node_index).tofile(fh)
                 fh.write(b"\n)")
-                fh.write((f"End of Binary Section {key})\n").encode("utf8"))
+                fh.write(("End of Binary Section {})\n".format(key)).encode("utf8"))
             else:
                 numpy.savetxt(fh, values + first_node_index, fmt="%x")
                 fh.write(b"))\n")

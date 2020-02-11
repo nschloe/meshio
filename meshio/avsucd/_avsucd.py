@@ -156,7 +156,7 @@ def write(filename, mesh):
 
     with open_file(filename, "w") as f:
         # Write meshio version
-        f.write(f"# Written by meshio v{version}\n")
+        f.write("# Written by meshio v{}\n".format(version))
 
         # Write first line
         num_nodes = len(mesh.points)
@@ -172,7 +172,11 @@ def write(filename, mesh):
         ]
         num_node_data_sum = sum(num_node_data)
         num_cell_data_sum = sum(num_cell_data)
-        f.write(f"{num_nodes} {num_cells} {num_node_data_sum} {num_cell_data_sum} 0\n")
+        f.write(
+            "{} {} {} {} 0\n".format(
+                num_nodes, num_cells, num_node_data_sum, num_cell_data_sum
+            )
+        )
 
         # Write nodes
         _write_nodes(f, mesh.points)
@@ -205,7 +209,7 @@ def write(filename, mesh):
 
 def _write_nodes(f, points):
     for i, (x, y, z) in enumerate(points):
-        f.write(f"{i+1} {x} {y} {z}\n")
+        f.write("{} {} {} {}\n".format(i + 1, x, y, z))
 
 
 def _write_cells(f, cells, cell_data, num_cells):
@@ -227,16 +231,20 @@ def _write_cells(f, cells, cell_data, num_cells):
     for k, v in cells:
         for cell in v[:, meshio_to_avsucd_order[k]]:
             cell_str = " ".join(str(c + 1) for c in cell)
-            f.write(f"{i+1} {int(material[i])} {meshio_to_avsucd_type[k]} {cell_str}\n")
+            f.write(
+                "{} {} {} {}\n".format(
+                    i + 1, int(material[i]), meshio_to_avsucd_type[k], cell_str
+                )
+            )
             i += 1
 
 
 def _write_data(f, labels, data_array, num_entities, num_data, num_data_sum):
     num_data_str = " ".join(str(i) for i in num_data)
-    f.write(f"{len(num_data)} {num_data_str}\n")
+    f.write("{} {}\n".format(len(num_data), num_data_str))
 
     for label in labels:
-        f.write(f"{label}, real\n")
+        f.write("{}, real\n".format(label))
 
     data_array = numpy.column_stack((numpy.arange(1, num_entities + 1), data_array))
     numpy.savetxt(f, data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_data_sum)

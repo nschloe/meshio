@@ -273,7 +273,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
     data = data[:, 1:]
 
     line = f.readline().decode("utf-8")
-    if line.strip() != f"End {tag}":
+    if line.strip() != "End {}".format(tag):
         raise ReadError()
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
