@@ -376,7 +376,7 @@ def _chunk_it(array, n):
         k += 1
 
 
-def write(filename, mesh, binary=True):
+def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     # Writing XML with an etree required first transforming the (potentially large)
     # arrays into string, which are much larger in memory still. This makes this writer
     # very memory hungry. See <https://stackoverflow.com/q/59272477/353337>.
@@ -394,8 +394,6 @@ def write(filename, mesh, binary=True):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    header_type = "UInt32"
-
     vtk_file = ET.Element(
         "VTKFile",
         type="UnstructuredGrid",
@@ -403,9 +401,16 @@ def write(filename, mesh, binary=True):
         # Use the native endianness. Not strictly necessary, but this simplifies things
         # a bit.
         byte_order=("LittleEndian" if sys.byteorder == "little" else "BigEndian"),
-        header_type=header_type,
-        compressor="vtkZLibDataCompressor",
     )
+    if header_type is None:
+        header_type = "UInt32"
+    else:
+        vtk_file.set("header_type", header_type)
+
+    if compression:
+        # TODO lz4, lzma <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>
+        assert compression == "zlib"
+        vtk_file.set("compressor", "vtkZLibDataCompressor")
 
     # swap the data to match the system byteorder
     # Don't use byteswap to make sure that the dtype is changed; see
@@ -427,33 +432,47 @@ def write(filename, mesh, binary=True):
             da.set("NumberOfComponents", "{}".format(data.shape[1]))
         if binary:
             da.set("format", "binary")
+            if compression:
+                # compressed write
+                def text_writer(f):
+                    max_block_size = 32768
+                    data_bytes = data.tostring()
 
-            def text_writer(f):
-                max_block_size = 32768
-                data_bytes = data.tostring()
+                    # round up
+                    num_blocks = -int(-len(data_bytes) // max_block_size)
+                    last_block_size = (
+                        len(data_bytes) - (num_blocks - 1) * max_block_size
+                    )
 
-                # round up
-                num_blocks = -int(-len(data_bytes) // max_block_size)
-                last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
+                    # It's too bad that we have to keep all blocks in memory. This is
+                    # necessary because the header, written first, needs to know the
+                    # lengths of all blocks. Also, the blocks are encoded _after_ having
+                    # been concatenated.
+                    compressed_blocks = [
+                        # This zlib.compress is the slowest part of the writer
+                        zlib.compress(block)
+                        for block in _chunk_it(data_bytes, max_block_size)
+                    ]
 
-                # It's too bad that we have to keep all blocks in memory. This is
-                # necessary because the header, written first, needs to know the lengths
-                # of all blocks. Also, the blocks are encoded _after_ having been
-                # concatenated.
-                compressed_blocks = [
-                    # This zlib.compress is the slowest part of the writer
-                    zlib.compress(block)
-                    for block in _chunk_it(data_bytes, max_block_size)
-                ]
+                    # collect header
+                    header = numpy.array(
+                        [num_blocks, max_block_size, last_block_size]
+                        + [len(b) for b in compressed_blocks],
+                        dtype=vtu_to_numpy_type[header_type],
+                    )
+                    f.write(base64.b64encode(header.tostring()).decode())
+                    f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
 
-                # collect header
-                header = numpy.array(
-                    [num_blocks, max_block_size, last_block_size]
-                    + [len(b) for b in compressed_blocks],
-                    dtype=vtu_to_numpy_type[header_type],
-                )
-                f.write(base64.b64encode(header.tostring()).decode())
-                f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
+            else:
+                # uncompressed write
+                def text_writer(f):
+                    data_bytes = data.tostring()
+                    # collect header
+                    header = numpy.array(
+                        len(data_bytes), dtype=vtu_to_numpy_type[header_type]
+                    )
+                    f.write(base64.b64encode(header.tostring()).decode())
+                    f.write(base64.b64encode(data_bytes).decode())
 
         else:
             da.set("format", "ascii")
