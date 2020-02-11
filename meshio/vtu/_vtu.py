@@ -497,11 +497,14 @@ def write(filename, mesh, binary=True):
 
         # offset (points to the first element of the next cell)
         offsets = [
-            v.data.shape[1] * numpy.arange(1, v.data.shape[0] + 1) for v in mesh.cells
+            v.data.shape[1]
+            * numpy.arange(1, v.data.shape[0] + 1, dtype=connectivity.dtype)
+            for v in mesh.cells
         ]
         for k in range(1, len(offsets)):
             offsets[k] += offsets[k - 1][-1]
         offsets = numpy.concatenate(offsets)
+
         # types
         types = numpy.concatenate(
             [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in mesh.cells]
