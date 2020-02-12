@@ -119,10 +119,29 @@ class Mesh:
 
     @property
     def cells_dict(self):
-        assert len(self.cells) == len(
-            numpy.unique([c.type for c in self.cells])
-        ), "More than one block of the same type. Cannot create dictionary."
-        return dict(self.cells)
+        cells_dict = {}
+        for cell_type, data in self.cells:
+            if cell_type not in cells_dict:
+                cells_dict[cell_type] = []
+            cells_dict[cell_type].append(data)
+        # concatenate
+        for key, value in cells_dict.items():
+            cells_dict[key] = numpy.concatenate(value)
+        return cells_dict
+
+    @property
+    def cell_data_dict(self):
+        cell_data_dict = {}
+        for key, value_list in self.cell_data.items():
+            cell_data_dict[key] = {}
+            for value, (cell_type, _) in zip(value_list, self.cells):
+                if cell_type not in cell_data_dict[key]:
+                    cell_data_dict[key][cell_type] = []
+                cell_data_dict[key][cell_type].append(value)
+
+            for cell_type, val in cell_data_dict[key].items():
+                cell_data_dict[key][cell_type] = numpy.concatenate(val)
+        return cell_data_dict
 
     @classmethod
     def read(cls, path_or_buf, file_format=None):

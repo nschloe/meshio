@@ -148,7 +148,7 @@ def write(filename, mesh, binary=False):
     if not any(c.type == "triangle" for c in mesh.cells):
         raise WriteError(
             "STL can only write triangle cells (not {}).".format(
-                ", ".join(list(mesh.cells.keys()))
+                ", ".join(c.type for c in mesh.cells)
             )
         )
     if len(mesh.cells) > 1:
