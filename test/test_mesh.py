@@ -27,6 +27,8 @@ def test_cells_dict():
             ("triangle", numpy.array([[0, 1, 2]])),
             ("triangle", numpy.array([[0, 2, 3]])),
         ],
+        cell_data={"a": [[0.5], [1.3]]},
     )
     assert len(mesh.cells_dict) == 1
     assert numpy.array_equal(mesh.cells_dict["triangle"], [[0, 1, 2], [0, 2, 3]])
+    assert numpy.array_equal(mesh.cell_data_dict["a"]["triangle"], [0.5, 1.3])

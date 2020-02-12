@@ -129,6 +129,20 @@ class Mesh:
             cells_dict[key] = numpy.concatenate(value)
         return cells_dict
 
+    @property
+    def cell_data_dict(self):
+        cell_data_dict = {}
+        for key, value_list in self.cell_data.items():
+            cell_data_dict[key] = {}
+            for value, (cell_type, _) in zip(value_list, self.cells):
+                if cell_type not in cell_data_dict[key]:
+                    cell_data_dict[key][cell_type] = []
+                cell_data_dict[key][cell_type].append(value)
+
+            for cell_type, val in cell_data_dict[key].items():
+                cell_data_dict[key][cell_type] = numpy.concatenate(val)
+        return cell_data_dict
+
     @classmethod
     def read(cls, path_or_buf, file_format=None):
         # avoid circular import
