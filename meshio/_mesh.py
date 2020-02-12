@@ -1,5 +1,4 @@
 import collections
-import warnings
 
 import numpy
 
@@ -21,11 +20,13 @@ class Mesh:
     ):
         self.points = points
         if isinstance(cells, dict):
-            warnings.warn(
-                "cell dictionaries are deprecated, use list of tuples, e.g., "
-                '[("triangle", [[0, 1, 2], ...])]',
-                DeprecationWarning,
-            )
+            # Let's not deprecate this for now.
+            # import warnings
+            # warnings.warn(
+            #     "cell dictionaries are deprecated, use list of tuples, e.g., "
+            #     '[("triangle", [[0, 1, 2], ...])]',
+            #     DeprecationWarning,
+            # )
             # old dict, deprecated
             self.cells = [Cells(cell_type, data) for cell_type, data in cells.items()]
         else:
