@@ -11,6 +11,7 @@ from paraview.util.vtkAlgorithm import (
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from vtkmodules.vtkCommonDataModel import vtkUnstructuredGrid
 
+paraview_plugin_version = meshio.__version__
 vtk_to_meshio_type = meshio.vtk._vtk.vtk_to_meshio_type
 meshio_to_vtk_type = meshio.vtk._vtk.meshio_to_vtk_type
 meshio_input_filetypes = list(meshio._helpers.reader_map.keys())
@@ -77,8 +78,7 @@ class MeshioReader(VTKPythonAlgorithmBase):
             points = np.hstack([points, np.zeros((len(points), 1))])
         output.SetPoints(points)
 
-        # Cells, adapted from
-        # https://github.com/nschloe/meshio/blob/master/test/legacy_writer.py
+        # Cells, adapted from test/legacy_writer.py
         cell_types = np.array([], dtype=np.ubyte)
         cell_offsets = np.array([], dtype=int)
         cell_conn = np.array([], dtype=int)
@@ -146,7 +146,7 @@ class MeshioWriter(VTKPythonAlgorithmBase):
         cell_conn = mesh.GetCells()
         cell_offsets = mesh.GetCellLocations()
         cell_types = mesh.GetCellTypes()
-        cells = {}
+        cells_dict = {}
         for vtk_cell_type in np.unique(cell_types):
             offsets = cell_offsets[cell_types == vtk_cell_type]
             ncells = len(offsets)
@@ -154,10 +154,11 @@ class MeshioWriter(VTKPythonAlgorithmBase):
             array = np.empty((ncells, npoints), dtype=int)
             for i in range(npoints):
                 array[:, i] = cell_conn[offsets + i + 1]
-            cells[vtk_to_meshio_type[vtk_cell_type]] = array
+            cells_dict[vtk_to_meshio_type[vtk_cell_type]] = array
+        cells = [meshio.Cells(key, cells_dict[key]) for key in cells_dict]
 
         # Read point and field data
-        # Adapted from https://github.com/nschloe/meshio/blob/master/test/legacy_reader.py
+        # Adapted from test/legacy_reader.py
         def _read_data(data):
             out = {}
             for i in range(data.VTKObject.GetNumberOfArrays()):
@@ -172,12 +173,12 @@ class MeshioWriter(VTKPythonAlgorithmBase):
         # Read cell data
         cell_data_flattened = _read_data(mesh.GetCellData())
         cell_data = {}
-        for cell_type in cells:
-            vtk_cell_type = meshio_to_vtk_type[cell_type]
-            mask_cell_type = cell_types == vtk_cell_type
-            cell_data[cell_type] = {}
-            for name, array in cell_data_flattened.items():
-                cell_data[cell_type][name] = array[mask_cell_type]
+        for name, array in cell_data_flattened.items():
+            cell_data[name] = []
+            for cell_type in cells_dict:
+                vtk_cell_type = meshio_to_vtk_type[cell_type]
+                mask_cell_type = cell_types == vtk_cell_type
+                cell_data[name].append(array[mask_cell_type])
 
         # Use meshio to write mesh
         meshio.write_points_cells(
