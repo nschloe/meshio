@@ -557,6 +557,8 @@ def translate_cells(data, types, cell_data_raw):
         # through the data array. Slight disadvantage: This doesn't work for cells with
         # a custom number of points.
         numnodes = vtk_type_to_numnodes[types]
+        if not numpy.all(numnodes > 0):
+            raise ReadError("File contains cells that meshio cannot handle.")
         offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
 
         if not numpy.all(numnodes == data[offsets]):
