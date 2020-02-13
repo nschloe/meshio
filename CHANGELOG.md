@@ -33,6 +33,7 @@ GitHub](https://github.com/nschloe/meshio).
   }
   ```
   From 4.0.0 on, `mesh.cell_data` is a dictioary of lists,
+  ```python
   {
     "a": [[0.5, 1.3], [1.1, -0.3, ...]],
     "b": [[2.17, 41.3], [3.14, 1.61, ...]],
@@ -40,4 +41,4 @@ GitHub](https://github.com/nschloe/meshio).
   ```
   Each data list, e.g., `mesh.cell_data["a"]`, can be `zip`ped with `mesh.cells`.
 
-  An old-style `cell_data` dictioary can be retrieved via `mesh.cell_data_dict`.
+  An old-style `cell_data` dictionary can be retrieved via `mesh.cell_data_dict`.
