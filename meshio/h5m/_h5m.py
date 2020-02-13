@@ -1,5 +1,6 @@
 """
-I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
+I/O for h5m, cf.
+<https://www.mcs.anl.gov/~fathom/moab-docs/html/h5mmain.html>.
 """
 import logging
 from datetime import datetime
@@ -38,7 +39,15 @@ def read(filename):
     # point_end_gid = point_start_gid + len(point_gids) - 1
     # assert all(point_gids == range(point_start_gid, point_end_gid + 1))
 
-    h5m_to_meshio_type = {"Edge2": "line", "Tri3": "triangle", "Tet4": "tetra"}
+    h5m_to_meshio_type = {
+        "Edge2": "line",
+        "Hex8": "hexahedron",
+        "Prism6": "wedge",
+        "Pyramid5": "pyramid",
+        "Quad4": "quad",
+        "Tri3": "triangle",
+        "Tet4": "tetra",
+    }
     cells = []
     cell_data = {}
     for h5m_type, data in dset["elements"].items():
