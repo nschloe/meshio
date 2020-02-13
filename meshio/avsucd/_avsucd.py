@@ -11,9 +11,6 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import Cells, Mesh
 
-meshio_data = {"avsucd:material", "flac3d:zone", "gmsh:physical", "medit:ref"}
-
-
 meshio_to_avsucd_type = {
     "vertex": "pt",
     "line": "line",
@@ -76,7 +73,13 @@ def read_buffer(f):
         for k, v in cdata.items():
             cell_data[k] = numpy.split(v, sections)
 
-    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
+    return Mesh(
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        cell_tags_key="avsucd:material",
+    )
 
 
 def _read_nodes(f, num_nodes):
@@ -168,7 +171,7 @@ def write(filename, mesh):
             1 if vv.ndim == 1 else vv.shape[1]
             for k, v in mesh.cell_data.items()
             for vv in v
-            if k not in meshio_data
+            if ":" not in k
         ]
         num_node_data_sum = sum(num_node_data)
         num_cell_data_sum = sum(num_cell_data)
@@ -182,7 +185,7 @@ def write(filename, mesh):
         _write_nodes(f, mesh.points)
 
         # Write cells
-        _write_cells(f, mesh.cells, mesh.cell_data, num_cells)
+        _write_cells(f, mesh.cells, mesh.cell_tags, num_cells)
 
         # Write node data
         if num_node_data_sum:
@@ -194,12 +197,12 @@ def write(filename, mesh):
 
         # Write cell data
         if num_cell_data_sum:
-            labels = [k for k in mesh.cell_data.keys() if k not in meshio_data]
+            labels = [k for k in mesh.cell_data.keys() if ":" not in k]
             data_array = numpy.column_stack(
                 [
                     numpy.concatenate(v)
                     for k, v in mesh.cell_data.items()
-                    if k not in meshio_data
+                    if ":" not in k
                 ]
             )
             _write_data(
@@ -212,17 +215,10 @@ def _write_nodes(f, points):
         f.write("{} {} {} {}\n".format(i + 1, x, y, z))
 
 
-def _write_cells(f, cells, cell_data, num_cells):
-    # Interoperability with other formats
-    mat_data = None
-    for k in cell_data.keys():
-        if k in meshio_data:
-            mat_data = k
-            break
-
-    # Material array
-    if mat_data:
-        material = numpy.concatenate(cell_data[mat_data])
+def _write_cells(f, cells, cell_tags, num_cells):
+    # Material array given by the generic meshio tags
+    if cell_tags is not None:
+        material = numpy.concatenate(cell_tags)
     else:
         material = numpy.zeros(num_cells, dtype=int)
 

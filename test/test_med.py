@@ -55,9 +55,9 @@ def test_reference_file_with_mixed_cells():
     assert {k: len(v) for k, v in mesh.cells} == ref_num_cells
 
     # Point tags
-    assert mesh.point_data["point_tags"].sum() == 52
+    assert mesh.point_tags.sum() == 52
     ref_point_tags_info = {2: ["Side"], 3: ["Side", "Top"], 4: ["Top"]}
-    assert mesh.point_tags == ref_point_tags_info
+    assert mesh.point_tags_info == ref_point_tags_info
 
     # Cell tags
     ref_sum_cell_tags = {
@@ -68,7 +68,7 @@ def test_reference_file_with_mixed_cells():
         "triangle": -30,
     }
     assert {
-        c.type: sum(d) for c, d in zip(mesh.cells, mesh.cell_data["cell_tags"])
+        c.type: sum(d) for c, d in zip(mesh.cells, mesh.cell_tags)
     } == ref_sum_cell_tags
     ref_cell_tags_info = {
         -6: ["Top circle"],
@@ -79,7 +79,7 @@ def test_reference_file_with_mixed_cells():
         -11: ["B", "C"],
         -12: ["C"],
     }
-    assert mesh.cell_tags == ref_cell_tags_info
+    assert mesh.cell_tags_info == ref_cell_tags_info
 
     helpers.write_read(meshio.med.write, meshio.med.read, mesh, 1.0e-15)
 

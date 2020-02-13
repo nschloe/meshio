@@ -78,12 +78,19 @@ def read_buffer(f, is_ascii, data_size):
             tags = tag_dict.get(cell_type, [])
             cell_data[name].append(tags)
 
+    # Define gmsh:physical as cell_tags_key
+    if "gmsh:physical" in cell_data:
+        cell_tags_key = "gmsh:physical"
+    else:
+        cell_tags_key = None
+
     return Mesh(
         points,
         cells,
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
+        cell_tags_key=cell_tags_key,
         gmsh_periodic=periodic,
     )
 
@@ -298,10 +305,14 @@ def write(filename, mesh, binary=True):
         tag_data = {}
         other_data = {}
         for key, d in mesh.cell_data.items():
-            if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
+            if key in ["gmsh:physical", "gmsh:geometrical"]:
                 tag_data[key] = d
             else:
                 other_data[key] = d
+
+        # Identify mesh.cell_tags as gmsh:physical if present
+        if mesh.cell_tags is not None:
+            tag_data["gmsh:physical"] = mesh.cell_tags
 
         _write_nodes(fh, mesh.points, binary)
         _write_elements(fh, cells, tag_data, binary)
@@ -343,7 +354,7 @@ def _write_elements(fh, cells, tag_data, binary):
     consecutive_index = 0
     for k, (cell_type, node_idcs) in enumerate(cells):
         tags = []
-        for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
+        for name in ["gmsh:physical", "gmsh:geometrical"]:
             try:
                 tags.append(tag_data[name][k])
             except KeyError:

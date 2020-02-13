@@ -96,7 +96,14 @@ def read_buffer(f):
             if items[0] != "End":
                 raise ReadError("Unknown keyword '{}'.".format(items[0]))
 
-    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
+    return Mesh(
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        point_tags_key="medit:ref",
+        cell_tags_key="medit:ref",
+    )
 
 
 def write(filename, mesh):
@@ -112,12 +119,8 @@ def write(filename, mesh):
         # vertices
         fh.write(b"\nVertices\n")
         fh.write("{}\n".format(n).encode("utf-8"))
-        if "medit:ref" in mesh.point_data:
-            labels = mesh.point_data["medit:ref"]
-        elif "gmsh:physical" in mesh.point_data:
-            # Translating gmsh data to medit is an important case, so treat it
-            # explicitly here.
-            labels = mesh.point_data["gmsh:physical"]
+        if mesh.point_tags is not None:
+            labels = mesh.point_tags
         else:
             labels = numpy.ones(n, dtype=int)
         data = numpy.c_[mesh.points, labels]
@@ -145,16 +148,8 @@ def write(filename, mesh):
             fh.write("{}\n".format(medit_name).encode("utf-8"))
             fh.write("{}\n".format(len(data)).encode("utf-8"))
 
-            if "medit:ref" in mesh.cell_data:
-                labels = mesh.cell_data["medit:ref"][icg]
-            elif "gmsh:physical" in mesh.cell_data:
-                # Translating gmsh data to medit is an important case, so treat it
-                # explicitly here.
-                labels = mesh.cell_data["gmsh:physical"][icg]
-            elif "flac3d:zone" in mesh.cell_data:
-                labels = mesh.cell_data["flac3d:zone"][icg]
-            elif "avsucd:material" in mesh.cell_data:
-                labels = mesh.cell_data["avsucd:material"][icg]
+            if mesh.cell_tags is not None:
+                labels = mesh.cell_tags[icg]
             else:
                 labels = numpy.ones(len(data), dtype=int)
 

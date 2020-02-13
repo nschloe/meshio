@@ -13,6 +13,8 @@ class Mesh:
         point_data=None,
         cell_data=None,
         field_data=None,
+        point_tags_key=None,
+        cell_tags_key=None,
         point_sets=None,
         cell_sets=None,
         gmsh_periodic=None,
@@ -34,6 +36,8 @@ class Mesh:
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
         self.field_data = {} if field_data is None else field_data
+        self.point_tags_key = point_tags_key
+        self.cell_tags_key = cell_tags_key
         self.point_sets = {} if point_sets is None else point_sets
         self.cell_sets = {} if cell_sets is None else cell_sets
         self.gmsh_periodic = gmsh_periodic
@@ -51,17 +55,25 @@ class Mesh:
         else:
             lines.append("  No cells.")
 
-        if self.point_sets:
-            lines.append("  Point sets: {}".format(", ".join(self.point_sets.keys())))
-
-        if self.cell_sets:
-            lines.append("  Cell sets: {}".format(", ".join(self.cell_sets.keys())))
-
         if self.point_data:
             lines.append("  Point data: {}".format(", ".join(self.point_data.keys())))
 
         if self.cell_data:
             lines.append("  Cell data: {}".format(", ".join(self.cell_data.keys())))
+
+        if self.point_tags is not None:
+            tags = [str(tag) for tag in numpy.unique(self.point_tags)]
+            lines.append("  Point tags: {}".format(", ".join(tags)))
+
+        if self.cell_tags is not None:
+            tags = [str(tag) for tag in numpy.unique(numpy.concatenate(self.cell_tags))]
+            lines.append("  Cell tags: {}".format(", ".join(tags)))
+
+        if self.point_sets:
+            lines.append("  Point sets: {}".format(", ".join(self.point_sets.keys())))
+
+        if self.cell_sets:
+            lines.append("  Cell sets: {}".format(", ".join(self.cell_sets.keys())))
 
         return "\n".join(lines)
 
@@ -150,3 +162,17 @@ class Mesh:
         from ._helpers import read
 
         return read(path_or_buf, file_format)
+
+    @property
+    def point_tags(self):
+        try:
+            return self.point_data[self.point_tags_key]
+        except KeyError:
+            return None
+
+    @property
+    def cell_tags(self):
+        try:
+            return self.cell_data[self.cell_tags_key]
+        except KeyError:
+            return None

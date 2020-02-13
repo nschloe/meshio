@@ -27,9 +27,6 @@ meshio_only = {
 }
 
 
-meshio_data = {"avsucd:material", "flac3d:zone", "gmsh:physical", "medit:ref"}
-
-
 numnodes_to_meshio_type = {
     4: "tetra",
     5: "pyramid",
@@ -137,6 +134,7 @@ def read_buffer(f):
         cells=[(k, numpy.array(v)[:, flac3d_to_meshio_order[k]]) for k, v in cells],
         cell_data=cell_data,
         field_data=field_data,
+        cell_tags_key="flac3d:zone",
     )
 
 
@@ -194,10 +192,9 @@ def write(filename, mesh):
         f.write("* ZONES\n")
         _write_cells(f, mesh.points, mesh.cells)
 
-        if mesh.cell_data:
-            if set(list(mesh.cell_data)).intersection(meshio_data):
-                f.write("* ZONE GROUPS\n")
-                _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
+        if mesh.cell_tags is not None:
+            f.write("* ZONE GROUPS\n")
+            _write_cell_tags(f, mesh.cells, mesh.cell_tags, mesh.field_data)
 
 
 def _write_points(f, points):
@@ -252,32 +249,21 @@ def _translate_zones(points, cells):
     return zones
 
 
-def _write_cell_data(f, cells, cell_data, field_data):
+def _write_cell_tags(f, cell_tags, field_data):
     """
     Write zone groups.
     """
-    zgroups, labels = _translate_zgroups(cells, cell_data, field_data)
+    zgroups, labels = _translate_zgroups(cell_tags, field_data)
     for k in sorted(zgroups.keys()):
         f.write('ZGROUP "{}"\n'.format(labels[k]))
         _write_zgroup(f, zgroups[k])
 
 
-def _translate_zgroups(cells, cell_data, field_data):
+def _translate_zgroups(cell_tags, field_data):
     """
-    Convert meshio cell_data to FLAC3D zone groups.
+    Convert meshio cell tags to FLAC3D zone groups.
     """
-    mat_data = None
-    for k in cell_data.keys():
-        if k in meshio_data:
-            mat_data = k
-            break
-
-    num_cells = sum(len(c.data) for c in cells)
-    zone_data = (
-        numpy.concatenate(cell_data[mat_data])
-        if mat_data
-        else numpy.zeros(num_cells, dtype=int)
-    )
+    zone_data = numpy.concatenate(cell_tags)
 
     zgroups = {k: numpy.nonzero(zone_data == k)[0] + 1 for k in numpy.unique(zone_data)}
 

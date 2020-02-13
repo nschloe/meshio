@@ -77,13 +77,13 @@ def read(filename):
     # Point tags
     if "FAM" in mesh["NOE"]:
         tags = mesh["NOE"]["FAM"][()]
-        point_data["point_tags"] = tags  # replacing previous "point_tags"
+        point_data["med:family"] = tags
 
     # Information for point tags
-    point_tags = {}
+    point_tags_info = {}
     fas = mesh["FAS"] if "FAS" in mesh else f["FAS"][mesh_name]
     if "NOEUD" in fas:
-        point_tags = _read_families(fas["NOEUD"])
+        point_tags_info = _read_families(fas["NOEUD"])
 
     # Cells
     cells = []
@@ -97,21 +97,27 @@ def read(filename):
         # Cell tags
         if "FAM" in med_cell_type_group:
             tags = med_cell_type_group["FAM"][()]
-            if "cell_tags" not in cell_data:
-                cell_data["cell_tags"] = []
-            cell_data["cell_tags"].append(tags)
+            if "med:family" not in cell_data:
+                cell_data["med:family"] = []
+            cell_data["med:family"].append(tags)
 
     # Information for cell tags
-    cell_tags = {}
+    cell_tags_info = {}
     if "ELEME" in fas:
-        cell_tags = _read_families(fas["ELEME"])
+        cell_tags_info = _read_families(fas["ELEME"])
 
     # Construct the mesh object
     mesh = Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        field_data=field_data,
+        point_tags_key="med:family",
+        cell_tags_key="med:family",
     )
-    mesh.point_tags = point_tags
-    mesh.cell_tags = cell_tags
+    mesh.point_tags_info = point_tags_info
+    mesh.cell_tags_info = cell_tags_info
     return mesh
 
 
@@ -253,8 +259,8 @@ def write(filename, mesh, add_global_ids=True):
     coo.attrs.create("NBR", len(mesh.points))
 
     # Point tags
-    if "point_tags" in mesh.point_data:  # works only for med -> med
-        family = nodes_group.create_dataset("FAM", data=mesh.point_data["point_tags"])
+    if mesh.point_tags is not None:
+        family = nodes_group.create_dataset("FAM", data=mesh.point_tags)
         family.attrs.create("CGT", 1)
         family.attrs.create("NBR", len(mesh.points))
 
@@ -274,10 +280,8 @@ def write(filename, mesh, add_global_ids=True):
         nod.attrs.create("NBR", len(cells))
 
         # Cell tags
-        if "cell_tags" in mesh.cell_data:  # works only for med -> med
-            family = med_cells.create_dataset(
-                "FAM", data=mesh.cell_data["cell_tags"][k]
-            )
+        if mesh.cell_tags is not None:
+            family = med_cells.create_dataset("FAM", data=mesh.cell_tags[k])
             family.attrs.create("CGT", 1)
             family.attrs.create("NBR", len(cells))
 
@@ -289,17 +293,17 @@ def write(filename, mesh, add_global_ids=True):
 
     # For point tags
     try:
-        if len(mesh.point_tags) > 0:
+        if len(mesh.point_tags_info) > 0:
             node = families.create_group("NOEUD")
-            _write_families(node, mesh.point_tags)
+            _write_families(node, mesh.point_tags_info)
     except AttributeError:
         pass
 
     # For cell tags
     try:
-        if len(mesh.cell_tags) > 0:
+        if len(mesh.cell_tags_info) > 0:
             element = families.create_group("ELEME")
-            _write_families(element, mesh.cell_tags)
+            _write_families(element, mesh.cell_tags_info)
     except AttributeError:
         pass
 
@@ -308,7 +312,7 @@ def write(filename, mesh, add_global_ids=True):
 
     # Nodal data
     for name, data in mesh.point_data.items():
-        if name == "point_tags":  # ignore point_tags already written under FAS
+        if ":" in name:  # ignore all format-specific data
             continue
         supp = "NOEU"  # nodal data
         _write_data(fields, mesh_name, profile, name, supp, data)
@@ -317,7 +321,7 @@ def write(filename, mesh, add_global_ids=True):
     # Only support writing ELEM fields with only 1 Gauss point per cell
     # Or ELNO (DG) fields defined at every node per cell
     for name, d in mesh.cell_data.items():
-        if name == "cell_tags":  # ignore cell_tags already written under FAS
+        if ":" in name:  # ignore all format-specific data
             continue
         for cell, data in zip(mesh.cells, d):
             # Determine the nature of the cell data
