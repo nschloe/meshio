@@ -186,8 +186,7 @@ def _write_buffer(f, file_type, mesh):
 
     ugrid_counts["points"] = mesh.points.shape[0]
 
-
-    for i,(key,data) in enumerate(mesh.cells):
+    for i, (key, data) in enumerate(mesh.cells):
         if key in ugrid_counts:
             ugrid_counts[key] = data.shape[0]
             ugrid_meshio_id[key] = i
