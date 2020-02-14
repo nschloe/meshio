@@ -25,7 +25,7 @@ def _filetype_from_path(path):
     ext = ""
     out = None
     for suffix in reversed(path.suffixes):
-        ext = suffix + ext
+        ext = (suffix + ext).lower()
         if ext in _extension_to_filetype:
             out = _extension_to_filetype[ext]
 
