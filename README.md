@@ -51,7 +51,7 @@ Install with
 pip install meshio[all]
 ```
 and and use the command-line tools
-```
+```bash
 meshio-convert    input.msh output.vtk   # convert between two formats
 
 meshio-info       input.xdmf             # show some info about the mesh
