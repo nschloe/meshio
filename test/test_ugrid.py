@@ -14,6 +14,7 @@ import meshio
     [
         helpers.tri_mesh,
         helpers.quad_mesh,
+        helpers.tri_quad_mesh,
         helpers.quad_tri_mesh,
         helpers.tet_mesh,
         helpers.hex_mesh,
@@ -80,37 +81,49 @@ def test_reference_file(
     assert mesh.points.shape[0] == ref_num_points
     assert mesh.points.shape[1] == 3
 
+    ugrid_meshio_id = {
+        "triangle": None,
+        "quad": None,
+        "tetra": None,
+        "pyramid": None,
+        "wedge": None,
+        "hexahedron": None,
+    }
+
+    for i, (key, data) in enumerate(mesh.cells):
+        if key in ugrid_meshio_id:
+            ugrid_meshio_id[key] = i
+
     # validate element counts
     if ref_num_triangle > 0:
-        for c in mesh.cells:
-            if c.type == "triangle":
-                assert c.data.shape == (ref_num_triangle, 3)
+        c = mesh.cells[ugrid_meshio_id["triangle"]]
+        assert c.data.shape == (ref_num_triangle, 3)
     else:
-        assert not any(c.type == "triangle" for c in mesh.cells)
+        assert ugrid_meshio_id["triangle"] is None
 
     if ref_num_quad > 0:
-        assert mesh.cells[0].type == "quad"
-        assert mesh.cells[0].data.shape == (ref_num_quad, 4)
+        c = mesh.cells[ugrid_meshio_id["quad"]]
+        assert c.data.shape == (ref_num_quad, 4)
     else:
-        assert not any(c.type == "quad" for c in mesh.cells)
+        assert ugrid_meshio_id["quad"] is None
 
     if ref_num_tet > 0:
-        assert mesh.cells[1].type == "tetra"
+        c = mesh.cells[ugrid_meshio_id["tetra"]]
         assert mesh.cells[1].data.shape == (ref_num_tet, 4)
     else:
-        assert not any(c.type == "tetra" for c in mesh.cells)
+        assert ugrid_meshio_id["tetra"] is None
 
     if ref_num_wedge > 0:
-        assert mesh.cells[2].type == "wedge"
-        assert mesh.cells[2].data.shape == (ref_num_wedge, 6)
+        c = mesh.cells[ugrid_meshio_id["wedge"]]
+        assert c.data.shape == (ref_num_wedge, 6)
     else:
-        assert not any(c.type == "wedge" for c in mesh.cells)
+        assert ugrid_meshio_id["wedge"] is None
 
     if ref_num_hex > 0:
-        assert mesh.cells[3].type == "hexahedron"
-        assert mesh.cells[3].data.shape == (ref_num_hex, 8)
+        c = mesh.cells[ugrid_meshio_id["hexahedron"]]
+        assert c.data.shape == (ref_num_hex, 8)
     else:
-        assert not any(c.type == "hexahedron" for c in mesh.cells)
+        assert ugrid_meshio_id["hexahedron"] is None
 
     # validate boundary tags
 
@@ -179,3 +192,61 @@ def test_volume(filename, volume, accuracy):
         v = _pyramid_volume(cell)
         vol += v
     assert numpy.isclose(vol, 1.0, accuracy)
+
+
+def _triangle_area(cell):
+    """
+    Evaluate triangle area using cross product of two edge vectors
+    """
+    u = cell[0] - cell[1]
+    v = cell[0] - cell[2]
+    return numpy.linalg.norm(numpy.cross(u, v)) / 2.0
+
+
+def _quad_area(cell):
+    """
+    Evaluate triangle area using cross product of two edge vectors
+    """
+    tri1 = cell[[0, 1, 2]]
+    tri2 = cell[[2, 3, 0]]
+    return _triangle_area(tri1) + _triangle_area(tri2)
+
+
+# Test whether any of the surface elements is  connected in the wrong way
+@pytest.mark.parametrize(
+    "filename, area_tria_ref,area_quad_ref,accuracy",
+    [("hch_strct.4.lb8.ugrid", 9587.10463, 74294.529256, 1e-5)],
+)
+def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "ugrid", filename)
+
+    mesh = meshio.read(filename)
+    ugrid_meshio_id = {
+        "triangle": None,
+        "quad": None,
+        "tetra": None,
+        "pyramid": None,
+        "wedge": None,
+        "hexahedron": None,
+    }
+
+    for i, (key, data) in enumerate(mesh.cells):
+        if key in ugrid_meshio_id:
+            ugrid_meshio_id[key] = i
+
+    tria = mesh.cells[ugrid_meshio_id["triangle"]]
+    total_tri_area = 0
+    for _cell in tria.data:
+        cell = numpy.array([mesh.points[i] for i in _cell])
+        a = _triangle_area(cell)
+        total_tri_area += a
+    assert numpy.isclose(total_tri_area, area_tria_ref, accuracy)
+
+    quad = mesh.cells[ugrid_meshio_id["quad"]]
+    total_quad_area = 0
+    for _cell in quad.data:
+        cell = numpy.array([mesh.points[i] for i in _cell])
+        a = _quad_area(cell)
+        total_quad_area += a
+    assert numpy.isclose(total_quad_area, area_quad_ref, accuracy)
