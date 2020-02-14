@@ -189,7 +189,7 @@ def _read_cells(f, line0, point_ids):
 
     etype = etype_sline.split("=")[1].strip()
     if etype not in abaqus_to_meshio_type:
-        raise ReadError(f"Element type not available: {etype}")
+        raise ReadError("Element type not available: {}".format(etype))
 
     cell_type = abaqus_to_meshio_type[etype]
 
@@ -246,7 +246,7 @@ def get_param_map(word, required_keys=None):
     msg = ""
     for key in required_keys:
         if key not in param_map:
-            msg += f"{key!r} not found in {word!r}\n"
+            msg += "{} not found in {}\n".format(key, word)
     if msg:
         raise RuntimeError(msg)
     return param_map
@@ -275,7 +275,7 @@ def write(filename, mesh, translate_cell_names=True):
     with open_file(filename, "wt") as f:
         f.write("*Heading\n")
         f.write("Abaqus DataFile Version 6.14\n")
-        f.write(f"written by meshio v{__version__}\n")
+        f.write("written by meshio v{}\n".format(__version__))
         f.write("*Node\n")
         fmt = ", ".join(["{}"] + ["{!r}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):

@@ -285,7 +285,9 @@ def write(filename, mesh, binary=True):
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
-        fh.write((f"$MeshFormat\n4.0 {mode_idx} {size_of_double}\n").encode("utf-8"))
+        fh.write(
+            "$MeshFormat\n4.0 {} {}\n".format(mode_idx, size_of_double).encode("utf-8")
+        )
         if binary:
             numpy.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")

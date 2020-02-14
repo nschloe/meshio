@@ -44,7 +44,6 @@ def determine_file_type(filename):
         type_suffix = filename_parts[-2]
         if type_suffix in file_types.keys():
             file_type = file_types[type_suffix]
-
     return file_type
 
 
@@ -68,10 +67,9 @@ def read_buffer(f, file_type):
     itype = file_type["int_type"]
     ftype = file_type["float_type"]
 
-    # FORTRAN type includes a number of bytes before and after
-    # each record , according to documentation [1] there are
-    # two records in the file
-    # see also UG_IO freely available code at [2]
+    # Fortran type includes a number of bytes before and after each record, according to
+    # documentation [1] there are two records in the file; see also UG_IO freely
+    # available code at [2].
     if file_type["type"] == "F":
         _read_section(f, file_type, count=1, dtype=itype)
 
@@ -191,7 +189,7 @@ def _write_buffer(f, file_type, mesh):
             ugrid_counts[key] = data.shape[0]
             ugrid_meshio_id[key] = i
         else:
-            msg = ("UGRID mesh format doesn't know {} cells. Skipping.").format(key)
+            msg = "UGRID mesh format doesn't know {} cells. Skipping.".format(key)
             logging.warning(msg)
             continue
 

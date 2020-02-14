@@ -30,7 +30,7 @@ def _filetype_from_path(path):
             out = _extension_to_filetype[ext]
 
     if out is None:
-        raise ReadError(f"Could not deduce file format from extension '{ext}'.")
+        raise ReadError("Could not deduce file format from extension '{}'.".format(ext))
     return out
 
 
@@ -50,17 +50,17 @@ def read(filename, file_format=None):
                 "tetgen format is spread across multiple files "
                 "and so cannot be read from a buffer"
             )
-        msg = f"Unknown file format '{file_format}'"
+        msg = "Unknown file format '{}'".format(file_format)
     else:
         path = pathlib.Path(filename)
         if not path.exists():
-            raise ReadError(f"File {filename} not found.")
+            raise ReadError("File {} not found.".format(filename))
 
         if not file_format:
             # deduce file format from extension
             file_format = _filetype_from_path(path)
 
-        msg = f"Unknown file format '{file_format}' of '{filename}'."
+        msg = "Unknown file format '{}' of '{}'.".format(file_format, filename)
 
     if file_format not in reader_map:
         raise ReadError(msg)
@@ -78,7 +78,7 @@ def write_points_cells(
     point_sets=None,
     cell_sets=None,
     file_format=None,
-    **kwargs,
+    **kwargs
 ):
     points = numpy.asarray(points)
     cells = [(key, numpy.asarray(value)) for key, value in cells]

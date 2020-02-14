@@ -127,7 +127,7 @@ def _read_data(fields, profiles):
             names = [None] * len(time_step)
             for i, key in enumerate(time_step):
                 t = data[key].attrs["PDT"]  # current time
-                names[i] = name + f"[{i:d}] - {t:g}"
+                names[i] = name + "[{:d}] - {:g}".format(i, t)
 
         # MED field can contain multiple types of data
         for i, key in enumerate(time_step):

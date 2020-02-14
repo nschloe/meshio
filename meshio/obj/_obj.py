@@ -21,7 +21,7 @@ def read(filename):
 
 def read_buffer(f):
     points = []
-    faces = []
+    face_groups = []
     while True:
         line = f.readline()
 
@@ -46,19 +46,22 @@ def read_buffer(f):
             # "s 1" or "s off" controls smooth shading
             pass
         elif split[0] == "f":
-            faces.append([int(item.split("/")[0]) for item in split[1:]])
+            dat = [int(item.split("/")[0]) for item in split[1:]]
+            if len(face_groups) == 0 or (
+                len(face_groups[-1]) > 0 and len(face_groups[-1][-1]) != len(dat)
+            ):
+                face_groups.append([])
+            face_groups[-1].append(dat)
+        elif split[0] == "g":
+            # new group
+            face_groups.append([])
         else:
             # who knows
             pass
 
-    triangle = numpy.array([f for f in faces if len(f) == 3])
-    quad = numpy.array([f for f in faces if len(f) == 4])
-
-    cells = []
-    if len(triangle) > 0:
-        cells += [("triangle", triangle - 1)]
-    if len(quad) > 0:
-        cells += [("quad", quad - 1)]
+    # convert to numpy arrays
+    face_groups = [numpy.array(f) for f in face_groups]
+    cells = [("triangle" if f.shape[1] == 3 else "quad", f - 1) for f in face_groups]
 
     return Mesh(numpy.array(points), cells)
 
@@ -84,7 +87,7 @@ def write(filename, mesh):
             if cell_type == "quad":
                 fmt += " {}"
             for c in cell_array:
-                f.write(f"{fmt}\n".format(*(c + 1)))
+                f.write("{}\n".format(fmt).format(*(c + 1)))
 
 
 register("obj", [".obj"], read, {"obj": write})

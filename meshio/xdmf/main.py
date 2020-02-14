@@ -46,7 +46,7 @@ class XdmfReader:
             return self.read_xdmf2(root)
 
         if version.split(".")[0] != "3":
-            raise ReadError(f"Unknown XDMF version {version}.")
+            raise ReadError("Unknown XDMF version {}.".format(version))
 
         return self.read_xdmf3(root)
 
@@ -60,7 +60,7 @@ class XdmfReader:
                 return self._read_data_item(
                     root.find(".//" + "/".join(xpath.split("/")[2:])), root
                 )
-            raise ValueError(f"Can't read XPath {xpath}.")
+            raise ValueError("Can't read XPath {}.".format(xpath))
 
         dims = [int(d) for d in data_item.get("Dimensions").split()]
 
@@ -104,10 +104,12 @@ class XdmfReader:
         full_hdf5_path = os.path.join(os.path.dirname(self.filename), filename)
 
         f = h5py.File(full_hdf5_path, "r")
-        if h5path[0] != "/":
-            raise ReadError()
 
-        for key in h5path[1:].split("/"):
+        # Some files don't contain the leading slash /.
+        if h5path[0] == "/":
+            h5path = h5path[1:]
+
+        for key in h5path.split("/"):
             f = f[key]
         # `[()]` gives a numpy.ndarray
         return f[()]
@@ -199,7 +201,7 @@ class XdmfReader:
                     if c.get("Center") != "Grid":
                         raise ReadError()
             else:
-                raise ReadError(f"Unknown section '{c.tag}'.")
+                raise ReadError("Unknown section '{}'.".format(c.tag))
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -256,13 +258,15 @@ class XdmfReader:
                     cells.append(Cells(xdmf_to_meshio_type[cell_type], data))
 
             elif c.tag == "Geometry":
-                try:
-                    geometry_type = c.get("GeometryType")
-                except KeyError:
-                    pass
-                else:
-                    if geometry_type not in ["XY", "XYZ"]:
+                if c.get("Type"):
+                    if c.get("GeometryType"):
                         raise ReadError()
+                    geometry_type = c.get("Type")
+                else:
+                    geometry_type = c.get("GeometryType")
+
+                if geometry_type not in ["XY", "XYZ"]:
+                    raise ReadError('Illegal geometry type "{}".'.format(geometry_type))
 
                 data_items = list(c)
                 if len(data_items) != 1:
@@ -296,7 +300,7 @@ class XdmfReader:
                         raise ReadError()
                     cell_data_raw[name] = data
             else:
-                raise ReadError(f"Unknown section '{c.tag}'.")
+                raise ReadError("Unknown section '{}'.".format(c.tag))
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -366,8 +370,8 @@ class XdmfWriter:
             return bin_filename
 
         if self.data_format != "HDF":
-            raise WriteError(f'Unknown data format "{self.data_format}"')
-        name = f"data{self.data_counter}"
+            raise WriteError('Unknown data format "{}"'.format(self.data_format))
+        name = "data{}".format(self.data_counter)
         self.data_counter += 1
         self.h5_file.create_dataset(
             name,
