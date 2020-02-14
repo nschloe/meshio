@@ -67,8 +67,9 @@ def read(filename):
 def read_buffer(f):
     # Initialize the optional data fields
     cells = []
-    nsets = {}
-    elsets = {}
+    cell_ids = []
+    point_sets = {}
+    cell_sets = {}
     field_data = {}
     cell_data = {}
     point_data = {}
@@ -87,28 +88,39 @@ def read_buffer(f):
         if keyword.startswith("COOR"):
             points, point_gids = _read_nodes(f)
         elif keyword.startswith("ELEMENT"):
-            key, idx = _read_cells(f, keyword, point_gids)
+            key, idx, ids = _read_cells(f, keyword, point_gids)
             cells.append(Cells(key, idx))
+            cell_ids.append(ids)
         elif keyword.startswith("NSET"):
             params_map = get_param_map(keyword, required_keys=["NSET"])
-            setids = read_set(f, params_map)
+            set_ids = read_set(f, params_map)
             name = params_map["NSET"]
-            if name not in nsets:
-                nsets[name] = []
-            nsets[name].append(setids)
+            point_sets[name] = numpy.array(
+                [point_gids[point_id] for point_id in set_ids], dtype="int32"
+            )
         elif keyword.startswith("ESET"):
             params_map = get_param_map(keyword, required_keys=["ESET"])
-            setids = read_set(f, params_map)
+            set_ids = read_set(f, params_map)
             name = params_map["ESET"]
-            if name not in elsets:
-                elsets[name] = []
-            elsets[name].append(setids)
+            cell_sets[name] = []
+            for cell_ids_ in cell_ids:
+                cell_sets_ = numpy.array(
+                    [cell_ids_[set_id] for set_id in set_ids if set_id in cell_ids_],
+                    dtype="int32",
+                )
+                cell_sets[name].append(cell_sets_)
         else:
             # There are just too many PERMAS keywords to explicitly skip them.
             pass
 
     return Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        field_data=field_data,
+        point_sets=point_sets,
+        cell_sets=cell_sets,
     )
 
 
@@ -143,19 +155,22 @@ def _read_cells(f, line0, point_gids):
         raise ReadError("Element type not available: {}".format(etype))
     cell_type = permas_to_meshio_type[etype]
     cells, idx = [], []
+    cell_ids = {}
+    counter = 0
     while True:
         last_pos = f.tell()
         line = f.readline()
-        if line.startswith("$") or line == "":
+        if line.startswith("$") or line.startswith("!") or line == "":
             break
         line = line.strip()
-        # the first item is just a running index
-        idx += [point_gids[int(k)] for k in filter(None, line.split(" ")[1:])]
+        idx += [int(k) for k in filter(None, line.split(" "))]
         if not line.endswith("!"):
-            cells.append(idx)
+            cell_ids[idx[0]] = counter
+            cells.append([point_gids[k] for k in idx[1:]])
             idx = []
+            counter += 1
     f.seek(last_pos)
-    return cell_type, numpy.array(cells)
+    return cell_type, numpy.array(cells), cell_ids
 
 
 def get_param_map(word, required_keys=None):
@@ -208,16 +223,11 @@ def read_set(f, params_map):
         set_ids += [int(k) for k in line.strip().strip(" ").split(" ")]
     f.seek(last_pos)
 
+    set_ids = numpy.array(set_ids, dtype="int32")
     if "generate" in params_map:
         if len(set_ids) != 3:
             raise ReadError(set_ids)
-        set_ids = numpy.arange(set_ids[0], set_ids[1], set_ids[2])
-    else:
-        try:
-            set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
-        except ValueError:
-            print(set_ids)
-            raise
+        set_ids = numpy.arange(set_ids[0], set_ids[1], set_ids[2], dtype="int32")
     return set_ids
 
 
