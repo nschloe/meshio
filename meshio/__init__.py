@@ -35,7 +35,7 @@ from .__about__ import (
     __website__,
 )
 from ._exceptions import ReadError, WriteError
-from ._helpers import read, write, write_points_cells
+from ._helpers import extension_to_filetype, read, write, write_points_cells
 from ._mesh import Cells, Mesh
 
 __all__ = [
@@ -70,6 +70,7 @@ __all__ = [
     "read",
     "write",
     "write_points_cells",
+    "extension_to_filetype",
     "Mesh",
     "Cells",
     "ReadError",

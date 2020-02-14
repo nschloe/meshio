@@ -272,4 +272,4 @@ try:
 except ImportError:
     pass
 else:
-    register("h5m", [".h5m"], read, {"moab": write})
+    register("h5m", [".h5m"], read, {"h5m": write})
