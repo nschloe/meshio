@@ -2,7 +2,7 @@ import argparse
 import os
 import pathlib
 
-from .. import ansys, cgns, gmsh, h5m, mdpa, med, ply, stl, vtk, vtu, xdmf
+from .. import cgns, h5m, med, vtu, xdmf
 from .._helpers import _filetype_from_path, read, reader_map
 from ._helpers import _get_version_text
 
@@ -32,9 +32,7 @@ def decompress(argv=None):
     elif fmt == "vtu":
         vtu.write(args.infile, mesh, binary=True, compression=None)
     elif fmt == "xdmf":
-        xdmf.write(
-            args.infile, mesh, data_format="HDF", compression=None,
-        )
+        xdmf.write(args.infile, mesh, data_format="HDF", compression=None)
     else:
         print("Don't know how to decompress {}.".format(args.infile))
         exit(1)
