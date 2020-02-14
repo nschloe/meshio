@@ -315,7 +315,7 @@ class XdmfReader:
 
 class XdmfWriter:
     def __init__(
-        self, filename, mesh, data_format="HDF", compression=None, compression_opts=None
+        self, filename, mesh, data_format="HDF", compression="gzip", compression_opts=4
     ):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
