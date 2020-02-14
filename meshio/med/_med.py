@@ -111,8 +111,7 @@ def read(filename):
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
-        point_tags_key="med:family",
-        cell_tags_key="med:family",
+        tags_key="med:family",
     )
     mesh.point_tags_info = point_tags_info
     mesh.cell_tags_info = cell_tags_info

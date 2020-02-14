@@ -80,9 +80,9 @@ def read_buffer(f, is_ascii, data_size):
 
     # Define gmsh:physical as cell_tags_key
     if "gmsh:physical" in cell_data:
-        cell_tags_key = "gmsh:physical"
+        tags_key = "gmsh:physical"
     else:
-        cell_tags_key = None
+        tags_key = None
 
     return Mesh(
         points,
@@ -90,7 +90,7 @@ def read_buffer(f, is_ascii, data_size):
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
-        cell_tags_key=cell_tags_key,
+        tags_key=tags_key,
         gmsh_periodic=periodic,
     )
 

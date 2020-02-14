@@ -101,8 +101,7 @@ def read_buffer(f):
         cells,
         point_data=point_data,
         cell_data=cell_data,
-        point_tags_key="medit:ref",
-        cell_tags_key="medit:ref",
+        tags_key="medit:ref",
     )
 
 

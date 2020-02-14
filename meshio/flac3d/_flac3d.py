@@ -134,7 +134,7 @@ def read_buffer(f):
         cells=[(k, numpy.array(v)[:, flac3d_to_meshio_order[k]]) for k, v in cells],
         cell_data=cell_data,
         field_data=field_data,
-        cell_tags_key="flac3d:zone",
+        tags_key="flac3d:zone",
     )
 
 
