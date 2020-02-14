@@ -97,11 +97,7 @@ def read_buffer(f):
                 raise ReadError("Unknown keyword '{}'.".format(items[0]))
 
     return Mesh(
-        points,
-        cells,
-        point_data=point_data,
-        cell_data=cell_data,
-        tags_key="medit:ref",
+        points, cells, point_data=point_data, cell_data=cell_data, tags_key="medit:ref",
     )
 
 
