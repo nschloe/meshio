@@ -53,6 +53,7 @@ setup(
         "console_scripts": [
             "meshio-compress = meshio._cli:compress",
             "meshio-convert = meshio._cli:convert",
+            "meshio-decompress = meshio._cli:decompress",
             "meshio-info = meshio._cli:info",
         ]
     },
