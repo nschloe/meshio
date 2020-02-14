@@ -50,9 +50,17 @@ Install with
 ```
 pip install meshio[all]
 ```
-and simply call
+and and use the command-line tools
 ```
-meshio-convert input.msh output.vtu
+meshio-convert    input.msh output.vtk   # convert between two formats
+
+meshio-info       input.xdmf             # show some info about the mesh
+
+meshio-compress   input.vtu              # compress the mesh file
+meshio-decompress input.vtu              # decompress the mesh file
+
+meshio-binary     input.msh              # convert to binary format
+meshio-ascii      input.msh              # convert to ASCII format
 ```
 with any of the supported formats.
 
