@@ -8,7 +8,6 @@ import datetime
 import re
 import warnings
 
-import netCDF4
 import numpy
 
 from ..__about__ import __version__
@@ -369,4 +368,9 @@ def write(filename, mesh):
     rootgrp.close()
 
 
-register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
+try:
+    import netCDF4
+except ImportError:
+    pass
+else:
+    register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
