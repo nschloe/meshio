@@ -50,7 +50,8 @@ Install with
 ```
 pip install meshio[all]
 ```
-and and use the command-line tools
+(`[all]` pulls in all optional dependencies. By default, meshio only uses numpy.)
+You can then use the command-line tools
 ```bash
 meshio-convert    input.msh output.vtk   # convert between two formats
 
