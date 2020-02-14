@@ -25,8 +25,8 @@ def test_cell_tags(mesh_format):
 
 
 @pytest.mark.parametrize("mesh_format", [meshio.med, meshio.medit])
-def test_tag_tags(mesh_format):
-    # Reference cell tags given by a MED file
+def test_point_tags(mesh_format):
+    # Reference point tags given by a MED file
     this_dir = os.path.dirname(os.path.abspath(__file__))
     filename = os.path.join(this_dir, "meshes", "med", "cylinder.med")
     mesh = meshio.read(filename)
