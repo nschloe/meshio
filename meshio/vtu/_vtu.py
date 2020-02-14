@@ -43,7 +43,10 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     cells = []
     cell_data = {}
     for start, end in zip(b[:-1], b[1:]):
-        meshio_type = vtk_to_meshio_type[types[start]]
+        try:
+            meshio_type = vtk_to_meshio_type[types[start]]
+        except KeyError:
+            raise ReadError("File contains cells that meshio cannot handle.")
         n = num_nodes_per_cell[meshio_type]
         indices = numpy.add.outer(
             offsets[start:end], numpy.arange(-n, 0, dtype=offsets.dtype)
@@ -409,10 +412,9 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         # a bit.
         byte_order=("LittleEndian" if sys.byteorder == "little" else "BigEndian"),
     )
-    if header_type is None:
-        header_type = "UInt32"
-    else:
-        vtk_file.set("header_type", header_type)
+    header_type = (
+        "UInt32" if header_type is None else vtk_file.set("header_type", header_type)
+    )
 
     if binary and compression:
         # TODO lz4, lzma <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>

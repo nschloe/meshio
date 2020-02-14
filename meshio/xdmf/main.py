@@ -104,10 +104,12 @@ class XdmfReader:
         full_hdf5_path = os.path.join(os.path.dirname(self.filename), filename)
 
         f = h5py.File(full_hdf5_path, "r")
-        if h5path[0] != "/":
-            raise ReadError()
 
-        for key in h5path[1:].split("/"):
+        # Some files don't contain the leading slash /.
+        if h5path[0] == "/":
+            h5path = h5path[1:]
+
+        for key in h5path.split("/"):
             f = f[key]
         # `[()]` gives a numpy.ndarray
         return f[()]
@@ -256,13 +258,15 @@ class XdmfReader:
                     cells.append(Cells(xdmf_to_meshio_type[cell_type], data))
 
             elif c.tag == "Geometry":
-                try:
-                    geometry_type = c.get("GeometryType")
-                except KeyError:
-                    pass
-                else:
-                    if geometry_type not in ["XY", "XYZ"]:
+                if c.get("Type"):
+                    if c.get("GeometryType"):
                         raise ReadError()
+                    geometry_type = c.get("Type")
+                else:
+                    geometry_type = c.get("GeometryType")
+
+                if geometry_type not in ["XY", "XYZ"]:
+                    raise ReadError('Illegal geometry type "{}".'.format(geometry_type))
 
                 data_items = list(c)
                 if len(data_items) != 1:
@@ -311,7 +315,7 @@ class XdmfReader:
 
 class XdmfWriter:
     def __init__(
-        self, filename, mesh, data_format="HDF", compression=None, compression_opts=None
+        self, filename, mesh, data_format="HDF", compression="gzip", compression_opts=4
     ):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(

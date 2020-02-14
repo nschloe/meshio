@@ -99,8 +99,7 @@ def read_buffer(f, file_type):
         nnodes, 3
     )
 
-    # TODO order plays a role here?
-    for key in ["quad", "triangle"]:
+    for key in ["triangle", "quad"]:
         nitems = ugrid_counts[key][0]
         nvertices = ugrid_counts[key][1]
         if nitems == 0:
@@ -172,12 +171,23 @@ def _write_buffer(f, file_type, mesh):
         "wedge": 0,
         "hexahedron": 0,
     }
+    # ugrid type to cell array id
+    ugrid_meshio_id = {
+        "points": -1,
+        "triangle": -1,
+        "quad": -1,
+        "tetra": -1,
+        "pyramid": -1,
+        "wedge": -1,
+        "hexahedron": -1,
+    }
 
     ugrid_counts["points"] = mesh.points.shape[0]
 
-    for key, data in mesh.cells:
+    for i, (key, data) in enumerate(mesh.cells):
         if key in ugrid_counts:
             ugrid_counts[key] = data.shape[0]
+            ugrid_meshio_id[key] = i
         else:
             msg = "UGRID mesh format doesn't know {} cells. Skipping.".format(key)
             logging.warning(msg)
@@ -213,12 +223,12 @@ def _write_buffer(f, file_type, mesh):
 
     _write_section(f, file_type, mesh.points, ftype)
 
-    for cell_type, data in mesh.cells:
-        if cell_type not in ["triangle", "quad"]:
+    for key in ["triangle", "quad"]:
+        if ugrid_counts[key] == 0:
             continue
-        if ugrid_counts[key] > 0:
-            # UGRID is one-based
-            _write_section(f, file_type, data + 1, itype)
+        c = mesh.cells[ugrid_meshio_id[key]]
+        # UGRID is one-based
+        _write_section(f, file_type, c.data + 1, itype)
 
     # write boundary tags
     for key in ["triangle", "quad"]:
@@ -239,11 +249,10 @@ def _write_buffer(f, file_type, mesh):
         _write_section(f, file_type, labels, itype)
 
     # write volume elements
-    for c in mesh.cells:
-        if c.type not in ["tetra", "pyramid", "wedge", "hexahedron"]:
+    for key in ["tetra", "pyramid", "wedge", "hexahedron"]:
+        if ugrid_counts[key] == 0:
             continue
-        if ugrid_counts[c.type] == 0:
-            continue
+        c = mesh.cells[ugrid_meshio_id[key]]
         # UGRID is one-based
         out = c.data + 1
         if c.type == "pyramid":
