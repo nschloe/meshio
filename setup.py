@@ -51,7 +51,11 @@ setup(
     data_files=[("paraview-plugins", ["tools/paraview-meshio-plugin.py"])],
     entry_points={
         "console_scripts": [
+            "meshio-ascii = meshio._cli:ascii",
+            "meshio-binary = meshio._cli:binary",
+            "meshio-compress = meshio._cli:compress",
             "meshio-convert = meshio._cli:convert",
+            "meshio-decompress = meshio._cli:decompress",
             "meshio-info = meshio._cli:info",
         ]
     },

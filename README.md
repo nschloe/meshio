@@ -7,7 +7,7 @@
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/meshio.svg?style=flat-square)](https://codecov.io/gh/nschloe/meshio)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg?style=flat-square)](https://pypi.org/project/meshio)
-[![PyPI pyversions](https://img.shields.io/pypi/pyversions/meshio.svg)](https://pypi.org/pypi/meshio/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/meshio.svg?style=flat-square)](https://pypi.org/pypi/meshio/)
 [![Anaconda Cloud](https://anaconda.org/conda-forge/meshio/badges/version.svg?=style=flat-square)](https://anaconda.org/conda-forge/meshio/)
 [![Debian CI](https://badges.debian.net/badges/debian/testing/python3-meshio/version.svg?style=flat-square)](https://tracker.debian.org/pkg/python-meshio)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1173115.svg?style=flat-square)](https://doi.org/10.5281/zenodo.1173115)
@@ -50,9 +50,17 @@ Install with
 ```
 pip install meshio[all]
 ```
-and simply call
+and and use the command-line tools
 ```
-meshio-convert input.msh output.vtu
+meshio-convert    input.msh output.vtk   # convert between two formats
+
+meshio-info       input.xdmf             # show some info about the mesh
+
+meshio-compress   input.vtu              # compress the mesh file
+meshio-decompress input.vtu              # decompress the mesh file
+
+meshio-binary     input.msh              # convert to binary format
+meshio-ascii      input.msh              # convert to ASCII format
 ```
 with any of the supported formats.
 
