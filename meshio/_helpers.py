@@ -7,14 +7,14 @@ from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
 from ._mesh import Mesh
 
-_extension_to_filetype = {}
+extension_to_filetype = {}
 reader_map = {}
 _writer_map = {}
 
 
 def register(name, extensions, reader, writer_map):
     for ext in extensions:
-        _extension_to_filetype[ext] = name
+        extension_to_filetype[ext] = name
 
     if reader is not None:
         reader_map[name] = reader
@@ -25,9 +25,9 @@ def _filetype_from_path(path):
     ext = ""
     out = None
     for suffix in reversed(path.suffixes):
-        ext = suffix + ext
-        if ext in _extension_to_filetype:
-            out = _extension_to_filetype[ext]
+        ext = (suffix + ext).lower()
+        if ext in extension_to_filetype:
+            out = extension_to_filetype[ext]
 
     if out is None:
         raise ReadError("Could not deduce file format from extension '{}'.".format(ext))

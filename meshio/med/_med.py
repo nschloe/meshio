@@ -33,8 +33,6 @@ numpy_void_str = numpy.string_("")
 
 
 def read(filename):
-    import h5py
-
     f = h5py.File(filename, "r")
 
     # Mesh ensemble
@@ -213,8 +211,6 @@ def _read_families(fas_data):
 
 
 def write(filename, mesh, add_global_ids=True, compression="gzip", compression_opts=4):
-    import h5py
-
     f = h5py.File(filename, "w")
 
     # Strangely the version must be 3.0.x
@@ -474,4 +470,9 @@ def _write_families(fm_group, tags, compression, compression_opts):
             dataset[i] = [ord(x) for x in name_80]
 
 
-register("med", [".med"], read, {"med": write})
+try:
+    import h5py
+except ImportError:
+    pass
+else:
+    register("med", [".med"], read, {"med": write})

@@ -65,8 +65,6 @@ meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
 def read(filename):  # noqa: C901
-    import netCDF4
-
     nc = netCDF4.Dataset(filename)
 
     # assert nc.version == numpy.float32(5.1)
@@ -262,8 +260,6 @@ numpy_to_exodus_dtype = {
 
 
 def write(filename, mesh):
-    import netCDF4
-
     rootgrp = netCDF4.Dataset(filename, "w")
 
     # set global data
@@ -372,4 +368,9 @@ def write(filename, mesh):
     rootgrp.close()
 
 
-register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
+try:
+    import netCDF4
+except ImportError:
+    pass
+else:
+    register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})

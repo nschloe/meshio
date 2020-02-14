@@ -12,7 +12,7 @@ with open(os.path.join(base_dir, "meshio", "__about__.py"), "rb") as f:
 
 extras = {
     "exodus": ["netCDF4"],
-    "hdf5": ["h5py"],  # MED, MOAB, XDMF formats
+    "hdf5": ["h5py"],  # CGNS, H5M, MED, XDMF formats
 }
 extras["all"] = list(set(itertools.chain.from_iterable(extras.values())))
 

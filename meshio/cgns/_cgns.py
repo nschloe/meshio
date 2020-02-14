@@ -11,8 +11,6 @@ from .._mesh import Mesh
 
 
 def read(filename):
-    import h5py
-
     f = h5py.File(filename, "r")
 
     x = f["Base"]["Zone1"]["GridCoordinates"]["CoordinateX"][" data"]
@@ -34,8 +32,6 @@ def read(filename):
 
 
 def write(filename, mesh, compression="gzip", compression_opts=4):
-    import h5py
-
     f = h5py.File(filename, "w")
 
     base = f.create_group("Base")
@@ -91,4 +87,9 @@ def write(filename, mesh, compression="gzip", compression_opts=4):
             )
 
 
-register("cgns", [".cgns"], read, {"cgns": write})
+try:
+    import h5py
+except ImportError:
+    pass
+else:
+    register("cgns", [".cgns"], read, {"cgns": write})
