@@ -38,11 +38,7 @@ def ascii(argv=None):
     elif fmt == "vtu":
         vtu.write(args.infile, mesh, binary=False)
     elif fmt == "xdmf":
-        xdmf.write(
-            args.infile,
-            mesh,
-            data_format="XML"
-        )
+        xdmf.write(args.infile, mesh, data_format="XML")
     else:
         print("Don't know how to convert {} to ASCII format.".format(args.infile))
         exit(1)

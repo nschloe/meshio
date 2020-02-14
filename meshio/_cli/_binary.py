@@ -38,11 +38,7 @@ def binary(argv=None):
     elif fmt == "vtu":
         vtu.write(args.infile, mesh, binary=True)
     elif fmt == "xdmf":
-        xdmf.write(
-            args.infile,
-            mesh,
-            data_format="HDF",
-        )
+        xdmf.write(args.infile, mesh, data_format="HDF")
     else:
         print("Don't know how to convert {} to binary format.".format(args.infile))
         exit(1)
