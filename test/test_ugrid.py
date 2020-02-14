@@ -132,7 +132,7 @@ def test_reference_file(
     for k, c in enumerate(mesh.cells):
         if c.type not in ["triangle", "quad"]:
             continue
-        all_tags.append(mesh.cell_data["ugrid:ref"][k])
+        all_tags.append(mesh.cell_tags[k])
 
     all_tags = numpy.concatenate(all_tags)
 

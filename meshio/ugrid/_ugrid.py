@@ -139,7 +139,7 @@ def read_buffer(f, file_type):
     if file_type["type"] == "F":
         _read_section(f, file_type, count=1, dtype=itype)
 
-    return Mesh(points, cells, cell_data=cell_data)
+    return Mesh(points, cells, cell_data=cell_data, cell_tags_key="ugrid:ref")
 
 
 def _write_section(f, file_type, array, dtype):
@@ -234,14 +234,8 @@ def _write_buffer(f, file_type, mesh):
     for key in ["triangle", "quad"]:
         if ugrid_counts[key] == 0:
             continue
-        if key in mesh.cell_data and "ugrid:ref" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["ugrid:ref"]
-        elif key in mesh.cell_data and "medit:ref" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["medit:ref"]
-        elif key in mesh.cell_data and "gmsh:physical" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["gmsh:physical"]
-        elif key in mesh.cell_data and "flac3d:zone" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["flac3d:zone"]
+        if mesh.cell_tags is not None:
+            labels = mesh.cell_tags[ugrid_meshio_id[key]].astype(itype)
         else:
             labels = numpy.ones(ugrid_counts[key], dtype=itype)
 
