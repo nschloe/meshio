@@ -51,8 +51,6 @@ class XdmfReader:
         return self.read_xdmf3(root)
 
     def _read_data_item(self, data_item, root=None):
-        import h5py
-
         reference = data_item.get("Reference")
         if reference:
             xpath = (data_item.text if reference == "XML" else reference).strip()
@@ -330,8 +328,6 @@ class XdmfWriter:
         self.compression_opts = compression_opts
 
         if data_format == "HDF":
-            import h5py
-
             self.h5_filename = os.path.splitext(self.filename)[0] + ".h5"
             self.h5_file = h5py.File(self.h5_filename, "w")
 
@@ -522,18 +518,24 @@ def write(*args, **kwargs):
     XdmfWriter(*args, **kwargs)
 
 
-register(
-    "xdmf",
-    [".xdmf", ".xmf"],
-    read,
-    {
-        "xdmf": write,
-        "xdmf-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
-        "xdmf-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
-        "xdmf-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
-        "xdmf3": write,
-        "xdmf3-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
-        "xdmf3-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
-        "xdmf3-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
-    },
-)
+try:
+    import h5py
+except ImportError:
+    pass
+else:
+    # TODO register all xdmf except hdf outside this try block
+    register(
+        "xdmf",
+        [".xdmf", ".xmf"],
+        read,
+        {
+            "xdmf": write,
+            "xdmf-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
+            "xdmf-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
+            "xdmf-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
+            "xdmf3": write,
+            "xdmf3-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
+            "xdmf3-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
+            "xdmf3-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
+        },
+    )
