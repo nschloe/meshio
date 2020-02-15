@@ -78,7 +78,7 @@ def read_buffer(f):
         cells,
         point_data=point_data,
         cell_data=cell_data,
-        tags_key="avsucd:material",
+        cell_tags=cell_data["avsucd:material"],
     )
 
 

@@ -13,7 +13,8 @@ class Mesh:
         point_data=None,
         cell_data=None,
         field_data=None,
-        tags_key=None,
+        point_tags=None,
+        cell_tags=None,
         point_sets=None,
         cell_sets=None,
         gmsh_periodic=None,
@@ -35,7 +36,8 @@ class Mesh:
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
         self.field_data = {} if field_data is None else field_data
-        self.tags_key = tags_key
+        self.point_tags = point_tags
+        self.cell_tags = cell_tags
         self.point_sets = {} if point_sets is None else point_sets
         self.cell_sets = {} if cell_sets is None else cell_sets
         self.gmsh_periodic = gmsh_periodic
@@ -160,17 +162,3 @@ class Mesh:
         from ._helpers import read
 
         return read(path_or_buf, file_format)
-
-    @property
-    def point_tags(self):
-        try:
-            return self.point_data[self.tags_key]
-        except KeyError:
-            return None
-
-    @property
-    def cell_tags(self):
-        try:
-            return self.cell_data[self.tags_key]
-        except KeyError:
-            return None

@@ -73,9 +73,11 @@ def read(filename):
     points = pts_dataset[()].reshape(n_points, -1, order="F")
 
     # Point tags
+    point_tags = None
     if "FAM" in mesh["NOE"]:
         tags = mesh["NOE"]["FAM"][()]
         point_data["med:family"] = tags
+        point_tags = point_data["med:family"]
 
     # Information for point tags
     point_tags_info = {}
@@ -85,6 +87,7 @@ def read(filename):
 
     # Cells
     cells = []
+    cell_tags = None
     med_cells = mesh["MAI"]
     for med_cell_type, med_cell_type_group in med_cells.items():
         cell_type = med_to_meshio_type[med_cell_type]
@@ -98,6 +101,8 @@ def read(filename):
             if "med:family" not in cell_data:
                 cell_data["med:family"] = []
             cell_data["med:family"].append(tags)
+    if "med:family" in cell_data:
+        cell_tags = cell_data["med:family"]
 
     # Information for cell tags
     cell_tags_info = {}
@@ -111,7 +116,8 @@ def read(filename):
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
-        tags_key="med:family",
+        point_tags=point_tags,
+        cell_tags=cell_tags,
     )
     mesh.point_tags_info = point_tags_info
     mesh.cell_tags_info = cell_tags_info

@@ -139,7 +139,7 @@ def read_buffer(f, file_type):
     if file_type["type"] == "F":
         _read_section(f, file_type, count=1, dtype=itype)
 
-    return Mesh(points, cells, cell_data=cell_data, tags_key="ugrid:ref")
+    return Mesh(points, cells, cell_data=cell_data, cell_tags=cell_data["ugrid:ref"])
 
 
 def _write_section(f, file_type, array, dtype):

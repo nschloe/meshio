@@ -126,15 +126,17 @@ def read_buffer(f):
         for cid, zid in mapper.values():
             cell_data[cid] = zid
         cell_data = {"flac3d:zone": numpy.split(cell_data, n_cells[:-1])}
+        cell_tags = cell_data["flac3d:zone"]
     else:
         cell_data = {}
+        cell_tags = None
 
     return Mesh(
         points=numpy.array(points),
         cells=[(k, numpy.array(v)[:, flac3d_to_meshio_order[k]]) for k, v in cells],
         cell_data=cell_data,
         field_data=field_data,
-        tags_key="flac3d:zone",
+        cell_tags=cell_tags,
     )
 
 

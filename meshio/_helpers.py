@@ -75,6 +75,8 @@ def write_points_cells(
     point_data=None,
     cell_data=None,
     field_data=None,
+    point_tags=None,
+    cell_tags=None,
     point_sets=None,
     cell_sets=None,
     file_format=None,
@@ -88,6 +90,8 @@ def write_points_cells(
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
+        point_tags=point_tags,
+        cell_tags=cell_tags,
         point_sets=point_sets,
         cell_sets=cell_sets,
     )

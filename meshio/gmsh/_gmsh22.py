@@ -78,11 +78,11 @@ def read_buffer(f, is_ascii, data_size):
             tags = tag_dict.get(cell_type, [])
             cell_data[name].append(tags)
 
-    # Define gmsh:physical as cell_tags_key
+    # Identify gmsh:physical as cell tags
     if "gmsh:physical" in cell_data:
-        tags_key = "gmsh:physical"
+        cell_tags = cell_data["gmsh:physical"]
     else:
-        tags_key = None
+        cell_tags = None
 
     return Mesh(
         points,
@@ -90,7 +90,7 @@ def read_buffer(f, is_ascii, data_size):
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
-        tags_key=tags_key,
+        cell_tags=cell_tags,
         gmsh_periodic=periodic,
     )
 
