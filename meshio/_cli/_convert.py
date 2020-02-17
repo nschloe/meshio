@@ -29,7 +29,11 @@ def convert(argv=None):
     mesh.points = numpy.ascontiguousarray(mesh.points)
 
     # write it out
-    write(args.outfile, mesh, file_format=args.output_format)
+    kwargs = {"file_format": args.output_format}
+    if args.float_format is not None:
+        kwargs["float_fmt"] = args.float_format
+
+    write(args.outfile, mesh, **kwargs)
 
 
 def _get_convert_parser():
@@ -59,6 +63,13 @@ def _get_convert_parser():
     )
 
     parser.add_argument("outfile", type=str, help="mesh file to be written to")
+
+    parser.add_argument(
+        "--float-format",
+        "-f",
+        type=str,
+        help="float format used in output ASCII files (default: .15e)",
+    )
 
     parser.add_argument(
         "--prune",
