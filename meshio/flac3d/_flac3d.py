@@ -179,7 +179,7 @@ def _read_zgroup(f, line):
     return name, data, slot
 
 
-def write(filename, mesh):
+def write(filename, mesh, float_fmt=".15e"):
     """
     Write FLAC3D f3grid grid file (only ASCII).
     """
@@ -190,7 +190,7 @@ def write(filename, mesh):
         f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
         f.write("* {}\n".format(time.ctime()))
         f.write("* GRIDPOINTS\n")
-        _write_points(f, mesh.points)
+        _write_points(f, mesh.points, float_fmt)
         f.write("* ZONES\n")
         _write_cells(f, mesh.points, mesh.cells)
 
@@ -200,12 +200,13 @@ def write(filename, mesh):
                 _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
 
 
-def _write_points(f, points):
+def _write_points(f, points, float_fmt):
     """
     Write points coordinates.
     """
     for i, point in enumerate(points):
-        f.write("G\t{:8}\t{:.14e}\t{:.14e}\t{:.14e}\n".format(i + 1, *point))
+        fmt = "G\t{:8}\t" + "\t".join(3 * ["{:" + float_fmt + "}"]) + "\n"
+        f.write(fmt.format(i + 1, *point))
 
 
 def _write_cells(f, points, cells):

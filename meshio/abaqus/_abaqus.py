@@ -271,13 +271,13 @@ def _read_set(f, params_map):
     return set_ids, line
 
 
-def write(filename, mesh, translate_cell_names=True):
+def write(filename, mesh, float_fmt=".15e", translate_cell_names=True):
     with open_file(filename, "wt") as f:
         f.write("*Heading\n")
         f.write("Abaqus DataFile Version 6.14\n")
         f.write("written by meshio v{}\n".format(__version__))
         f.write("*Node\n")
-        fmt = ", ".join(["{}"] + ["{!r}"] * mesh.points.shape[1]) + "\n"
+        fmt = ", ".join(["{}"] + ["{:" + float_fmt + "}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):
             f.write(fmt.format(k + 1, *x))
         eid = 0
