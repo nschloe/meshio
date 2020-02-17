@@ -257,7 +257,7 @@ def _read_periodic(f, is_ascii):
     return periodic
 
 
-def write(filename, mesh, binary=True):
+def write(filename, mesh, float_fmt=".15e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
@@ -296,7 +296,7 @@ def write(filename, mesh, binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        _write_nodes(fh, mesh.points, binary)
+        _write_nodes(fh, mesh.points, float_fmt, binary)
         _write_elements(fh, cells, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, binary)
@@ -307,7 +307,7 @@ def write(filename, mesh, binary=True):
             _write_data(fh, "ElementData", name, dat, binary)
 
 
-def _write_nodes(fh, points, binary):
+def _write_nodes(fh, points, float_fmt, binary):
     fh.write(b"$Nodes\n")
 
     # TODO not sure what dimEntity is supposed to say
@@ -340,11 +340,10 @@ def _write_nodes(fh, points, binary):
             )
         )
 
+        fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, x in enumerate(points):
             # tag(int) x(double) y(double) z(double)
-            fh.write(
-                "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
-            )
+            fh.write(fmt.format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
 
     fh.write(b"$EndNodes\n")
 

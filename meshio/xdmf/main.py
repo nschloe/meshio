@@ -520,7 +520,7 @@ def write(*args, **kwargs):
 
 try:
     import h5py
-except ImportError:
+except ModuleNotFoundError:
     pass
 else:
     # TODO register all xdmf except hdf outside this try block

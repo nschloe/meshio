@@ -2,6 +2,7 @@ import sys
 from contextlib import contextmanager
 
 try:
+    # Python 3.6+
     from os import PathLike
 except ImportError:
     from pathlib import PurePath as PathLike

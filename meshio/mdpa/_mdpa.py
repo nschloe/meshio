@@ -367,19 +367,15 @@ def cell_data_from_raw(cells, cell_data_raw):
     return cell_data
 
 
-def _write_nodes(fh, points, binary=False):
+def _write_nodes(fh, points, float_fmt, binary=False):
     fh.write(b"Begin Nodes\n")
     if binary:
         raise WriteError()
 
     for k, x in enumerate(points):
-        fh.write(
-            " {} {:.16E} {:.16E} {:.16E}\n".format(k + 1, x[0], x[1], x[2]).encode(
-                "utf-8"
-            )
-        )
+        fmt = " {} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
+        fh.write(fmt.format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
     fh.write(b"End Nodes\n\n")
-    return
 
 
 def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=2):
@@ -467,7 +463,7 @@ def _write_data(fh, tag, name, data, binary):
     fh.write(("End " + tag + " " + name + "\n\n").encode("utf-8"))
 
 
-def write(filename, mesh, binary=False):
+def write(filename, mesh, float_fmt=".15e", binary=False):
     """Writes mdpa files, cf.
     <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
     """
@@ -552,7 +548,7 @@ def write(filename, mesh, binary=False):
                 break
 
         # We identify the entities
-        _write_nodes(fh, mesh.points, binary)
+        _write_nodes(fh, mesh.points, float_fmt, binary)
         _write_elements_and_conditions(fh, cells, tag_data, binary, dimension)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodalData", name, dat, binary)
