@@ -255,7 +255,7 @@ def _read_periodic(f):
     return periodic
 
 
-def write(filename, mesh, binary=True):
+def write(filename, mesh, float_fmt=".15e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
@@ -303,7 +303,7 @@ def write(filename, mesh, binary=True):
             else:
                 other_data[key] = d
 
-        _write_nodes(fh, mesh.points, binary)
+        _write_nodes(fh, mesh.points, float_fmt, binary)
         _write_elements(fh, cells, tag_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic)
@@ -315,7 +315,7 @@ def write(filename, mesh, binary=True):
             _write_data(fh, "ElementData", name, dat, binary)
 
 
-def _write_nodes(fh, points, binary):
+def _write_nodes(fh, points, float_fmt, binary):
     fh.write(b"$Nodes\n")
     fh.write("{}\n".format(len(points)).encode("utf-8"))
     if binary:
@@ -326,10 +326,9 @@ def _write_nodes(fh, points, binary):
         tmp.tofile(fh)
         fh.write(b"\n")
     else:
+        fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, x in enumerate(points):
-            fh.write(
-                "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
-            )
+            fh.write(fmt.format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
     fh.write(b"$EndNodes\n")
 
 

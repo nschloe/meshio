@@ -71,7 +71,7 @@ def read(filename):
     return Mesh(points, [Cells("tetra", cells)])
 
 
-def write(filename, mesh):
+def write(filename, mesh, float_fmt=".15e"):
     base, ext = os.path.splitext(filename)
     if ext == ".node":
         node_filename = filename
@@ -89,8 +89,9 @@ def write(filename, mesh):
     with open(node_filename, "w") as fh:
         fh.write("# This file was created by meshio v{}\n".format(__version__))
         fh.write("{} {} {} {}\n".format(mesh.points.shape[0], 3, 0, 0))
+        fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, pt in enumerate(mesh.points):
-            fh.write("{} {:.15e} {:.15e} {:.15e}\n".format(k, pt[0], pt[1], pt[2]))
+            fh.write(fmt.format(k, pt[0], pt[1], pt[2]))
 
     if not any(c.type == "tetra" for c in mesh.cells):
         raise WriteError("TegGen only supports tetrahedra")
