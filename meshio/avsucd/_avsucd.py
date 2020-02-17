@@ -208,15 +208,12 @@ def _write_nodes(f, points):
 def _write_cells(f, cells, cell_data, num_cells):
     # try to find an appropriate materials array
     key, other = _pick_first_int_data(cell_data)
-    if key:
-        material = cell_data[key]
-        if other:
-            logging.warning(
-                "AVS-UCD can only write one cell data array. "
-                "Picking {}, skipping {}.".format(key, ", ".join(other))
-            )
-    else:
-        material = numpy.zeros(num_cells, dtype=int)
+    if key and other:
+        logging.warning(
+            "AVS-UCD can only write one cell data array. "
+            "Picking {}, skipping {}.".format(key, ", ".join(other))
+        )
+    material = cell_data[key] if key else numpy.zeros(num_cells, dtype=int)
 
     # Loop over cells
     i = 0
