@@ -213,16 +213,18 @@ def _write_cells(f, cells, cell_data, num_cells):
             "AVS-UCD can only write one cell data array. "
             "Picking {}, skipping {}.".format(key, ", ".join(other))
         )
-    material = cell_data[key] if key else numpy.zeros(num_cells, dtype=int)
+    material = (
+        numpy.concatenate(cell_data[key]) if key else numpy.zeros(num_cells, dtype=int)
+    )
 
     # Loop over cells
     i = 0
-    for k, v in cells:
-        for cell in v[:, meshio_to_avsucd_order[k]]:
+    for cell_type, v in cells:
+        for cell in v[:, meshio_to_avsucd_order[cell_type]]:
             cell_str = " ".join(str(c + 1) for c in cell)
             f.write(
                 "{} {} {} {}\n".format(
-                    i + 1, material[i], meshio_to_avsucd_type[k], cell_str
+                    i + 1, material[i], meshio_to_avsucd_type[cell_type], cell_str
                 )
             )
             i += 1
