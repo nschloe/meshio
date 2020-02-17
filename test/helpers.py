@@ -246,13 +246,13 @@ def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=numpy.float):
 def add_cell_data(mesh, specs):
     mesh2 = copy.deepcopy(mesh)
     numpy.random.seed(0)
-    cell_data = {}
-    for name, shape, dtype in specs:
-        cell_data[name] = [
+    mesh2.cell_data = {
+        name: [
             (100 * numpy.random.rand(*((len(cells),) + shape))).astype(dtype)
-            for cell_type, cells in mesh.cells
+            for _, cells in mesh.cells
         ]
-    mesh2.cell_data = cell_data
+        for name, shape, dtype in specs
+    }
     return mesh2
 
 
