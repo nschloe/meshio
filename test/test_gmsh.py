@@ -153,3 +153,9 @@ def test_reference_file_readonly(filename, ref_sum, ref_num_cells):
     assert {
         k: len(v) for k, v in mesh.cell_data_dict["gmsh:physical"].items()
     } == ref_num_cells
+
+    num_cells = {k: 0 for k in ref_num_cells}
+    for vv in mesh.cell_sets_dict.values():
+        for k, v in vv.items():
+            num_cells[k] += len(v)
+    assert num_cells == ref_num_cells
