@@ -14,6 +14,8 @@ import meshio
         helpers.tri_quad_mesh,
         helpers.tet_mesh,
         helpers.hex_mesh,
+        # helpers.add_cell_data(helpers.tri_mesh, 1, dtype=int),
+        helpers.add_cell_data(helpers.tri_mesh, [("medit:ref", (), int)]),
     ],
 )
 def test_io(mesh):

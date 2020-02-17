@@ -1,3 +1,4 @@
+import numpy
 import pytest
 
 import helpers
@@ -17,10 +18,10 @@ test_set = [
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),
     helpers.add_point_data(helpers.tri_mesh, 3),
-    helpers.add_cell_data(helpers.tri_mesh, 1),
-    helpers.add_cell_data(helpers.tri_quad_mesh, 1),
-    helpers.add_cell_data(helpers.tri_mesh, 2),
-    helpers.add_cell_data(helpers.tri_mesh, 3),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+    helpers.add_cell_data(helpers.tri_quad_mesh, [("a", (), numpy.float64)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float32)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("b", (3,), numpy.float64)]),
 ]
 
 

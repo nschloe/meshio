@@ -20,9 +20,9 @@ import meshio
         # helpers.add_point_data(helpers.tri_mesh, 1), # NOTE: Data not supported yet
         # helpers.add_point_data(helpers.tri_mesh, 3),
         # helpers.add_point_data(helpers.tri_mesh, 9),
-        # helpers.add_cell_data(helpers.tri_mesh, 1),
-        # helpers.add_cell_data(helpers.tri_mesh, 3),
-        # helpers.add_cell_data(helpers.tri_mesh, 9),
+        # helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        # helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
+        # helpers.add_cell_data(helpers.tri_mesh, [("a", (9,), numpy.float64)]),
         # helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
         # helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         # helpers.add_field_data(helpers.hex_mesh, [1, 3], int),

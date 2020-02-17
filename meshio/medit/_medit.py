@@ -123,10 +123,9 @@ def write(filename, mesh, float_fmt=".15e"):
             )
         labels = mesh.point_data[labels_key] if labels_key else numpy.ones(n, dtype=int)
 
-        data = numpy.c_[mesh.points, labels]
-        fmt = " ".join(["%" + float_fmt] * d) + " %d"
-        # TODO replace savetxt
-        numpy.savetxt(fh, data, fmt)
+        fmt = " ".join(["{:" + float_fmt + "}"] * d) + " {:d}\n"
+        for x, label in zip(mesh.points, labels):
+            fh.write(fmt.format(*x, label).encode("utf-8"))
 
         medit_from_meshio = {
             "line": ("Edges", 2),
@@ -159,16 +158,15 @@ def write(filename, mesh, float_fmt=".15e"):
 
             # pick out cell data
             labels = (
-                mesh.cells_data[labels_key][k]
+                mesh.cell_data[labels_key][k]
                 if labels_key
-                else numpy.ones(len(data), dtype=int)
+                else numpy.ones(len(data), dtype=data.dtype)
             )
 
+            fmt = " ".join(["{:d}"] * (num + 1)) + "\n"
             # adapt 1-base
-            data_with_label = numpy.c_[data + 1, labels]
-            fmt = " ".join(["%d"] * (num + 1))
-            # TODO replace savetxt
-            numpy.savetxt(fh, data_with_label, fmt)
+            for d, label in zip(data + 1, labels):
+                fh.write(fmt.format(*d, label).encode("utf-8"))
 
         fh.write(b"\nEnd\n")
 

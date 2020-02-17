@@ -15,9 +15,9 @@ import meshio
         # helpers.tri_quad_mesh,
         helpers.add_point_data(helpers.tri_mesh, 1, dtype=int),
         helpers.add_point_data(helpers.tri_mesh, 1, dtype=float),
-        # helpers.add_cell_data(helpers.tri_mesh, 1),
-        # helpers.add_cell_data(helpers.tri_mesh, 3),
-        # helpers.add_cell_data(helpers.tri_mesh, 9),
+        # helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        # helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float64)]),
+        # helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
