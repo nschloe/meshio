@@ -13,7 +13,6 @@ def convert(argv=None):
 
     # read mesh data
     mesh = read(args.infile, file_format=args.input_format)
-    print(mesh)
 
     if args.prune:
         mesh.prune()
