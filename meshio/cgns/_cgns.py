@@ -89,7 +89,7 @@ def write(filename, mesh, compression="gzip", compression_opts=4):
 
 try:
     import h5py
-except ImportError:
+except ModuleNotFoundError:
     pass
 else:
     register("cgns", [".cgns"], read, {"cgns": write})

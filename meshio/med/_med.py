@@ -477,7 +477,7 @@ def _write_families(fm_group, tags, compression, compression_opts):
 
 try:
     import h5py
-except ImportError:
+except ModuleNotFoundError:
     pass
 else:
     register("med", [".med"], read, {"med": write})
