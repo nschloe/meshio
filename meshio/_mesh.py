@@ -150,6 +150,32 @@ class Mesh:
                 cell_data_dict[key][cell_type] = numpy.concatenate(val)
         return cell_data_dict
 
+    @property
+    def cell_sets_dict(self):
+        sets_dict = {}
+        for key, member_list in self.cell_sets.items():
+            sets_dict[key] = {}
+            offsets = {}
+            for members, cells in zip(member_list, self.cells):
+                if cells.type in offsets:
+                    offset = offsets[cells.type]
+                    offsets[cells.type] += cells.data.shape[0]
+                else:
+                    offset = 0
+                    offsets[cells.type] = cells.data.shape[0]
+                if cells.type in sets_dict[key]:
+                    sets_dict[key][cells.type].append(members + offset)
+                else:
+                    sets_dict[key][cells.type] = [members + offset]
+        return {
+            key: {
+                cell_type: numpy.concatenate(members)
+                for cell_type, members in sets.items()
+                if sum(map(numpy.size, members))
+            }
+            for key, sets in sets_dict.items()
+        }
+
     @classmethod
     def read(cls, path_or_buf, file_format=None):
         # avoid circular import
