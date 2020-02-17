@@ -100,7 +100,6 @@ ET._original_serialize_xml = ET._serialize_xml
 
 
 def _serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwargs):
-
     if elem.tag == "![CDATA[":
         write("\n<{}{}]]>\n".format(elem.tag, elem.text))
         if elem.tail:
@@ -117,6 +116,36 @@ ET._serialize_xml = ET._serialize["xml"] = _serialize_xml
 def write_xml(filename, root):
     tree = ET.ElementTree(root)
     tree.write(filename)
+
+
+def _pick_first_int_data(data):
+    # pick out material
+    keys = list(data.keys())
+    candidate_keys = []
+    for key in keys:
+        # works for point_data and cell_data
+        if data[key][0].dtype in [
+            numpy.int8,
+            numpy.int16,
+            numpy.int32,
+            numpy.int64,
+            numpy.uint8,
+            numpy.uint16,
+            numpy.uint32,
+            numpy.uint64,
+        ]:
+            candidate_keys.append(key)
+
+    if len(candidate_keys) > 0:
+        # pick the first
+        key = candidate_keys[0]
+        idx = keys.index(key)
+        other = keys[:idx] + keys[idx + 1 :]
+    else:
+        key = None
+        other = []
+
+    return key, other
 
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html

@@ -11,6 +11,7 @@ import logging
 
 import numpy
 
+from .._common import _pick_first_int_data
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
@@ -234,16 +235,25 @@ def _write_buffer(f, file_type, mesh):
     for key in ["triangle", "quad"]:
         if ugrid_counts[key] == 0:
             continue
-        if key in mesh.cell_data and "ugrid:ref" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["ugrid:ref"]
-        elif key in mesh.cell_data and "medit:ref" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["medit:ref"]
-        elif key in mesh.cell_data and "gmsh:physical" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["gmsh:physical"]
-        elif key in mesh.cell_data and "flac3d:zone" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["flac3d:zone"]
-        else:
-            labels = numpy.ones(ugrid_counts[key], dtype=itype)
+
+        # pick out cell data
+        for data in mesh.cell_data.values():
+            if data.dtype in [numpy.int8, numpy.int16, numpy.int32, numpy.int64]:
+                labels = data
+                break
+
+        # pick out cell_data
+        labels_key, other = _pick_first_int_data(mesh.cell_data)
+        if labels_key and other:
+            logging.warning(
+                "UGRID can only write one cell data array. "
+                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+            )
+        labels = (
+            mesh.cell_data[labels_key]
+            if labels_key
+            else numpy.ones(ugrid_counts[key], dtype=int)
+        )
 
         labels = labels.reshape(ugrid_counts[key], 1)
         _write_section(f, file_type, labels, itype)

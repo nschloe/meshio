@@ -7,12 +7,10 @@ import logging
 import numpy
 
 from ..__about__ import __version__ as version
+from .._common import _pick_first_int_data
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Cells, Mesh
-
-meshio_data = {"avsucd:material", "flac3d:zone", "gmsh:physical", "medit:ref"}
-
 
 meshio_to_avsucd_type = {
     "vertex": "pt",
@@ -166,9 +164,8 @@ def write(filename, mesh):
         ]
         num_cell_data = [
             1 if vv.ndim == 1 else vv.shape[1]
-            for k, v in mesh.cell_data.items()
+            for v in mesh.cell_data.values()
             for vv in v
-            if k not in meshio_data
         ]
         num_node_data_sum = sum(num_node_data)
         num_cell_data_sum = sum(num_cell_data)
@@ -194,13 +191,9 @@ def write(filename, mesh):
 
         # Write cell data
         if num_cell_data_sum:
-            labels = [k for k in mesh.cell_data.keys() if k not in meshio_data]
+            labels = list(mesh.cell_data.keys())
             data_array = numpy.column_stack(
-                [
-                    numpy.concatenate(v)
-                    for k, v in mesh.cell_data.items()
-                    if k not in meshio_data
-                ]
+                [numpy.concatenate(v) for v in mesh.cell_data.values()]
             )
             _write_data(
                 f, labels, data_array, num_cells, num_cell_data, num_cell_data_sum
@@ -213,16 +206,15 @@ def _write_nodes(f, points):
 
 
 def _write_cells(f, cells, cell_data, num_cells):
-    # Interoperability with other formats
-    mat_data = None
-    for k in cell_data.keys():
-        if k in meshio_data:
-            mat_data = k
-            break
-
-    # Material array
-    if mat_data:
-        material = numpy.concatenate(cell_data[mat_data])
+    # try to find an appropriate materials array
+    key, other = _pick_first_int_data(cell_data)
+    if key:
+        material = cell_data[key]
+        if other:
+            logging.warning(
+                "AVS-UCD can only write one cell data array. "
+                "Picking {}, skipping {}.".format(key, ", ".join(other))
+            )
     else:
         material = numpy.zeros(num_cells, dtype=int)
 
@@ -233,7 +225,7 @@ def _write_cells(f, cells, cell_data, num_cells):
             cell_str = " ".join(str(c + 1) for c in cell)
             f.write(
                 "{} {} {} {}\n".format(
-                    i + 1, int(material[i]), meshio_to_avsucd_type[k], cell_str
+                    i + 1, material[i], meshio_to_avsucd_type[k], cell_str
                 )
             )
             i += 1

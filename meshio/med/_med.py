@@ -254,7 +254,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     coo.attrs.create("NBR", len(mesh.points))
 
     # Point tags
-    if "point_tags" in mesh.point_data:  # works only for med -> med
+    if "point_tags" in mesh.point_data:  # only works for med -> med
         family = nodes_group.create_dataset(
             "FAM",
             data=mesh.point_data["point_tags"],
