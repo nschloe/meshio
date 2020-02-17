@@ -42,6 +42,7 @@ def read_buffer(f, is_ascii, data_size):
     cell_tags = {}
     point_data = {}
     physical_tags = None
+    cell_sets = {}
     periodic = None
     while True:
         line = f.readline().decode("utf-8")
@@ -54,13 +55,14 @@ def read_buffer(f, is_ascii, data_size):
 
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
+            cell_sets = {k: [] for k in field_data.keys()}
         elif environ == "Entities":
             physical_tags = _read_entities(f, is_ascii, data_size)
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, data_size)
         elif environ == "Elements":
             cells, cell_tags = _read_elements(
-                f, point_tags, physical_tags, is_ascii, data_size
+                f, point_tags, physical_tags, is_ascii, data_size, field_data, cell_sets
             )
         elif environ == "Periodic":
             periodic = _read_periodic(f, is_ascii, data_size)
@@ -96,6 +98,7 @@ def read_buffer(f, is_ascii, data_size):
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
+        cell_sets=cell_sets,
         gmsh_periodic=periodic,
     )
 
@@ -173,7 +176,9 @@ def _read_nodes(f, is_ascii, data_size):
     return points, tags
 
 
-def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
+def _read_elements(
+    f, point_tags, physical_tags, is_ascii, data_size, field_data, cell_sets
+):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
 
@@ -189,6 +194,17 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         # entityDim(int) entityTag(int) elementType(int) numElements(size_t)
         dim_entity, tag_entity, type_ele = fromfile(f, c_int, 3)
         (num_ele,) = fromfile(f, c_size_t, 1)
+        for physical_name, cell_set in cell_sets.items():
+            if physical_tags:
+                for physical_tag in physical_tags[dim_entity][tag_entity]:
+                    cell_set.append(
+                        numpy.arange(
+                            num_ele
+                            if field_data[physical_name][0] == physical_tag
+                            else 0,
+                            dtype=type(num_ele),
+                        )
+                    )
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
         d = fromfile(f, c_size_t, int(num_ele * (1 + num_nodes_per_ele))).reshape(
