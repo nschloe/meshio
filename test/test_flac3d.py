@@ -8,10 +8,16 @@ import helpers
 import meshio
 
 
-@pytest.mark.parametrize("mesh", [helpers.tet_mesh, helpers.hex_mesh])
+@pytest.mark.parametrize(
+    "mesh",
+    [
+        helpers.tet_mesh,
+        helpers.hex_mesh,
+        # helpers.add_cell_data(helpers.tet_mesh, [("a", (), int)]),  # TODO
+    ],
+)
 def test(mesh):
     helpers.write_read(meshio.flac3d.write, meshio.flac3d.read, mesh, 1.0e-15)
-    return
 
 
 # the failure perhaps has to do with dictionary ordering
