@@ -2,6 +2,7 @@ import copy
 import os
 from functools import partial
 
+import numpy
 import pytest
 
 import helpers
@@ -35,9 +36,9 @@ def gmsh_periodic():
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_point_data(helpers.tri_mesh, 9),
-        helpers.add_cell_data(helpers.tri_mesh, 1),
-        helpers.add_cell_data(helpers.tri_mesh, 3),
-        helpers.add_cell_data(helpers.tri_mesh, 9),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (9,), numpy.float64)]),
         helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
         helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
@@ -65,9 +66,9 @@ def test_gmsh22(mesh, binary):
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_point_data(helpers.tri_mesh, 9),
-        helpers.add_cell_data(helpers.tri_mesh, 1),
-        helpers.add_cell_data(helpers.tri_mesh, 3),
-        helpers.add_cell_data(helpers.tri_mesh, 9),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (9,), numpy.float64)]),
         helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
         helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
@@ -95,9 +96,9 @@ def test_gmsh40(mesh, binary):
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_point_data(helpers.tri_mesh, 9),
-        helpers.add_cell_data(helpers.tri_mesh, 1),
-        helpers.add_cell_data(helpers.tri_mesh, 3),
-        helpers.add_cell_data(helpers.tri_mesh, 9),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (9,), numpy.float64)]),
         helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
         helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         helpers.add_field_data(helpers.hex_mesh, [1, 3], int),

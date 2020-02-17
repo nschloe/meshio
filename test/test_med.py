@@ -27,9 +27,9 @@ h5py = pytest.importorskip("h5py")
         helpers.add_point_data(helpers.tri_mesh, 2),
         helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_point_data(helpers.hex_mesh, 3),
-        helpers.add_cell_data(helpers.tri_mesh, 1),
-        helpers.add_cell_data(helpers.tri_mesh, 2),
-        helpers.add_cell_data(helpers.tri_mesh, 3),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
     ],
 )
 def test_io(mesh):

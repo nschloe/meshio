@@ -126,11 +126,11 @@ class Info:
         self.is_ascii = False
         self.split = []
         self.num_items = 0
-        # One of the problem in reading VTK files are POINT_DATA and CELL_DATA fields. They
-        # can contain a number of SCALARS+LOOKUP_TABLE tables, without giving and indication
-        # of how many there are. Hence, SCALARS must be treated like a first-class section.
-        # To associate it with POINT/CELL_DATA, we store the `active` section in this
-        # variable.
+        # One of the problem in reading VTK files are POINT_DATA and CELL_DATA fields.
+        # They can contain a number of SCALARS+LOOKUP_TABLE tables, without giving and
+        # indication of how many there are. Hence, SCALARS must be treated like a
+        # first-class section.  To associate it with POINT/CELL_DATA, we store the
+        # `active` section in this variable.
         self.section = None
 
 
@@ -474,6 +474,7 @@ def _read_fields(f, num_fields, is_ascii):
             name, shape0, shape1, data_type = f.readline().decode("utf-8").split()
         else:
             name, shape0, shape1, data_type = line
+
         shape0 = int(shape0)
         shape1 = int(shape1)
         dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type.lower()])
@@ -647,6 +648,10 @@ def _write_points(f, points, binary):
     if binary:
         # Binary data must be big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        # if points.dtype.byteorder == "<" or (
+        #     points.dtype.byteorder == "=" and sys.byteorder == "little"
+        # ):
+        #     logging.warn("Converting to new byte order")
         points.astype(points.dtype.newbyteorder(">")).tofile(f, sep="")
     else:
         # ascii

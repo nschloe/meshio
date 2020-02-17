@@ -24,10 +24,13 @@ test_set = [
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),
     helpers.add_point_data(helpers.tri_mesh, 3),
-    helpers.add_cell_data(helpers.tri_mesh, 1),
-    helpers.add_cell_data(helpers.tri_mesh, 2),
-    helpers.add_cell_data(helpers.tri_mesh, 3),
-    helpers.add_cell_data(helpers.add_point_data(helpers.tri_mesh_2d, 2), 2),
+    # VTK files float data is always stored in big endian
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (), ">f8")]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), ">f8")]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), ">f8")]),
+    helpers.add_cell_data(
+        helpers.add_point_data(helpers.tri_mesh_2d, 2), [("a", (2,), ">f8")]
+    ),
 ]
 
 

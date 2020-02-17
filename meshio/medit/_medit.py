@@ -12,6 +12,7 @@ from ctypes import c_double, c_float
 
 import numpy
 
+from .._common import _pick_first_int_data
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
@@ -99,7 +100,7 @@ def read_buffer(f):
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
-def write(filename, mesh):
+def write(filename, mesh, float_fmt=".15e"):
     with open_file(filename, "wb") as fh:
         version = {numpy.dtype(c_float): 1, numpy.dtype(c_double): 2}[mesh.points.dtype]
         # N. B.: PEP 461 Adding % formatting to bytes and bytearray
@@ -112,17 +113,19 @@ def write(filename, mesh):
         # vertices
         fh.write(b"\nVertices\n")
         fh.write("{}\n".format(n).encode("utf-8"))
-        if "medit:ref" in mesh.point_data:
-            labels = mesh.point_data["medit:ref"]
-        elif "gmsh:physical" in mesh.point_data:
-            # Translating gmsh data to medit is an important case, so treat it
-            # explicitly here.
-            labels = mesh.point_data["gmsh:physical"]
-        else:
-            labels = numpy.ones(n, dtype=int)
-        data = numpy.c_[mesh.points, labels]
-        fmt = " ".join(["%r"] * d) + " %d"
-        numpy.savetxt(fh, data, fmt)
+
+        # pick out point data
+        labels_key, other = _pick_first_int_data(mesh.point_data)
+        if labels_key and other:
+            logging.warning(
+                "Medit can only write one point data array. "
+                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+            )
+        labels = mesh.point_data[labels_key] if labels_key else numpy.ones(n, dtype=int)
+
+        fmt = " ".join(["{:" + float_fmt + "}"] * d) + " {:d}\n"
+        for x, label in zip(mesh.points, labels):
+            fh.write(fmt.format(*x, label).encode("utf-8"))
 
         medit_from_meshio = {
             "line": ("Edges", 2),
@@ -132,12 +135,20 @@ def write(filename, mesh):
             "hexahedron": ("Hexahedra", 8),
         }
 
-        for icg, (key, data) in enumerate(mesh.cells):
+        # pick out cell_data
+        labels_key, other = _pick_first_int_data(mesh.cell_data)
+        if labels_key and other:
+            logging.warning(
+                "Medit can only write one cell data array. "
+                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+            )
+
+        for k, (cell_type, data) in enumerate(mesh.cells):
             try:
-                medit_name, num = medit_from_meshio[key]
+                medit_name, num = medit_from_meshio[cell_type]
             except KeyError:
                 msg = ("MEDIT's mesh format doesn't know {} cells. Skipping.").format(
-                    key
+                    cell_type
                 )
                 logging.warning(msg)
                 continue
@@ -145,23 +156,17 @@ def write(filename, mesh):
             fh.write("{}\n".format(medit_name).encode("utf-8"))
             fh.write("{}\n".format(len(data)).encode("utf-8"))
 
-            if "medit:ref" in mesh.cell_data:
-                labels = mesh.cell_data["medit:ref"][icg]
-            elif "gmsh:physical" in mesh.cell_data:
-                # Translating gmsh data to medit is an important case, so treat it
-                # explicitly here.
-                labels = mesh.cell_data["gmsh:physical"][icg]
-            elif "flac3d:zone" in mesh.cell_data:
-                labels = mesh.cell_data["flac3d:zone"][icg]
-            elif "avsucd:material" in mesh.cell_data:
-                labels = mesh.cell_data["avsucd:material"][icg]
-            else:
-                labels = numpy.ones(len(data), dtype=int)
+            # pick out cell data
+            labels = (
+                mesh.cell_data[labels_key][k]
+                if labels_key
+                else numpy.ones(len(data), dtype=data.dtype)
+            )
 
+            fmt = " ".join(["{:d}"] * (num + 1)) + "\n"
             # adapt 1-base
-            data_with_label = numpy.c_[data + 1, labels]
-            fmt = " ".join(["%d"] * (num + 1))
-            numpy.savetxt(fh, data_with_label, fmt)
+            for d, label in zip(data + 1, labels):
+                fh.write(fmt.format(*d, label).encode("utf-8"))
 
         fh.write(b"\nEnd\n")
 
