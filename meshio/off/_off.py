@@ -40,7 +40,6 @@ def read_buffer(f):
     verts = numpy.fromfile(f, dtype=float, count=3 * num_verts, sep=" ").reshape(
         num_verts, 3
     )
-
     data = numpy.fromfile(f, dtype=int, count=4 * num_faces, sep=" ").reshape(
         num_faces, 4
     )
@@ -82,7 +81,9 @@ def write(filename, mesh):
         fh.write(out.encode("utf-8"))
 
         # triangles
-        out = numpy.column_stack([numpy.full(tri.shape[0], tri.shape[1]), tri])
+        out = numpy.column_stack(
+            [numpy.full(tri.shape[0], tri.shape[1], dtype=tri.dtype), tri]
+        )
         # savetxt is slower
         # numpy.savetxt(fh, out, "%d  %d %d %d")
         fmt = " ".join(["{}"] * out.shape[1])
