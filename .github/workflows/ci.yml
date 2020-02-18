@@ -50,6 +50,7 @@ jobs:
       run: |
         pip install pytest pytest-cov
         pytest --cov=meshio --cov-report=xml
+    # https://github.com/codecov/codecov-action/issues/43
     - name: Submit to codecov
       uses: codecov/codecov-action@v1.0.5
       with:
