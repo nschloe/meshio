@@ -51,4 +51,7 @@ jobs:
         pip install pytest pytest-cov
         pytest --cov meshio
     - name: Submit to codecov
-      run: bash <(curl -s https://codecov.io/bash)
+      uses: codecov/codecov-action@v1.0.5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: ${{ matrix.python-version }}
