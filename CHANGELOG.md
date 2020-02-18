@@ -4,7 +4,7 @@ This document only describes _breaking_ changes in meshio. If you are interested
 fixes, enhancements etc., best follow [the meshio project on
 GitHub](https://github.com/nschloe/meshio).
 
-## v4.0.0 (Feb 12, 2020?), 
+## v4.0.0 (Feb 18, 2020),
 
 - `mesh.cells` used to be a dictionary of the form
   ```python
