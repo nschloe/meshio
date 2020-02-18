@@ -4,7 +4,7 @@ This document only describes _breaking_ changes in meshio. If you are interested
 fixes, enhancements etc., best follow [the meshio project on
 GitHub](https://github.com/nschloe/meshio).
 
-## v4.0.0 (Feb 12, 2020?), 
+## v4.0.0 (Feb 18, 2020)
 
 - `mesh.cells` used to be a dictionary of the form
   ```python
@@ -32,7 +32,7 @@ GitHub](https://github.com/nschloe/meshio).
     "quad": {"a": [1.1, -0.3, ...], "b": [3.14, 1.61, ...]},
   }
   ```
-  From 4.0.0 on, `mesh.cell_data` is a dictioary of lists,
+  From 4.0.0 on, `mesh.cell_data` is a dictionary of lists,
   ```python
   {
     "a": [[0.5, 1.3], [1.1, -0.3, ...]],
