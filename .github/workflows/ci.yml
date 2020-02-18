@@ -49,10 +49,9 @@ jobs:
     - name: Test with pytest
       run: |
         pip install pytest pytest-cov
-        pytest --cov meshio
+        pytest --cov=meshio --cov-report=xml
     - name: Submit to codecov
       uses: codecov/codecov-action@v1.0.5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
         flags: ${{ matrix.python-version }}
