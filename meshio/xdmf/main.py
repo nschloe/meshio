@@ -325,7 +325,7 @@ class XdmfWriter:
         self.data_format = data_format
         self.data_counter = 0
         self.compression = compression
-        self.compression_opts = compression_opts
+        self.compression_opts = None if compression is None else compression_opts
 
         if data_format == "HDF":
             self.h5_filename = os.path.splitext(self.filename)[0] + ".h5"

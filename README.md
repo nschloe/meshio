@@ -155,8 +155,8 @@ You can now open all meshio-supported files in ParaView.
 
 ### Performance comparison
 
-The comparisons here are for a tetrahedral mesh with about 400k points and 2M
-tetrahedra.  The red lines mark the size of the mesh in memory.
+The comparisons here are for a triangular mesh with about 900k points and 1.8M
+triangles. The red lines mark the size of the mesh in memory.
 
 #### File sizes
 
