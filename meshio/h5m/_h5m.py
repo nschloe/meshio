@@ -269,6 +269,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
 
 try:
     import h5py
+# Use ModuleNotFoundError when dropping support for Python 3.5
 except ImportError:
     pass
 else:

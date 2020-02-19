@@ -466,6 +466,7 @@ def _write_families(fm_group, tags, compression, compression_opts):
 
 try:
     import h5py
+# Use ModuleNotFoundError when dropping support for Python 3.5
 except ImportError:
     pass
 else:
