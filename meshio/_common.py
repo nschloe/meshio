@@ -11,6 +11,7 @@ num_nodes_per_cell = {
     "tetra": 4,
     "hexahedron": 8,
     "hexahedron20": 20,
+    "hexahedron24": 24,
     "wedge": 6,
     "pyramid": 5,
     #
@@ -72,6 +73,7 @@ num_nodes_per_cell = {
     "tetra220": 220,
     "wedge550": 550,
     "hexahedron1000": 1000,
+    "hexahedron1331": 1331,
     #
     "line11": 11,
     "triangle66": 66,
