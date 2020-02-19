@@ -40,6 +40,7 @@ meshio_to_xdmf_type = {
     "line3": ["Edge_3"],
     "triangle6": ["Triangle_6", "Tri_6"],
     "quad8": ["Quadrilateral_8", "Quad_8"],
+    "quad9": ["Quadrilateral_9", "Quad_9"],
     "tetra10": ["Tetrahedron_10", "Tet_10"],
     "pyramid13": ["Pyramid_13"],
     "wedge15": ["Wedge_15"],
