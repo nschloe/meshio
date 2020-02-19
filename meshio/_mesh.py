@@ -118,6 +118,9 @@ class Mesh:
 
         write(path_or_buf, self, file_format, **kwargs)
 
+    def get_cells_type(self, cell_type):
+        return numpy.concatenate([c.data for c in self.cells if c.type == cell_type])
+
     @property
     def cells_dict(self):
         cells_dict = {}

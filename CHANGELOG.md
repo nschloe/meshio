@@ -23,7 +23,8 @@ GitHub](https://github.com/nschloe/meshio).
   This has the advantage that multiple blocks of the same cell type can be accounted
   for. Also, cell ordering can be preserved.
 
-  The old `cells` dictionary can still be retrieved via `mesh.cells_dict`.
+  You can now use the method `mesh.get_cells_type("triangle")` to get all cells of
+  `"triangle"` type, or use `mesh.cells_dict` to build the old dictionary structure.
 
 - `mesh.cell_data` used to be a dictionary of the form
   ```python
