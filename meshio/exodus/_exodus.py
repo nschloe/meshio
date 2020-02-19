@@ -370,7 +370,7 @@ def write(filename, mesh):
 
 try:
     import netCDF4
-except ModuleNotFoundError:
+except ImportError:
     pass
 else:
     register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})

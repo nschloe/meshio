@@ -269,7 +269,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
 
 try:
     import h5py
-except ModuleNotFoundError:
+except ImportError:
     pass
 else:
     register("h5m", [".h5m"], read, {"h5m": write})
