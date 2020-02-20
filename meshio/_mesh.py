@@ -181,3 +181,20 @@ class Mesh:
         from ._helpers import read
 
         return read(path_or_buf, file_format)
+
+    def sets_to_int_data(self):
+        # If possible, convert cell sets to integer cell data. This is possible if all
+        # cells appear exactly in one group.
+        intfun = []
+        for c in zip(*self.cell_sets.values()):
+            # check if all numbers appear exactly once in the groups
+            d = numpy.sort(numpy.concatenate(c))
+            is_convertible = numpy.all(d[1:] == d[:-1] + 1) and len(d) == d[-1] + 1
+            if is_convertible:
+                intfun.append(numpy.zeros(len(d), dtype=int))
+                for k, cc in enumerate(c):
+                    intfun[-1][cc] = k
+
+        data_name = "-".join(self.cell_sets.keys())
+        self.cell_data = {data_name: intfun}
+        self.cell_sets = {}
