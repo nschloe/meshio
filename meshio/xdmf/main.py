@@ -520,7 +520,8 @@ def write(*args, **kwargs):
 
 try:
     import h5py
-except ModuleNotFoundError:
+# Use ModuleNotFoundError when dropping support for Python 3.5
+except ImportError:
     pass
 else:
     # TODO register all xdmf except hdf outside this try block

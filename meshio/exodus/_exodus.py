@@ -370,7 +370,8 @@ def write(filename, mesh):
 
 try:
     import netCDF4
-except ModuleNotFoundError:
+# Use ModuleNotFoundError when dropping support for Python 3.5
+except ImportError:
     pass
 else:
     register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
