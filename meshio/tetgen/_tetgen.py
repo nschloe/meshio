@@ -10,7 +10,7 @@ import numpy
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
@@ -68,7 +68,7 @@ def read(filename):
         cells = cells[:, 1:5]
         cells -= node_index_base
 
-    return Mesh(points, [Cells("tetra", cells)])
+    return Mesh(points, [CellBlock("tetra", cells)])
 
 
 def write(filename, mesh, float_fmt=".15e"):

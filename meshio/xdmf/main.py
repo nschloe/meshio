@@ -11,7 +11,7 @@ import numpy
 from .._common import CDATA, cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -253,7 +253,7 @@ class XdmfReader:
                 if cell_type == "Mixed":
                     cells = translate_mixed_cells(data)
                 else:
-                    cells.append(Cells(xdmf_to_meshio_type[cell_type], data))
+                    cells.append(CellBlock(xdmf_to_meshio_type[cell_type], data))
 
             elif c.tag == "Geometry":
                 if c.get("Type"):

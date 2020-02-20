@@ -15,7 +15,7 @@ from .._common import _pick_first_int_data
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 # Float size and endianess are recorded by these suffixes
 # binary files come in C-type or FORTRAN type
@@ -109,7 +109,7 @@ def read_buffer(f, file_type):
             f, file_type, count=nitems * nvertices, dtype=itype
         ).reshape(nitems, nvertices)
         # UGRID is one-based
-        cells.append(Cells(key, out - 1))
+        cells.append(CellBlock(key, out - 1))
 
     cell_data = {"ugrid:ref": []}
     for key in ["triangle", "quad"]:
@@ -132,7 +132,7 @@ def read_buffer(f, file_type):
             out = out[:, [1, 0, 3, 4, 2]]
 
         # UGRID is one-based
-        cells.append(Cells(key, out - 1))
+        cells.append(CellBlock(key, out - 1))
 
         # fill volume element attributes with zero
         cell_data["ugrid:ref"].append(numpy.zeros(nitems, dtype=int))

@@ -11,7 +11,7 @@ from .._common import meshio_to_vtk_type, vtk_to_meshio_type
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 vtk_type_to_numnodes = numpy.array(
     [
@@ -548,11 +548,11 @@ def translate_cells(data, types, cell_data_raw):
             if len(cells) > 0 and cells[-1].type == cell_type:
                 cells[-1].data.append(cell)
             else:
-                cells.append(Cells(cell_type, [cell]))
+                cells.append(CellBlock(cell_type, [cell]))
 
         # convert data to numpy arrays
         for k, c in enumerate(cells):
-            cells[k] = Cells(c.type, numpy.array(c.data))
+            cells[k] = CellBlock(c.type, numpy.array(c.data))
     else:
         # Deduct offsets from the cell types. This is much faster than manually going
         # through the data array. Slight disadvantage: This doesn't work for cells with
@@ -572,7 +572,7 @@ def translate_cells(data, types, cell_data_raw):
             meshio_type = vtk_to_meshio_type[types[start]]
             n = data[offsets[start]]
             indices = numpy.add.outer(offsets[start:end], numpy.arange(1, n + 1))
-            cells.append(Cells(meshio_type, data[indices]))
+            cells.append(CellBlock(meshio_type, data[indices]))
             for name, d in cell_data_raw.items():
                 if name not in cell_data:
                     cell_data[name] = []

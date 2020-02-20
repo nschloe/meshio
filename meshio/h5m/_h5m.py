@@ -9,7 +9,7 @@ import numpy
 
 from .. import __about__
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 # def _int_to_bool_list(num):
 #     # From <https://stackoverflow.com/a/33608387/353337>.
@@ -52,7 +52,7 @@ def read(filename):
         meshio_type = h5m_to_meshio_type[h5m_type]
         conn = data["connectivity"]
         # Note that the indices are off by 1 in h5m.
-        cells.append(Cells(meshio_type, conn[()] - 1))
+        cells.append(CellBlock(meshio_type, conn[()] - 1))
 
         # TODO bring cell data back
         # if 'tags' in data:

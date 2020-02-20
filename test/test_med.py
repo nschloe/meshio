@@ -50,7 +50,7 @@ def test_reference_file_with_mixed_cells():
     # Points
     assert numpy.isclose(mesh.points.sum(), 16.53169892762988)
 
-    # Cells
+    # CellBlock
     ref_num_cells = {"pyramid": 18, "quad": 18, "line": 17, "tetra": 63, "triangle": 4}
     assert {k: len(v) for k, v in mesh.cells} == ref_num_cells
 
@@ -93,7 +93,7 @@ def test_reference_file_with_point_cell_data():
     # Points
     assert numpy.isclose(mesh.points.sum(), 12)
 
-    # Cells
+    # CellBlock
     assert {k: len(v) for k, v in mesh.cells} == {"hexahedron": 1}
 
     # Point data

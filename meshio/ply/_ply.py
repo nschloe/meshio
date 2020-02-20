@@ -12,7 +12,7 @@ import numpy
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 # Reference dtypes
 ply_to_numpy_dtype = {
@@ -200,9 +200,9 @@ def _read_ascii(
 
     cells = []
     if len(triangles) > 0:
-        cells.append(Cells("triangle", numpy.array(triangles)))
+        cells.append(CellBlock("triangle", numpy.array(triangles)))
     if len(quads) > 0:
-        cells.append(Cells("quad", numpy.array(quads)))
+        cells.append(CellBlock("quad", numpy.array(quads)))
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
@@ -273,9 +273,9 @@ def _read_binary(
 
     cells = []
     if len(triangles) > 0:
-        cells.append(Cells("triangle", numpy.array(triangles)))
+        cells.append(CellBlock("triangle", numpy.array(triangles)))
     if len(quads) > 0:
-        cells.append(Cells("quad", numpy.array(quads)))
+        cells.append(CellBlock("quad", numpy.array(quads)))
 
     return Mesh(verts, cells, point_data=point_data, cell_data={})
 
@@ -337,7 +337,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
         for k, (cell_type, data) in enumerate(mesh.cells):
             if data.dtype == numpy.int64:
                 has_cast = True
-                mesh.cells[k] = Cells(cell_type, data.astype(numpy.int32))
+                mesh.cells[k] = CellBlock(cell_type, data.astype(numpy.int32))
 
         if has_cast:
             warnings.warn(

@@ -78,7 +78,7 @@ class MeshioReader(VTKPythonAlgorithmBase):
             points = np.hstack([points, np.zeros((len(points), 1))])
         output.SetPoints(points)
 
-        # Cells, adapted from test/legacy_writer.py
+        # CellBlock, adapted from test/legacy_writer.py
         cell_types = np.array([], dtype=np.ubyte)
         cell_offsets = np.array([], dtype=int)
         cell_conn = np.array([], dtype=int)
@@ -94,7 +94,7 @@ class MeshioReader(VTKPythonAlgorithmBase):
                 [npoints * np.ones((ncells, 1), dtype=int), data]
             ).flatten()
             cell_conn = np.hstack([cell_conn, conn])
-        output.SetCells(cell_types, cell_offsets, cell_conn)
+        output.SetCellBlock(cell_types, cell_offsets, cell_conn)
 
         # Point data
         for name, array in mesh.point_data.items():
@@ -155,7 +155,7 @@ class MeshioWriter(VTKPythonAlgorithmBase):
             for i in range(npoints):
                 array[:, i] = cell_conn[offsets + i + 1]
             cells_dict[vtk_to_meshio_type[vtk_cell_type]] = array
-        cells = [meshio.Cells(key, cells_dict[key]) for key in cells_dict]
+        cells = [meshio.CellBlock(key, cells_dict[key]) for key in cells_dict]
 
         # Read point and field data
         # Adapted from test/legacy_reader.py

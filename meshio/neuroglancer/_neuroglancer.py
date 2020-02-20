@@ -10,7 +10,7 @@ import numpy as np
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def write(filename, mesh):
@@ -68,7 +68,7 @@ def read_buffer(file):
     if np.any(triangles > num_vertices):
         raise ReadError("The mesh references nonexistent vertices")
 
-    return Mesh(vertices, [Cells("triangle", triangles)])
+    return Mesh(vertices, [CellBlock("triangle", triangles)])
 
 
 register("neuroglancer", [], read, {"neuroglancer": write})
