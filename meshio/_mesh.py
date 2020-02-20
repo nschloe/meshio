@@ -2,6 +2,8 @@ import collections
 
 import numpy
 
+from ._common import _geometric_dimension
+
 Cells = collections.namedtuple("Cells", ["type", "data"])
 
 
@@ -174,15 +176,31 @@ class Mesh:
         }
 
     def int_data_to_sets(self):
-        """See #716"""
+        """Return a dict of dicts of indices of cells belonging to subsets
+
+        defined by int-valued cell_data, keyed (like cell_sets_dict)
+        by name (as found in field_data or constructed from the int)
+        and cell_type.  The indices are into the items of
+        cells_dict[cell_type].
+
+        """
         sets = {}
-        for k, data in self.cell_data_dict.items():
-            if not(data and next(iter(data.values())).dtype.kind == 'i'):
+        for key, data in self.cell_data_dict.items():
+            if not (data and all(v.dtype.kind == "i" for v in data.values())):
                 continue
             for cell_type, tags in data.items():
-                codomain = numpy.unique(tags)
-                sets['{}:{}'.format(k, cell_type)] = codomain
-                print(self.field_data)
+                names = {
+                    v[0]: k
+                    for k, v in self.field_data.items()
+                    if v[1] == _geometric_dimension[cell_type]
+                }
+                for tag in numpy.unique(tags):
+                    name = names.get(tag, "{}:{}:{}".format(key, cell_type, tag))
+                    indices = numpy.isin(tags, tag).nonzero()[0]
+                    if name in sets:
+                        sets[name][cell_type] = indices
+                    else:
+                        sets[name] = {cell_type: indices}
         return sets
 
     @classmethod
