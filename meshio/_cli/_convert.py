@@ -30,6 +30,9 @@ def convert(argv=None):
     if args.sets_to_int_data:
         mesh.sets_to_int_data()
 
+    if args.int_data_to_sets:
+        mesh.int_data_to_sets()
+
     # write it out
     kwargs = {"file_format": args.output_format}
     if args.float_format is not None:
@@ -92,6 +95,13 @@ def _get_convert_parser():
         "-s",
         action="store_true",
         help="if possible, convert sets to integer data (useful if the output type does not support sets)",
+    )
+
+    parser.add_argument(
+        "--int-data-to-sets",
+        "-d",
+        action="store_true",
+        help="if possible, convert integer data to sets (useful if the output type does not support integer data)",
     )
 
     parser.add_argument(
