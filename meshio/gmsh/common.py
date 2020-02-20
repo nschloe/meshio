@@ -211,11 +211,7 @@ def _write_data(fh, tag, name, data, binary):
     fh.write("{}\n".format(0).encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
-    if num_components not in [
-        1,
-        3,
-        9,
-    ]:
+    if num_components not in [1, 3, 9]:
         raise WriteError("Gmsh only permits 1, 3, or 9 components per data field.")
 
     # Cut off the last dimension in case it's 1. This avoids problems with
