@@ -173,6 +173,18 @@ class Mesh:
             for key, sets in sets_dict.items()
         }
 
+    def int_data_to_sets(self):
+        """See #716"""
+        sets = {}
+        for k, data in self.cell_data_dict.items():
+            if not(data and next(iter(data.values())).dtype.kind == 'i'):
+                continue
+            for cell_type, tags in data.items():
+                codomain = numpy.unique(tags)
+                sets['{}:{}'.format(k, cell_type)] = codomain
+                print(self.field_data)
+        return sets
+
     @classmethod
     def read(cls, path_or_buf, file_format=None):
         # avoid circular import

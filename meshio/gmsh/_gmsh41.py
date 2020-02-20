@@ -7,7 +7,7 @@ from functools import partial
 
 import numpy
 
-from .._common import cell_data_from_raw, raw_from_cell_data
+from .._common import cell_data_from_raw, raw_from_cell_data, _geometric_dimension
 from .._exceptions import ReadError, WriteError
 from .._mesh import Cells, Mesh
 from .common import (
@@ -548,70 +548,3 @@ def _write_periodic(fh, periodic, binary):
     if binary:
         fh.write(b"\n")
     fh.write(b"$EndPeriodic\n")
-
-
-_geometric_dimension = {
-    "line": 1,
-    "triangle": 2,
-    "quad": 2,
-    "tetra": 3,
-    "hexahedron": 3,
-    "wedge": 3,
-    "pyramid": 3,
-    "line3": 1,
-    "triangle6": 2,
-    "quad9": 2,
-    "tetra10": 3,
-    "hexahedron27": 3,
-    "wedge18": 3,
-    "pyramid14": 3,
-    "vertex": 0,
-    "quad8": 2,
-    "hexahedron20": 3,
-    "triangle10": 2,
-    "triangle15": 2,
-    "triangle21": 2,
-    "line4": 1,
-    "line5": 1,
-    "line6": 1,
-    "tetra20": 3,
-    "tetra35": 3,
-    "tetra56": 3,
-    "quad16": 2,
-    "quad25": 2,
-    "quad36": 2,
-    "triangle28": 2,
-    "triangle36": 2,
-    "triangle45": 2,
-    "triangle55": 2,
-    "triangle66": 2,
-    "quad49": 2,
-    "quad64": 2,
-    "quad81": 2,
-    "quad100": 2,
-    "quad121": 2,
-    "line7": 1,
-    "line8": 1,
-    "line9": 1,
-    "line10": 1,
-    "line11": 1,
-    "tetra84": 3,
-    "tetra120": 3,
-    "tetra165": 3,
-    "tetra220": 3,
-    "tetra286": 3,
-    "wedge40": 3,
-    "wedge75": 3,
-    "hexahedron64": 3,
-    "hexahedron125": 3,
-    "hexahedron216": 3,
-    "hexahedron343": 3,
-    "hexahedron512": 3,
-    "hexahedron729": 3,
-    "hexahedron1000": 3,
-    "wedge126": 3,
-    "wedge196": 3,
-    "wedge288": 3,
-    "wedge405": 3,
-    "wedge550": 3,
-}
