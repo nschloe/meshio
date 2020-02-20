@@ -27,6 +27,23 @@ def convert(argv=None):
     # Some converters (like VTK) require `points` to be contiguous.
     mesh.points = numpy.ascontiguousarray(mesh.points)
 
+    if args.sets_to_int_data:
+        # If possible, convert cell sets to integer cell data. This is possible if all
+        # cells appear exactly in one group.
+        intfun = []
+        for c in zip(*mesh.cell_sets.values()):
+            # check if all numbers appear exactly once in the groups
+            d = numpy.sort(numpy.concatenate(c))
+            is_convertible = numpy.all(d[1:] == d[:-1] + 1) and len(d) == d[-1] + 1
+            if is_convertible:
+                intfun.append(numpy.zeros(len(d), dtype=int))
+                for k, cc in enumerate(c):
+                    intfun[-1][cc] = k
+
+        data_name = "-".join(mesh.cell_sets.keys())
+        mesh.cell_data = {data_name: intfun}
+        mesh.cell_sets = {}
+
     # write it out
     kwargs = {"file_format": args.output_format}
     if args.float_format is not None:
@@ -82,6 +99,13 @@ def _get_convert_parser():
         "-z",
         action="store_true",
         help="remove third (z) dimension if all points are 0",
+    )
+
+    parser.add_argument(
+        "--sets-to-int-data",
+        "-s",
+        action="store_true",
+        help="if possible, convert sets to integer data (useful if the output type does not support sets)",
     )
 
     parser.add_argument(
