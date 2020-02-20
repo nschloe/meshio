@@ -39,7 +39,7 @@ def test_cells_dict():
     assert numpy.array_equal(mesh.cell_data_dict["a"]["triangle"], [0.5, 1.3])
 
 
-def test_set_to_int_data():
+def test_sets_to_int_data():
     mesh = helpers.add_cell_sets(helpers.tri_mesh)
 
     mesh.sets_to_int_data()
@@ -48,4 +48,4 @@ def test_set_to_int_data():
 
 
 if __name__ == "__main__":
-    test_set_to_int_data()
+    test_sets_to_int_data()
