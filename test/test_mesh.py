@@ -1,6 +1,7 @@
 import copy
 
 import numpy
+import pytest
 
 import helpers
 import meshio
@@ -39,6 +40,7 @@ def test_cells_dict():
     assert numpy.array_equal(mesh.cell_data_dict["a"]["triangle"], [0.5, 1.3])
 
 
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires Python 3.6 or higher")
 def test_sets_to_int_data():
     mesh = helpers.add_cell_sets(helpers.tri_mesh)
 
