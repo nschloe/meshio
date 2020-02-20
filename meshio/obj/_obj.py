@@ -10,7 +10,7 @@ from ..__about__ import __version__
 from .._exceptions import WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
@@ -65,7 +65,7 @@ def read_buffer(f):
     # convert to numpy arrays
     face_groups = [numpy.array(f) for f in face_groups]
     cells = [
-        Cells("triangle" if f.shape[1] == 3 else "quad", f - 1) for f in face_groups
+        CellBlock("triangle" if f.shape[1] == 3 else "quad", f - 1) for f in face_groups
     ]
 
     return Mesh(points, cells, point_data=point_data)

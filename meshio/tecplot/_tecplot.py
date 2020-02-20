@@ -412,7 +412,7 @@ def write(filename, mesh):
         for arr in data:
             _write_table(f, arr)
 
-        # Cells
+        # CellBlock
         cells = numpy.array(cells) + 1
         for cell in cells:
             f.write("{}\n".format(" ".join(str(c) for c in cell)))

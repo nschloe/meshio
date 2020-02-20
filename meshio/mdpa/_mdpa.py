@@ -13,7 +13,7 @@ from .._common import num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 ## We check if we can read/write the mesh natively from Kratos
 # TODO: Implement native reading
@@ -160,7 +160,7 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
             t = inverse_num_nodes_per_cell[num_nodes_per_elem]
 
         if len(cells) == 0 or t != cells[-1].type:
-            cells.append(Cells(t, []))
+            cells.append(CellBlock(t, []))
         # Subtract one to account for the fact that python indices are 0-based.
         cells[-1].data.append(numpy.array(data[-num_nodes_per_elem:]) - 1)
 
@@ -171,7 +171,7 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
 
     # convert to numpy arrays
     for k, c in enumerate(cells):
-        cells[k] = Cells(c.type, numpy.array(c.data, dtype=int))
+        cells[k] = CellBlock(c.type, numpy.array(c.data, dtype=int))
 
     # Cannot convert cell_tags[key] to numpy array: There may be a
     # different number of tags for each cell.

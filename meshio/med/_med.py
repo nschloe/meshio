@@ -47,7 +47,7 @@ def read(filename):
 
     # Possible time-stepping
     if "NOE" not in mesh:
-        # One needs NOE (node) and MAI (french maillage, meshing) data. If they
+        # One needs NOE (node) and MAI (French maillage, meshing) data. If they
         # are not available in the mesh, check for time-steppings.
         time_step = mesh.keys()
         if len(time_step) != 1:
@@ -60,7 +60,7 @@ def read(filename):
 
     # Read nodal and cell data if they exist
     try:
-        fields = f["CHA"]  # champs (fields) in french
+        fields = f["CHA"]  # champs (fields) in French
     except KeyError:
         point_data, cell_data, field_data = {}, {}, {}
     else:
@@ -83,7 +83,7 @@ def read(filename):
     if "NOEUD" in fas:
         point_tags = _read_families(fas["NOEUD"])
 
-    # Cells
+    # CellBlock
     cells = []
     med_cells = mesh["MAI"]
     for med_cell_type, med_cell_type_group in med_cells.items():
@@ -220,7 +220,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     med_mesh = mesh_ensemble.create_group(mesh_name)
     med_mesh.attrs.create("DIM", mesh.points.shape[1])  # mesh dimension
     med_mesh.attrs.create("ESP", mesh.points.shape[1])  # spatial dimension
-    med_mesh.attrs.create("REP", 0)  # cartesian coordinate system (repère in french)
+    med_mesh.attrs.create("REP", 0)  # cartesian coordinate system (repère in French)
     med_mesh.attrs.create("UNT", numpy_void_str)  # time unit
     med_mesh.attrs.create("UNI", numpy_void_str)  # spatial unit
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
@@ -264,7 +264,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
         family.attrs.create("CGT", 1)
         family.attrs.create("NBR", len(mesh.points))
 
-    # Cells (mailles in french)
+    # Cells (mailles in French)
     if len(mesh.cells) != len(numpy.unique([c.type for c in mesh.cells])):
         WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
@@ -295,7 +295,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
             family.attrs.create("CGT", 1)
             family.attrs.create("NBR", len(cells))
 
-    # Information about point and cell sets (familles in french)
+    # Information about point and cell sets (familles in French)
     fas = f.create_group("FAS")
     families = fas.create_group(mesh_name)
     family_zero = families.create_group("FAMILLE_ZERO")  # must be defined in any case

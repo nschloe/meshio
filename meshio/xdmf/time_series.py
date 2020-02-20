@@ -7,7 +7,7 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
-from .._mesh import Cells
+from .._mesh import CellBlock
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -367,9 +367,9 @@ class TimeSeriesWriter:
                 '[("triangle", [[0, 1, 2], ...])]',
                 DeprecationWarning,
             )
-            cells = [Cells(cell_type, data) for cell_type, data in cells.items()]
+            cells = [CellBlock(cell_type, data) for cell_type, data in cells.items()]
         else:
-            cells = [Cells(cell_type, data) for cell_type, data in cells]
+            cells = [CellBlock(cell_type, data) for cell_type, data in cells]
         if len(cells) == 1:
             meshio_type = cells[0].type
             num_cells = len(cells[0].data)

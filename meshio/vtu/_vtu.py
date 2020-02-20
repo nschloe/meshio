@@ -20,7 +20,7 @@ from .._common import (
 )
 from .._exceptions import ReadError
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def num_bytes_to_num_base64_chars(num_bytes):
@@ -30,7 +30,7 @@ def num_bytes_to_num_base64_chars(num_bytes):
 
 
 def _cells_from_data(connectivity, offsets, types, cell_data_raw):
-    # Translate it into the Cells array.
+    # Translate it into the cells array.
     # `connectivity` is a one-dimensional vector with
     # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
     if len(offsets) != len(types):
@@ -51,7 +51,7 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
         indices = numpy.add.outer(
             offsets[start:end], numpy.arange(-n, 0, dtype=offsets.dtype)
         )
-        cells.append(Cells(meshio_type, connectivity[indices]))
+        cells.append(CellBlock(meshio_type, connectivity[indices]))
         for name, d in cell_data_raw.items():
             if name not in cell_data:
                 cell_data[name] = []
@@ -70,7 +70,7 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
             cls["connectivity"], cls["offsets"], cls["types"], cdr
         )
         for c in cls:
-            out_cells.append(Cells(c.type, c.data + offset))
+            out_cells.append(CellBlock(c.type, c.data + offset))
 
     return out_cells, cell_data
 
