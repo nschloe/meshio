@@ -27,6 +27,9 @@ def convert(argv=None):
     # Some converters (like VTK) require `points` to be contiguous.
     mesh.points = numpy.ascontiguousarray(mesh.points)
 
+    if args.sets_to_int_data:
+        mesh.sets_to_int_data()
+
     # write it out
     kwargs = {"file_format": args.output_format}
     if args.float_format is not None:
@@ -82,6 +85,13 @@ def _get_convert_parser():
         "-z",
         action="store_true",
         help="remove third (z) dimension if all points are 0",
+    )
+
+    parser.add_argument(
+        "--sets-to-int-data",
+        "-s",
+        action="store_true",
+        help="if possible, convert sets to integer data (useful if the output type does not support sets)",
     )
 
     parser.add_argument(

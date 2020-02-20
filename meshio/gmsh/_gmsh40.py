@@ -9,7 +9,7 @@ import numpy
 
 from .._common import _geometric_dimension, cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 from .common import (
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
@@ -278,7 +278,7 @@ def write(filename, mesh, float_fmt=".15e", binary=True):
                     "(got %s). Converting.",
                     value.dtype,
                 )
-                mesh.cells[k] = Cells(key, numpy.array(value, dtype=c_int))
+                mesh.cells[k] = CellBlock(key, numpy.array(value, dtype=c_int))
 
     cells = _meshio_to_gmsh_order(mesh.cells)
 

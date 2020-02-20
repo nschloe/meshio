@@ -1,7 +1,7 @@
 import numpy
 
 from .._exceptions import ReadError
-from .._mesh import Cells
+from .._mesh import CellBlock
 
 numpy_to_xdmf_dtype = {
     "int32": ("Int", "4"),
@@ -150,7 +150,7 @@ def translate_mixed_cells(data):
         n = xdmf_idx_to_num_nodes[types[start]]
         point_offsets = offsets[start:end] + (2 if types[start] == 2 else 1)
         indices = numpy.array([numpy.arange(n) + o for o in point_offsets])
-        cells.append(Cells(meshio_type, data[indices]))
+        cells.append(CellBlock(meshio_type, data[indices]))
 
     return cells
 

@@ -10,7 +10,7 @@ import numpy
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
@@ -45,7 +45,7 @@ def read_buffer(f):
     )
     if not numpy.all(data[:, 0] == 3):
         raise ReadError("Can only read triangular faces")
-    cells = [Cells("triangle", data[:, 1:])]
+    cells = [CellBlock("triangle", data[:, 1:])]
 
     return verts, cells
 

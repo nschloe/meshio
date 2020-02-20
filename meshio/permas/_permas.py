@@ -9,7 +9,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 permas_to_meshio_type = {
     "PLOT1": "vertex",
@@ -88,7 +88,7 @@ def read_buffer(f):
             points, point_gids = _read_nodes(f)
         elif keyword.startswith("ELEMENT"):
             key, idx = _read_cells(f, keyword, point_gids)
-            cells.append(Cells(key, idx))
+            cells.append(CellBlock(key, idx))
         elif keyword.startswith("NSET"):
             params_map = get_param_map(keyword, required_keys=["NSET"])
             setids = read_set(f, params_map)

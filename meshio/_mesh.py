@@ -4,7 +4,7 @@ import numpy
 
 from ._common import _geometric_dimension
 
-Cells = collections.namedtuple("Cells", ["type", "data"])
+CellBlock = collections.namedtuple("CellBlock", ["type", "data"])
 
 
 class Mesh:
@@ -30,9 +30,11 @@ class Mesh:
             #     DeprecationWarning,
             # )
             # old dict, deprecated
-            self.cells = [Cells(cell_type, data) for cell_type, data in cells.items()]
+            self.cells = [
+                CellBlock(cell_type, data) for cell_type, data in cells.items()
+            ]
         else:
-            self.cells = [Cells(cell_type, data) for cell_type, data in cells]
+            self.cells = [CellBlock(cell_type, data) for cell_type, data in cells]
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
         self.field_data = {} if field_data is None else field_data
@@ -111,7 +113,7 @@ class Mesh:
         for k, c in enumerate(self.cells):
             s = c.data.shape
             n = numpy.prod(s)
-            self.cells[k] = Cells(c.type, all_cells_flat[k : k + n].reshape(s))
+            self.cells[k] = CellBlock(c.type, all_cells_flat[k : k + n].reshape(s))
             k += n
 
     def write(self, path_or_buf, file_format=None, **kwargs):
@@ -209,3 +211,20 @@ class Mesh:
         from ._helpers import read
 
         return read(path_or_buf, file_format)
+
+    def sets_to_int_data(self):
+        # If possible, convert cell sets to integer cell data. This is possible if all
+        # cells appear exactly in one group.
+        intfun = []
+        for c in zip(*self.cell_sets.values()):
+            # check if all numbers appear exactly once in the groups
+            d = numpy.sort(numpy.concatenate(c))
+            is_convertible = numpy.all(d[1:] == d[:-1] + 1) and len(d) == d[-1] + 1
+            if is_convertible:
+                intfun.append(numpy.zeros(len(d), dtype=int))
+                for k, cc in enumerate(c):
+                    intfun[-1][cc] = k
+
+        data_name = "-".join(self.cell_sets.keys())
+        self.cell_data = {data_name: intfun}
+        self.cell_sets = {}

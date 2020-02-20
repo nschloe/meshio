@@ -268,6 +268,17 @@ def add_point_sets(mesh):
     return mesh2
 
 
+def add_cell_sets(mesh):
+    mesh2 = copy.deepcopy(mesh)
+    assert len(mesh.cells) == 1
+    n = len(mesh.cells[0])
+    mesh2.cell_sets = {
+        "grain0": [numpy.array([0])],
+        "grain1": [numpy.arange(1, n)],
+    }
+    return mesh2
+
+
 def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     """Write and read a file, and make sure the data is the same as before.
     """

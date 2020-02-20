@@ -7,7 +7,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 abaqus_to_meshio_type = {
     # trusses
@@ -125,7 +125,7 @@ def read_buffer(f):
             points, point_ids, line = _read_nodes(f)
         elif keyword == "ELEMENT":
             cell_type, cells_data, ids, line = _read_cells(f, line, point_ids)
-            cells.append(Cells(cell_type, cells_data))
+            cells.append(CellBlock(cell_type, cells_data))
             cell_ids.append(ids)
         elif keyword == "NSET":
             params_map = get_param_map(line, required_keys=["NSET"])
