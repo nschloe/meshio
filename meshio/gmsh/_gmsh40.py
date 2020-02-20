@@ -7,7 +7,7 @@ from functools import partial
 
 import numpy
 
-from .._common import cell_data_from_raw, raw_from_cell_data, _geometric_dimension
+from .._common import _geometric_dimension, cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._mesh import Cells, Mesh
 from .common import (
