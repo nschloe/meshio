@@ -22,6 +22,7 @@ def read(filename):
 def read_buffer(f):
     points = []
     vertex_normals = []
+    texture_coords = []
     face_groups = []
     while True:
         line = f.readline()
@@ -42,6 +43,8 @@ def read_buffer(f):
             points.append([numpy.float(item) for item in split[1:]])
         elif split[0] == "vn":
             vertex_normals.append([numpy.float(item) for item in split[1:]])
+        elif split[0] == "vt":
+            texture_coords.append([numpy.float(item) for item in split[1:]])
         elif split[0] == "s":
             # "s 1" or "s off" controls smooth shading
             pass
@@ -60,7 +63,13 @@ def read_buffer(f):
             pass
 
     points = numpy.array(points)
-    point_data = {"obj:vn": numpy.array(vertex_normals)} if vertex_normals else {}
+    texture_coords = numpy.array(texture_coords)
+    vertex_normals = numpy.array(vertex_normals)
+    point_data = {}
+    if len(texture_coords) > 0:
+        point_data["obj:vt"] = texture_coords
+    if len(vertex_normals) > 0:
+        point_data["obj:vn"] = vertex_normals
 
     # convert to numpy arrays
     face_groups = [numpy.array(f) for f in face_groups]
@@ -88,15 +97,21 @@ def write(filename, mesh):
             f.write("v {} {} {}\n".format(p[0], p[1], p[2]))
 
         if "obj:vn" in mesh.point_data:
-            for vn in mesh.point_data["obj:vn"]:
-                f.write("vn {} {} {}\n".format(vn[0], vn[1], vn[2]))
+            dat = mesh.point_data["obj:vn"]
+            fmt = "vn " + " ".join(["{}"] * dat.shape[1]) + "\n"
+            for vn in dat:
+                f.write(fmt.format(*vn))
+
+        if "obj:vt" in mesh.point_data:
+            dat = mesh.point_data["obj:vt"]
+            fmt = "vt " + " ".join(["{}"] * dat.shape[1]) + "\n"
+            for vt in dat:
+                f.write(fmt.format(*vt))
 
         for cell_type, cell_array in mesh.cells:
-            fmt = "f {} {} {}"
-            if cell_type == "quad":
-                fmt += " {}"
+            fmt = "f " + " ".join(["{}"] * cell_array.shape[1]) + "\n"
             for c in cell_array:
-                f.write("{}\n".format(fmt).format(*(c + 1)))
+                f.write(fmt.format(*(c + 1)))
 
 
 register("obj", [".obj"], read, {"obj": write})
