@@ -21,6 +21,7 @@ def read(filename):
 
 def read_buffer(f):
     points = []
+    vertex_normals = []
     face_groups = []
     while True:
         line = f.readline()
@@ -40,8 +41,7 @@ def read_buffer(f):
             # vertex
             points.append([numpy.float(item) for item in split[1:]])
         elif split[0] == "vn":
-            # skip vertex normals
-            pass
+            vertex_normals.append([numpy.float(item) for item in split[1:]])
         elif split[0] == "s":
             # "s 1" or "s off" controls smooth shading
             pass
@@ -59,15 +59,17 @@ def read_buffer(f):
             # who knows
             pass
 
+    points = numpy.array(points)
+    point_data = {"obj:vn": numpy.array(vertex_normals)} if vertex_normals else {}
+
     # convert to numpy arrays
     face_groups = [numpy.array(f) for f in face_groups]
     cells = [("triangle" if f.shape[1] == 3 else "quad", f - 1) for f in face_groups]
 
-    return Mesh(numpy.array(points), cells)
+    return Mesh(points, cells, point_data=point_data)
 
 
 def write(filename, mesh):
-
     for c in mesh.cells:
         if c.type not in ["triangle", "quad"]:
             raise WriteError(
@@ -82,6 +84,11 @@ def write(filename, mesh):
         )
         for p in mesh.points:
             f.write("v {} {} {}\n".format(p[0], p[1], p[2]))
+
+        if "obj:vn" in mesh.point_data:
+            for vn in mesh.point_data["obj:vn"]:
+                f.write("vn {} {} {}\n".format(vn[0], vn[1], vn[2]))
+
         for cell_type, cell_array in mesh.cells:
             fmt = "f {} {} {}"
             if cell_type == "quad":
