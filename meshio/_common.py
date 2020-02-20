@@ -192,16 +192,7 @@ def _pick_first_int_data(data):
     candidate_keys = []
     for key in keys:
         # works for point_data and cell_data
-        if data[key][0].dtype in [
-            numpy.int8,
-            numpy.int16,
-            numpy.int32,
-            numpy.int64,
-            numpy.uint8,
-            numpy.uint16,
-            numpy.uint32,
-            numpy.uint64,
-        ]:
+        if data[key][0].dtype.kind in ["i", "u"]:  # int or uint
             candidate_keys.append(key)
 
     if len(candidate_keys) > 0:

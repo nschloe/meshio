@@ -2,8 +2,6 @@ import collections
 
 import numpy
 
-from ._common import _geometric_dimension
-
 CellBlock = collections.namedtuple("CellBlock", ["type", "data"])
 
 
@@ -177,34 +175,6 @@ class Mesh:
             for key, sets in sets_dict.items()
         }
 
-    def int_data_to_sets(self):
-        """Return a dict of dicts of indices of cells belonging to subsets
-
-        defined by int-valued cell_data, keyed (like cell_sets_dict)
-        by name (as found in field_data or constructed from the int)
-        and cell_type.  The indices are into the items of
-        cells_dict[cell_type].
-
-        """
-        sets = {}
-        for key, data in self.cell_data_dict.items():
-            if not (data and all(v.dtype.kind == "i" for v in data.values())):
-                continue
-            for cell_type, tags in data.items():
-                names = {
-                    v[0]: k
-                    for k, v in self.field_data.items()
-                    if v[1] == _geometric_dimension[cell_type]
-                }
-                for tag in numpy.unique(tags):
-                    name = names.get(tag, "{}:{}:{}".format(key, cell_type, tag))
-                    indices = numpy.isin(tags, tag).nonzero()[0]
-                    if name in sets:
-                        sets[name][cell_type] = indices
-                    else:
-                        sets[name] = {cell_type: indices}
-        return sets
-
     @classmethod
     def read(cls, path_or_buf, file_format=None):
         # avoid circular import
@@ -228,3 +198,36 @@ class Mesh:
         data_name = "-".join(self.cell_sets.keys())
         self.cell_data = {data_name: intfun}
         self.cell_sets = {}
+
+    def int_data_to_sets(self):
+        """Convert all int data to {point,cell}_sets, where possible.
+
+        defined by int-valued cell_data, keyed (like cell_sets_dict) by name (as found
+        in field_data or constructed from the int) and cell_type.  The indices are into
+        the items of cells_dict[cell_type].
+        """
+        keys = []
+        for key, data in self.cell_data.items():
+            # handle all int and uint data
+            if not numpy.all(v.dtype.kind in ["i", "u"] for v in data):
+                continue
+
+            keys.append(key)
+
+            # this call can be rather expensive
+            tags = numpy.unique(numpy.concatenate(data))
+
+            # try and get the names by splitting the key along "-" (this is how
+            # sets_to_int_data() forms the key
+            names = sorted(list(set(key.split("-"))))
+            if len(names) != len(tags):
+                # alternative names
+                names = ["set{}".format(tag) for tag in tags]
+
+            for name, tag in zip(names, tags):
+                self.cell_sets[name] = []
+                self.cell_sets[name] = [numpy.where(d == tag)[0] for d in data]
+
+        # remove the cell data
+        for key in keys:
+            del self.cell_data[key]

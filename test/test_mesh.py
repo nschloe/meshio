@@ -50,5 +50,17 @@ def test_sets_to_int_data():
     assert numpy.all(mesh.cell_data["grain0-grain1"][0] == [0, 1])
 
 
+def test_int_data_to_sets():
+    mesh = helpers.tri_mesh
+    mesh.cell_data = {"grain0-grain1": [numpy.array([0, 1])]}
+
+    mesh.int_data_to_sets()
+    assert "grain0" in mesh.cell_sets
+    assert numpy.all(mesh.cell_sets["grain0"][0] == [0])
+    assert "grain1" in mesh.cell_sets
+    assert numpy.all(mesh.cell_sets["grain1"][0] == [1])
+
+
 if __name__ == "__main__":
-    test_sets_to_int_data()
+    # test_sets_to_int_data()
+    test_int_data_to_sets()
