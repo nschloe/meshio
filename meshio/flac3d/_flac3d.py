@@ -1,11 +1,13 @@
 """
 I/O for FLAC3D format.
 """
+import logging
 import time
 
 import numpy
 
 from ..__about__ import __version__ as version
+from .._common import _pick_first_int_data
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
@@ -25,9 +27,6 @@ meshio_only = {
     "hexahedron24": "hexahedron",
     "hexahedron27": "hexahedron",
 }
-
-
-meshio_data = {"avsucd:material", "flac3d:zone", "gmsh:physical", "medit:ref"}
 
 
 numnodes_to_meshio_type = {
@@ -96,9 +95,8 @@ def read_buffer(f):
     pidx = 0
     zidx = 0
     count = 0
-    line = f.readline()
+    line = f.readline().rstrip().split()
     while line:
-        line = line.rstrip().split()
         if line[0] == "G":
             pid, point = _read_point(line)
             points.append(point)
@@ -122,11 +120,11 @@ def read_buffer(f):
             slots.add(slot)
             if len(slots) > 1:
                 raise ReadError("Multiple slots are not supported")
-        line = f.readline()
+        line = f.readline().rstrip().split()
 
     if zidx:
         n_cells = numpy.cumsum([len(c[1]) for c in cells])
-        cell_data = numpy.empty(n_cells[-1])
+        cell_data = numpy.empty(n_cells[-1], dtype=int)
         for cid, zid in mapper.values():
             cell_data[cid] = zid
         cell_data = {"flac3d:zone": numpy.split(cell_data, n_cells[:-1])}
@@ -180,7 +178,7 @@ def _read_zgroup(f, line):
     return name, data, slot
 
 
-def write(filename, mesh):
+def write(filename, mesh, float_fmt=".15e"):
     """
     Write FLAC3D f3grid grid file (only ASCII).
     """
@@ -188,25 +186,41 @@ def write(filename, mesh):
         raise WriteError("FLAC3D format only supports 3D cells")
 
     with open_file(filename, "w") as f:
-        f.write(f"* FLAC3D grid produced by meshio v{version}\n")
+        f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
         f.write("* {}\n".format(time.ctime()))
         f.write("* GRIDPOINTS\n")
-        _write_points(f, mesh.points)
+        _write_points(f, mesh.points, float_fmt)
         f.write("* ZONES\n")
         _write_cells(f, mesh.points, mesh.cells)
 
         if mesh.cell_data:
-            if set(list(mesh.cell_data)).intersection(meshio_data):
+            # pick out material
+            key, other = _pick_first_int_data(mesh.cell_data)
+            if key:
+                material = mesh.cell_data[key]
+                if other:
+                    logging.warning(
+                        "FLAC3D can only write one cell data array. "
+                        "Picking {}, skipping {}.".format(key, ", ".join(other))
+                    )
+            else:
+                material = None
+
+            if material is not None:
                 f.write("* ZONE GROUPS\n")
-                _write_cell_data(f, mesh.cells, mesh.cell_data, mesh.field_data)
+                zgroups, labels = _translate_zgroups(material, mesh.field_data)
+                for k in sorted(zgroups.keys()):
+                    f.write('ZGROUP "{}"\n'.format(labels[k]))
+                    _write_zgroup(f, zgroups[k])
 
 
-def _write_points(f, points):
+def _write_points(f, points, float_fmt):
     """
     Write points coordinates.
     """
     for i, point in enumerate(points):
-        f.write("G\t{:8}\t{:.14e}\t{:.14e}\t{:.14e}\n".format(i + 1, *point))
+        fmt = "G\t{:8}\t" + "\t".join(3 * ["{:" + float_fmt + "}"]) + "\n"
+        f.write(fmt.format(i + 1, *point))
 
 
 def _write_cells(f, points, cells):
@@ -253,33 +267,9 @@ def _translate_zones(points, cells):
     return zones
 
 
-def _write_cell_data(f, cells, cell_data, field_data):
+def _translate_zgroups(zone_data, field_data):
+    """Convert meshio cell_data to FLAC3D zone groups.
     """
-    Write zone groups.
-    """
-    zgroups, labels = _translate_zgroups(cells, cell_data, field_data)
-    for k in sorted(zgroups.keys()):
-        f.write('ZGROUP "{}"\n'.format(labels[k]))
-        _write_zgroup(f, zgroups[k])
-
-
-def _translate_zgroups(cells, cell_data, field_data):
-    """
-    Convert meshio cell_data to FLAC3D zone groups.
-    """
-    mat_data = None
-    for k in cell_data.keys():
-        if k in meshio_data:
-            mat_data = k
-            break
-
-    num_cells = sum(len(c.data) for c in cells)
-    zone_data = (
-        numpy.concatenate(cell_data[mat_data])
-        if mat_data
-        else numpy.zeros(num_cells, dtype=int)
-    )
-
     zgroups = {k: numpy.nonzero(zone_data == k)[0] + 1 for k in numpy.unique(zone_data)}
 
     labels = {k: str(k) for k in zgroups.keys()}
@@ -290,8 +280,7 @@ def _translate_zgroups(cells, cell_data, field_data):
 
 
 def _write_zgroup(f, data, ncol=20):
-    """
-    Write zone group data.
+    """Write zone group data.
     """
     nrow = len(data) // ncol
     lines = numpy.split(data, numpy.full(nrow, ncol).cumsum())

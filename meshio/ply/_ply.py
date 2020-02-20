@@ -12,7 +12,7 @@ import numpy
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 # Reference dtypes
 ply_to_numpy_dtype = {
@@ -200,9 +200,9 @@ def _read_ascii(
 
     cells = []
     if len(triangles) > 0:
-        cells.append(Cells("triangle", numpy.array(triangles)))
+        cells.append(CellBlock("triangle", numpy.array(triangles)))
     if len(quads) > 0:
-        cells.append(Cells("quad", numpy.array(quads)))
+        cells.append(CellBlock("quad", numpy.array(quads)))
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
@@ -273,9 +273,9 @@ def _read_binary(
 
     cells = []
     if len(triangles) > 0:
-        cells.append(Cells("triangle", numpy.array(triangles)))
+        cells.append(CellBlock("triangle", numpy.array(triangles)))
     if len(quads) > 0:
-        cells.append(Cells("quad", numpy.array(quads)))
+        cells.append(CellBlock("quad", numpy.array(quads)))
 
     return Mesh(verts, cells, point_data=point_data, cell_data={})
 
@@ -290,7 +290,9 @@ def write(filename, mesh, binary=True):  # noqa: C901
         fh.write(b"comment Created by meshio\n")
 
         if binary:
-            fh.write(f"format binary_{sys.byteorder}_endian 1.0\n".encode("utf-8"))
+            fh.write(
+                "format binary_{}_endian 1.0\n".format(sys.byteorder).encode("utf-8")
+            )
         else:
             fh.write(b"format ascii 1.0\n")
 
@@ -321,13 +323,13 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write("property {} {}\n".format(type_name, dim_names[k]).encode("utf-8"))
         for key, value in mesh.point_data.items():
             type_name = type_name_table[value.dtype]
-            fh.write(f"property {type_name} {key}\n".encode("utf-8"))
+            fh.write("property {} {}\n".format(type_name, key).encode("utf-8"))
 
         num_cells = 0
         for cell_type, c in mesh.cells:
             if cell_type in ["triangle", "quad"]:
                 num_cells += c.data.shape[0]
-        fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
+        fh.write("element face {:d}\n".format(num_cells).encode("utf-8"))
 
         # possibly cast down to int32
         cells = mesh.cells
@@ -335,7 +337,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
         for k, (cell_type, data) in enumerate(mesh.cells):
             if data.dtype == numpy.int64:
                 has_cast = True
-                mesh.cells[k] = Cells(cell_type, data.astype(numpy.int32))
+                mesh.cells[k] = CellBlock(cell_type, data.astype(numpy.int32))
 
         if has_cast:
             warnings.warn(
@@ -354,7 +356,9 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
         ply_type = numpy_to_ply_dtype[cell_dtype]
         fh.write(
-            f"property list {ply_type} {ply_type} vertex_indices\n".encode("utf-8")
+            "property list {} {} vertex_indices\n".format(ply_type, ply_type).encode(
+                "utf-8"
+            )
         )
         # TODO other cell data
         fh.write(b"end_header\n")

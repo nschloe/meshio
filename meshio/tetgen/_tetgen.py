@@ -10,7 +10,7 @@ import numpy
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
@@ -68,10 +68,10 @@ def read(filename):
         cells = cells[:, 1:5]
         cells -= node_index_base
 
-    return Mesh(points, [Cells("tetra", cells)])
+    return Mesh(points, [CellBlock("tetra", cells)])
 
 
-def write(filename, mesh):
+def write(filename, mesh, float_fmt=".15e"):
     base, ext = os.path.splitext(filename)
     if ext == ".node":
         node_filename = filename
@@ -80,17 +80,18 @@ def write(filename, mesh):
         node_filename = base + ".node"
         ele_filename = filename
     else:
-        raise WriteError(f"Must specify .node or .ele file. Got {filename}.")
+        raise WriteError("Must specify .node or .ele file. Got {}.".format(filename))
 
     if mesh.points.shape[1] != 3:
         raise WriteError("Can only write 3D points")
 
     # write nodes
     with open(node_filename, "w") as fh:
-        fh.write(f"# This file was created by meshio v{__version__}\n")
+        fh.write("# This file was created by meshio v{}\n".format(__version__))
         fh.write("{} {} {} {}\n".format(mesh.points.shape[0], 3, 0, 0))
+        fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, pt in enumerate(mesh.points):
-            fh.write("{} {:.15e} {:.15e} {:.15e}\n".format(k, pt[0], pt[1], pt[2]))
+            fh.write(fmt.format(k, pt[0], pt[1], pt[2]))
 
     if not any(c.type == "tetra" for c in mesh.cells):
         raise WriteError("TegGen only supports tetrahedra")
@@ -104,7 +105,7 @@ def write(filename, mesh):
 
     # write cells
     with open(ele_filename, "w") as fh:
-        fh.write(f"# This file was created by meshio v{__version__}\n")
+        fh.write("# This file was created by meshio v{}\n".format(__version__))
         for cell_type, data in filter(lambda c: c.type == "tetra", mesh.cells):
             fh.write("{} {} {}\n".format(data.shape[0], 4, 0))
             for k, tet in enumerate(data):

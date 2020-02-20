@@ -7,9 +7,9 @@ from functools import partial
 
 import numpy
 
-from .._common import cell_data_from_raw, raw_from_cell_data
+from .._common import _geometric_dimension, cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 from .common import (
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
@@ -257,7 +257,7 @@ def _read_periodic(f, is_ascii):
     return periodic
 
 
-def write(filename, mesh, binary=True):
+def write(filename, mesh, float_fmt=".15e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
@@ -278,14 +278,16 @@ def write(filename, mesh, binary=True):
                     "(got %s). Converting.",
                     value.dtype,
                 )
-                mesh.cells[k] = Cells(key, numpy.array(value, dtype=c_int))
+                mesh.cells[k] = CellBlock(key, numpy.array(value, dtype=c_int))
 
     cells = _meshio_to_gmsh_order(mesh.cells)
 
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
-        fh.write((f"$MeshFormat\n4.0 {mode_idx} {size_of_double}\n").encode("utf-8"))
+        fh.write(
+            "$MeshFormat\n4.0 {} {}\n".format(mode_idx, size_of_double).encode("utf-8")
+        )
         if binary:
             numpy.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
@@ -294,7 +296,7 @@ def write(filename, mesh, binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        _write_nodes(fh, mesh.points, binary)
+        _write_nodes(fh, mesh.points, float_fmt, binary)
         _write_elements(fh, cells, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, binary)
@@ -305,7 +307,7 @@ def write(filename, mesh, binary=True):
             _write_data(fh, "ElementData", name, dat, binary)
 
 
-def _write_nodes(fh, points, binary):
+def _write_nodes(fh, points, float_fmt, binary):
     fh.write(b"$Nodes\n")
 
     # TODO not sure what dimEntity is supposed to say
@@ -338,11 +340,10 @@ def _write_nodes(fh, points, binary):
             )
         )
 
+        fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, x in enumerate(points):
             # tag(int) x(double) y(double) z(double)
-            fh.write(
-                "{} {!r} {!r} {!r}\n".format(k + 1, x[0], x[1], x[2]).encode("utf-8")
-            )
+            fh.write(fmt.format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
 
     fh.write(b"$EndNodes\n")
 
@@ -435,70 +436,3 @@ def _write_periodic(fh, periodic, binary):
     if binary:
         fh.write(b"\n")
     fh.write(b"$EndPeriodic\n")
-
-
-_geometric_dimension = {
-    "line": 1,
-    "triangle": 2,
-    "quad": 2,
-    "tetra": 3,
-    "hexahedron": 3,
-    "wedge": 3,
-    "pyramid": 3,
-    "line3": 1,
-    "triangle6": 2,
-    "quad9": 2,
-    "tetra10": 3,
-    "hexahedron27": 3,
-    "wedge18": 3,
-    "pyramid14": 3,
-    "vertex": 0,
-    "quad8": 2,
-    "hexahedron20": 3,
-    "triangle10": 2,
-    "triangle15": 2,
-    "triangle21": 2,
-    "line4": 1,
-    "line5": 1,
-    "line6": 1,
-    "tetra20": 3,
-    "tetra35": 3,
-    "tetra56": 3,
-    "quad16": 2,
-    "quad25": 2,
-    "quad36": 2,
-    "triangle28": 2,
-    "triangle36": 2,
-    "triangle45": 2,
-    "triangle55": 2,
-    "triangle66": 2,
-    "quad49": 2,
-    "quad64": 2,
-    "quad81": 2,
-    "quad100": 2,
-    "quad121": 2,
-    "line7": 1,
-    "line8": 1,
-    "line9": 1,
-    "line10": 1,
-    "line11": 1,
-    "tetra84": 3,
-    "tetra120": 3,
-    "tetra165": 3,
-    "tetra220": 3,
-    "tetra286": 3,
-    "wedge40": 3,
-    "wedge75": 3,
-    "hexahedron64": 3,
-    "hexahedron125": 3,
-    "hexahedron216": 3,
-    "hexahedron343": 3,
-    "hexahedron512": 3,
-    "hexahedron729": 3,
-    "hexahedron1000": 3,
-    "wedge126": 3,
-    "wedge196": 3,
-    "wedge288": 3,
-    "wedge405": 3,
-    "wedge550": 3,
-}

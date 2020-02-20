@@ -10,7 +10,7 @@ from ..__about__ import __version__
 from .._exceptions import WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
@@ -21,7 +21,9 @@ def read(filename):
 
 def read_buffer(f):
     points = []
-    faces = []
+    vertex_normals = []
+    texture_coords = []
+    face_groups = []
     while True:
         line = f.readline()
 
@@ -40,31 +42,45 @@ def read_buffer(f):
             # vertex
             points.append([numpy.float(item) for item in split[1:]])
         elif split[0] == "vn":
-            # skip vertex normals
-            pass
+            vertex_normals.append([numpy.float(item) for item in split[1:]])
+        elif split[0] == "vt":
+            texture_coords.append([numpy.float(item) for item in split[1:]])
         elif split[0] == "s":
             # "s 1" or "s off" controls smooth shading
             pass
         elif split[0] == "f":
-            faces.append([int(item.split("/")[0]) for item in split[1:]])
+            dat = [int(item.split("/")[0]) for item in split[1:]]
+            if len(face_groups) == 0 or (
+                len(face_groups[-1]) > 0 and len(face_groups[-1][-1]) != len(dat)
+            ):
+                face_groups.append([])
+            face_groups[-1].append(dat)
+        elif split[0] == "g":
+            # new group
+            face_groups.append([])
         else:
             # who knows
             pass
 
-    triangle = numpy.array([f for f in faces if len(f) == 3])
-    quad = numpy.array([f for f in faces if len(f) == 4])
+    points = numpy.array(points)
+    texture_coords = numpy.array(texture_coords)
+    vertex_normals = numpy.array(vertex_normals)
+    point_data = {}
+    if len(texture_coords) > 0:
+        point_data["obj:vt"] = texture_coords
+    if len(vertex_normals) > 0:
+        point_data["obj:vn"] = vertex_normals
 
-    cells = []
-    if len(triangle) > 0:
-        cells += [("triangle", triangle - 1)]
-    if len(quad) > 0:
-        cells += [("quad", quad - 1)]
+    # convert to numpy arrays
+    face_groups = [numpy.array(f) for f in face_groups]
+    cells = [
+        CellBlock("triangle" if f.shape[1] == 3 else "quad", f - 1) for f in face_groups
+    ]
 
-    return Mesh(numpy.array(points), cells)
+    return Mesh(points, cells, point_data=point_data)
 
 
 def write(filename, mesh):
-
     for c in mesh.cells:
         if c.type not in ["triangle", "quad"]:
             raise WriteError(
@@ -79,12 +95,23 @@ def write(filename, mesh):
         )
         for p in mesh.points:
             f.write("v {} {} {}\n".format(p[0], p[1], p[2]))
+
+        if "obj:vn" in mesh.point_data:
+            dat = mesh.point_data["obj:vn"]
+            fmt = "vn " + " ".join(["{}"] * dat.shape[1]) + "\n"
+            for vn in dat:
+                f.write(fmt.format(*vn))
+
+        if "obj:vt" in mesh.point_data:
+            dat = mesh.point_data["obj:vt"]
+            fmt = "vt " + " ".join(["{}"] * dat.shape[1]) + "\n"
+            for vt in dat:
+                f.write(fmt.format(*vt))
+
         for cell_type, cell_array in mesh.cells:
-            fmt = "f {} {} {}"
-            if cell_type == "quad":
-                fmt += " {}"
+            fmt = "f " + " ".join(["{}"] * cell_array.shape[1]) + "\n"
             for c in cell_array:
-                f.write(f"{fmt}\n".format(*(c + 1)))
+                f.write(fmt.format(*(c + 1)))
 
 
 register("obj", [".obj"], read, {"obj": write})

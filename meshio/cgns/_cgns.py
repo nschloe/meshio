@@ -11,8 +11,6 @@ from .._mesh import Mesh
 
 
 def read(filename):
-    import h5py
-
     f = h5py.File(filename, "r")
 
     x = f["Base"]["Zone1"]["GridCoordinates"]["CoordinateX"][" data"]
@@ -33,9 +31,7 @@ def read(filename):
     return Mesh(points, cells)
 
 
-def write(filename, mesh):
-    import h5py
-
+def write(filename, mesh, compression="gzip", compression_opts=4):
     f = h5py.File(filename, "w")
 
     base = f.create_group("Base")
@@ -47,11 +43,26 @@ def write(filename, mesh):
 
     # write points
     coord_x = coords.create_group("CoordinateX")
-    coord_x.create_dataset(" data", data=mesh.points[:, 0])
+    coord_x.create_dataset(
+        " data",
+        data=mesh.points[:, 0],
+        compression=compression,
+        compression_opts=compression_opts,
+    )
     coord_y = coords.create_group("CoordinateY")
-    coord_y.create_dataset(" data", data=mesh.points[:, 1])
+    coord_y.create_dataset(
+        " data",
+        data=mesh.points[:, 1],
+        compression=compression,
+        compression_opts=compression_opts,
+    )
     coord_z = coords.create_group("CoordinateZ")
-    coord_z.create_dataset(" data", data=mesh.points[:, 2])
+    coord_z.create_dataset(
+        " data",
+        data=mesh.points[:, 2],
+        compression=compression,
+        compression_opts=compression_opts,
+    )
 
     # write cells
     # TODO write cells other than tetra
@@ -59,11 +70,27 @@ def write(filename, mesh):
     rnge = elems.create_group("ElementRange")
     for cell_type, data in mesh.cells:
         if cell_type == "tetra":
-            rnge.create_dataset(" data", data=[1, data.shape[0]])
+            rnge.create_dataset(
+                " data",
+                data=[1, data.shape[0]],
+                compression=compression,
+                compression_opts=compression_opts,
+            )
     conn = elems.create_group("ElementConnectivity")
     for cell_type, data in mesh.cells:
         if cell_type == "tetra":
-            conn.create_dataset(" data", data=data.reshape(-1) + 1)
+            conn.create_dataset(
+                " data",
+                data=data.reshape(-1) + 1,
+                compression=compression,
+                compression_opts=compression_opts,
+            )
 
 
-register("cgns", [".cgns"], read, {"cgns": write})
+try:
+    import h5py
+# Use ModuleNotFoundError when dropping support for Python 3.5
+except ImportError:
+    pass
+else:
+    register("cgns", [".cgns"], read, {"cgns": write})

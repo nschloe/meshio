@@ -1,3 +1,4 @@
+import numpy
 import pytest
 
 import helpers
@@ -17,23 +18,23 @@ test_set = [
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),
     helpers.add_point_data(helpers.tri_mesh, 3),
-    helpers.add_cell_data(helpers.tri_mesh, 1),
-    helpers.add_cell_data(helpers.tri_quad_mesh, 1),
-    helpers.add_cell_data(helpers.tri_mesh, 2),
-    helpers.add_cell_data(helpers.tri_mesh, 3),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+    helpers.add_cell_data(helpers.tri_quad_mesh, [("a", (), numpy.float64)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float32)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("b", (3,), numpy.float64)]),
 ]
 
 
 @pytest.mark.parametrize("mesh", test_set)
-@pytest.mark.parametrize("binary", [False, True])
-def test(mesh, binary):
+@pytest.mark.parametrize(
+    "data_type", [(False, None), (True, None), (True, "lzma"), (True, "zlib")]
+)
+def test(mesh, data_type):
+    binary, compression = data_type
+
     def writer(*args, **kwargs):
         return meshio.vtu.write(
-            *args,
-            binary=binary,
-            # don't use pretty xml to increase test coverage
-            # pretty_xml=False,
-            **kwargs,
+            *args, binary=binary, compression=compression, **kwargs,
         )
 
     # ASCII files are only meant for debugging, VTK stores only 11 digits

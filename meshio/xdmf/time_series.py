@@ -1,4 +1,5 @@
 import os
+import warnings
 import xml.etree.ElementTree as ET
 from io import BytesIO
 
@@ -6,6 +7,7 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
+from .._mesh import CellBlock
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -31,7 +33,7 @@ class TimeSeriesReader:
 
         version = root.get("Version")
         if version.split(".")[0] != "3":
-            raise ReadError(f"Unknown XDMF version {version}.")
+            raise ReadError("Unknown XDMF version {}.".format(version))
 
         domains = list(root)
         if len(domains) != 1:
@@ -263,7 +265,8 @@ class TimeSeriesWriter:
         return self
 
     def __exit__(self, *args):
-        self.h5_file.close()
+        if self.data_format == "HDF":
+            self.h5_file.close()
 
     def write_points_cells(self, points, cells):
         # <Grid Name="mesh" GridType="Uniform">
@@ -299,7 +302,7 @@ class TimeSeriesWriter:
             self.mesh_name
         )
         ET.SubElement(grid, "{http://www.w3.org/2003/XInclude}include", xpointer=ptr)
-        ET.SubElement(grid, "Time", Value=f"{t}")
+        ET.SubElement(grid, "Time", Value=str(t))
 
         if point_data:
             self.point_data(point_data, grid)
@@ -331,7 +334,7 @@ class TimeSeriesWriter:
 
         if self.data_format != "HDF":
             raise WriteError()
-        name = f"data{self.data_counter}"
+        name = "data{}".format(self.data_counter)
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
         return os.path.basename(self.h5_filename) + ":/" + name
@@ -358,6 +361,15 @@ class TimeSeriesWriter:
         data_item.text = self.numpy_to_xml_string(points)
 
     def cells(self, cells, grid):
+        if isinstance(cells, dict):
+            warnings.warn(
+                "cell dictionaries are deprecated, use list of tuples, e.g., "
+                '[("triangle", [[0, 1, 2], ...])]',
+                DeprecationWarning,
+            )
+            cells = [CellBlock(cell_type, data) for cell_type, data in cells.items()]
+        else:
+            cells = [CellBlock(cell_type, data) for cell_type, data in cells]
         if len(cells) == 1:
             meshio_type = cells[0].type
             num_cells = len(cells[0].data)

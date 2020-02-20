@@ -7,9 +7,9 @@ from functools import partial
 
 import numpy
 
-from .._common import cell_data_from_raw, raw_from_cell_data
+from .._common import _geometric_dimension, cell_data_from_raw, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 from .common import (
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
@@ -28,7 +28,7 @@ c_double = numpy.dtype("d")
 
 
 def _size_type(data_size):
-    return numpy.dtype(f"u{data_size}")
+    return numpy.dtype("u{}".format(data_size))
 
 
 def read_buffer(f, is_ascii, data_size):
@@ -42,6 +42,7 @@ def read_buffer(f, is_ascii, data_size):
     cell_tags = {}
     point_data = {}
     physical_tags = None
+    cell_sets = {}
     periodic = None
     while True:
         line = f.readline().decode("utf-8")
@@ -54,13 +55,14 @@ def read_buffer(f, is_ascii, data_size):
 
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
+            cell_sets = {k: [] for k in field_data.keys()}
         elif environ == "Entities":
             physical_tags = _read_entities(f, is_ascii, data_size)
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii, data_size)
         elif environ == "Elements":
             cells, cell_tags = _read_elements(
-                f, point_tags, physical_tags, is_ascii, data_size
+                f, point_tags, physical_tags, is_ascii, data_size, field_data, cell_sets
             )
         elif environ == "Periodic":
             periodic = _read_periodic(f, is_ascii, data_size)
@@ -96,6 +98,7 @@ def read_buffer(f, is_ascii, data_size):
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
+        cell_sets=cell_sets,
         gmsh_periodic=periodic,
     )
 
@@ -173,7 +176,9 @@ def _read_nodes(f, is_ascii, data_size):
     return points, tags
 
 
-def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
+def _read_elements(
+    f, point_tags, physical_tags, is_ascii, data_size, field_data, cell_sets
+):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
 
@@ -189,6 +194,17 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         # entityDim(int) entityTag(int) elementType(int) numElements(size_t)
         dim_entity, tag_entity, type_ele = fromfile(f, c_int, 3)
         (num_ele,) = fromfile(f, c_size_t, 1)
+        for physical_name, cell_set in cell_sets.items():
+            if physical_tags:
+                for physical_tag in physical_tags[dim_entity][tag_entity]:
+                    cell_set.append(
+                        numpy.arange(
+                            num_ele
+                            if field_data[physical_name][0] == physical_tag
+                            else 0,
+                            dtype=type(num_ele),
+                        )
+                    )
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
         d = fromfile(f, c_size_t, int(num_ele * (1 + num_nodes_per_ele))).reshape(
@@ -281,7 +297,7 @@ def write4_1(filename, mesh, binary=True):
                 logging.warning(
                     "Binary Gmsh needs c_size_t (got %s). Converting.", value.dtype
                 )
-                mesh.cells[k] = Cells(key, value.astype(c_size_t))
+                mesh.cells[k] = CellBlock(key, value.astype(c_size_t))
 
     cells = _meshio_to_gmsh_order(mesh.cells)
 
@@ -289,7 +305,7 @@ def write4_1(filename, mesh, binary=True):
         file_type = 1 if binary else 0
         data_size = c_size_t.itemsize
         fh.write(b"$MeshFormat\n")
-        fh.write(f"4.1 {file_type} {data_size}\n".encode("utf-8"))
+        fh.write("4.1 {} {}\n".format(file_type, data_size).encode("utf-8"))
         if binary:
             numpy.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
@@ -389,8 +405,14 @@ def _write_nodes(fh, points, cells, binary):
         points.tofile(fh)
         fh.write(b"\n")
     else:
-        fh.write(f"{num_blocks} {n} {min_tag} {max_tag}\n".encode("utf-8"))
-        fh.write(f"{dim_entity} {entity_tag} {is_parametric} {n}\n".encode("utf-8"))
+        fh.write(
+            "{} {} {} {}\n".format(num_blocks, n, min_tag, max_tag).encode("utf-8")
+        )
+        fh.write(
+            "{} {} {} {}\n".format(dim_entity, entity_tag, is_parametric, n).encode(
+                "utf-8"
+            )
+        )
         numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh, "\n", "%d")
         fh.write(b"\n")
         numpy.savetxt(fh, points, delimiter=" ")
@@ -465,7 +487,9 @@ def _write_elements(fh, cells, binary):
             entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]
-            fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode("utf-8"))
+            fh.write(
+                "{} {} {} {}\n".format(dim, entity_tag, cell_type, n).encode("utf-8")
+            )
 
             numpy.savetxt(
                 fh,
@@ -524,70 +548,3 @@ def _write_periodic(fh, periodic, binary):
     if binary:
         fh.write(b"\n")
     fh.write(b"$EndPeriodic\n")
-
-
-_geometric_dimension = {
-    "line": 1,
-    "triangle": 2,
-    "quad": 2,
-    "tetra": 3,
-    "hexahedron": 3,
-    "wedge": 3,
-    "pyramid": 3,
-    "line3": 1,
-    "triangle6": 2,
-    "quad9": 2,
-    "tetra10": 3,
-    "hexahedron27": 3,
-    "wedge18": 3,
-    "pyramid14": 3,
-    "vertex": 0,
-    "quad8": 2,
-    "hexahedron20": 3,
-    "triangle10": 2,
-    "triangle15": 2,
-    "triangle21": 2,
-    "line4": 1,
-    "line5": 1,
-    "line6": 1,
-    "tetra20": 3,
-    "tetra35": 3,
-    "tetra56": 3,
-    "quad16": 2,
-    "quad25": 2,
-    "quad36": 2,
-    "triangle28": 2,
-    "triangle36": 2,
-    "triangle45": 2,
-    "triangle55": 2,
-    "triangle66": 2,
-    "quad49": 2,
-    "quad64": 2,
-    "quad81": 2,
-    "quad100": 2,
-    "quad121": 2,
-    "line7": 1,
-    "line8": 1,
-    "line9": 1,
-    "line10": 1,
-    "line11": 1,
-    "tetra84": 3,
-    "tetra120": 3,
-    "tetra165": 3,
-    "tetra220": 3,
-    "tetra286": 3,
-    "wedge40": 3,
-    "wedge75": 3,
-    "hexahedron64": 3,
-    "hexahedron125": 3,
-    "hexahedron216": 3,
-    "hexahedron343": 3,
-    "hexahedron512": 3,
-    "hexahedron729": 3,
-    "hexahedron1000": 3,
-    "wedge126": 3,
-    "wedge196": 3,
-    "wedge288": 3,
-    "wedge405": 3,
-    "wedge550": 3,
-}

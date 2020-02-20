@@ -1,7 +1,7 @@
 import numpy
 
 from .._exceptions import ReadError
-from .._mesh import Cells
+from .._mesh import CellBlock
 
 numpy_to_xdmf_dtype = {
     "int32": ("Int", "4"),
@@ -25,25 +25,38 @@ dtype_to_format_string = {
 
 # See
 # <http://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
+# <https://gitlab.kitware.com/xdmf/xdmf/blob/master/Xdmf.dtd#L34>
 # for XDMF types.
 # There appears to be no particular consistency, so allow for different
 # alternatives as well.
 meshio_to_xdmf_type = {
     "vertex": ["Polyvertex"],
     "line": ["Polyline"],
-    "triangle": ["Triangle"],
-    "quad": ["Quadrilateral"],
-    "tetra": ["Tetrahedron"],
-    "pyramid": ["Pyramid"],
-    "wedge": ["Wedge"],
-    "hexahedron": ["Hexahedron"],
     "line3": ["Edge_3"],
-    "triangle6": ["Triangle_6", "Tri_6"],
+    "quad": ["Quadrilateral"],
     "quad8": ["Quadrilateral_8", "Quad_8"],
-    "tetra10": ["Tetrahedron_10", "Tet_10"],
+    "quad9": ["Quadrilateral_9", "Quad_9"],
+    "pyramid": ["Pyramid"],
     "pyramid13": ["Pyramid_13"],
+    "tetra": ["Tetrahedron"],
+    "triangle": ["Triangle"],
+    "triangle6": ["Triangle_6", "Tri_6"],
+    "tetra10": ["Tetrahedron_10", "Tet_10"],
+    "wedge": ["Wedge"],
     "wedge15": ["Wedge_15"],
+    "wedge18": ["Wedge_18"],
+    "hexahedron": ["Hexahedron"],
     "hexahedron20": ["Hexahedron_20", "Hex_20"],
+    "hexahedron24": ["Hexahedron_24", "Hex_24"],
+    "hexahedron27": ["Hexahedron_27", "Hex_27"],
+    "hexahedron64": ["Hexahedron_64", "Hex_64"],
+    "hexahedron125": ["Hexahedron_125", "Hex_125"],
+    "hexahedron216": ["Hexahedron_216", "Hex_216"],
+    "hexahedron343": ["Hexahedron_343", "Hex_343"],
+    "hexahedron512": ["Hexahedron_512", "Hex_512"],
+    "hexahedron729": ["Hexahedron_729", "Hex_729"],
+    "hexahedron1000": ["Hexahedron_1000", "Hex_100"],
+    "hexahedron1331": ["Hexahedron_1331", "Hex_1331"],
 }
 xdmf_to_meshio_type = {v: k for k, vals in meshio_to_xdmf_type.items() for v in vals}
 
@@ -137,7 +150,7 @@ def translate_mixed_cells(data):
         n = xdmf_idx_to_num_nodes[types[start]]
         point_offsets = offsets[start:end] + (2 if types[start] == 2 else 1)
         indices = numpy.array([numpy.arange(n) + o for o in point_offsets])
-        cells.append(Cells(meshio_type, data[indices]))
+        cells.append(CellBlock(meshio_type, data[indices]))
 
     return cells
 

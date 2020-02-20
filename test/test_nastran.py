@@ -32,10 +32,10 @@ def test_reference_file(filename):
     filename = os.path.join(this_dir, "meshes", "nastran", filename)
     mesh = meshio.read(filename)
 
-    # Points
+    # points
     assert numpy.isclose(mesh.points.sum(), 16.5316866)
 
-    # Cells
+    # cells
     ref_num_cells = {
         "line": 241,
         "triangle": 171,

@@ -15,7 +15,7 @@ def test_obj(mesh):
         return meshio.obj.write(*args, **kwargs)
 
     for k, c in enumerate(mesh.cells):
-        mesh.cells[k] = meshio.Cells(c.type, c.data.astype(numpy.int32))
+        mesh.cells[k] = meshio.CellBlock(c.type, c.data.astype(numpy.int32))
 
     helpers.write_read(writer, meshio.obj.read, mesh, 1.0e-12)
 

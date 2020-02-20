@@ -2,6 +2,7 @@ import copy
 import os
 from functools import partial
 
+import numpy
 import pytest
 
 import helpers
@@ -35,9 +36,9 @@ def gmsh_periodic():
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_point_data(helpers.tri_mesh, 9),
-        helpers.add_cell_data(helpers.tri_mesh, 1),
-        helpers.add_cell_data(helpers.tri_mesh, 3),
-        helpers.add_cell_data(helpers.tri_mesh, 9),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (9,), numpy.float64)]),
         helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
         helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
@@ -65,9 +66,9 @@ def test_gmsh22(mesh, binary):
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_point_data(helpers.tri_mesh, 9),
-        helpers.add_cell_data(helpers.tri_mesh, 1),
-        helpers.add_cell_data(helpers.tri_mesh, 3),
-        helpers.add_cell_data(helpers.tri_mesh, 9),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (9,), numpy.float64)]),
         helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
         helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
@@ -95,9 +96,9 @@ def test_gmsh40(mesh, binary):
         helpers.add_point_data(helpers.tri_mesh, 1),
         helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_point_data(helpers.tri_mesh, 9),
-        helpers.add_cell_data(helpers.tri_mesh, 1),
-        helpers.add_cell_data(helpers.tri_mesh, 3),
-        helpers.add_cell_data(helpers.tri_mesh, 9),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (9,), numpy.float64)]),
         helpers.add_field_data(helpers.tri_mesh, [1, 2], int),
         helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
@@ -137,19 +138,25 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
-# @pytest.mark.parametrize(
-#     "filename, ref_sum, ref_num_cells",
-#     [("insulated-4.1.msh", 2.001762136876221, {"line": 21, "triangle": 111})],
-# )
-# def test_reference_file_readonly(filename, ref_sum, ref_num_cells):
-#     this_dir = os.path.dirname(os.path.abspath(__file__))
-#     filename = os.path.join(this_dir, "meshes", "msh", filename)
-#
-#     mesh = meshio.read(filename)
-#     tol = 1.0e-2
-#     s = mesh.points.sum()
-#     assert abs(s - ref_sum) < tol * ref_sum
-#     assert {k: len(v) for k, v in mesh.cells.items()} == ref_num_cells
-#     assert {
-#         k: len(v["gmsh:physical"]) for k, v in mesh.cell_data.items()
-#     } == ref_num_cells
+@pytest.mark.parametrize(
+    "filename, ref_sum, ref_num_cells",
+    [("insulated-4.1.msh", 2.001762136876221, {"line": 21, "triangle": 111})],
+)
+def test_reference_file_readonly(filename, ref_sum, ref_num_cells):
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "msh", filename)
+
+    mesh = meshio.read(filename)
+    tol = 1.0e-2
+    s = mesh.points.sum()
+    assert abs(s - ref_sum) < tol * ref_sum
+    assert {k: len(v) for k, v in mesh.cells_dict.items()} == ref_num_cells
+    assert {
+        k: len(v) for k, v in mesh.cell_data_dict["gmsh:physical"].items()
+    } == ref_num_cells
+
+    num_cells = {k: 0 for k in ref_num_cells}
+    for vv in mesh.cell_sets_dict.values():
+        for k, v in vv.items():
+            num_cells[k] += len(v)
+    assert num_cells == ref_num_cells

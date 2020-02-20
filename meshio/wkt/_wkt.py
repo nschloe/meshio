@@ -7,7 +7,7 @@ import numpy as np
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 float_pattern = r"[+-]?(?:\d+\.?\d*|\d*\.?\d+)"
 float_re = re.compile(float_pattern)
@@ -20,7 +20,7 @@ triangle_pattern = r"\(\s*\(\s*({})\s*\)\s*\)".format(
 )
 triangle_re = re.compile(triangle_pattern)
 
-tin_pattern = fr"TIN\s*\((?:\s*{triangle_pattern}\s*,?)*\s*\)"
+tin_pattern = r"TIN\s*\((?:\s*{}\s*,?)*\s*\)".format(triangle_pattern)
 tin_re = re.compile(tin_pattern)
 
 
@@ -57,7 +57,7 @@ def read_str(s):
 
     tri_arr = np.array(tri_idxs, np.uint64)
 
-    return Mesh(point_arr, [Cells("triangle", tri_arr)])
+    return Mesh(point_arr, [CellBlock("triangle", tri_arr)])
 
 
 def arr_to_str(arr):

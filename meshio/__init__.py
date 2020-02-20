@@ -20,6 +20,7 @@ from . import (
     ply,
     stl,
     svg,
+    tecplot,
     tetgen,
     ugrid,
     vtk,
@@ -27,10 +28,15 @@ from . import (
     wkt,
     xdmf,
 )
-from .__about__ import __author__, __author_email__, __version__, __website__
+from .__about__ import (
+    __original_author__,
+    __original_author_email__,
+    __version__,
+    __website__,
+)
 from ._exceptions import ReadError, WriteError
-from ._helpers import read, write, write_points_cells
-from ._mesh import Cells, Mesh
+from ._helpers import extension_to_filetype, read, write, write_points_cells
+from ._mesh import CellBlock, Mesh
 
 __all__ = [
     "abaqus",
@@ -53,6 +59,7 @@ __all__ = [
     "ply",
     "stl",
     "svg",
+    "tecplot",
     "tetgen",
     "ugrid",
     "vtk",
@@ -63,12 +70,13 @@ __all__ = [
     "read",
     "write",
     "write_points_cells",
+    "extension_to_filetype",
     "Mesh",
-    "Cells",
+    "CellBlock",
     "ReadError",
     "WriteError",
     "__version__",
-    "__author__",
-    "__author_email__",
+    "__original_author__",
+    "__original_author_email__",
     "__website__",
 ]

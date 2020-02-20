@@ -33,8 +33,6 @@ numpy_void_str = numpy.string_("")
 
 
 def read(filename):
-    import h5py
-
     f = h5py.File(filename, "r")
 
     # Mesh ensemble
@@ -49,7 +47,7 @@ def read(filename):
 
     # Possible time-stepping
     if "NOE" not in mesh:
-        # One needs NOE (node) and MAI (french maillage, meshing) data. If they
+        # One needs NOE (node) and MAI (French maillage, meshing) data. If they
         # are not available in the mesh, check for time-steppings.
         time_step = mesh.keys()
         if len(time_step) != 1:
@@ -62,7 +60,7 @@ def read(filename):
 
     # Read nodal and cell data if they exist
     try:
-        fields = f["CHA"]  # champs (fields) in french
+        fields = f["CHA"]  # champs (fields) in French
     except KeyError:
         point_data, cell_data, field_data = {}, {}, {}
     else:
@@ -81,11 +79,11 @@ def read(filename):
 
     # Information for point tags
     point_tags = {}
-    fas = f["FAS"][mesh_name]
+    fas = mesh["FAS"] if "FAS" in mesh else f["FAS"][mesh_name]
     if "NOEUD" in fas:
         point_tags = _read_families(fas["NOEUD"])
 
-    # Cells
+    # CellBlock
     cells = []
     med_cells = mesh["MAI"]
     for med_cell_type, med_cell_type_group in med_cells.items():
@@ -127,7 +125,7 @@ def _read_data(fields, profiles):
             names = [None] * len(time_step)
             for i, key in enumerate(time_step):
                 t = data[key].attrs["PDT"]  # current time
-                names[i] = name + f"[{i:d}] - {t:g}"
+                names[i] = name + "[{:d}] - {:g}".format(i, t)
 
         # MED field can contain multiple types of data
         for i, key in enumerate(time_step):
@@ -206,9 +204,7 @@ def _read_families(fas_data):
     return families
 
 
-def write(filename, mesh, add_global_ids=True):
-    import h5py
-
+def write(filename, mesh, add_global_ids=True, compression="gzip", compression_opts=4):
     f = h5py.File(filename, "w")
 
     # Strangely the version must be 3.0.x
@@ -224,7 +220,7 @@ def write(filename, mesh, add_global_ids=True):
     med_mesh = mesh_ensemble.create_group(mesh_name)
     med_mesh.attrs.create("DIM", mesh.points.shape[1])  # mesh dimension
     med_mesh.attrs.create("ESP", mesh.points.shape[1])  # spatial dimension
-    med_mesh.attrs.create("REP", 0)  # cartesian coordinate system (repère in french)
+    med_mesh.attrs.create("REP", 0)  # cartesian coordinate system (repère in French)
     med_mesh.attrs.create("UNT", numpy_void_str)  # time unit
     med_mesh.attrs.create("UNI", numpy_void_str)  # spatial unit
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
@@ -248,17 +244,27 @@ def write(filename, mesh, add_global_ids=True):
     nodes_group.attrs.create("CGS", 1)
     profile = "MED_NO_PROFILE_INTERNAL"
     nodes_group.attrs.create("PFL", numpy.string_(profile))
-    coo = nodes_group.create_dataset("COO", data=mesh.points.flatten(order="F"))
+    coo = nodes_group.create_dataset(
+        "COO",
+        data=mesh.points.flatten(order="F"),
+        compression=compression,
+        compression_opts=compression_opts,
+    )
     coo.attrs.create("CGT", 1)
     coo.attrs.create("NBR", len(mesh.points))
 
     # Point tags
-    if "point_tags" in mesh.point_data:  # works only for med -> med
-        family = nodes_group.create_dataset("FAM", data=mesh.point_data["point_tags"])
+    if "point_tags" in mesh.point_data:  # only works for med -> med
+        family = nodes_group.create_dataset(
+            "FAM",
+            data=mesh.point_data["point_tags"],
+            compression=compression,
+            compression_opts=compression_opts,
+        )
         family.attrs.create("CGT", 1)
         family.attrs.create("NBR", len(mesh.points))
 
-    # Cells (mailles in french)
+    # Cells (mailles in French)
     if len(mesh.cells) != len(numpy.unique([c.type for c in mesh.cells])):
         WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
@@ -269,19 +275,27 @@ def write(filename, mesh, add_global_ids=True):
         med_cells.attrs.create("CGT", 1)
         med_cells.attrs.create("CGS", 1)
         med_cells.attrs.create("PFL", numpy.string_(profile))
-        nod = med_cells.create_dataset("NOD", data=cells.flatten(order="F") + 1)
+        nod = med_cells.create_dataset(
+            "NOD",
+            data=cells.flatten(order="F") + 1,
+            compression=compression,
+            compression_opts=compression_opts,
+        )
         nod.attrs.create("CGT", 1)
         nod.attrs.create("NBR", len(cells))
 
         # Cell tags
         if "cell_tags" in mesh.cell_data:  # works only for med -> med
             family = med_cells.create_dataset(
-                "FAM", data=mesh.cell_data["cell_tags"][k]
+                "FAM",
+                data=mesh.cell_data["cell_tags"][k],
+                compression=compression,
+                compression_opts=compression_opts,
             )
             family.attrs.create("CGT", 1)
             family.attrs.create("NBR", len(cells))
 
-    # Information about point and cell sets (familles in french)
+    # Information about point and cell sets (familles in French)
     fas = f.create_group("FAS")
     families = fas.create_group(mesh_name)
     family_zero = families.create_group("FAMILLE_ZERO")  # must be defined in any case
@@ -291,7 +305,7 @@ def write(filename, mesh, add_global_ids=True):
     try:
         if len(mesh.point_tags) > 0:
             node = families.create_group("NOEUD")
-            _write_families(node, mesh.point_tags)
+            _write_families(node, mesh.point_tags, compression, compression_opts)
     except AttributeError:
         pass
 
@@ -299,7 +313,7 @@ def write(filename, mesh, add_global_ids=True):
     try:
         if len(mesh.cell_tags) > 0:
             element = families.create_group("ELEME")
-            _write_families(element, mesh.cell_tags)
+            _write_families(element, mesh.cell_tags, compression, compression_opts)
     except AttributeError:
         pass
 
@@ -311,7 +325,9 @@ def write(filename, mesh, add_global_ids=True):
         if name == "point_tags":  # ignore point_tags already written under FAS
             continue
         supp = "NOEU"  # nodal data
-        _write_data(fields, mesh_name, profile, name, supp, data)
+        _write_data(
+            fields, mesh_name, profile, name, supp, data, compression, compression_opts
+        )
 
     # Cell data
     # Only support writing ELEM fields with only 1 Gauss point per cell
@@ -330,10 +346,30 @@ def write(filename, mesh, add_global_ids=True):
                 supp = "ELNO"
             else:  # general ELGA data defined at unknown Gauss points
                 supp = "ELGA"
-            _write_data(fields, mesh_name, profile, name, supp, data, med_type)
+            _write_data(
+                fields,
+                mesh_name,
+                profile,
+                name,
+                supp,
+                data,
+                compression,
+                compression_opts,
+                med_type,
+            )
 
 
-def _write_data(fields, mesh_name, profile, name, supp, data, med_type=None):
+def _write_data(
+    fields,
+    mesh_name,
+    profile,
+    name,
+    supp,
+    data,
+    compression,
+    compression_opts,
+    med_type=None,
+):
     # Skip for general ELGA fields defined at unknown Gauss points
     if supp == "ELGA":
         return
@@ -382,7 +418,12 @@ def _write_data(fields, mesh_name, profile, name, supp, data, med_type=None):
     profile.attrs.create("GAU", numpy_void_str)
 
     # Dataset
-    profile.create_dataset("CO", data=data.flatten(order="F"))
+    profile.create_dataset(
+        "CO",
+        data=data.flatten(order="F"),
+        compression=compression,
+        compression_opts=compression_opts,
+    )
 
 
 def _component_names(n_components):
@@ -402,7 +443,7 @@ def _family_name(set_id, name):
     return "FAM" + "_" + str(set_id) + "_" + "_".join(name)
 
 
-def _write_families(fm_group, tags):
+def _write_families(fm_group, tags, compression, compression_opts):
     """
     Write point/cell tag information under FAS/[mesh_name]
     """
@@ -411,10 +452,22 @@ def _write_families(fm_group, tags):
         family.attrs.create("NUM", set_id)
         group = family.create_group("GRO")
         group.attrs.create("NBR", len(name))  # number of subsets
-        dataset = group.create_dataset("NOM", (len(name),), dtype="80int8")
+        dataset = group.create_dataset(
+            "NOM",
+            (len(name),),
+            dtype="80int8",
+            compression=compression,
+            compression_opts=compression_opts,
+        )
         for i in range(len(name)):
             name_80 = name[i] + "\x00" * (80 - len(name[i]))  # make name 80 characters
             dataset[i] = [ord(x) for x in name_80]
 
 
-register("med", [".med"], read, {"med": write})
+try:
+    import h5py
+# Use ModuleNotFoundError when dropping support for Python 3.5
+except ImportError:
+    pass
+else:
+    register("med", [".med"], read, {"med": write})

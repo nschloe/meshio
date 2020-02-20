@@ -11,7 +11,7 @@ import numpy
 from .._common import CDATA, cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -46,13 +46,11 @@ class XdmfReader:
             return self.read_xdmf2(root)
 
         if version.split(".")[0] != "3":
-            raise ReadError(f"Unknown XDMF version {version}.")
+            raise ReadError("Unknown XDMF version {}.".format(version))
 
         return self.read_xdmf3(root)
 
     def _read_data_item(self, data_item, root=None):
-        import h5py
-
         reference = data_item.get("Reference")
         if reference:
             xpath = (data_item.text if reference == "XML" else reference).strip()
@@ -60,7 +58,7 @@ class XdmfReader:
                 return self._read_data_item(
                     root.find(".//" + "/".join(xpath.split("/")[2:])), root
                 )
-            raise ValueError(f"Can't read XPath {xpath}.")
+            raise ValueError("Can't read XPath {}.".format(xpath))
 
         dims = [int(d) for d in data_item.get("Dimensions").split()]
 
@@ -102,10 +100,12 @@ class XdmfReader:
         full_hdf5_path = os.path.join(os.path.dirname(self.filename), filename)
 
         f = h5py.File(full_hdf5_path, "r")
-        if h5path[0] != "/":
-            raise ReadError()
 
-        for key in h5path[1:].split("/"):
+        # Some files don't contain the leading slash /.
+        if h5path[0] == "/":
+            h5path = h5path[1:]
+
+        for key in h5path.split("/"):
             f = f[key]
         # `[()]` gives a numpy.ndarray
         return f[()]
@@ -197,7 +197,7 @@ class XdmfReader:
                     if c.get("Center") != "Grid":
                         raise ReadError()
             else:
-                raise ReadError(f"Unknown section '{c.tag}'.")
+                raise ReadError("Unknown section '{}'.".format(c.tag))
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -328,16 +328,18 @@ class XdmfReader:
                 if cell_type == "Mixed":
                     cells = translate_mixed_cells(data)
                 else:
-                    cells.append(Cells(xdmf_to_meshio_type[cell_type], data))
+                    cells.append(CellBlock(xdmf_to_meshio_type[cell_type], data))
 
             elif c.tag == "Geometry":
-                try:
-                    geometry_type = c.get("GeometryType")
-                except KeyError:
-                    pass
-                else:
-                    if geometry_type not in ["XY", "XYZ"]:
+                if c.get("Type"):
+                    if c.get("GeometryType"):
                         raise ReadError()
+                    geometry_type = c.get("Type")
+                else:
+                    geometry_type = c.get("GeometryType")
+
+                if geometry_type not in ["XY", "XYZ"]:
+                    raise ReadError('Illegal geometry type "{}".'.format(geometry_type))
 
                 data_items = list(c)
                 if len(data_items) != 1:
@@ -371,7 +373,7 @@ class XdmfReader:
                         raise ReadError()
                     cell_data_raw[name] = data
             else:
-                raise ReadError(f"Unknown section '{c.tag}'.")
+                raise ReadError("Unknown section '{}'.".format(c.tag))
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -387,7 +389,7 @@ class XdmfReader:
 
 class XdmfWriter:
     def __init__(
-        self, filename, mesh, data_format="HDF", compression=None, compression_opts=None
+        self, filename, mesh, data_format="HDF", compression="gzip", compression_opts=4
     ):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
@@ -399,11 +401,9 @@ class XdmfWriter:
         self.data_format = data_format
         self.data_counter = 0
         self.compression = compression
-        self.compression_opts = compression_opts
+        self.compression_opts = None if compression is None else compression_opts
 
         if data_format == "HDF":
-            import h5py
-
             self.h5_filename = os.path.splitext(self.filename)[0] + ".h5"
             self.h5_file = h5py.File(self.h5_filename, "w")
 
@@ -442,8 +442,8 @@ class XdmfWriter:
             return bin_filename
 
         if self.data_format != "HDF":
-            raise WriteError(f'Unknown data format "{self.data_format}"')
-        name = f"data{self.data_counter}"
+            raise WriteError('Unknown data format "{}"'.format(self.data_format))
+        name = "data{}".format(self.data_counter)
         self.data_counter += 1
         self.h5_file.create_dataset(
             name,
@@ -509,14 +509,16 @@ class XdmfWriter:
                 NumberOfElements=str(total_num_cells),
             )
             total_num_cell_items = sum(numpy.prod(c.data.shape) for c in cells)
-            num_lines = sum(c.data.shape[0] for c in cells if c.type == "line")
-            dim = str(total_num_cell_items + total_num_cells + num_lines)
+            num_vertices_and_lines = sum(
+                c.data.shape[0] for c in cells if c.type in {"vertex", "line"}
+            )
+            dim = str(total_num_cell_items + total_num_cells + num_vertices_and_lines)
             cd = numpy.concatenate(
                 [
                     numpy.hstack(
                         [
                             numpy.full(
-                                (value.shape[0], 2 if key == "line" else 1),
+                                (value.shape[0], 2 if key in {"vertex", "line"} else 1),
                                 meshio_type_to_xdmf_index[key],
                             ),
                             value,
@@ -592,18 +594,25 @@ def write(*args, **kwargs):
     XdmfWriter(*args, **kwargs)
 
 
-register(
-    "xdmf",
-    [".xdmf", ".xmf"],
-    read,
-    {
-        "xdmf": write,
-        "xdmf-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
-        "xdmf-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
-        "xdmf-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
-        "xdmf3": write,
-        "xdmf3-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
-        "xdmf3-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
-        "xdmf3-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
-    },
-)
+try:
+    import h5py
+# Use ModuleNotFoundError when dropping support for Python 3.5
+except ImportError:
+    pass
+else:
+    # TODO register all xdmf except hdf outside this try block
+    register(
+        "xdmf",
+        [".xdmf", ".xmf"],
+        read,
+        {
+            "xdmf": write,
+            "xdmf-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
+            "xdmf-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
+            "xdmf-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
+            "xdmf3": write,
+            "xdmf3-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
+            "xdmf3-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
+            "xdmf3-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
+        },
+    )

@@ -3,15 +3,18 @@
   <p align="center">I/O for mesh files.</p>
 </p>
 
-[![CircleCI](https://img.shields.io/circleci/project/github/nschloe/meshio/master.svg?style=flat-square)](https://circleci.com/gh/nschloe/meshio/tree/master)
+
+[![gh-actions](https://img.shields.io/github/workflow/status/nschloe/meshio/ci?style=flat-square)](https://github.com/nschloe/meshio/actions?query=workflow%3Aci)
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/meshio.svg?style=flat-square)](https://codecov.io/gh/nschloe/meshio)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 [![PyPi Version](https://img.shields.io/pypi/v/meshio.svg?style=flat-square)](https://pypi.org/project/meshio)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/meshio.svg?style=flat-square)](https://pypi.org/pypi/meshio/)
 [![Anaconda Cloud](https://anaconda.org/conda-forge/meshio/badges/version.svg?=style=flat-square)](https://anaconda.org/conda-forge/meshio/)
 [![Debian CI](https://badges.debian.net/badges/debian/testing/python3-meshio/version.svg?style=flat-square)](https://tracker.debian.org/pkg/python-meshio)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1173115.svg?style=flat-square)](https://doi.org/10.5281/zenodo.1173115)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshio)
 [![PyPi downloads](https://img.shields.io/pypi/dm/meshio.svg?style=flat-square)](https://pypistats.org/packages/meshio)
+[![Slack](https://img.shields.io/static/v1?logo=slack&label=chat&message=on%20slack&color=4a154b&style=flat-square)](https://app.slack.com/client/TTL6Q54A3/CT8655KR7)
 
 There are various mesh formats available for representing unstructured meshes.
 meshio can read and write all of the following and smoothly converts between them:
@@ -29,12 +32,13 @@ meshio can read and write all of the following and smoothly converts between the
  [MED/Salome](https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html),
  [Nastran](https://help.autodesk.com/view/NSTRN/2019/ENU/?guid=GUID-42B54ACB-FBE3-47CA-B8FE-475E7AD91A00) (bulk data),
  [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed#mesh-representation-of-segmented-object-surfaces),
- [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats) (versions 2 and 4),
+ [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats) (format versions 2.2, 4.0, and 4.1),
  [OBJ](https://en.wikipedia.org/wiki/Wavefront_.obj_file),
  [OFF](https://segeval.cs.princeton.edu/public/off_format.html),
  [PERMAS](https://www.intes.de),
  [PLY](https://en.wikipedia.org/wiki/PLY_(file_format)),
  [STL](https://en.wikipedia.org/wiki/STL_(file_format)),
+ [Tecplot .dat](http://paulbourke.net/dataformats/tp/),
  [TetGen .node/.ele](https://wias-berlin.de/software/tetgen/fformats.html),
  [SVG](https://www.w3.org/TR/SVG/) (2D only, output only),
  [UGRID](http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html),
@@ -45,11 +49,20 @@ meshio can read and write all of the following and smoothly converts between the
 
 Install with
 ```
-pip3 install meshio[all]
+pip install meshio[all]
 ```
-and simply call
-```
-meshio-convert input.msh output.vtu
+(`[all]` pulls in all optional dependencies. By default, meshio only uses numpy.)
+You can then use the command-line tools
+```bash
+meshio-convert    input.msh output.vtk   # convert between two formats
+
+meshio-info       input.xdmf             # show some info about the mesh
+
+meshio-compress   input.vtu              # compress the mesh file
+meshio-decompress input.vtu              # decompress the mesh file
+
+meshio-binary     input.msh              # convert to binary format
+meshio-ascii      input.msh              # convert to ASCII format
 ```
 with any of the supported formats.
 
@@ -123,10 +136,28 @@ with meshio.xdmf.TimeSeriesReader(filename) as reader:
         t, point_data, cell_data = reader.read_data(k)
 ```
 
+### ParaView plugin
+
+<img alt="gmsh paraview" src="https://nschloe.github.io/meshio/gmsh-paraview.png" width="60%">
+_A Gmsh file opened with ParaView._
+
+If you have downloaded a binary version of ParaView, you may proceed as follows.
+
+ * Make sure that ParaView uses a Python version that supports meshio. (That is at least
+   Python 3.)
+ * Install meshio
+ * Open ParaView
+ * Find the file `paraview-meshio-plugin.py` of your meshio installation (on Linux:
+   `~/.local/paraview-plugins/`) and load it under _Tools / Manage Plugins / Load New_
+ * _Optional:_ Activate _Auto Load_
+
+You can now open all meshio-supported files in ParaView.
+
+
 ### Performance comparison
 
-The comparisons here are for a tetrahedral mesh with about 400k points and 2M
-tetrahedra.  The red lines mark the size of the mesh in memory.
+The comparisons here are for a triangular mesh with about 900k points and 1.8M
+triangles. The red lines mark the size of the mesh in memory.
 
 #### File sizes
 
@@ -146,7 +177,7 @@ tetrahedra.  The red lines mark the size of the mesh in memory.
 meshio is [available from the Python Package Index](https://pypi.org/project/meshio/),
 so simply do
 ```
-pip3 install meshio
+pip install meshio
 ```
 to install.
 

@@ -10,7 +10,7 @@ import numpy
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
@@ -120,7 +120,7 @@ def data_from_facets(facets):
     k = numpy.argsort(idx)
     points = pts[idx[k]]
     inv_k = numpy.argsort(k)
-    cells = [Cells("triangle", inv_k[inv].reshape(-1, 3))]
+    cells = [CellBlock("triangle", inv_k[inv].reshape(-1, 3))]
     return points, cells
 
 
@@ -148,7 +148,7 @@ def write(filename, mesh, binary=False):
     if not any(c.type == "triangle" for c in mesh.cells):
         raise WriteError(
             "STL can only write triangle cells (not {}).".format(
-                ", ".join(list(mesh.cells.keys()))
+                ", ".join(c.type for c in mesh.cells)
             )
         )
     if len(mesh.cells) > 1:
@@ -228,6 +228,6 @@ register(
     {
         "stl-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
         "stl-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "stl": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
+        "stl": lambda f, m, **kwargs: write(f, m, **{"binary": True, **kwargs}),
     },
 )

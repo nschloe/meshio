@@ -65,8 +65,6 @@ meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
 def read(filename):  # noqa: C901
-    import netCDF4
-
     nc = netCDF4.Dataset(filename)
 
     # assert nc.version == numpy.float32(5.1)
@@ -141,8 +139,8 @@ def read(filename):  # noqa: C901
         # elif key == "eb_names":
         #     value.set_auto_mask(False)
         #     eb_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-        elif key == "node_ns":
-            ns = value
+        elif key.startswith("node_ns"):  # Expected keys: node_ns1, node_ns2
+            ns.append(value[:] - 1)  # Exodus is 1-based
 
     # merge element block data; can't handle blocks yet
     for k, value in cd.items():
@@ -262,8 +260,6 @@ numpy_to_exodus_dtype = {
 
 
 def write(filename, mesh):
-    import netCDF4
-
     rootgrp = netCDF4.Dataset(filename, "w")
 
     # set global data
@@ -338,9 +334,9 @@ def write(filename, mesh):
         # <https://gitlab.kitware.com/paraview/paraview/issues/18403>.
         for k, (name, data) in enumerate(mesh.point_data.items()):
             for i, s in enumerate(data.shape):
-                rootgrp.createDimension(f"dim_nod_var{k}{i}", s)
+                rootgrp.createDimension("dim_nod_var{}{}".format(k, i), s)
             dims = ["time_step"] + [
-                f"dim_nod_var{k}{i}" for i in range(len(data.shape))
+                "dim_nod_var{}{}".format(k, i) for i in range(len(data.shape))
             ]
             node_data = rootgrp.createVariable(
                 "vals_nod_var{}".format(k + 1),
@@ -372,4 +368,10 @@ def write(filename, mesh):
     rootgrp.close()
 
 
-register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
+try:
+    import netCDF4
+# Use ModuleNotFoundError when dropping support for Python 3.5
+except ImportError:
+    pass
+else:
+    register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})

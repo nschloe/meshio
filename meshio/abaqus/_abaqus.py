@@ -7,7 +7,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 abaqus_to_meshio_type = {
     # trusses
@@ -32,6 +32,7 @@ abaqus_to_meshio_type = {
     "B33H": "line3",
     # surfaces
     "CPS4": "quad",
+    "CPS4R": "quad",
     "S4": "quad",
     "S4R": "quad",
     "S4RS": "quad",
@@ -102,6 +103,7 @@ def read(filename):
 def read_buffer(f):
     # Initialize the optional data fields
     cells = []
+    cell_ids = []
     point_sets = {}
     cell_sets = {}
     field_data = {}
@@ -118,26 +120,31 @@ def read_buffer(f):
             line = f.readline()
             continue
 
-        keyword = line.strip("*")
-        if keyword.upper().startswith("NODE"):
+        keyword = line.partition(",")[0].strip().replace("*", "").upper()
+        if keyword == "NODE":
             points, point_ids, line = _read_nodes(f)
-        elif keyword.upper().startswith("ELEMENT"):
-            key, idx, line = _read_cells(f, keyword, point_ids)
-            cells.append(Cells(key, idx))
-        elif keyword.upper().startswith("NSET"):
-            params_map = get_param_map(keyword, required_keys=["NSET"])
+        elif keyword == "ELEMENT":
+            cell_type, cells_data, ids, line = _read_cells(f, line, point_ids)
+            cells.append(CellBlock(cell_type, cells_data))
+            cell_ids.append(ids)
+        elif keyword == "NSET":
+            params_map = get_param_map(line, required_keys=["NSET"])
             set_ids, line = _read_set(f, params_map)
             name = params_map["NSET"]
             point_sets[name] = numpy.array(
                 [point_ids[point_id] for point_id in set_ids], dtype="int32"
             )
-        elif keyword.upper().startswith("ELSET"):
-            params_map = get_param_map(keyword, required_keys=["ELSET"])
-            setids, line = _read_set(f, params_map)
+        elif keyword == "ELSET":
+            params_map = get_param_map(line, required_keys=["ELSET"])
+            set_ids, line = _read_set(f, params_map)
             name = params_map["ELSET"]
-            if name not in cell_sets:
-                cell_sets[name] = []
-            cell_sets[name].append(setids)
+            cell_sets[name] = []
+            for cell_ids_ in cell_ids:
+                cell_sets_ = numpy.array(
+                    [cell_ids_[set_id] for set_id in set_ids if set_id in cell_ids_],
+                    dtype="int32",
+                )
+                cell_sets[name].append(cell_sets_)
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
@@ -149,25 +156,26 @@ def read_buffer(f):
         cell_data=cell_data,
         field_data=field_data,
         point_sets=point_sets,
+        cell_sets=cell_sets,
     )
 
 
 def _read_nodes(f):
     points = []
     point_ids = {}
-    index = 0
+    counter = 0
     while True:
         line = f.readline()
-        if line.startswith("*"):
+        if not line or line.startswith("*"):
             break
         if line.strip() == "":
             continue
 
         line = line.strip().split(",")
         point_id, coords = line[0], line[1:]
-        point_ids[int(point_id)] = index
+        point_ids[int(point_id)] = counter
         points.append([float(x) for x in coords])
-        index += 1
+        counter += 1
 
     return numpy.array(points, dtype=float), point_ids, line
 
@@ -181,14 +189,16 @@ def _read_cells(f, line0, point_ids):
 
     etype = etype_sline.split("=")[1].strip()
     if etype not in abaqus_to_meshio_type:
-        raise ReadError(f"Element type not available: {etype}")
+        raise ReadError("Element type not available: {}".format(etype))
 
     cell_type = abaqus_to_meshio_type[etype]
 
     cells, idx = [], []
+    cell_ids = {}
+    counter = 0
     while True:
         line = f.readline()
-        if line.startswith("*"):
+        if not line or line.startswith("*"):
             break
         if line.strip() == "":
             continue
@@ -196,10 +206,11 @@ def _read_cells(f, line0, point_ids):
         line = line.strip()
         idx += [int(k) for k in filter(None, line.split(","))]
         if not line.endswith(","):
-            # the first item is just a running index
+            cell_ids[idx[0]] = counter
             cells.append([point_ids[k] for k in idx[1:]])
             idx = []
-    return cell_type, numpy.array(cells), line
+            counter += 1
+    return cell_type, numpy.array(cells), cell_ids, line
 
 
 def get_param_map(word, required_keys=None):
@@ -222,7 +233,7 @@ def get_param_map(word, required_keys=None):
     param_map = {}
     for wordi in words:
         if "=" not in wordi:
-            key = wordi.strip()
+            key = wordi.strip().upper()
             value = None
         else:
             sword = wordi.split("=")
@@ -235,7 +246,7 @@ def get_param_map(word, required_keys=None):
     msg = ""
     for key in required_keys:
         if key not in param_map:
-            msg += f"{key!r} not found in {word!r}\n"
+            msg += "{} not found in {}\n".format(key, word)
     if msg:
         raise RuntimeError(msg)
     return param_map
@@ -245,32 +256,28 @@ def _read_set(f, params_map):
     set_ids = []
     while True:
         line = f.readline()
-        if line.startswith("*"):
+        if not line or line.startswith("*"):
             break
         if line.strip() == "":
             continue
 
         set_ids += [int(k) for k in line.strip().strip(",").split(",")]
 
-    if "generate" in params_map:
+    set_ids = numpy.array(set_ids, dtype="int32")
+    if "GENERATE" in params_map:
         if len(set_ids) != 3:
             raise ReadError(set_ids)
-        set_ids = numpy.arange(set_ids[0], set_ids[1], set_ids[2])
-    else:
-        try:
-            set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
-        except ValueError:
-            raise ReadError(set_ids)
+        set_ids = numpy.arange(set_ids[0], set_ids[1] + 1, set_ids[2], dtype="int32")
     return set_ids, line
 
 
-def write(filename, mesh, translate_cell_names=True):
+def write(filename, mesh, float_fmt=".15e", translate_cell_names=True):
     with open_file(filename, "wt") as f:
         f.write("*Heading\n")
         f.write("Abaqus DataFile Version 6.14\n")
-        f.write(f"written by meshio v{__version__}\n")
+        f.write("written by meshio v{}\n".format(__version__))
         f.write("*Node\n")
-        fmt = ", ".join(["{}"] + ["{!r}"] * mesh.points.shape[1]) + "\n"
+        fmt = ", ".join(["{}"] + ["{:" + float_fmt + "}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):
             f.write(fmt.format(k + 1, *x))
         eid = 0
@@ -283,6 +290,27 @@ def write(filename, mesh, translate_cell_names=True):
                 eid += 1
                 nids_strs = (str(nid + 1) for nid in row.tolist())
                 f.write(str(eid) + "," + ",".join(nids_strs) + "\n")
+
+        nnl = 8
+        for ic in range(len(mesh.cells)):
+            for k, v in mesh.cell_sets.items():
+                els = [str(i + 1) for i in v[ic]]
+                f.write("*ELSET, ELSET=%s\n" % k)
+                f.write(
+                    ",\n".join(
+                        ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
+                    )
+                    + "\n"
+                )
+
+        for k, v in mesh.point_sets.items():
+            nds = [str(i + 1) for i in v]
+            f.write("*NSET, NSET=%s\n" % k)
+            f.write(
+                ",\n".join(",".join(nds[i : i + nnl]) for i in range(0, len(nds), nnl))
+                + "\n"
+            )
+
         f.write("*end")
 
 
