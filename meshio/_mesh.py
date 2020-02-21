@@ -123,6 +123,11 @@ class Mesh:
     def get_cells_type(self, cell_type):
         return numpy.concatenate([c.data for c in self.cells if c.type == cell_type])
 
+    def get_cell_data(self, name, cell_type):
+        return numpy.concatenate(
+            [d for c, d in zip(self.cells, self.cell_data[name]) if c.type == cell_type]
+        )
+
     @property
     def cells_dict(self):
         cells_dict = {}
