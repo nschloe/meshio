@@ -37,6 +37,8 @@ def convert(argv=None):
     kwargs = {"file_format": args.output_format}
     if args.float_format is not None:
         kwargs["float_fmt"] = args.float_format
+    if args.ascii:
+        kwargs["binary"] = False
 
     write(args.outfile, mesh, **kwargs)
 
@@ -50,12 +52,12 @@ def _get_convert_parser():
                 return super()._format_action_invocation(action)
             default = self._get_default_metavar_for_optional(action)
             args_string = self._format_args(action, default)
-            return ', '.join(action.option_strings) + ' ' + args_string
+            return ", ".join(action.option_strings) + " " + args_string
 
     parser = argparse.ArgumentParser(
         description=("Convert between mesh formats."),
         # formatter_class=argparse.RawTextHelpFormatter,
-        formatter_class=CustomHelpFormatter
+        formatter_class=CustomHelpFormatter,
     )
 
     parser.add_argument("infile", type=str, help="mesh file to be read from")
@@ -81,7 +83,7 @@ def _get_convert_parser():
     parser.add_argument(
         "--ascii",
         "-a",
-        action="store_false",
+        action="store_true",
         help="write in ASCII format variant (where applicable, default: binary)",
     )
 

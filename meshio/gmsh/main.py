@@ -106,10 +106,7 @@ register(
     [".msh"],
     read,
     {
-        "gmsh": lambda f, m, **kwargs: write(f, m, "4", **kwargs, binary=True),
-        "gmsh2-ascii": lambda f, m, **kwargs: write(f, m, "2", **kwargs, binary=False),
-        "gmsh2-binary": lambda f, m, **kwargs: write(f, m, "2", **kwargs, binary=True),
-        "gmsh4-ascii": lambda f, m, **kwargs: write(f, m, "4", **kwargs, binary=False),
-        "gmsh4-binary": lambda f, m, **kwargs: write(f, m, "4", **kwargs, binary=True),
+        "gmsh22": lambda f, m, **kwargs: write(f, m, "2.2", **kwargs),
+        "gmsh": lambda f, m, **kwargs: write(f, m, "4.1", **kwargs),
     },
 )

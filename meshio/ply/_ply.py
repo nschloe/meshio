@@ -403,13 +403,4 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 fh.write(out.encode("utf-8"))
 
 
-register(
-    "ply",
-    [".ply"],
-    read,
-    {
-        "ply-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-        "ply-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "ply": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-    },
-)
+register("ply", [".ply"], read, {"ply": write})

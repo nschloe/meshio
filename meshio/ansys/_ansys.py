@@ -461,13 +461,4 @@ def write(filename, mesh, binary=True):
             first_index = last_index + 1
 
 
-register(
-    "ansys",
-    [],
-    read,
-    {
-        "ansys": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "ansys-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-        "ansys-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-    },
-)
+register("ansys", [], read, {"ansys": write})

@@ -561,13 +561,4 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     tree.write(filename)
 
 
-register(
-    "vtu",
-    [".vtu"],
-    read,
-    {
-        "vtu": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "vtu-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-        "vtu-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-    },
-)
+register("vtu", [".vtu"], read, {"vtu": write})

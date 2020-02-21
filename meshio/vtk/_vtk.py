@@ -739,13 +739,4 @@ def _write_field_data(f, data, binary):
         f.write(b"\n")
 
 
-register(
-    "vtk",
-    [".vtk"],
-    read,
-    {
-        "vtk": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "vtk-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-        "vtk-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-    },
-)
+register("vtk", [".vtk"], read, {"vtk": write})
