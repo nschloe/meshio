@@ -37,14 +37,27 @@ def convert(argv=None):
     kwargs = {"file_format": args.output_format}
     if args.float_format is not None:
         kwargs["float_fmt"] = args.float_format
+    if args.ascii:
+        kwargs["binary"] = False
 
     write(args.outfile, mesh, **kwargs)
 
 
 def _get_convert_parser():
+    # Avoid repeating format names
+    # https://stackoverflow.com/a/31124505/353337
+    class CustomHelpFormatter(argparse.HelpFormatter):
+        def _format_action_invocation(self, action):
+            if not action.option_strings or action.nargs == 0:
+                return super()._format_action_invocation(action)
+            default = self._get_default_metavar_for_optional(action)
+            args_string = self._format_args(action, default)
+            return ", ".join(action.option_strings) + " " + args_string
+
     parser = argparse.ArgumentParser(
         description=("Convert between mesh formats."),
-        formatter_class=argparse.RawTextHelpFormatter,
+        # formatter_class=argparse.RawTextHelpFormatter,
+        formatter_class=CustomHelpFormatter,
     )
 
     parser.add_argument("infile", type=str, help="mesh file to be read from")
@@ -53,7 +66,7 @@ def _get_convert_parser():
         "--input-format",
         "-i",
         type=str,
-        choices=list(reader_map.keys()),
+        choices=sorted(list(reader_map.keys())),
         help="input file format",
         default=None,
     )
@@ -62,9 +75,16 @@ def _get_convert_parser():
         "--output-format",
         "-o",
         type=str,
-        choices=list(_writer_map.keys()),
+        choices=sorted(list(_writer_map.keys())),
         help="output file format",
         default=None,
+    )
+
+    parser.add_argument(
+        "--ascii",
+        "-a",
+        action="store_true",
+        help="write in ASCII format variant (where applicable, default: binary)",
     )
 
     parser.add_argument("outfile", type=str, help="mesh file to be written to")

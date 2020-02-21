@@ -18,19 +18,19 @@ def is_same_mesh(mesh0, mesh1, atol):
 def test_info():
     input_mesh = helpers.tri_mesh
     infile = tempfile.NamedTemporaryFile().name
-    meshio.write(infile, input_mesh, file_format="gmsh4-ascii")
+    meshio.write(infile, input_mesh, file_format="gmsh")
     meshio._cli.info([infile, "--input-format", "gmsh"])
 
 
 def test_convert():
     input_mesh = helpers.tri_mesh
     infile = tempfile.NamedTemporaryFile().name
-    meshio.write(infile, input_mesh, file_format="gmsh4-ascii")
+    meshio.write(infile, input_mesh, file_format="gmsh")
 
     outfile = tempfile.NamedTemporaryFile().name
 
     meshio._cli.convert(
-        [infile, outfile, "--input-format", "gmsh", "--output-format", "vtk-binary"]
+        [infile, outfile, "--input-format", "gmsh", "--output-format", "vtk"]
     )
 
     mesh = meshio.read(outfile, file_format="vtk")

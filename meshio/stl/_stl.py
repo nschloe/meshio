@@ -231,13 +231,4 @@ def _binary(filename, points, cells):
                 fh.write(numpy.uint16(0))
 
 
-register(
-    "stl",
-    [".stl"],
-    read,
-    {
-        "stl-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-        "stl-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "stl": lambda f, m, **kwargs: write(f, m, **{"binary": True, **kwargs}),
-    },
-)
+register("stl", [".stl"], read, {"stl": write})
