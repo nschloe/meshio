@@ -121,7 +121,7 @@ def write(filename, mesh, file_format=None, **kwargs):
     try:
         writer = _writer_map[file_format]
     except KeyError:
-        raise KeyError(
+        raise WriteError(
             "Unknown format '{}'. Pick one of {}".format(
                 file_format, sorted(list(_writer_map.keys()))
             )
