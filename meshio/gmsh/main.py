@@ -1,11 +1,11 @@
 import struct
 
-from .._exceptions import ReadError
+from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from . import _gmsh22, _gmsh40, _gmsh41
 
-_readers = {"2": _gmsh22, "2.2": _gmsh22, "4": _gmsh40, "4.0": _gmsh40, "4.1": _gmsh41}
-_writers = {"2": _gmsh22, "2.2": _gmsh22, "4": _gmsh41, "4.0": _gmsh40, "4.1": _gmsh41}
+_readers = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
+_writers = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
 
 
 def read(filename):
@@ -30,6 +30,7 @@ def read_buffer(f):
     if line != "$MeshFormat":
         raise ReadError()
     fmt_version, data_size, is_ascii = _read_header(f)
+    print(fmt_version, data_size, is_ascii)
 
     try:
         reader = _readers[fmt_version]
@@ -90,9 +91,9 @@ def write(filename, mesh, fmt_version="4.1", binary=True):
         writer = _writers[fmt_version]
     except KeyError:
         try:
-            writer = _writers[fmt_version.split(".")[0]]
+            writer = _writers[fmt_version]
         except KeyError:
-            raise ValueError(
+            raise WriteError(
                 "Need mesh format in {} (got {})".format(
                     sorted(_writers.keys()), fmt_version
                 )
