@@ -1,4 +1,4 @@
-__version__ = "4.0.2"
+__version__ = "4.0.3"
 __original_author__ = "Nico Schlömer"
 __original_author_email__ = "nico.schloemer@gmail.com"
 __copyright__ = "Copyright (c) 2015-2020 meshio developers"
