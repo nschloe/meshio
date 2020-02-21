@@ -5,7 +5,7 @@ import numpy
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
-from ._mesh import Mesh
+from ._mesh import Mesh, CellBlock
 
 extension_to_filetype = {}
 reader_map = {}
@@ -81,7 +81,9 @@ def write_points_cells(
     **kwargs
 ):
     points = numpy.asarray(points)
-    cells = [(key, numpy.asarray(value)) for key, value in cells.items()]
+    if isinstance(cells, dict):
+        cells = [CellBlock(name, vals) for name, vals in cells.items()]
+    cells = [(key, numpy.asarray(value)) for key, value in cells]
     mesh = Mesh(
         points,
         cells,
