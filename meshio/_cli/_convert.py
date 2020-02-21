@@ -53,7 +53,7 @@ def _get_convert_parser():
         "--input-format",
         "-i",
         type=str,
-        choices=list(reader_map.keys()),
+        choices=sorted(list(reader_map.keys())),
         help="input file format",
         default=None,
     )
@@ -62,9 +62,16 @@ def _get_convert_parser():
         "--output-format",
         "-o",
         type=str,
-        choices=list(_writer_map.keys()),
+        choices=sorted(list(_writer_map.keys())),
         help="output file format",
         default=None,
+    )
+
+    parser.add_argument(
+        "--ascii",
+        "-a",
+        action="store_false",
+        help="write in ASCII format variant (default: binary)",
     )
 
     parser.add_argument("outfile", type=str, help="mesh file to be written to")

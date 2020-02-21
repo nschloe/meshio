@@ -79,7 +79,7 @@ def _get_parser():
         "--input-format",
         "-i",
         type=str,
-        choices=list(reader_map.keys()),
+        choices=sorted(list(reader_map.keys())),
         help="input file format",
         default=None,
     )
