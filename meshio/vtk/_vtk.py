@@ -582,7 +582,7 @@ def translate_cells(data, types, cell_data_raw):
     return cells, cell_data
 
 
-def write(filename, mesh, binary=True):
+def write(filename, mesh, binary=True, info=None):
     def pad(array):
         return numpy.pad(array, ((0, 0), (0, 1)), "constant")
 
@@ -617,8 +617,14 @@ def write(filename, mesh, binary=True):
         logging.warning("VTK ASCII files are only meant for debugging.")
 
     with open_file(filename, "wb") as f:
+        if info is not None and len(info) > 0:
+            # first item in info truncated to 255 characters + '\n'
+            info_line = "{}\n".format(info[0] if len(info[0]) < 256 else info[0][:255])
+        else:
+            info_line = "written by meshio v{}\n".format(__version__)
+
         f.write(b"# vtk DataFile Version 4.2\n")
-        f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
+        f.write(info_line.encode("utf-8"))
         f.write(("BINARY\n" if binary else "ASCII\n").encode("utf-8"))
         f.write(b"DATASET UNSTRUCTURED_GRID\n")
 

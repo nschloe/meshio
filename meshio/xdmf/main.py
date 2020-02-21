@@ -311,7 +311,13 @@ class XdmfReader:
 
 class XdmfWriter:
     def __init__(
-        self, filename, mesh, data_format="HDF", compression="gzip", compression_opts=4
+        self,
+        filename,
+        mesh,
+        data_format="HDF",
+        compression="gzip",
+        compression_opts=4,
+        info=None,
     ):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
@@ -330,6 +336,10 @@ class XdmfWriter:
             self.h5_file = h5py.File(self.h5_filename, "w")
 
         xdmf_file = ET.Element("Xdmf", Version="3.0")
+
+        if info:
+            for i in info:
+                ET.SubElement(xdmf_file, "Information", Value=i)
 
         domain = ET.SubElement(xdmf_file, "Domain")
         grid = ET.SubElement(domain, "Grid", Name="Grid")

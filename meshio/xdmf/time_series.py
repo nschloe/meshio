@@ -229,7 +229,7 @@ class TimeSeriesReader:
 
 
 class TimeSeriesWriter:
-    def __init__(self, filename, data_format="HDF"):
+    def __init__(self, filename, data_format="HDF", info=None):
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -241,6 +241,10 @@ class TimeSeriesWriter:
         self.data_counter = 0
 
         self.xdmf_file = ET.Element("Xdmf", Version="3.0")
+
+        if info:
+            for i in info:
+                ET.SubElement(self.xdmf_file, "Information", Value=i)
 
         self.domain = ET.SubElement(self.xdmf_file, "Domain")
         self.collection = ET.SubElement(
