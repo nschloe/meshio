@@ -81,7 +81,7 @@ def write_points_cells(
     **kwargs
 ):
     points = numpy.asarray(points)
-    cells = [(key, numpy.asarray(value)) for key, value in cells]
+    cells = [(key, numpy.asarray(value)) for key, value in cells.items()]
     mesh = Mesh(
         points,
         cells,
