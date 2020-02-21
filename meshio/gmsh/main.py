@@ -30,7 +30,6 @@ def read_buffer(f):
     if line != "$MeshFormat":
         raise ReadError()
     fmt_version, data_size, is_ascii = _read_header(f)
-    print(fmt_version, data_size, is_ascii)
 
     try:
         reader = _readers[fmt_version]
