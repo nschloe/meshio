@@ -42,9 +42,20 @@ def convert(argv=None):
 
 
 def _get_convert_parser():
+    # Avoid repeating format names
+    # https://stackoverflow.com/a/31124505/353337
+    class CustomHelpFormatter(argparse.HelpFormatter):
+        def _format_action_invocation(self, action):
+            if not action.option_strings or action.nargs == 0:
+                return super()._format_action_invocation(action)
+            default = self._get_default_metavar_for_optional(action)
+            args_string = self._format_args(action, default)
+            return ', '.join(action.option_strings) + ' ' + args_string
+
     parser = argparse.ArgumentParser(
         description=("Convert between mesh formats."),
-        formatter_class=argparse.RawTextHelpFormatter,
+        # formatter_class=argparse.RawTextHelpFormatter,
+        formatter_class=CustomHelpFormatter
     )
 
     parser.add_argument("infile", type=str, help="mesh file to be read from")
@@ -71,7 +82,7 @@ def _get_convert_parser():
         "--ascii",
         "-a",
         action="store_false",
-        help="write in ASCII format variant (default: binary)",
+        help="write in ASCII format variant (where applicable, default: binary)",
     )
 
     parser.add_argument("outfile", type=str, help="mesh file to be written to")
