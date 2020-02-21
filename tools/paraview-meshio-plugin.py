@@ -101,7 +101,6 @@ class MeshioReader(VTKPythonAlgorithmBase):
             output.PointData.append(array, name)
 
         # Cell data
-        print(mesh.cell_data)
         for name, data in mesh.cell_data.items():
             array = np.concatenate(data)
             output.CellData.append(array, name)

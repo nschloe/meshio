@@ -216,7 +216,6 @@ def read_set(f, params_map):
         try:
             set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
         except ValueError:
-            print(set_ids)
             raise
     return set_ids
 
