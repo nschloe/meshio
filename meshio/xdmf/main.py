@@ -123,19 +123,15 @@ class XdmfReader:
         return field_data
 
     def read_xdmf2(self, root):  # noqa: C901
-        domains = list(root)
+        domains = root.findall("Domain")
         if len(domains) != 1:
             raise ReadError()
         domain = domains[0]
-        if domain.tag != "Domain":
-            raise ReadError()
 
-        grids = list(domain)
+        grids = domain.findall("Grid")
         if len(grids) != 1:
             raise ReadError("XDMF reader: Only supports one grid right now.")
         grid = grids[0]
-        if grid.tag != "Grid":
-            raise ReadError()
 
         if grid.get("GridType") not in (None, "Uniform"):
             raise ReadError()
@@ -203,28 +199,27 @@ class XdmfReader:
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
+        spec_info = [ii.text for ii in root.iter("Information")]
+
         return Mesh(
             points,
             cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
+            info=spec_info,
         )
 
     def read_xdmf3(self, root):  # noqa: C901
-        domains = list(root)
+        domains = root.findall("Domain")
         if len(domains) != 1:
             raise ReadError()
         domain = domains[0]
-        if domain.tag != "Domain":
-            raise ReadError()
 
-        grids = list(domain)
+        grids = domain.findall("Grid")
         if len(grids) != 1:
             raise ReadError("XDMF reader: Only supports one grid right now.")
         grid = grids[0]
-        if grid.tag != "Grid":
-            raise ReadError()
 
         points = None
         cells = []
@@ -302,12 +297,15 @@ class XdmfReader:
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
+        spec_info = [ii.text for ii in root.iter("Information")]
+
         return Mesh(
             points,
             cells,
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
+            info=spec_info,
         )
 
 

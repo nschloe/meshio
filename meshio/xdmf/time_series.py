@@ -35,14 +35,14 @@ class TimeSeriesReader:
         if version.split(".")[0] != "3":
             raise ReadError("Unknown XDMF version {}.".format(version))
 
-        domains = list(root)
+        self.info = [ii.text for ii in root.iter("Information")]
+
+        domains = root.findall("Domain")
         if len(domains) != 1:
             raise ReadError()
         self.domain = domains[0]
-        if self.domain.tag != "Domain":
-            raise ReadError()
 
-        grids = list(self.domain)
+        grids = self.domain.findall("Grid")
 
         # find the collection grid
         collection_grid = None
@@ -57,7 +57,7 @@ class TimeSeriesReader:
             raise ReadError()
 
         # get the collection at once
-        self.collection = list(collection_grid)
+        self.collection = collection_grid.findall("Grid")
         self.num_steps = len(self.collection)
         self.cells = None
         self.hdf5_files = {}

@@ -30,6 +30,7 @@ def read_buffer(f):
     cells = []
     point_data = {}
     cell_data = {"medit:ref": []}
+    spec_info = []
 
     meshio_from_medit = {
         "Edges": ("line", 2),
@@ -47,7 +48,10 @@ def read_buffer(f):
             break
 
         line = line.strip()
-        if len(line) == 0 or line[0] == "#":
+        if len(line) == 0:
+            continue
+        if line[0] == "#":
+            spec_info.append(line[1:])
             continue
 
         items = line.split()
@@ -97,7 +101,9 @@ def read_buffer(f):
             if items[0] != "End":
                 raise ReadError("Unknown keyword '{}'.".format(items[0]))
 
-    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
+    return Mesh(
+        points, cells, point_data=point_data, cell_data=cell_data, info=spec_info,
+    )
 
 
 def write(filename, mesh, float_fmt=".15e"):

@@ -148,7 +148,7 @@ def read_buffer(f):
 
     # skip header and title
     f.readline()
-    f.readline()
+    spec_info = [f.readline().decode("utf-8")]
 
     data_type = f.readline().decode("utf-8").strip().upper()
     if data_type not in ["ASCII", "BINARY"]:
@@ -182,6 +182,7 @@ def read_buffer(f):
         point_data=info.point_data,
         cell_data=cell_data,
         field_data=info.field_data,
+        info=spec_info,
     )
 
 
