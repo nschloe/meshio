@@ -148,7 +148,7 @@ If you have downloaded a binary version of ParaView, you may proceed as follows.
  * Install meshio
  * Open ParaView
  * Find the file `paraview-meshio-plugin.py` of your meshio installation (on Linux:
-   `~/.local/paraview-plugins/`) and load it under _Tools / Manage Plugins / Load New_
+   `~/.local/share/paraview/plugins/`) and load it under _Tools / Manage Plugins / Load New_
  * _Optional:_ Activate _Auto Load_
 
 You can now open all meshio-supported files in ParaView.
