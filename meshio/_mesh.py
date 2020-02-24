@@ -121,6 +121,8 @@ class Mesh:
         write(path_or_buf, self, file_format, **kwargs)
 
     def get_cells_type(self, cell_type):
+        if not any(c.type == cell_type for c in self.cells):
+            return numpy.array([], dtype=int)
         return numpy.concatenate([c.data for c in self.cells if c.type == cell_type])
 
     def get_cell_data(self, name, cell_type):
