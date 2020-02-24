@@ -288,6 +288,7 @@ class TimeSeriesWriter:
         write_xml(self.filename, self.xdmf_file)
 
     def write_data(self, t, point_data=None, cell_data=None):
+        cell_data = {} if cell_data is None else cell_data
         # <Grid>
         #   <xi:include xpointer="xpointer(//Grid[@Name=&quot;TimeSeries_phi&quot;]/Grid[1]/*[self::Topology or self::Geometry])" />
         #   <Time Value="3.3333333333333335e-05" />
