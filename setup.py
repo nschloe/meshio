@@ -48,7 +48,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Topic :: Scientific/Engineering",
     ],
-    data_files=[("paraview-plugins", ["tools/paraview-meshio-plugin.py"])],
+    data_files=[("share/paraview/plugins/", ["tools/paraview-meshio-plugin.py"])],
     entry_points={
         "console_scripts": [
             "meshio-ascii = meshio._cli:ascii",
