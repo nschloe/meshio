@@ -190,9 +190,9 @@ def read_buffer(f):
     mesh.points_id = points_id
     mesh.cells_id = cells_id
     if len(point_refs) > 0:
-        mesh.point_data["nastran:ref"] = point_refs
+        mesh.point_data["nastran:ref"] = numpy.array(point_refs)
     if len(cell_refs) > 0:
-        mesh.cell_data["nastran:ref"] = cell_refs
+        mesh.cell_data["nastran:ref"] = [numpy.array(i) for i in cell_refs]
     return mesh
 
 
