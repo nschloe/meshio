@@ -393,20 +393,21 @@ class TimeSeriesWriter:
             )
             data_item.text = self.numpy_to_xml_string(cells[0].data)
         elif len(cells) > 1:
-            total_num_cells = sum(c.shape[0] for c in cells.values())
+            total_num_cells = sum(c.data.shape[0] for c in cells)
             topo = ET.SubElement(
                 grid,
                 "Topology",
                 TopologyType="Mixed",
                 NumberOfElements=str(total_num_cells),
             )
-            total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
+            total_num_cell_items = sum(numpy.prod(c.data.shape) for c in cells)
             dim = total_num_cell_items + total_num_cells
             # Lines translate to Polylines, and one needs to specify the exact
             # number of nodes. Hence, prepend 2.
-            if "line" in cells:
-                cells["line"] = numpy.insert(cells["line"], 0, 2, axis=1)
-                dim += len(cells["line"])
+            for c in cells:
+                if c.type == "line":
+                    c.data[:] = numpy.insert(c.data, 0, 2, axis=1)
+                    dim += len(c.data)
             dim = str(dim)
             cd = numpy.concatenate(
                 [
@@ -414,7 +415,7 @@ class TimeSeriesWriter:
                     numpy.insert(
                         value, 0, meshio_type_to_xdmf_index[key], axis=1
                     ).flatten()
-                    for key, value in cells.items()
+                    for key, value in cells
                 ]
             )
             dt, prec = numpy_to_xdmf_dtype[cd.dtype.name]
