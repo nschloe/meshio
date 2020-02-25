@@ -29,8 +29,9 @@ from . import (
     xdmf,
 )
 from .__about__ import (
-    __original_author__,
-    __original_author_email__,
+    __author__,
+    __author_email__,
+    __maintainer__,
     __version__,
     __website__,
 )
@@ -76,7 +77,8 @@ __all__ = [
     "ReadError",
     "WriteError",
     "__version__",
-    "__original_author__",
-    "__original_author_email__",
+    "__author__",
+    "__author_email__",
+    "__maintainer__",
     "__website__",
 ]

@@ -208,10 +208,6 @@ class Mesh:
 
     def int_data_to_sets(self):
         """Convert all int data to {point,cell}_sets, where possible.
-
-        defined by int-valued cell_data, keyed (like cell_sets_dict) by name (as found
-        in field_data or constructed from the int) and cell_type.  The indices are into
-        the items of cells_dict[cell_type].
         """
         keys = []
         for key, data in self.cell_data.items():
