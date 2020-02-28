@@ -5,8 +5,8 @@ from .._helpers import register
 from . import _gmsh22, _gmsh40, _gmsh41
 
 # Some mesh files out there have the version specified as version "2" when it really is
-# "2.2".
-_readers = {"2": _gmsh22, "2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
+# "2.2". Same with "4" vs "4.1".
+_readers = {"2": _gmsh22, "2.2": _gmsh22, "4.0": _gmsh40, "4": _gmsh41, "4.1": _gmsh41}
 _writers = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
 
 
