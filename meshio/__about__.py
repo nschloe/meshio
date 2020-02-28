@@ -1,4 +1,4 @@
-__version__ = "4.0.7"
+__version__ = "4.0.8"
 __author__ = "Nico Schlömer et al."
 __author_email__ = "nico.schloemer@gmail.com"
 __maintainer__ = "meshio developers"
