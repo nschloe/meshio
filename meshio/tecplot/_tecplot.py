@@ -174,13 +174,13 @@ def _read_variables(line):
 
     i = 0
     while i < len(line):
-        l = line[i]
-
-        if '"' in l and not (l.startswith('"') and l.endswith('"')):
-            l += "_" + line[i + 1]
+        if '"' in line[i] and not (line[i].startswith('"') and line[i].endswith('"')):
+            var = "{}_{}".format(line[i], line[i + 1])
             i += 1
+        else:
+            var = line[i]
 
-        variables.append(l.replace('"', ""))
+        variables.append(var.replace('"', ""))
         i += 1
 
     # Check that at least X and Y are defined
@@ -210,17 +210,15 @@ def _read_zone(line, variables):
     line = [l for l in line.replace(",", " ").split() if l != "="]
     i = 0
     while i < len(line) - 1:
-        l = line[i]
-
-        if "=" in l:
-            if not (l.startswith("=") or l.endswith("=")):
-                key, value = l.split("=")
+        if "=" in line[i]:
+            if not (line[i].startswith("=") or line[i].endswith("=")):
+                key, value = line[i].split("=")
             else:
-                key = l.replace("=", "")
+                key = line[i].replace("=", "")
                 value = line[i + 1]
                 i += 1
         else:
-            key = l
+            key = line[i]
             value = line[i + 1].replace("=", "")
             i += 1
 
