@@ -169,7 +169,7 @@ def read_buffer(f):
 def _read_variables(line):
     # Gather variables in a list
     line = line.split("=")[1]
-    line = [l for l in line.replace(",", " ").split()]
+    line = [x for x in line.replace(",", " ").split()]
     variables = []
 
     i = 0
@@ -207,7 +207,7 @@ def _read_zone(line, variables):
         line = line[:ivar] + line[i2 + 1 :]
 
     # Split remaining key/value pairs separated by '='
-    line = [l for l in line.replace(",", " ").split() if l != "="]
+    line = [x for x in line.replace(",", " ").split() if x != "="]
     i = 0
     while i < len(line) - 1:
         if "=" in line[i]:
