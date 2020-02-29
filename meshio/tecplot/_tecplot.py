@@ -115,9 +115,8 @@ def read_buffer(f):
                     break
             line = " ".join(lines)
 
-            num_nodes, num_cells, zone_format, zone_type, is_cell_centered = _read_zone(
-                line, variables
-            )
+            zone = _read_zone(line, variables)
+            num_nodes, num_cells, zone_format, zone_type, is_cell_centered = _parse_fezone(zone, variables)
 
             num_data = [num_cells if i else num_nodes for i in is_cell_centered]
             data, cells = _read_zone_data(
@@ -206,6 +205,10 @@ def _read_zone(line, variables):
         if key in zone_key_to_type.keys():
             zone[key] = zone_key_to_type[key](value)
 
+    return zone
+
+
+def _parse_fezone(zone, variables):
     # Check that the grid is unstructured
     if "F" in zone.keys():
         if zone["F"] not in {"FEPOINT", "FEBLOCK"}:
