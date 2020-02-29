@@ -120,7 +120,13 @@ def read_buffer(f):
             line = " ".join(lines)
 
             zone = _read_zone(line, variables)
-            num_nodes, num_cells, zone_format, zone_type, is_cell_centered = _parse_fezone(zone, variables)
+            (
+                num_nodes,
+                num_cells,
+                zone_format,
+                zone_type,
+                is_cell_centered,
+            ) = _parse_fezone(zone, variables)
 
             num_data = [num_cells if i else num_nodes for i in is_cell_centered]
             data, cells = _read_zone_data(
@@ -171,7 +177,7 @@ def _read_variables(line):
         l = line[i]
 
         if '"' in l and not (l.startswith('"') and l.endswith('"')):
-            l += "_" + line[i+1]
+            l += "_" + line[i + 1]
             i += 1
 
         variables.append(l.replace('"', ""))
@@ -197,13 +203,13 @@ def _read_zone(line, variables):
     # If zone contains VARLOCATION, process it and remove the key/value pair
     if ivar >= 0:
         i1, i2 = line.find("("), line.find(")")
-        zone["VARLOCATION"] = line[i1:i2 + 1].replace(" ", "")
-        line = line[:ivar] + line[i2 + 1:]
+        zone["VARLOCATION"] = line[i1 : i2 + 1].replace(" ", "")
+        line = line[:ivar] + line[i2 + 1 :]
 
     # Split remaining key/value pairs separated by '='
     line = [l for l in line.replace(",", " ").split() if l != "="]
     i = 0
-    while i < len(line)-1:
+    while i < len(line) - 1:
         l = line[i]
 
         if "=" in l:
@@ -211,13 +217,13 @@ def _read_zone(line, variables):
                 key, value = l.split("=")
             else:
                 key = l.replace("=", "")
-                value = line[i+1]
+                value = line[i + 1]
                 i += 1
         else:
             key = l
-            value = line[i+1].replace("=", "")
+            value = line[i + 1].replace("=", "")
             i += 1
-            
+
         zone[key] = zone_key_to_type[key](value)
         i += 1
 

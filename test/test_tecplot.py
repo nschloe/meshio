@@ -1,7 +1,6 @@
-from copy import deepcopy
-
 import os
 import sys
+from copy import deepcopy
 
 import numpy
 import pytest
