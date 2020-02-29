@@ -205,6 +205,8 @@ def _read_zone(line, variables):
         if key in zone_key_to_type.keys():
             zone[key] = zone_key_to_type[key](value)
 
+        i += 1
+
     return zone
 
 
