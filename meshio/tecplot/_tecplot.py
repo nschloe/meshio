@@ -189,7 +189,7 @@ def _read_zone(line, variables):
         line = line[:ivar] + line[i2 + 1:]
 
     # Split remaining key/value pairs separated by '='
-    line = [l for l in line.replace(",", "").split() if l != "="]
+    line = [l for l in line.replace(",", " ").split() if l != "="]
     i = 0
     while i < len(line)-1:
         l = line[i]
