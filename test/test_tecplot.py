@@ -1,5 +1,8 @@
 from copy import deepcopy
 
+import os
+import sys
+
 import numpy
 import pytest
 
@@ -11,6 +14,15 @@ import meshio
     "mesh", [helpers.tri_mesh, helpers.quad_mesh, helpers.tet_mesh, helpers.hex_mesh],
 )
 def test(mesh):
+    helpers.write_read(meshio.tecplot.write, meshio.tecplot.read, mesh, 1.0e-15)
+
+
+@pytest.mark.parametrize("filename", ["quad_zone_comma.tec", "quad_zone_space.tec"])
+def test_comma_space(filename):
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(this_dir, "meshes", "tecplot", filename)
+    mesh = meshio.read(filename)
+
     helpers.write_read(meshio.tecplot.write, meshio.tecplot.read, mesh, 1.0e-15)
 
 
