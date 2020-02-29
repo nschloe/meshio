@@ -411,4 +411,4 @@ def _write_table(f, data, ncol=20):
             f.write("{}\n".format(" ".join(str(l) for l in line)))
 
 
-register("tecplot", [".dat"], read, {"tecplot": write})
+register("tecplot", [".dat", ".tec"], read, {"tecplot": write})
