@@ -162,8 +162,20 @@ def read_buffer(f):
 
 def _read_variables(line):
     # Gather variables in a list
-    line = line.split("=")[1].split(",")
-    variables = [str(var).replace('"', "").strip() for var in line]
+    line = line.split("=")[1]
+    line = [l for l in line.replace(",", " ").split()]
+    variables = []
+
+    i = 0
+    while i < len(line):
+        l = line[i]
+
+        if '"' in l and not (l.startswith('"') and l.endswith('"')):
+            l += "_" + line[i+1]
+            i += 1
+
+        variables.append(l.replace('"', ""))
+        i += 1
 
     # Check that at least X and Y are defined
     if "X" not in variables and "x" not in variables:
