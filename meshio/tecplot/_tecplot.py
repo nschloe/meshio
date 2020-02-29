@@ -13,6 +13,10 @@ from .._helpers import register
 from .._mesh import Mesh
 
 zone_key_to_type = {
+    "T": str,
+    "I": int,
+    "J": int,
+    "K": int,
     "N": int,
     "NODES": int,
     "E": int,
@@ -201,10 +205,8 @@ def _read_zone(line, variables):
             key = l
             value = line[i+1].replace("=", "")
             i += 1
-        
-        if key in zone_key_to_type.keys():
-            zone[key] = zone_key_to_type[key](value)
-
+            
+        zone[key] = zone_key_to_type[key](value)
         i += 1
 
     return zone
