@@ -29,7 +29,9 @@ jobs:
       - checkout
       - run: git lfs pull
       # The actual test
-      - run: tox
+      - run: |
+          pip install tox
+          tox
       # submit to codecov
       - run: bash <(curl -s https://codecov.io/bash)
 

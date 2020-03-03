@@ -42,7 +42,9 @@ jobs:
     - name: Install dependencies
       run: sudo apt-get install -y python3-h5py python3-netcdf4
     - name: Test with tox
-      run: tox
+      run: |
+          pip install tox
+          tox
     # No codecov until
     # https://github.com/codecov/codecov-action/issues/43
     # is solved. :(
