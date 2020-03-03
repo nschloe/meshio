@@ -40,16 +40,11 @@ jobs:
       with:
         lfs: true
     - name: Install dependencies
+      run: sudo apt-get install -y python3-h5py python3-netcdf4
+    - name: Test with tox
       run: |
-        sudo apt-get install -y python3-h5py python3-netcdf4
-    - name: Install package
-      run: |
-        pip install --upgrade pip
-        pip install .[all]
-    - name: Test with pytest
-      run: |
-        pip install pytest pytest-cov
-        pytest --cov=meshio --cov-report=xml
+          pip install tox
+          tox
     # No codecov until
     # https://github.com/codecov/codecov-action/issues/43
     # is solved. :(

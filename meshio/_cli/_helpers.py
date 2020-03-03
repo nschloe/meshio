@@ -1,6 +1,6 @@
 import sys
 
-from ..__about__ import __copyright__, __version__
+from ..__about__ import __version__
 
 
 def _get_version_text():
@@ -12,6 +12,6 @@ def _get_version_text():
                 sys.version_info.minor,
                 sys.version_info.micro,
             ),
-            __copyright__,
+            "Copyright (c) 2015-2020 Nico Schlömer et al.",
         ]
     )
