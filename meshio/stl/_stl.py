@@ -4,7 +4,6 @@ I/O for the STL format, cf.
 """
 import logging
 import os
-import re
 
 import numpy
 
