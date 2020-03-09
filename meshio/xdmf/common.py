@@ -171,3 +171,18 @@ def attribute_type(data):
     if len(data.shape) != 3:
         raise ReadError()
     return "Matrix"
+
+
+def read_comments(root):
+    comments = []
+    for ii in root.iter("Information"):
+        comment = ""
+        if "Name" in ii.attrib:
+            comment += ii.attrib["Name"] + "::"
+        if "Value" in ii.attrib:
+            comment += ii.attrib["Value"].strip()
+        else:
+            comment += ii.text.strip()
+        comments.append(comment)
+
+    return comments

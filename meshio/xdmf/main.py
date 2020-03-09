@@ -18,6 +18,7 @@ from .common import (
     meshio_to_xdmf_type,
     meshio_type_to_xdmf_index,
     numpy_to_xdmf_dtype,
+    read_comments,
     translate_mixed_cells,
     xdmf_to_meshio_type,
     xdmf_to_numpy_type,
@@ -125,19 +126,15 @@ class XdmfReader:
         return field_data
 
     def read_xdmf2(self, root):  # noqa: C901
-        domains = list(root)
+        domains = root.findall("Domain")
         if len(domains) != 1:
             raise ReadError()
         domain = domains[0]
-        if domain.tag != "Domain":
-            raise ReadError()
 
-        grids = list(domain)
+        grids = domain.findall("Grid")
         if len(grids) != 1:
             raise ReadError("XDMF reader: Only supports one grid right now.")
         grid = grids[0]
-        if grid.tag != "Grid":
-            raise ReadError()
 
         if grid.get("GridType") not in (None, "Uniform"):
             raise ReadError()
@@ -150,7 +147,7 @@ class XdmfReader:
 
         for c in grid:
             if c.tag == "Topology":
-                data_items = list(c)
+                data_items = c.findall("DataItem")
                 if len(data_items) != 1:
                     raise ReadError()
                 topology_type = c.get("TopologyType")
@@ -170,7 +167,7 @@ class XdmfReader:
             elif c.tag == "Geometry":
                 if c.get("GeometryType") not in (None, "XYZ"):
                     raise ReadError()
-                data_items = list(c)
+                data_items = c.findall("DataItem")
                 if len(data_items) != 1:
                     raise ReadError()
                 points = self._read_data_item(data_items[0])
@@ -185,7 +182,7 @@ class XdmfReader:
                 # assert c.attrib['Active'] == '1'
                 # assert c.attrib['AttributeType'] == 'None'
 
-                data_items = list(c)
+                data_items = c.findall("DataItem")
                 if len(data_items) != 1:
                     raise ReadError()
 
@@ -211,22 +208,19 @@ class XdmfReader:
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
+            comments=read_comments(root),
         )
 
     def read_xdmf3(self, root):  # noqa: C901
-        domains = list(root)
+        domains = root.findall("Domain")
         if len(domains) != 1:
             raise ReadError()
         domain = domains[0]
-        if domain.tag != "Domain":
-            raise ReadError()
 
-        grids = list(domain)
+        grids = domain.findall("Grid")
         if len(grids) != 1:
             raise ReadError("XDMF reader: Only supports one grid right now.")
         grid = grids[0]
-        if grid.tag != "Grid":
-            raise ReadError()
 
         points = None
         cells = []
@@ -236,7 +230,7 @@ class XdmfReader:
 
         for c in grid:
             if c.tag == "Topology":
-                data_items = list(c)
+                data_items = c.findall("DataItem")
                 if len(data_items) != 1:
                     raise ReadError()
                 data_item = data_items[0]
@@ -268,7 +262,7 @@ class XdmfReader:
                 if geometry_type not in ["XY", "XYZ"]:
                     raise ReadError('Illegal geometry type "{}".'.format(geometry_type))
 
-                data_items = list(c)
+                data_items = c.findall("DataItem")
                 if len(data_items) != 1:
                     raise ReadError()
                 data_item = data_items[0]
@@ -285,7 +279,7 @@ class XdmfReader:
                 # 'AttributeType'.
                 # assert c.attrib['Type'] == 'None'
 
-                data_items = list(c)
+                data_items = c.findall("DataItem")
                 if len(data_items) != 1:
                     raise ReadError()
                 data_item = data_items[0]
@@ -310,6 +304,7 @@ class XdmfReader:
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
+            comments=read_comments(root),
         )
 
 

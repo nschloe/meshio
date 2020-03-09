@@ -17,6 +17,7 @@ class Mesh:
         cell_sets=None,
         gmsh_periodic=None,
         info=None,
+        comments=None,
     ):
         self.points = points
         if isinstance(cells, dict):
@@ -40,6 +41,7 @@ class Mesh:
         self.cell_sets = {} if cell_sets is None else cell_sets
         self.gmsh_periodic = gmsh_periodic
         self.info = info
+        self.comments = comments
 
     def __repr__(self):
         lines = [

@@ -14,6 +14,7 @@ from .common import (
     meshio_to_xdmf_type,
     meshio_type_to_xdmf_index,
     numpy_to_xdmf_dtype,
+    read_comments,
     translate_mixed_cells,
     xdmf_to_meshio_type,
     xdmf_to_numpy_type,
@@ -35,14 +36,14 @@ class TimeSeriesReader:
         if version.split(".")[0] != "3":
             raise ReadError("Unknown XDMF version {}.".format(version))
 
-        domains = list(root)
+        self.comments = read_comments(root)
+
+        domains = root.findall("Domain")
         if len(domains) != 1:
             raise ReadError()
         self.domain = domains[0]
-        if self.domain.tag != "Domain":
-            raise ReadError()
 
-        grids = list(self.domain)
+        grids = self.domain.findall("Grid")
 
         # find the collection grid
         collection_grid = None
@@ -57,7 +58,7 @@ class TimeSeriesReader:
             raise ReadError()
 
         # get the collection at once
-        self.collection = list(collection_grid)
+        self.collection = collection_grid.findall("Grid")
         self.num_steps = len(self.collection)
         self.cells = None
         self.hdf5_files = {}
@@ -94,7 +95,7 @@ class TimeSeriesReader:
 
         for c in grid:
             if c.tag == "Topology":
-                data_items = list(c)
+                data_items = c.findall("DataItem")
                 if len(data_items) != 1:
                     raise ReadError()
                 data_item = data_items[0]
@@ -124,7 +125,7 @@ class TimeSeriesReader:
                     if geometry_type not in ["XY", "XYZ"]:
                         raise ReadError()
 
-                data_items = list(c)
+                data_items = c.findall("DataItem")
                 if len(data_items) != 1:
                     raise ReadError()
                 data_item = data_items[0]
@@ -145,9 +146,10 @@ class TimeSeriesReader:
             elif c.tag == "Attribute":
                 name = c.get("Name")
 
-                if len(list(c)) != 1:
+                data_items = c.findall("DataItem")
+                if len(data_items) != 1:
                     raise ReadError()
-                data_item = list(c)[0]
+                data_item = data_items[0]
                 data = self._read_data_item(data_item)
 
                 if c.get("Center") == "Node":

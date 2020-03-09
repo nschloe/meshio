@@ -24,10 +24,13 @@ def read(filename):
     else:
         raise ReadError()
 
+    comments = []
     # read nodes
     with open(node_filename) as f:
         line = f.readline().strip()
         while len(line) == 0 or line[0] == "#":
+            if line[0] == "#":
+                comments.append(line[1:].strip())
             line = f.readline().strip()
 
         num_points, dim, num_attrs, num_bmarkers = [
@@ -54,6 +57,8 @@ def read(filename):
     with open(ele_filename) as f:
         line = f.readline().strip()
         while len(line) == 0 or line[0] == "#":
+            if line[0] == "#":
+                comments.append(line[1:].strip())
             line = f.readline().strip()
 
         num_tets, num_points_per_tet, num_attrs = [
@@ -68,7 +73,7 @@ def read(filename):
         cells = cells[:, 1:5]
         cells -= node_index_base
 
-    return Mesh(points, [CellBlock("tetra", cells)])
+    return Mesh(points, [CellBlock("tetra", cells)], comments=comments)
 
 
 def write(filename, mesh, float_fmt=".15e"):

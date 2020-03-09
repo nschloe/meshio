@@ -146,9 +146,10 @@ def read_buffer(f):
     # initialize output data
     info = Info()
 
-    # skip header and title
+    # skip header
     f.readline()
-    f.readline()
+    # read title
+    comments = [k.strip() for k in f.readline().decode("utf-8").split(";")]
 
     data_type = f.readline().decode("utf-8").strip().upper()
     if data_type not in ["ASCII", "BINARY"]:
@@ -182,6 +183,7 @@ def read_buffer(f):
         point_data=info.point_data,
         cell_data=cell_data,
         field_data=info.field_data,
+        comments=comments,
     )
 
 
