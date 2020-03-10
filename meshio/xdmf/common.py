@@ -1,3 +1,5 @@
+import xml.etree.ElementTree as ET
+
 import numpy
 
 from .._exceptions import ReadError
@@ -186,3 +188,16 @@ def read_comments(root):
         comments.append(comment)
 
     return comments
+
+
+def write_comments(xdmf_file, comments):
+    if comments:
+        for c in comments:
+            if "::" in c:
+                name, val = c.split("::", maxsplit=1)
+                comment = ET.SubElement(xdmf_file, "Information", Name=name)
+            else:
+                val = c
+                comment = ET.SubElement(xdmf_file, "Information")
+
+            comment.text = val

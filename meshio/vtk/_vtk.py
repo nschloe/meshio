@@ -6,7 +6,6 @@ from functools import reduce
 
 import numpy
 
-from ..__about__ import __version__
 from .._common import meshio_to_vtk_type, vtk_to_meshio_type
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
@@ -618,8 +617,20 @@ def write(filename, mesh, binary=True):
         logging.warning("VTK ASCII files are only meant for debugging.")
 
     with open_file(filename, "wb") as f:
+        if mesh.comments is not None and len(mesh.comments) > 0:
+            comments = "; ".join(mesh.comments)
+            if len(comments) < 256:
+                title_line = "{}\n".format(comments)
+            else:
+                title_line = "{}\n".format(comments[:255])
+                logging.warning(
+                    "Comments are too long. Writing only the first 255 characters."
+                )
+        else:
+            title_line = "\n"
+
         f.write(b"# vtk DataFile Version 4.2\n")
-        f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
+        f.write(title_line.encode("utf-8"))
         f.write(("BINARY\n" if binary else "ASCII\n").encode("utf-8"))
         f.write(b"DATASET UNSTRUCTURED_GRID\n")
 

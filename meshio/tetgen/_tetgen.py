@@ -7,7 +7,6 @@ import os
 
 import numpy
 
-from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
@@ -92,7 +91,9 @@ def write(filename, mesh, float_fmt=".15e"):
 
     # write nodes
     with open(node_filename, "w") as fh:
-        fh.write("# This file was created by meshio v{}\n".format(__version__))
+        if mesh.comments:
+            for c in mesh.comments:
+                fh.write("# {}\n".format(c))
         fh.write("{} {} {} {}\n".format(mesh.points.shape[0], 3, 0, 0))
         fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, pt in enumerate(mesh.points):
@@ -110,7 +111,9 @@ def write(filename, mesh, float_fmt=".15e"):
 
     # write cells
     with open(ele_filename, "w") as fh:
-        fh.write("# This file was created by meshio v{}\n".format(__version__))
+        if mesh.comments:
+            for c in mesh.comments:
+                fh.write("# {}\n".format(c))
         for cell_type, data in filter(lambda c: c.type == "tetra", mesh.cells):
             fh.write("{} {} {}\n".format(data.shape[0], 4, 0))
             for k, tet in enumerate(data):

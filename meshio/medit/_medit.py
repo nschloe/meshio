@@ -108,6 +108,10 @@ def read_buffer(f):
 
 def write(filename, mesh, float_fmt=".15e"):
     with open_file(filename, "wb") as fh:
+        if mesh.comments:
+            for c in mesh.comments:
+                fh.write("# {}\n".format(c).encode("utf-8"))
+
         version = {numpy.dtype(c_float): 1, numpy.dtype(c_double): 2}[mesh.points.dtype]
         # N. B.: PEP 461 Adding % formatting to bytes and bytearray
         fh.write(b"MeshVersionFormatted %d\n" % version)

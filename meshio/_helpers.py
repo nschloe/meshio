@@ -2,6 +2,7 @@ import pathlib
 
 import numpy
 
+from .__about__ import __version__
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
@@ -139,6 +140,10 @@ def write(filename, mesh, file_format=None, **kwargs):
             # we allow custom keys <https://github.com/nschloe/meshio/issues/501> and
             # cannot check those
             pass
+
+    if mesh.comments is None or len(mesh.comments) == 0:
+        comment = "This file was created by meshio v{}".format(__version__)
+        mesh.comments = [comment]
 
     # Write
     return writer(filename, mesh, **kwargs)

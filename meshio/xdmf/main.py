@@ -20,6 +20,7 @@ from .common import (
     numpy_to_xdmf_dtype,
     read_comments,
     translate_mixed_cells,
+    write_comments,
     xdmf_to_meshio_type,
     xdmf_to_numpy_type,
 )
@@ -331,6 +332,8 @@ class XdmfWriter:
             self.h5_file = h5py.File(self.h5_filename, "w")
 
         xdmf_file = ET.Element("Xdmf", Version="3.0")
+
+        write_comments(xdmf_file, mesh.comments)
 
         domain = ET.SubElement(xdmf_file, "Domain")
         grid = ET.SubElement(domain, "Grid", Name="Grid")

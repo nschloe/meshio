@@ -11,7 +11,6 @@ import zlib
 
 import numpy
 
-from ..__about__ import __version__
 from .._common import (
     meshio_to_vtk_type,
     num_nodes_per_cell,
@@ -503,7 +502,12 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         da.text_writer = text_writer
         return
 
-    comment = ET.Comment("This file was created by meshio v{}".format(__version__))
+    if mesh.comments is not None and len(mesh.comments) > 0:
+        comments = "\n".join(mesh.comments)
+    else:
+        comments = ""
+
+    comment = ET.Comment(comments)
     vtk_file.insert(1, comment)
 
     grid = ET.SubElement(vtk_file, "UnstructuredGrid")

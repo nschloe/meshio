@@ -16,6 +16,7 @@ from .common import (
     numpy_to_xdmf_dtype,
     read_comments,
     translate_mixed_cells,
+    write_comments,
     xdmf_to_meshio_type,
     xdmf_to_numpy_type,
 )
@@ -242,6 +243,9 @@ class TimeSeriesWriter:
         self.data_counter = 0
 
         self.xdmf_file = ET.Element("Xdmf", Version="3.0")
+
+        if hasattr(self, "comments"):
+            write_comments(self.xdmf_file, self.comments)
 
         self.domain = ET.SubElement(self.xdmf_file, "Domain")
         self.collection = ET.SubElement(
