@@ -410,6 +410,7 @@ class XdmfWriter:
                 "Topology",
                 TopologyType=xdmf_type,
                 NumberOfElements=str(num_cells),
+                NodesPerElement=str(cells[0].data.shape[1]),
             )
             dt, prec = numpy_to_xdmf_dtype[cells[0].data.dtype.name]
             dim = "{} {}".format(*cells[0].data.shape)
