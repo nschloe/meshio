@@ -19,7 +19,6 @@ jobs:
         isort -rc --check .
     - name: Lint with flake8
       run: |
-        pip install --upgrade pip
         pip install flake8
         flake8 .
     - name: Lint with black
@@ -40,7 +39,9 @@ jobs:
       with:
         lfs: true
     - name: Install dependencies
-      run: sudo apt-get install -y python3-h5py python3-netcdf4
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-h5py python3-netcdf4
     - name: Test with tox
       run: |
           pip install tox
