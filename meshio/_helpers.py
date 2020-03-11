@@ -141,9 +141,12 @@ def write(filename, mesh, file_format=None, **kwargs):
             # cannot check those
             pass
 
+    comment = "This file was created by meshio v{}".format(__version__)
     if mesh.comments is None or len(mesh.comments) == 0:
-        comment = "This file was created by meshio v{}".format(__version__)
         mesh.comments = [comment]
+    else:
+        if mesh.comments[-1] != comment:
+            mesh.comments.append(comment)
 
     # Write
     return writer(filename, mesh, **kwargs)
