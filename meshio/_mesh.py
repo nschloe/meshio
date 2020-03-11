@@ -121,7 +121,14 @@ class Mesh:
         write(path_or_buf, self, file_format, **kwargs)
 
     def get_cells_type(self, cell_type):
+        if not any(c.type == cell_type for c in self.cells):
+            return numpy.array([], dtype=int)
         return numpy.concatenate([c.data for c in self.cells if c.type == cell_type])
+
+    def get_cell_data(self, name, cell_type):
+        return numpy.concatenate(
+            [d for c, d in zip(self.cells, self.cell_data[name]) if c.type == cell_type]
+        )
 
     @property
     def cells_dict(self):
@@ -201,10 +208,6 @@ class Mesh:
 
     def int_data_to_sets(self):
         """Convert all int data to {point,cell}_sets, where possible.
-
-        defined by int-valued cell_data, keyed (like cell_sets_dict) by name (as found
-        in field_data or constructed from the int) and cell_type.  The indices are into
-        the items of cells_dict[cell_type].
         """
         keys = []
         for key, data in self.cell_data.items():

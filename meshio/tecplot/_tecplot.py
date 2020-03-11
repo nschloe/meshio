@@ -13,6 +13,10 @@ from .._helpers import register
 from .._mesh import Mesh
 
 zone_key_to_type = {
+    "T": str,
+    "I": int,
+    "J": int,
+    "K": int,
     "N": int,
     "NODES": int,
     "E": int,
@@ -113,11 +117,16 @@ def read_buffer(f):
                 else:
                     f.seek(i)
                     break
-            line = "".join(lines)
+            line = " ".join(lines)
 
-            num_nodes, num_cells, zone_format, zone_type, is_cell_centered = _read_zone(
-                line, variables
-            )
+            zone = _read_zone(line, variables)
+            (
+                num_nodes,
+                num_cells,
+                zone_format,
+                zone_type,
+                is_cell_centered,
+            ) = _parse_fezone(zone, variables)
 
             num_data = [num_cells if i else num_nodes for i in is_cell_centered]
             data, cells = _read_zone_data(
@@ -159,8 +168,20 @@ def read_buffer(f):
 
 def _read_variables(line):
     # Gather variables in a list
-    line = line.split("=")[1].split(",")
-    variables = [str(var).replace('"', "").strip() for var in line]
+    line = line.split("=")[1]
+    line = [x for x in line.replace(",", " ").split()]
+    variables = []
+
+    i = 0
+    while i < len(line):
+        if '"' in line[i] and not (line[i].startswith('"') and line[i].endswith('"')):
+            var = "{}_{}".format(line[i], line[i + 1])
+            i += 1
+        else:
+            var = line[i]
+
+        variables.append(var.replace('"', ""))
+        i += 1
 
     # Check that at least X and Y are defined
     if "X" not in variables and "x" not in variables:
@@ -173,54 +194,41 @@ def _read_variables(line):
 
 def _read_zone(line, variables):
     # Gather zone entries in a dict
-    # We can only process the zone record character by character due to
-    # value of VARLOCATION containing both comma and equality characters.
     line = line[5:]
     zone = {}
+
+    # Look for VARLOCATION (problematic since it contains both ',' and '=')
+    ivar = line.find("VARLOCATION")
+
+    # If zone contains VARLOCATION, process it and remove the key/value pair
+    if ivar >= 0:
+        i1, i2 = line.find("("), line.find(")")
+        zone["VARLOCATION"] = line[i1 : i2 + 1].replace(" ", "")
+        line = line[:ivar] + line[i2 + 1 :]
+
+    # Split remaining key/value pairs separated by '='
+    line = [x for x in line.replace(",", " ").split() if x != "="]
     i = 0
-    key, value, read_key = "", "", True
-    is_varlocation, is_end = False, False
-    while True:
-        char = line[i] if line[i] != " " else ""
-
-        if char == "=":
-            read_key = False
-            is_varlocation = key == "VARLOCATION"
-
-        if is_varlocation:
-            i += 1
-            while True:
-                char = line[i] if line[i] != " " else ""
-                value += char
-                if line[i] == ")":
-                    break
-                else:
-                    i += 1
-            is_varlocation, is_end = False, True
-            i += 1  # Skip comma
-        else:
-            if char != ",":
-                if char != "=":
-                    if read_key:
-                        key += char
-                    else:
-                        value += char
+    while i < len(line) - 1:
+        if "=" in line[i]:
+            if not (line[i].startswith("=") or line[i].endswith("=")):
+                key, value = line[i].split("=")
             else:
-                is_end = True
-
-        if is_end:
-            if key in zone_key_to_type.keys():
-                zone[key] = zone_key_to_type[key](value)
-            key, value, read_key = "", "", True
-            is_end = False
-
-        if i >= len(line) - 1:
-            if key in zone_key_to_type.keys():
-                zone[key] = zone_key_to_type[key](value)
-            break
+                key = line[i].replace("=", "")
+                value = line[i + 1]
+                i += 1
         else:
+            key = line[i]
+            value = line[i + 1].replace("=", "")
             i += 1
 
+        zone[key] = zone_key_to_type[key](value)
+        i += 1
+
+    return zone
+
+
+def _parse_fezone(zone, variables):
     # Check that the grid is unstructured
     if "F" in zone.keys():
         if zone["F"] not in {"FEPOINT", "FEBLOCK"}:
@@ -426,4 +434,4 @@ def _write_table(f, data, ncol=20):
             f.write("{}\n".format(" ".join(str(l) for l in line)))
 
 
-register("tecplot", [".dat"], read, {"tecplot": write})
+register("tecplot", [".dat", ".tec"], read, {"tecplot": write})

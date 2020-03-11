@@ -437,10 +437,10 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     for key, data in mesh.field_data.items():
         mesh.field_data[key] = data.astype(data.dtype.newbyteorder("="))
 
-    def numpy_to_xml_array(parent, name, fmt, data):
-        da = ET.SubElement(
-            parent, "DataArray", type=numpy_to_vtu_type[data.dtype], Name=name
-        )
+    def numpy_to_xml_array(parent, name, data):
+        vtu_type = numpy_to_vtu_type[data.dtype]
+        fmt = "{:.11e}" if vtu_type.startswith("Float") else "{:d}"
+        da = ET.SubElement(parent, "DataArray", type=vtu_type, Name=name)
         if len(data.shape) == 2:
             da.set("NumberOfComponents", "{}".format(data.shape[1]))
         if binary:
@@ -519,7 +519,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     # points
     if points is not None:
         pts = ET.SubElement(piece, "Points")
-        numpy_to_xml_array(pts, "Points", "{:.11e}", points)
+        numpy_to_xml_array(pts, "Points", points)
 
     if mesh.cells is not None:
         cls = ET.SubElement(piece, "Cells")
@@ -542,32 +542,23 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in mesh.cells]
         )
 
-        numpy_to_xml_array(cls, "connectivity", "{:d}", connectivity)
-        numpy_to_xml_array(cls, "offsets", "{:d}", offsets)
-        numpy_to_xml_array(cls, "types", "{:d}", types)
+        numpy_to_xml_array(cls, "connectivity", connectivity)
+        numpy_to_xml_array(cls, "offsets", offsets)
+        numpy_to_xml_array(cls, "types", types)
 
     if mesh.point_data:
         pd = ET.SubElement(piece, "PointData")
         for name, data in mesh.point_data.items():
-            numpy_to_xml_array(pd, name, "{:.11e}", data)
+            numpy_to_xml_array(pd, name, data)
 
     if mesh.cell_data:
         cd = ET.SubElement(piece, "CellData")
         for name, data in raw_from_cell_data(mesh.cell_data).items():
-            numpy_to_xml_array(cd, name, "{:.11e}", data)
+            numpy_to_xml_array(cd, name, data)
 
     # write_xml(filename, vtk_file, pretty_xml)
     tree = ET.ElementTree(vtk_file)
     tree.write(filename)
 
 
-register(
-    "vtu",
-    [".vtu"],
-    read,
-    {
-        "vtu": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "vtu-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-        "vtu-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-    },
-)
+register("vtu", [".vtu"], read, {"vtu": write})

@@ -47,7 +47,7 @@ def gmsh_periodic():
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_gmsh22(mesh, binary):
-    writer = partial(meshio.gmsh.write, fmt_version="2", binary=binary)
+    writer = partial(meshio.gmsh.write, fmt_version="2.2", binary=binary)
     helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
@@ -134,7 +134,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     assert list(map(len, mesh.cell_data["gmsh:geometrical"])) == ref_num_cells
     assert list(map(len, mesh.cell_data["gmsh:physical"])) == ref_num_cells
 
-    writer = partial(meshio.gmsh.write, fmt_version="2", binary=binary)
+    writer = partial(meshio.gmsh.write, fmt_version="2.2", binary=binary)
     helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 

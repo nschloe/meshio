@@ -378,7 +378,8 @@ def _write_elements(fh, cells, tag_data, binary):
                     form.format(
                         consecutive_index + k + 1,
                         " ".join([str(val) for val in fcd[k]]),
-                        " ".join([str(cc + 1) for cc in c]),
+                        # a bit clumsy for `c+1`, but if c is uint64, c+1 is float64
+                        " ".join([str(cc) for cc in c + numpy.array(1, dtype=c.dtype)]),
                     ).encode("utf-8")
                 )
 

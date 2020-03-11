@@ -1,11 +1,13 @@
 import struct
 
-from .._exceptions import ReadError
+from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from . import _gmsh22, _gmsh40, _gmsh41
 
-_readers = {"2": _gmsh22, "2.2": _gmsh22, "4": _gmsh40, "4.0": _gmsh40, "4.1": _gmsh41}
-_writers = {"2": _gmsh22, "2.2": _gmsh22, "4": _gmsh41, "4.0": _gmsh40, "4.1": _gmsh41}
+# Some mesh files out there have the version specified as version "2" when it really is
+# "2.2". Same with "4" vs "4.1".
+_readers = {"2": _gmsh22, "2.2": _gmsh22, "4.0": _gmsh40, "4": _gmsh41, "4.1": _gmsh41}
+_writers = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
 
 
 def read(filename):
@@ -90,9 +92,9 @@ def write(filename, mesh, fmt_version="4.1", binary=True):
         writer = _writers[fmt_version]
     except KeyError:
         try:
-            writer = _writers[fmt_version.split(".")[0]]
+            writer = _writers[fmt_version]
         except KeyError:
-            raise ValueError(
+            raise WriteError(
                 "Need mesh format in {} (got {})".format(
                     sorted(_writers.keys()), fmt_version
                 )
@@ -106,10 +108,7 @@ register(
     [".msh"],
     read,
     {
-        "gmsh": lambda f, m, **kwargs: write(f, m, "4", **kwargs, binary=True),
-        "gmsh2-ascii": lambda f, m, **kwargs: write(f, m, "2", **kwargs, binary=False),
-        "gmsh2-binary": lambda f, m, **kwargs: write(f, m, "2", **kwargs, binary=True),
-        "gmsh4-ascii": lambda f, m, **kwargs: write(f, m, "4", **kwargs, binary=False),
-        "gmsh4-binary": lambda f, m, **kwargs: write(f, m, "4", **kwargs, binary=True),
+        "gmsh22": lambda f, m, **kwargs: write(f, m, "2.2", **kwargs),
+        "gmsh": lambda f, m, **kwargs: write(f, m, "4.1", **kwargs),
     },
 )

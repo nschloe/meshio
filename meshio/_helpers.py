@@ -5,7 +5,7 @@ import numpy
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
-from ._mesh import Mesh
+from ._mesh import CellBlock, Mesh
 
 extension_to_filetype = {}
 reader_map = {}
@@ -81,6 +81,8 @@ def write_points_cells(
     **kwargs
 ):
     points = numpy.asarray(points)
+    if isinstance(cells, dict):
+        cells = [CellBlock(name, vals) for name, vals in cells.items()]
     cells = [(key, numpy.asarray(value)) for key, value in cells]
     mesh = Mesh(
         points,
@@ -119,7 +121,7 @@ def write(filename, mesh, file_format=None, **kwargs):
     try:
         writer = _writer_map[file_format]
     except KeyError:
-        raise KeyError(
+        raise WriteError(
             "Unknown format '{}'. Pick one of {}".format(
                 file_format, sorted(list(_writer_map.keys()))
             )

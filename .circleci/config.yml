@@ -3,37 +3,35 @@ version: 2
 jobs:
   lint:
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/python:3
     steps:
       - checkout
       - run: |
           # For isort, must install all "system" dependencies
-          pip3 install isort --user
-          pip3 install .[all] --user
-          pip3 install pytest --user
+          pip install isort
+          pip install .[all]
+          pip install pytest
           isort -rc -c .
       - run: |
-          pip3 install black --user
+          pip install black
           black --check .
       - run: |
-          pip3 install flake8 --user
+          pip install flake8
           flake8 .
   build:
     working_directory: ~/work
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/python:3
     steps:
       # <https://stackoverflow.com/a/44333806/353337>
       - run: DEBIAN_FRONTEND=noninteractive sudo apt-get install tzdata
       - run: sudo apt-get install -y git git-lfs python3-h5py python3-netcdf4
-      - run: pip3 install -U pytest pytest-cov --user
       - checkout
       - run: git lfs pull
       # The actual test
-      - run: pip3 install .[all] --user
-      - run:
-          command: pytest --cov meshio
-          working_directory: test/
+      - run: |
+          pip install tox
+          tox
       # submit to codecov
       - run: bash <(curl -s https://codecov.io/bash)
 

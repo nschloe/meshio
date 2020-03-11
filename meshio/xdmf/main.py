@@ -486,6 +486,7 @@ class XdmfWriter:
                 "Topology",
                 TopologyType=xdmf_type,
                 NumberOfElements=str(num_cells),
+                NodesPerElement=str(cells[0].data.shape[1]),
             )
             dt, prec = numpy_to_xdmf_dtype[cells[0].data.dtype.name]
             dim = "{} {}".format(*cells[0].data.shape)
@@ -602,17 +603,5 @@ except ImportError:
 else:
     # TODO register all xdmf except hdf outside this try block
     register(
-        "xdmf",
-        [".xdmf", ".xmf"],
-        read,
-        {
-            "xdmf": write,
-            "xdmf-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
-            "xdmf-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
-            "xdmf-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
-            "xdmf3": write,
-            "xdmf3-binary": lambda f, m, **kwargs: write(f, m, data_format="Binary"),
-            "xdmf3-hdf": lambda f, m, **kwargs: write(f, m, data_format="HDF"),
-            "xdmf3-xml": lambda f, m, **kwargs: write(f, m, data_format="XML"),
-        },
+        "xdmf", [".xdmf", ".xmf"], read, {"xdmf": write},
     )
