@@ -14,7 +14,8 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1173115.svg?style=flat-square)](https://doi.org/10.5281/zenodo.1173115)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshio)
 [![PyPi downloads](https://img.shields.io/pypi/dm/meshio.svg?style=flat-square)](https://pypistats.org/packages/meshio)
-[![Slack](https://img.shields.io/static/v1?logo=slack&label=chat&message=on%20slack&color=4a154b&style=flat-square)](https://app.slack.com/client/TTL6Q54A3/CT8655KR7)
+[![Slack](https://img.shields.io/static/v1?logo=slack&label=chat&message=on%20slack&color=4a154b&style=flat-square)](https://join.slack.com/t/nschloe/shared_invite/zt-cofhrwm8-BgdrXAtVkOjnDmADROKD7A
+)
 
 There are various mesh formats available for representing unstructured meshes.
 meshio can read and write all of the following and smoothly converts between them:
@@ -139,7 +140,7 @@ with meshio.xdmf.TimeSeriesReader(filename) as reader:
 ### ParaView plugin
 
 <img alt="gmsh paraview" src="https://nschloe.github.io/meshio/gmsh-paraview.png" width="60%">
-_A Gmsh file opened with ParaView._
+*A Gmsh file opened with ParaView.*
 
 If you have downloaded a binary version of ParaView, you may proceed as follows.
 

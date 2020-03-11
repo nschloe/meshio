@@ -72,7 +72,7 @@ def read_buffer(f):
     m = re.match("element vertex (\\d+)", line)
     num_verts = int(m.groups()[0])
 
-    # fast forward to the next significant line
+    # read point data
     point_data_formats = []
     point_data_names = []
     line = _fast_forward(f)
@@ -90,13 +90,16 @@ def read_buffer(f):
     # read property lists
     line = _fast_forward(f)
     cell_data_names = []
-    cell_dtypes = []
-    while line != "end_header":
-        m = re.match("property list (.+) (.+) (.+)", line)
-        types = m.groups()[:2]
-        name = m.groups()[2]
-        cell_data_names.append(name)
-        cell_dtypes.append(tuple(types))
+    cell_data_dtypes = []
+    # read cell data
+    while line[:8] == "property":
+        if line[:13] == "property list":
+            m = re.match("property list (.+) (.+) (.+)", line)
+            cell_data_dtypes.append(tuple(m.groups()[:-1]))
+        else:
+            m = re.match("property (.+) (.+)", line)
+            cell_data_dtypes.append(m.groups()[0])
+        cell_data_names.append(m.groups()[-1])
         line = _fast_forward(f)
 
     if line != "end_header":
@@ -111,7 +114,7 @@ def read_buffer(f):
             num_verts,
             num_cells,
             cell_data_names,
-            cell_dtypes,
+            cell_data_dtypes,
         )
     else:
         mesh = _read_ascii(
@@ -121,7 +124,7 @@ def read_buffer(f):
             num_verts,
             num_cells,
             cell_data_names,
-            cell_dtypes,
+            cell_data_dtypes,
         )
 
     return mesh
@@ -215,7 +218,7 @@ def _read_binary(
     num_verts,
     num_cells,
     cell_data_names,
-    cell_dtypes,
+    cell_data_dtypes,
 ):
     ply_to_numpy_dtype_string = {
         "uchar": "i1",
@@ -247,37 +250,50 @@ def _read_binary(
     }
 
     # Convert strings to proper numpy dtypes
-    dt = [
+    dts = [
         (
-            endianness + ply_to_numpy_dtype_string[dtypes[0]],
-            endianness + ply_to_numpy_dtype_string[dtypes[1]],
+            endianness + ply_to_numpy_dtype_string[dtype[0]],
+            endianness + ply_to_numpy_dtype_string[dtype[1]],
         )
-        for dtypes in cell_dtypes
+        if isinstance(dtype, tuple)
+        else endianness + ply_to_numpy_dtype_string[dtype]
+        for dtype in cell_data_dtypes
     ]
 
     # read cell data -- this part is really slow
-    triangles = []
-    quads = []
-    for _ in range(num_cells):
-        count = numpy.fromfile(f, count=1, dtype=dt[0][0])[0]
-        data = numpy.fromfile(f, count=count, dtype=dt[0][1])
-        if count == 3:
-            triangles.append(data)
-        else:
-            if count != 4:
-                raise ReadError()
-            quads.append(data)
-        # cell data
-        for dtypes in dt[1:]:
-            pass
-
     cells = []
-    if len(triangles) > 0:
-        cells.append(CellBlock("triangle", numpy.array(triangles)))
-    if len(quads) > 0:
-        cells.append(CellBlock("quad", numpy.array(quads)))
+    last_cell_type = None
+    cell_data = {name: [] for name in cell_data_names if name != "vertex_indices"}
+    for _ in range(num_cells):
+        for name, dt in zip(cell_data_names, dts):
+            if name == "vertex_indices":
+                assert isinstance(dt, tuple)
+                count = numpy.fromfile(f, count=1, dtype=dt[0])[0]
+                data = numpy.fromfile(f, count=count, dtype=dt[1])
+                if count not in [3, 4]:
+                    raise ReadError("Expected count 3 or 4, got {}.".format(count))
+                cell_type = "triangle" if count == 3 else "quad"
+                is_new_block = last_cell_type != cell_type
+                if is_new_block:
+                    cells.append(CellBlock(cell_type, []))
+                    last_cell_type = cell_type
+                cells[-1].data.append(data)
+            else:
+                if isinstance(dt, tuple):
+                    count = numpy.fromfile(f, count=1, dtype=dt[0])[0]
+                    data = numpy.fromfile(f, count=count, dtype=dt[1])
+                else:
+                    data = numpy.fromfile(f, count=1, dtype=dt)[0]
+                if is_new_block:
+                    cell_data[name].append([])
+                cell_data[name][-1].append(data)
 
-    return Mesh(verts, cells, point_data=point_data, cell_data={})
+    # convert to numpy arrays
+    cells = [CellBlock(block.type, numpy.array(block.data)) for block in cells]
+    for key, values in cell_data.items():
+        cell_data[key] = [numpy.array(val) for val in values]
+
+    return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
 
 def write(filename, mesh, binary=True):  # noqa: C901
