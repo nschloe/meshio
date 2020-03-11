@@ -65,111 +65,109 @@ meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
 def read(filename):  # noqa: C901
-    nc = netCDF4.Dataset(filename)
+    with netCDF4.Dataset(filename) as nc:
+        # assert nc.version == numpy.float32(5.1)
+        # assert nc.api_version == numpy.float32(5.1)
+        # assert nc.floating_point_word_size == 8
 
-    # assert nc.version == numpy.float32(5.1)
-    # assert nc.api_version == numpy.float32(5.1)
-    # assert nc.floating_point_word_size == 8
+        # assert b''.join(nc.variables['coor_names'][0]) == b'X'
+        # assert b''.join(nc.variables['coor_names'][1]) == b'Y'
+        # assert b''.join(nc.variables['coor_names'][2]) == b'Z'
 
-    # assert b''.join(nc.variables['coor_names'][0]) == b'X'
-    # assert b''.join(nc.variables['coor_names'][1]) == b'Y'
-    # assert b''.join(nc.variables['coor_names'][2]) == b'Z'
+        points = numpy.zeros((len(nc.dimensions["num_nodes"]), 3))
+        point_data_names = []
+        cell_data_names = []
+        pd = {}
+        cd = {}
+        cells = []
+        ns_names = []
+        # eb_names = []
+        ns = []
+        point_sets = {}
+        info = []
 
-    points = numpy.zeros((len(nc.dimensions["num_nodes"]), 3))
-    point_data_names = []
-    cell_data_names = []
-    pd = {}
-    cd = {}
-    cells = []
-    ns_names = []
-    # eb_names = []
-    ns = []
-    point_sets = {}
-    info = []
+        for key, value in nc.variables.items():
+            if key == "info_records":
+                value.set_auto_mask(False)
+                info += [b"".join(c).decode("UTF-8") for c in value[:]]
+            elif key == "qa_records":
+                value.set_auto_mask(False)
+                for val in value:
+                    info += [b"".join(c).decode("UTF-8") for c in val[:]]
+            elif key[:7] == "connect":
+                meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
+                cells.append((meshio_type, value[:] - 1))
+            elif key == "coord":
+                points = nc.variables["coord"][:].T
+            elif key == "coordx":
+                points[:, 0] = value[:]
+            elif key == "coordy":
+                points[:, 1] = value[:]
+            elif key == "coordz":
+                points[:, 2] = value[:]
+            elif key == "name_nod_var":
+                value.set_auto_mask(False)
+                point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+            elif key[:12] == "vals_nod_var":
+                idx = 0 if len(key) == 12 else int(key[12:]) - 1
+                value.set_auto_mask(False)
+                # For now only take the first value
+                pd[idx] = value[0]
+                if len(value) > 1:
+                    warnings.warn("Skipping some time data")
+            elif key == "name_elem_var":
+                value.set_auto_mask(False)
+                cell_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+            elif key[:13] == "vals_elem_var":
+                # eb: element block
+                m = re.match("vals_elem_var(\\d+)?(?:eb(\\d+))?", key)
+                idx = 0 if m.group(1) is None else int(m.group(1)) - 1
+                block = 0 if m.group(2) is None else int(m.group(2)) - 1
 
-    for key, value in nc.variables.items():
-        if key == "info_records":
-            value.set_auto_mask(False)
-            info += [b"".join(c).decode("UTF-8") for c in value[:]]
-        elif key == "qa_records":
-            value.set_auto_mask(False)
-            for val in value:
-                info += [b"".join(c).decode("UTF-8") for c in val[:]]
-        elif key[:7] == "connect":
-            meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
-            cells.append((meshio_type, value[:] - 1))
-        elif key == "coord":
-            points = nc.variables["coord"][:].T
-        elif key == "coordx":
-            points[:, 0] = value[:]
-        elif key == "coordy":
-            points[:, 1] = value[:]
-        elif key == "coordz":
-            points[:, 2] = value[:]
-        elif key == "name_nod_var":
-            value.set_auto_mask(False)
-            point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-        elif key[:12] == "vals_nod_var":
-            idx = 0 if len(key) == 12 else int(key[12:]) - 1
-            value.set_auto_mask(False)
-            # For now only take the first value
-            pd[idx] = value[0]
-            if len(value) > 1:
-                warnings.warn("Skipping some time data")
-        elif key == "name_elem_var":
-            value.set_auto_mask(False)
-            cell_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-        elif key[:13] == "vals_elem_var":
-            # eb: element block
-            m = re.match("vals_elem_var(\\d+)?(?:eb(\\d+))?", key)
-            idx = 0 if m.group(1) is None else int(m.group(1)) - 1
-            block = 0 if m.group(2) is None else int(m.group(2)) - 1
+                value.set_auto_mask(False)
+                # For now only take the first value
+                if idx not in cd:
+                    cd[idx] = {}
+                cd[idx][block] = value[0]
 
-            value.set_auto_mask(False)
-            # For now only take the first value
-            if idx not in cd:
-                cd[idx] = {}
-            cd[idx][block] = value[0]
+                if len(value) > 1:
+                    warnings.warn("Skipping some time data")
+            elif key == "ns_names":
+                value.set_auto_mask(False)
+                ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+            # elif key == "eb_names":
+            #     value.set_auto_mask(False)
+            #     eb_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+            elif key.startswith("node_ns"):  # Expected keys: node_ns1, node_ns2
+                ns.append(value[:] - 1)  # Exodus is 1-based
 
-            if len(value) > 1:
-                warnings.warn("Skipping some time data")
-        elif key == "ns_names":
-            value.set_auto_mask(False)
-            ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-        # elif key == "eb_names":
-        #     value.set_auto_mask(False)
-        #     eb_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-        elif key.startswith("node_ns"):  # Expected keys: node_ns1, node_ns2
-            ns.append(value[:] - 1)  # Exodus is 1-based
+        # merge element block data; can't handle blocks yet
+        for k, value in cd.items():
+            cd[k] = numpy.concatenate(list(value.values()))
 
-    # merge element block data; can't handle blocks yet
-    for k, value in cd.items():
-        cd[k] = numpy.concatenate(list(value.values()))
+        # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
+        # triplets in the point data. If yes, they belong together.
+        single, double, triple = categorize(point_data_names)
 
-    # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
-    # triplets in the point data. If yes, they belong together.
-    single, double, triple = categorize(point_data_names)
+        point_data = {}
+        for name, idx in single:
+            point_data[name] = pd[idx]
+        for name, idx0, idx1 in double:
+            point_data[name] = numpy.column_stack([pd[idx0], pd[idx1]])
+        for name, idx0, idx1, idx2 in triple:
+            point_data[name] = numpy.column_stack([pd[idx0], pd[idx1], pd[idx2]])
 
-    point_data = {}
-    for name, idx in single:
-        point_data[name] = pd[idx]
-    for name, idx0, idx1 in double:
-        point_data[name] = numpy.column_stack([pd[idx0], pd[idx1]])
-    for name, idx0, idx1, idx2 in triple:
-        point_data[name] = numpy.column_stack([pd[idx0], pd[idx1], pd[idx2]])
+        cell_data = {}
+        k = 0
+        for cell_type, cell in cells:
+            n = len(cell)
+            cell_data[cell_type] = {}
+            for name, data in zip(cell_data_names, cd.values()):
+                cell_data[cell_type][name] = data[k : k + n]
+            k += n
 
-    cell_data = {}
-    k = 0
-    for cell_type, cell in cells:
-        n = len(cell)
-        cell_data[cell_type] = {}
-        for name, data in zip(cell_data_names, cd.values()):
-            cell_data[cell_type][name] = data[k : k + n]
-        k += n
+        point_sets = {name: dat for name, dat in zip(ns_names, ns)}
 
-    point_sets = {name: dat for name, dat in zip(ns_names, ns)}
-
-    nc.close()
     return Mesh(
         points,
         cells,
@@ -260,116 +258,120 @@ numpy_to_exodus_dtype = {
 
 
 def write(filename, mesh):
-    rootgrp = netCDF4.Dataset(filename, "w")
-
-    # set global data
-    rootgrp.title = "Created by meshio v{}, {}".format(
-        __version__, datetime.datetime.now().isoformat()
-    )
-    rootgrp.version = numpy.float32(5.1)
-    rootgrp.api_version = numpy.float32(5.1)
-    rootgrp.floating_point_word_size = 8
-
-    # set dimensions
-    total_num_elems = sum([c.data.shape[0] for c in mesh.cells])
-    rootgrp.createDimension("num_nodes", len(mesh.points))
-    rootgrp.createDimension("num_dim", mesh.points.shape[1])
-    rootgrp.createDimension("num_elem", total_num_elems)
-    rootgrp.createDimension("num_el_blk", len(mesh.cells))
-    rootgrp.createDimension("num_node_sets", len(mesh.point_sets))
-    rootgrp.createDimension("len_string", 33)
-    rootgrp.createDimension("len_line", 81)
-    rootgrp.createDimension("four", 4)
-    rootgrp.createDimension("time_step", None)
-
-    # dummy time step
-    data = rootgrp.createVariable("time_whole", "f4", "time_step")
-    data[:] = 0.0
-
-    # points
-    coor_names = rootgrp.createVariable("coor_names", "S1", ("num_dim", "len_string"))
-    coor_names.set_auto_mask(False)
-    coor_names[0, 0] = "X"
-    coor_names[1, 0] = "Y"
-    if mesh.points.shape[1] == 3:
-        coor_names[2, 0] = "Z"
-    data = rootgrp.createVariable(
-        "coord", numpy_to_exodus_dtype[mesh.points.dtype.name], ("num_dim", "num_nodes")
-    )
-    data[:] = mesh.points.T
-
-    # cells
-    # ParaView needs eb_prop1 -- some ID. The values don't seem to matter as
-    # long as they are different for the for different blocks.
-    data = rootgrp.createVariable("eb_prop1", "i4", "num_el_blk")
-    for k in range(len(mesh.cells)):
-        data[k] = k
-    for k, (key, values) in enumerate(mesh.cells):
-        dim1 = "num_el_in_blk{}".format(k + 1)
-        dim2 = "num_nod_per_el{}".format(k + 1)
-        rootgrp.createDimension(dim1, values.shape[0])
-        rootgrp.createDimension(dim2, values.shape[1])
-        dtype = numpy_to_exodus_dtype[values.dtype.name]
-        data = rootgrp.createVariable("connect{}".format(k + 1), dtype, (dim1, dim2))
-        data.elem_type = meshio_to_exodus_type[key]
-        # Exodus is 1-based
-        data[:] = values + 1
-
-    # point data
-    # The variable `name_nod_var` holds the names and indices of the node variables, the
-    # variables `vals_nod_var{1,2,...}` hold the actual data.
-    num_nod_var = len(mesh.point_data)
-    if num_nod_var > 0:
-        rootgrp.createDimension("num_nod_var", num_nod_var)
-        # set names
-        point_data_names = rootgrp.createVariable(
-            "name_nod_var", "S1", ("num_nod_var", "len_string")
+    with netCDF4.Dataset(filename, "w") as rootgrp:
+        # set global data
+        rootgrp.title = "Created by meshio v{}, {}".format(
+            __version__, datetime.datetime.now().isoformat()
         )
-        point_data_names.set_auto_mask(False)
-        for k, name in enumerate(mesh.point_data.keys()):
-            for i, letter in enumerate(name):
-                point_data_names[k, i] = letter.encode("utf-8")
+        rootgrp.version = numpy.float32(5.1)
+        rootgrp.api_version = numpy.float32(5.1)
+        rootgrp.floating_point_word_size = 8
 
-        # Set data. ParaView might have some problems here, see
-        # <https://gitlab.kitware.com/paraview/paraview/issues/18403>.
-        for k, (name, data) in enumerate(mesh.point_data.items()):
-            for i, s in enumerate(data.shape):
-                rootgrp.createDimension("dim_nod_var{}{}".format(k, i), s)
-            dims = ["time_step"] + [
-                "dim_nod_var{}{}".format(k, i) for i in range(len(data.shape))
-            ]
-            node_data = rootgrp.createVariable(
-                "vals_nod_var{}".format(k + 1),
-                numpy_to_exodus_dtype[data.dtype.name],
-                tuple(dims),
-                fill_value=False,
-            )
-            node_data[0] = data
+        # set dimensions
+        total_num_elems = sum([c.data.shape[0] for c in mesh.cells])
+        rootgrp.createDimension("num_nodes", len(mesh.points))
+        rootgrp.createDimension("num_dim", mesh.points.shape[1])
+        rootgrp.createDimension("num_elem", total_num_elems)
+        rootgrp.createDimension("num_el_blk", len(mesh.cells))
+        rootgrp.createDimension("num_node_sets", len(mesh.point_sets))
+        rootgrp.createDimension("len_string", 33)
+        rootgrp.createDimension("len_line", 81)
+        rootgrp.createDimension("four", 4)
+        rootgrp.createDimension("time_step", None)
 
-    # node sets
-    num_point_sets = len(mesh.point_sets)
-    if num_point_sets > 0:
-        data = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets")
-        data_names = rootgrp.createVariable(
-            "ns_names", "S1", ("num_node_sets", "len_string")
+        # dummy time step
+        data = rootgrp.createVariable("time_whole", "f4", "time_step")
+        data[:] = 0.0
+
+        # points
+        coor_names = rootgrp.createVariable(
+            "coor_names", "S1", ("num_dim", "len_string")
         )
-        for k, name in enumerate(mesh.point_sets.keys()):
+        coor_names.set_auto_mask(False)
+        coor_names[0, 0] = "X"
+        coor_names[1, 0] = "Y"
+        if mesh.points.shape[1] == 3:
+            coor_names[2, 0] = "Z"
+        data = rootgrp.createVariable(
+            "coord",
+            numpy_to_exodus_dtype[mesh.points.dtype.name],
+            ("num_dim", "num_nodes"),
+        )
+        data[:] = mesh.points.T
+
+        # cells
+        # ParaView needs eb_prop1 -- some ID. The values don't seem to matter as
+        # long as they are different for the for different blocks.
+        data = rootgrp.createVariable("eb_prop1", "i4", "num_el_blk")
+        for k in range(len(mesh.cells)):
             data[k] = k
-            for i, letter in enumerate(name):
-                data_names[k, i] = letter.encode("utf-8")
-        for k, (key, values) in enumerate(mesh.point_sets.items()):
-            dim1 = "num_nod_ns{}".format(k + 1)
+        for k, (key, values) in enumerate(mesh.cells):
+            dim1 = "num_el_in_blk{}".format(k + 1)
+            dim2 = "num_nod_per_el{}".format(k + 1)
             rootgrp.createDimension(dim1, values.shape[0])
+            rootgrp.createDimension(dim2, values.shape[1])
             dtype = numpy_to_exodus_dtype[values.dtype.name]
-            data = rootgrp.createVariable("node_ns{}".format(k + 1), dtype, (dim1,))
+            data = rootgrp.createVariable(
+                "connect{}".format(k + 1), dtype, (dim1, dim2)
+            )
+            data.elem_type = meshio_to_exodus_type[key]
             # Exodus is 1-based
             data[:] = values + 1
 
-    rootgrp.close()
+        # point data
+        # The variable `name_nod_var` holds the names and indices of the node variables, the
+        # variables `vals_nod_var{1,2,...}` hold the actual data.
+        num_nod_var = len(mesh.point_data)
+        if num_nod_var > 0:
+            rootgrp.createDimension("num_nod_var", num_nod_var)
+            # set names
+            point_data_names = rootgrp.createVariable(
+                "name_nod_var", "S1", ("num_nod_var", "len_string")
+            )
+            point_data_names.set_auto_mask(False)
+            for k, name in enumerate(mesh.point_data.keys()):
+                for i, letter in enumerate(name):
+                    point_data_names[k, i] = letter.encode("utf-8")
+
+            # Set data. ParaView might have some problems here, see
+            # <https://gitlab.kitware.com/paraview/paraview/issues/18403>.
+            for k, (name, data) in enumerate(mesh.point_data.items()):
+                for i, s in enumerate(data.shape):
+                    rootgrp.createDimension("dim_nod_var{}{}".format(k, i), s)
+                dims = ["time_step"] + [
+                    "dim_nod_var{}{}".format(k, i) for i in range(len(data.shape))
+                ]
+                node_data = rootgrp.createVariable(
+                    "vals_nod_var{}".format(k + 1),
+                    numpy_to_exodus_dtype[data.dtype.name],
+                    tuple(dims),
+                    fill_value=False,
+                )
+                node_data[0] = data
+
+        # node sets
+        num_point_sets = len(mesh.point_sets)
+        if num_point_sets > 0:
+            data = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets")
+            data_names = rootgrp.createVariable(
+                "ns_names", "S1", ("num_node_sets", "len_string")
+            )
+            for k, name in enumerate(mesh.point_sets.keys()):
+                data[k] = k
+                for i, letter in enumerate(name):
+                    data_names[k, i] = letter.encode("utf-8")
+            for k, (key, values) in enumerate(mesh.point_sets.items()):
+                dim1 = "num_nod_ns{}".format(k + 1)
+                rootgrp.createDimension(dim1, values.shape[0])
+                dtype = numpy_to_exodus_dtype[values.dtype.name]
+                data = rootgrp.createVariable("node_ns{}".format(k + 1), dtype, (dim1,))
+                # Exodus is 1-based
+                data[:] = values + 1
 
 
 try:
     import netCDF4
+    # import h5netcdf.legacyapi as netCDF4
 # Use ModuleNotFoundError when dropping support for Python 3.5
 except ImportError:
     pass

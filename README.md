@@ -139,7 +139,7 @@ with meshio.xdmf.TimeSeriesReader(filename) as reader:
 ### ParaView plugin
 
 <img alt="gmsh paraview" src="https://nschloe.github.io/meshio/gmsh-paraview.png" width="60%">
-_A Gmsh file opened with ParaView._
+*A Gmsh file opened with ParaView.*
 
 If you have downloaded a binary version of ParaView, you may proceed as follows.
 
