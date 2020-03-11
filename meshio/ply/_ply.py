@@ -254,7 +254,8 @@ def _read_binary(
         (
             endianness + ply_to_numpy_dtype_string[dtype[0]],
             endianness + ply_to_numpy_dtype_string[dtype[1]],
-        ) if isinstance(dtype, tuple)
+        )
+        if isinstance(dtype, tuple)
         else endianness + ply_to_numpy_dtype_string[dtype]
         for dtype in cell_data_dtypes
     ]

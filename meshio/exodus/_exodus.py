@@ -371,6 +371,7 @@ def write(filename, mesh):
 
 try:
     import netCDF4
+
     # import h5netcdf.legacyapi as netCDF4
 # Use ModuleNotFoundError when dropping support for Python 3.5
 except ImportError:
