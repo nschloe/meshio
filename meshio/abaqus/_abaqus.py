@@ -182,7 +182,7 @@ def _read_nodes(f):
 
 def _read_cells(f, line0, point_ids):
     values = {}
-    for pair in line0[9:].split(","):
+    for pair in line0.split(",")[1:]:
         k, v = pair.split("=")
         values[k.strip().upper()] = v.strip()
 
