@@ -181,14 +181,16 @@ def _read_nodes(f):
 
 
 def _read_cells(f, line0, point_ids):
-    sline = line0.split(",")[1:]
+    values = {}
+    for pair in line0[9:].split(","):
+        k, v = pair.split("=")
+        values[k.strip().upper()] = v.strip()
 
-    etype_sline = sline[0].upper()
-    if "TYPE" not in etype_sline:
-        raise ReadError(etype_sline)
+    if "TYPE" not in values.keys():
+        raise ReadError()
 
-    etype = etype_sline.split("=")[1].strip()
-    if etype not in abaqus_to_meshio_type:
+    etype = values["TYPE"]
+    if etype not in abaqus_to_meshio_type.keys():
         raise ReadError("Element type not available: {}".format(etype))
 
     cell_type = abaqus_to_meshio_type[etype]
