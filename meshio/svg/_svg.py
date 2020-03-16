@@ -6,7 +6,7 @@ from .._exceptions import WriteError
 from .._helpers import register
 
 
-def write(filename, mesh):
+def write(filename, mesh, stroke_width="2%", float_fmt=".3f", force_width=None):
     if mesh.points.shape[1] == 3 and not numpy.allclose(
         mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
     ):
@@ -22,17 +22,32 @@ def write(filename, mesh):
     width = numpy.max(pts[:, 0]) - min_x
     height = numpy.max(pts[:, 1]) - min_y
 
+    if force_width is not None:
+        scaling_factor = force_width / width
+        min_x *= scaling_factor
+        min_y *= scaling_factor
+        width *= scaling_factor
+        height *= scaling_factor
+        pts *= scaling_factor
+
+    fmt = " ".join(4 * ["{{:{}}}".format(float_fmt)])
     svg = ET.Element(
         "svg",
         xmlns="http://www.w3.org/2000/svg",
         version="1.1",
-        viewBox="{:.3f} {:.3f} {:.3f} {:.3f}".format(min_x, min_y, width, height),
+        viewBox=fmt.format(min_x, min_y, width, height),
     )
 
     style = ET.SubElement(svg, "style")
-    opts = ["fill: none", "stroke: black", "stroke-width: 2%", "stroke-linejoin:bevel"]
+    opts = [
+        "fill: none",
+        "stroke: black",
+        "stroke-width: {}".format(stroke_width),
+        "stroke-linejoin:bevel",
+    ]
     style.text = "polygon {" + "; ".join(opts) + "}"
 
+    fmt = ",".join(2 * ["{{:{}}}".format(float_fmt)])
     for cell_block in mesh.cells:
         if cell_block.type not in ["line", "triangle", "quad"]:
             continue
@@ -40,9 +55,7 @@ def write(filename, mesh):
             ET.SubElement(
                 svg,
                 "polygon",
-                points=" ".join(
-                    ["{:.3f},{:.3f}".format(pts[c, 0], pts[c, 1]) for c in cell]
-                ),
+                points=" ".join([fmt.format(pts[c, 0], pts[c, 1]) for c in cell]),
             )
 
     tree = ET.ElementTree(svg)
