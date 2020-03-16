@@ -30,12 +30,12 @@ def write(filename, mesh):
     )
 
     style = ET.SubElement(svg, "style")
-    style.text = "polygon {fill: none; stroke: black; stroke-width: 2%;}"
+    style.text = "polygon {fill: none; stroke: black; stroke-width: 2%; stroke-linejoin:bevel}"
 
-    for cell_type in ["line", "triangle", "quad"]:
-        if cell_type not in mesh.cells:
+    for cell_block in mesh.cells:
+        if cell_block.type not in ["line", "triangle", "quad"]:
             continue
-        for cell in mesh.cells[cell_type]:
+        for cell in cell_block.data:
             ET.SubElement(
                 svg,
                 "polygon",
