@@ -175,9 +175,7 @@ def _read_nodes(f, is_ascii, data_size):
     return points, tags
 
 
-def _read_elements(
-    f, point_tags, physical_tags, is_ascii, data_size, field_data
-):
+def _read_elements(f, point_tags, physical_tags, is_ascii, data_size, field_data):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
 
@@ -196,12 +194,16 @@ def _read_elements(
         (num_ele,) = fromfile(f, c_size_t, 1)
         for physical_name, cell_set in cell_sets.items():
             cell_set[k] = numpy.arange(
-                num_ele if (physical_tags and
-                            field_data[physical_name][1] == dim_entity and
-                            field_data[physical_name][0]
-                            in physical_tags[dim_entity][tag_entity])
+                num_ele
+                if (
+                    physical_tags
+                    and field_data[physical_name][1] == dim_entity
+                    and field_data[physical_name][0]
+                    in physical_tags[dim_entity][tag_entity]
+                )
                 else 0,
-                dtype=type(num_ele))
+                dtype=type(num_ele),
+            )
         tpe = _gmsh_to_meshio_type[type_ele]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
         d = fromfile(f, c_size_t, int(num_ele * (1 + num_nodes_per_ele))).reshape(
