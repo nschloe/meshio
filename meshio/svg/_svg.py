@@ -49,15 +49,28 @@ def write(filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None):
     # the style alongside. No problem it's paths all along.
     style.text = "path {" + "; ".join(opts) + "}"
 
-    fmt = (
-        "M {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
-        + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
-        + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
-        + "Z"
-    )
     for cell_block in mesh.cells:
         if cell_block.type not in ["line", "triangle", "quad"]:
             continue
+        if cell_block.type == "line":
+            fmt = "M {{:{}}} {{:{}}}".format(
+                float_fmt, float_fmt
+            ) + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+        elif cell_block.type == "triangle":
+            fmt = (
+                "M {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                + "Z"
+            )
+        elif cell_block.type == "quad":
+            fmt = (
+                "M {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                + "Z"
+            )
         for cell in cell_block.data:
             ET.SubElement(
                 svg, "path", d=fmt.format(*pts[cell].flatten()),
