@@ -6,7 +6,7 @@ from .._exceptions import WriteError
 from .._helpers import register
 
 
-def write(filename, mesh, stroke_width="2%", float_fmt=".3f", force_width=None):
+def write(filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None):
     if mesh.points.shape[1] == 3 and not numpy.allclose(
         mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
     ):
@@ -45,17 +45,22 @@ def write(filename, mesh, stroke_width="2%", float_fmt=".3f", force_width=None):
         "stroke-width: {}".format(stroke_width),
         "stroke-linejoin:bevel",
     ]
-    style.text = "polygon {" + "; ".join(opts) + "}"
+    # Use path, not polygon, because svgo converts polygons to paths and doesn't convert
+    # the style alongside. No problem it's paths all along.
+    style.text = "path {" + "; ".join(opts) + "}"
 
-    fmt = ",".join(2 * ["{{:{}}}".format(float_fmt)])
+    fmt = (
+        "M {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+        + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+        + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+        + "Z"
+    )
     for cell_block in mesh.cells:
         if cell_block.type not in ["line", "triangle", "quad"]:
             continue
         for cell in cell_block.data:
             ET.SubElement(
-                svg,
-                "polygon",
-                points=" ".join([fmt.format(pts[c, 0], pts[c, 1]) for c in cell]),
+                svg, "path", d=fmt.format(*pts[cell].flatten()),
             )
 
     tree = ET.ElementTree(svg)
