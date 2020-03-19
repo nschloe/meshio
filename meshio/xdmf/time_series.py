@@ -90,7 +90,7 @@ class TimeSeriesReader:
         grid = self.mesh_grid
 
         points = None
-        cells = {}
+        cells = []
 
         for c in grid:
             if c.tag == "Topology":
@@ -113,8 +113,7 @@ class TimeSeriesReader:
                 if cell_type == "Mixed":
                     cells = translate_mixed_cells(data)
                 else:
-                    meshio_type = xdmf_to_meshio_type[cell_type]
-                    cells[meshio_type] = data
+                    cells.append(CellBlock(xdmf_to_meshio_type[cell_type], data))
 
             elif c.tag == "Geometry":
                 try:
