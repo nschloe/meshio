@@ -141,7 +141,7 @@ class XdmfReader:
             raise ReadError()
 
         points = None
-        cells = {}
+        cells = []
         point_data = {}
         cell_data_raw = {}
         field_data = {}
@@ -162,8 +162,8 @@ class XdmfReader:
                         )
                     )
                 else:
-                    meshio_type = xdmf_to_meshio_type[topology_type]
-                    cells[meshio_type] = self._read_data_item(data_items[0])
+                    data = self._read_data_item(data_items[0])
+                    cells.append(CellBlock(xdmf_to_meshio_type[topology_type], data))
 
             elif c.tag == "Geometry":
                 if c.get("GeometryType") not in (None, "XYZ"):
