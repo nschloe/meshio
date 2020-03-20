@@ -119,7 +119,7 @@ def read_buffer(f):
                     break
             line = " ".join(lines)
 
-            zone = _read_zone(line, variables)
+            zone = _read_zone(line)
             (
                 num_nodes,
                 num_cells,
@@ -192,10 +192,21 @@ def _read_variables(line):
     return variables
 
 
-def _read_zone(line, variables):
+def _read_zone(line):
     # Gather zone entries in a dict
     line = line[5:]
     zone = {}
+
+    # Look for zone title
+    ivar = line.find('"')
+
+    # If zone contains a title, process it and save the title
+    if ivar >= 0:
+        i1, i2 = ivar, ivar + line[ivar + 1 :].find('"') + 2
+        zone_title = line[i1 + 1 : i2 - 1]
+        line = line.replace(line[i1:i2], "PLACEHOLDER")
+    else:
+        zone_title = None
 
     # Look for VARLOCATION (problematic since it contains both ',' and '=')
     ivar = line.find("VARLOCATION")
@@ -224,6 +235,10 @@ def _read_zone(line, variables):
 
         zone[key] = zone_key_to_type[key](value)
         i += 1
+
+    # Add zone title to zone dict
+    if zone_title:
+        zone["T"] = zone_title
 
     return zone
 
