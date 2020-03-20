@@ -49,7 +49,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, ref_num_cell_sets):
 
 def test_elset():
     points = numpy.array(
-        [[1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [2.0, 0.5, 0.0], [0.0, 0.5, 0.0],]
+        [[1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [2.0, 0.5, 0.0], [0.0, 0.5, 0.0]]
     )
     cells = [
         ("triangle", numpy.array([[0, 1, 2]])),
