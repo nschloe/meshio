@@ -320,8 +320,8 @@ def write(filename, mesh, float_fmt=".15e", translate_cell_names=True):
                 f.write(str(eid) + "," + ",".join(nids_strs) + "\n")
 
         nnl = 8
+        offset = 0
         for ic in range(len(mesh.cells)):
-            offset = sum(len(c.data) for c in mesh.cells[:ic])
             for k, v in mesh.cell_sets.items():
                 if len(v[ic]) > 0:
                     els = [str(i + 1 + offset) for i in v[ic]]
@@ -332,6 +332,7 @@ def write(filename, mesh, float_fmt=".15e", translate_cell_names=True):
                         )
                         + "\n"
                     )
+            offset += len(mesh.cells[ic].data)
 
         for k, v in mesh.point_sets.items():
             nds = [str(i + 1) for i in v]
