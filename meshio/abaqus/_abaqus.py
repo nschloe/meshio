@@ -321,15 +321,17 @@ def write(filename, mesh, float_fmt=".15e", translate_cell_names=True):
 
         nnl = 8
         for ic in range(len(mesh.cells)):
+            offset = sum(len(c.data) for c in mesh.cells[:ic])
             for k, v in mesh.cell_sets.items():
-                els = [str(i + 1) for i in v[ic]]
-                f.write("*ELSET, ELSET=%s\n" % k)
-                f.write(
-                    ",\n".join(
-                        ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
+                if len(v[ic]) > 0:
+                    els = [str(i + 1 + offset) for i in v[ic]]
+                    f.write("*ELSET, ELSET=%s\n" % k)
+                    f.write(
+                        ",\n".join(
+                            ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
+                        )
+                        + "\n"
                     )
-                    + "\n"
-                )
 
         for k, v in mesh.point_sets.items():
             nds = [str(i + 1) for i in v]
