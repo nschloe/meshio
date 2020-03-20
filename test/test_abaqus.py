@@ -30,7 +30,7 @@ def test(mesh):
 
 @pytest.mark.parametrize(
     "filename, ref_sum, ref_num_cells, ref_num_cell_sets",
-    [("UUea.inp", 4950.0, 50, 10), ("nle1xf3c.inp", 32.215275528, 12, 2)],
+    [("UUea.inp", 4950.0, 50, 10), ("nle1xf3c.inp", 32.215275528, 12, 3)],
 )
 def test_reference_file(filename, ref_sum, ref_num_cells, ref_num_cell_sets):
     this_dir = os.path.dirname(os.path.abspath(__file__))
