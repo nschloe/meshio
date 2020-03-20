@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 import numpy
 import pytest
@@ -44,3 +45,35 @@ def test_reference_file(filename, ref_sum, ref_num_cells, ref_num_cell_sets):
     assert numpy.isclose(numpy.sum(mesh.points), ref_sum)
     assert sum([len(cells.data) for cells in mesh.cells]) == ref_num_cells
     assert len(mesh.cell_sets) == ref_num_cell_sets
+
+
+def test_elset():
+    points = numpy.array(
+        [[1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [2.0, 0.5, 0.0], [0.0, 0.5, 0.0],]
+    )
+    cells = [
+        ("triangle", numpy.array([[0, 1, 2]])),
+        ("triangle", numpy.array([[0, 1, 3]])),
+    ]
+    cell_sets = {
+        "right": [numpy.array([0]), numpy.array([])],
+        "left": [numpy.array([]), numpy.array([1])],
+    }
+    mesh_ref = meshio.Mesh(points, cells, cell_sets=cell_sets)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        filepath = os.path.join(temp_dir, "test.inp")
+        meshio.abaqus.write(filepath, mesh_ref)
+        mesh = meshio.abaqus.read(filepath)
+
+    assert numpy.allclose(mesh_ref.points, mesh.points)
+
+    assert len(mesh_ref.cells) == len(mesh.cells)
+    for ic, cell in enumerate(mesh_ref.cells):
+        assert cell.type == mesh.cells[ic].type
+        assert numpy.allclose(cell.data, mesh.cells[ic].data)
+
+    assert sorted(mesh_ref.cell_sets.keys()) == sorted(mesh.cell_sets.keys())
+    for k, v in mesh_ref.cell_sets.items():
+        for ic in range(len(mesh_ref.cells)):
+            assert numpy.allclose(v[ic], mesh.cell_sets[k][ic])
