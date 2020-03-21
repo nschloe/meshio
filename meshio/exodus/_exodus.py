@@ -280,7 +280,7 @@ def write(filename, mesh):
         rootgrp.createDimension("time_step", None)
 
         # dummy time step
-        data = rootgrp.createVariable("time_whole", "f4", "time_step")
+        data = rootgrp.createVariable("time_whole", "f4", ["time_step"])
         data[:] = 0.0
 
         # points
@@ -302,7 +302,7 @@ def write(filename, mesh):
         # cells
         # ParaView needs eb_prop1 -- some ID. The values don't seem to matter as
         # long as they are different for the for different blocks.
-        data = rootgrp.createVariable("eb_prop1", "i4", "num_el_blk")
+        data = rootgrp.createVariable("eb_prop1", "i4", ["num_el_blk"])
         for k in range(len(mesh.cells)):
             data[k] = k
         for k, (key, values) in enumerate(mesh.cells):
@@ -352,7 +352,7 @@ def write(filename, mesh):
         # node sets
         num_point_sets = len(mesh.point_sets)
         if num_point_sets > 0:
-            data = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets")
+            data = rootgrp.createVariable("ns_prop1", "i4", ["num_node_sets"])
             data_names = rootgrp.createVariable(
                 "ns_names", "S1", ("num_node_sets", "len_string")
             )
