@@ -6,7 +6,9 @@ from .._exceptions import WriteError
 from .._helpers import register
 
 
-def write(filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None):
+def write(
+    filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None, fill="#ddd"
+):
     if mesh.points.shape[1] == 3 and not numpy.allclose(
         mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
     ):
@@ -40,7 +42,7 @@ def write(filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None):
 
     style = ET.SubElement(svg, "style")
     opts = [
-        "fill: none",
+        "fill: {}".format("none" if fill is None else fill),
         "stroke: black",
         "stroke-width: {}".format(stroke_width),
         "stroke-linejoin:bevel",
