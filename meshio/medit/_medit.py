@@ -14,12 +14,11 @@ from ctypes import c_double, c_float
 
 import numpy
 
-from ._medit_internal import medit_codes
-
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
+from ._medit_internal import medit_codes
 
 # map medit element types to meshio
 meshio_from_medit = {
@@ -42,28 +41,30 @@ def read(filename):
             mesh = read_buffer(f)
     return mesh
 
-def _produce_dtype(string_type,dim,itype,ftype):
+
+def _produce_dtype(string_type, dim, itype, ftype):
     """
     convert a medit_code to a dtype appropriate for building a numpy array
     """
     res = ""
-    c = 0 
+    c = 0
     while c < len(string_type):
         s = string_type[c]
         if s == "i":
-            res +=itype
+            res += itype
         elif s == "r":
-            res +=ftype
+            res += ftype
         elif s == "d":
             res += str(dim)
-            c+=1
+            c += 1
             continue
         else:
             ReadError("Invalid string type")
-        c+=1
+        c += 1
         if c != len(string_type):
-            res+=","
+            res += ","
     return res
+
 
 def read_binary_buffer(f):
     dim = 0
@@ -71,37 +72,36 @@ def read_binary_buffer(f):
     point_data = {}
     cell_data = {"medit:ref": []}
 
-
     code = numpy.fromfile(f, count=1, dtype="i4")
     if code != 1 and code != 16777216:
         raise ReadError("Invalid code")
-    #TODO endianess
-    
+    # TODO endianess
+
     version = numpy.fromfile(f, count=1, dtype="i4")
     if version < 1 or version > 4:
         raise ReadError("Invalid version")
-    print("vertsion ",version)
+    print("vertsion ", version)
 
-    #TODO size
-    itype="i4"
-    ftype="f8"
-    #append endianess
+    # TODO size
+    itype = "i4"
+    ftype = "f8"
+    # append endianess
     points = None
     cells = []
     point_data = dict()
     celldata = None
-    postype="i4"
-    print("code " ,code)
+    postype = "i4"
+    print("code ", code)
 
-    field = numpy.fromfile(f, count=1, dtype="i4")  
+    field = numpy.fromfile(f, count=1, dtype="i4")[0]
 
-    if field != 3 :# =  GmfDimension
+    if field != 3:  # =  GmfDimension
         raise ReadError("Invalid dimension code")
 
-    pos = numpy.fromfile(f, count=1, dtype="i4")  
+    pos = numpy.fromfile(f, count=1, dtype="i4")
 
     dim = numpy.fromfile(f, count=1, dtype="i4")[0]
-    
+
     if dim != 2 and dim != 3:
         raise ReadError("Invalid mesh dimension")
 
@@ -110,43 +110,46 @@ def read_binary_buffer(f):
         if field not in medit_codes.keys():
             raise ReadError("Unsupported field")
 
-        field_code = medit_codes[field][0]
+        field_code = medit_codes[field]
 
-        if field_code == "GmfEnd":
+        if field_code[0] == "GmfEnd":
             break
 
-        pos = numpy.fromfile(f, count=1, dtype="i4")  
+        if field_code[0] == "GmfReserved":
+            continue
 
-        nitems = numpy.fromfile(f, count=1, dtype=itype)[0]
+        pos = numpy.fromfile(f, count=1, dtype="i4")
 
-        field_template = medit_codes[field][1]
-        ncols = len(field_template)
-        all_integers = (field_template.count("i") == ncols)
-        if all_integers:
-            out = numpy.fromfile(f,count=nitems * ncols, dtype=itype).reshape(nitems,ncols)
-            if field_code not in meshio_from_medit.keys():
-                msg = ("meshio doesn't know {} type. Skipping.").format(field_code)
-                logging.warning(msg)
-                continue
+        nitems = 1
+        if field_code[1] == "i":
+            nitems = numpy.fromfile(f, count=1, dtype=itype)[0]
 
-            meshio_type,ncols = meshio_from_medit[field_code]
-            cells.append((meshio_type, out[:, :ncols] - 1))
-            cell_data["medit:ref"].append(out[:, -1])
+        field_template = field_code[2]
+        print(_produce_dtype(field_template, dim, itype, ftype))
+        dtype = numpy.dtype(_produce_dtype(field_template, dim, itype, ftype))
+        print(dtype)
+        out = numpy.asarray(numpy.fromfile(f, count=nitems, dtype=dtype))
+        if field_code[0] not in meshio_from_medit.keys():
+            msg = ("meshio doesn't know {} type. Skipping.").format(field_code[0])
+            logging.warning(msg)
+            continue
 
+        elif field_code[0] == "GmfVertices":
+            points = out["f0"]
+            point_data["medit:ref"] = out["f1"]
         else:
-            dtype = numpy.dtype(_produce_dtype(field_template,dim,itype,ftype))
-            out = numpy.fromfile(f,count=nitems, dtype=dtype)
-            if field_code not in meshio_from_medit.keys():
-                msg = ("meshio doesn't know {} type. Skipping.").format(field_code)
-                logging.warning(msg)
-                continue
-
-            elif field_code == "GmfVertices":
-                    points = out['f0']
-                    point_data["medit:ref"] = out['f1']
+            print(field_code)
+            meshio_type, ncols = meshio_from_medit[field_code[0]]
+            print(out.shape)
+            print(type(out))
+            print(type(out[0]))
+            print(out[0])
+            print(dtype.names[:ncols])
+            print(out[[dtype.names]])
+            cells.append((meshio_type, out[dtype.names[:ncols]] - 1))
+            cell_data["medit:ref"].append(out[:][dtype.names[-1]])
 
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
-
 
 
 def read_buffer(f):
@@ -291,4 +294,4 @@ def write(filename, mesh):
         fh.write(b"\nEnd\n")
 
 
-register("medit", [".mesh",".meshb"], read, {"medit": write})
+register("medit", [".mesh", ".meshb"], read, {"medit": write})
