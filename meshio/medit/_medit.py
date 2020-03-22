@@ -14,6 +14,8 @@ from ctypes import c_double, c_float
 
 import numpy
 
+from ._medit_internal import medit_codes
+
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
@@ -21,41 +23,14 @@ from .._mesh import Mesh
 
 # map medit element types to meshio
 meshio_from_medit = {
-        "GmfVertices":("point",None),
-        "GmfEdges": ("line", 2),
-        "GmfTriangles": ("triangle", 3),
-        "GmfQuadrilaterals": ("quad", 4),
-        "GmfTetrahedra": ("tetra", 4),
-        "GmfPrisms": ("wedge",6),
-        "GmfHexahedra": ("hexahedron", 8),
-        }
-
-# Key is the enum value of each keyword
-# values follow the design of GmfKwdFmt array of 
-# https://github.com/LoicMarechal/libMeshb/blob/master/sources/libmeshb7.c
-# For each keyword we assign its format as a string of numbers
-# i:integer, f:float, d:dimension
-medit_codes = {
-        3:("GmfDimension","i"),
-        4:("GmfVertices","dri"),
-        5:("GmfEdges","iii"),
-        6:("GmfTriangles","iiii"),
-        7:("GmfQuadrilaterals","iiiii"),
-        8:("GmfTetrahedra","iiiii"),
-        9:("GmfPrisms","iiiiiii"),
-        10:("GmfHexahedra","iiiiiiiii"),
-        20:("GmfNormalAtVertices","ii"),
-        21:("GmfNormalAtTriangleVertices", "iii"),
-        22:("GmfNormalAtQuadrilateralVertices","iiii"),
-        40:("GmfVerticesOnGeometricVertices","ii"),
-        41:("GmfVerticesOnGeometricEdges","iirr"),
-        42:("GmfVerticesOnGeometricTriangles","iirrr"),
-        43:("GmfVerticesOnGeometricQuadrilaterals","iirrr"),
-        44:("GmfEdgesOnGeometricEdges","ii"),
-        54:("GmfEnd",""),
-        59:("Tangents","dr"),
-        60:("Normals","dr"),
-        }
+    "GmfVertices": ("point", None),
+    "GmfEdges": ("line", 2),
+    "GmfTriangles": ("triangle", 3),
+    "GmfQuadrilaterals": ("quad", 4),
+    "GmfTetrahedra": ("tetra", 4),
+    "GmfPrisms": ("wedge", 6),
+    "GmfHexahedra": ("hexahedron", 8),
+}
 
 
 def read(filename):
