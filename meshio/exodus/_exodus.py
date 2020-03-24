@@ -65,6 +65,8 @@ meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
 def read(filename):  # noqa: C901
+    # import netCDF4
+    import h5netcdf.legacyapi as netCDF4
     with netCDF4.Dataset(filename) as nc:
         # assert nc.version == numpy.float32(5.1)
         # assert nc.api_version == numpy.float32(5.1)
@@ -74,7 +76,11 @@ def read(filename):  # noqa: C901
         # assert b''.join(nc.variables['coor_names'][1]) == b'Y'
         # assert b''.join(nc.variables['coor_names'][2]) == b'Z'
 
-        points = numpy.zeros((len(nc.dimensions["num_nodes"]), 3))
+        # netCDF4 has .size, h5netcdf.legacyapi is an int
+        num_nodes = nc.dimensions["num_nodes"]
+        num_nodes = num_nodes if isinstance(num_nodes, int) else nc.dimensions["num_nodes"].size
+
+        points = numpy.zeros((num_nodes, 3))
         point_data_names = []
         cell_data_names = []
         pd = {}
@@ -95,7 +101,13 @@ def read(filename):  # noqa: C901
                 for val in value:
                     info += [b"".join(c).decode("UTF-8") for c in val[:]]
             elif key[:7] == "connect":
-                meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
+                if isinstance(value.elem_type, str):
+                    # netCDF4
+                    elem_type = value.elem_type
+                else:
+                    # h5netcdf.legacyapi
+                    elem_type = value.elem_type.decode('UTF-8')
+                meshio_type = exodus_to_meshio_type[elem_type.upper()]
                 cells.append((meshio_type, value[:] - 1))
             elif key == "coord":
                 points = nc.variables["coord"][:].T
@@ -106,11 +118,17 @@ def read(filename):  # noqa: C901
             elif key == "coordz":
                 points[:, 2] = value[:]
             elif key == "name_nod_var":
-                value.set_auto_mask(False)
+                try:
+                    value.set_auto_mask(False)
+                except AttributeError:
+                    pass
                 point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
             elif key[:12] == "vals_nod_var":
                 idx = 0 if len(key) == 12 else int(key[12:]) - 1
-                value.set_auto_mask(False)
+                try:
+                    value.set_auto_mask(False)
+                except AttributeError:
+                    pass
                 # For now only take the first value
                 pd[idx] = value[0]
                 if len(value) > 1:
@@ -133,7 +151,10 @@ def read(filename):  # noqa: C901
                 if len(value) > 1:
                     warnings.warn("Skipping some time data")
             elif key == "ns_names":
-                value.set_auto_mask(False)
+                try:
+                    value.set_auto_mask(False)
+                except AttributeError:
+                    pass
                 ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
             # elif key == "eb_names":
             #     value.set_auto_mask(False)
@@ -258,6 +279,8 @@ numpy_to_exodus_dtype = {
 
 
 def write(filename, mesh):
+    # import netCDF4
+    import h5netcdf.legacyapi as netCDF4
     with netCDF4.Dataset(filename, "w") as rootgrp:
         # set global data
         rootgrp.title = "Created by meshio v{}, {}".format(
@@ -287,7 +310,10 @@ def write(filename, mesh):
         coor_names = rootgrp.createVariable(
             "coor_names", "S1", ("num_dim", "len_string")
         )
-        coor_names.set_auto_mask(False)
+        try:
+            coor_names.set_auto_mask(False)
+        except AttributeError:
+            pass
         coor_names[0, 0] = "X"
         coor_names[1, 0] = "Y"
         if mesh.points.shape[1] == 3:
@@ -369,12 +395,12 @@ def write(filename, mesh):
                 data[:] = values + 1
 
 
-try:
-    import netCDF4
-
-    # import h5netcdf.legacyapi as netCDF4
-# Use ModuleNotFoundError when dropping support for Python 3.5
-except ImportError:
-    pass
-else:
-    register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
+# try:
+#     import netCDF4
+#
+#     # import h5netcdf.legacyapi as netCDF4
+# # Use ModuleNotFoundError when dropping support for Python 3.5
+# except ImportError:
+#     pass
+# else:
+#     register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
