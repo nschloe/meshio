@@ -51,6 +51,8 @@ class XdmfReader:
         return self.read_xdmf3(root)
 
     def _read_data_item(self, data_item, root=None):
+        import h5py
+
         reference = data_item.get("Reference")
         if reference:
             xpath = (data_item.text if reference == "XML" else reference).strip()
@@ -315,6 +317,8 @@ class XdmfWriter:
     def __init__(
         self, filename, mesh, data_format="HDF", compression="gzip", compression_opts=4
     ):
+        import h5py
+
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -519,13 +523,7 @@ def write(*args, **kwargs):
     XdmfWriter(*args, **kwargs)
 
 
-try:
-    import h5py
-# Use ModuleNotFoundError when dropping support for Python 3.5
-except ImportError:
-    pass
-else:
-    # TODO register all xdmf except hdf outside this try block
-    register(
-        "xdmf", [".xdmf", ".xmf"], read, {"xdmf": write},
-    )
+# TODO register all xdmf except hdf outside this try block
+register(
+    "xdmf", [".xdmf", ".xmf"], read, {"xdmf": write},
+)

@@ -21,6 +21,8 @@ def read(filename):
     """Reads H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     """
+    import h5py
+
     f = h5py.File(filename, "r")
     dset = f["tstt"]
 
@@ -117,6 +119,8 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     """Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     """
+    import h5py
+
     f = h5py.File(filename, "w")
 
     tstt = f.create_group("tstt")
@@ -267,10 +271,4 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     tstt.attrs.create("max_id", global_id, dtype="u8")
 
 
-try:
-    import h5py
-# Use ModuleNotFoundError when dropping support for Python 3.5
-except ImportError:
-    pass
-else:
-    register("h5m", [".h5m"], read, {"h5m": write})
+register("h5m", [".h5m"], read, {"h5m": write})

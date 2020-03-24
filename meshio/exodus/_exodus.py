@@ -65,6 +65,8 @@ meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
 def read(filename):  # noqa: C901
+    import netCDF4
+
     with netCDF4.Dataset(filename) as nc:
         # assert nc.version == numpy.float32(5.1)
         # assert nc.api_version == numpy.float32(5.1)
@@ -258,6 +260,8 @@ numpy_to_exodus_dtype = {
 
 
 def write(filename, mesh):
+    import netCDF4
+
     with netCDF4.Dataset(filename, "w") as rootgrp:
         # set global data
         rootgrp.title = "Created by meshio v{}, {}".format(
@@ -369,12 +373,4 @@ def write(filename, mesh):
                 data[:] = values + 1
 
 
-try:
-    import netCDF4
-
-    # import h5netcdf.legacyapi as netCDF4
-# Use ModuleNotFoundError when dropping support for Python 3.5
-except ImportError:
-    pass
-else:
-    register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
+register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
