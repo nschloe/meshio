@@ -94,7 +94,7 @@ class MeshioReader(VTKPythonAlgorithmBase):
                 [npoints * np.ones((ncells, 1), dtype=int), data]
             ).flatten()
             cell_conn = np.hstack([cell_conn, conn])
-        output.SetCellBlock(cell_types, cell_offsets, cell_conn)
+        output.SetCells(cell_types, cell_offsets, cell_conn)
 
         # Point data
         for name, array in mesh.point_data.items():
