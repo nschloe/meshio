@@ -71,12 +71,12 @@ def read_buffer(f, is_ascii, data_size):
     cell_data = cell_data_from_raw(cells, cell_data_raw)
 
     # merge cell_tags into cell_data
-    for name, tag_dict in cell_tags.items():
-        if name not in cell_data:
-            cell_data[name] = []
+    for tag_name, tag_dict in cell_tags.items():
+        if tag_name not in cell_data:
+            cell_data[tag_name] = []
         for cell_type, _ in cells:
             tags = tag_dict.get(cell_type, [])
-            cell_data[name].append(tags)
+            cell_data[tag_name].append(tags)
 
     return Mesh(
         points,
@@ -138,7 +138,7 @@ def _read_cells(f, cells, point_tags, is_ascii):
         line = f.readline().decode("utf-8")
 
     # restrict to the standard two data items (physical, geometrical)
-    output_cell_tags = {"gmsh:physical": {}, "gmsh:geometrical": {}}
+    output_cell_tags = {}
     for cell_type in cell_tags:
         physical = []
         geometrical = []
@@ -152,8 +152,12 @@ def _read_cells(f, cells, point_tags, is_ascii):
         physical = numpy.array(physical, dtype=c_int)
         geometrical = numpy.array(geometrical, dtype=c_int)
         if len(physical) > 0:
+            if "gmsh:physical" not in output_cell_tags:
+                output_cell_tags["gmsh:physical"] = {}
             output_cell_tags["gmsh:physical"][cell_type] = physical
         if len(geometrical) > 0:
+            if "gmsh:geometrical" not in output_cell_tags:
+                output_cell_tags["gmsh:geometrical"] = {}
             output_cell_tags["gmsh:geometrical"][cell_type] = geometrical
 
     return has_additional_tag_data, output_cell_tags
