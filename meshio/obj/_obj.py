@@ -3,6 +3,7 @@ I/O for the Wavefront .obj file format, cf.
 <https://en.wikipedia.org/wiki/Wavefront_.obj_file>.
 """
 import datetime
+import logging
 
 import numpy
 
@@ -62,6 +63,10 @@ def read_buffer(f):
             # who knows
             pass
 
+    # There may be empty groups, too. <https://github.com/nschloe/meshio/issues/770>
+    # Remove them.
+    face_groups = [f for f in face_groups if len(f) > 0]
+
     points = numpy.array(points)
     texture_coords = numpy.array(texture_coords)
     vertex_normals = numpy.array(vertex_normals)
@@ -73,9 +78,18 @@ def read_buffer(f):
 
     # convert to numpy arrays
     face_groups = [numpy.array(f) for f in face_groups]
-    cells = [
-        CellBlock("triangle" if f.shape[1] == 3 else "quad", f - 1) for f in face_groups
-    ]
+    cells = []
+    for f in face_groups:
+        if f.shape[1] == 3:
+            cells.append(CellBlock("triangle", f - 1))
+        elif f.shape[1] == 4:
+            cells.append(CellBlock("quad", f - 1))
+        else:
+            # Anything else but triangles or quads not supported yet
+            logging.warning(
+                "meshio::obj only supports triangles and quads. "
+                "Skipping {} polygons with {} nodes".format(f.shape[0], f.shape[1])
+            )
 
     return Mesh(points, cells, point_data=point_data)
 
