@@ -165,9 +165,8 @@ def write(filename, mesh):
             1 if v.ndim == 1 else v.shape[1] for v in mesh.point_data.values()
         ]
         num_cell_data = [
-            1 if vv.ndim == 1 else vv.shape[1]
-            for v in mesh.cell_data.values()
-            for vv in v
+            1 if numpy.concatenate(v).ndim == 1 else numpy.concatenate(v).shape[1]
+            for k, v in mesh.cell_data.items()
         ]
         num_node_data_sum = sum(num_node_data)
         num_cell_data_sum = sum(num_cell_data)
