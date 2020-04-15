@@ -305,7 +305,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     # to make sure we are testing same type of cells we sort the list
     for cells0, cells1 in zip(sorted(input_mesh.cells), sorted(mesh.cells)):
-        assert cells0.type == cells1.type
+        assert cells0.type == cells1.type, "{} != {}".format(cells0.type, cells1.type)
         assert numpy.array_equal(cells0.data, cells1.data)
 
     for key in input_mesh.point_data.keys():

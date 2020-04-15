@@ -217,7 +217,7 @@ vtk_to_meshio_type = {
     5: "triangle",
     # 6: 'triangle_strip',
     7: "polygon",
-    # 8: 'pixel',
+    8: "pixel",
     9: "quad",
     10: "tetra",
     # 11: 'voxel',
