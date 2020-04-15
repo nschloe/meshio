@@ -520,30 +520,27 @@ def translate_cells(data, types, cell_data_raw):
     if has_polygon:
         numnodes = numpy.empty(len(types), dtype=int)
         # If some polygons are in the VTK file, loop over the cells
-        nbcells = len(types)
+        numcells = len(types)
         offsets = numpy.empty(len(types), dtype=int)
         offsets[0] = 0
-        for idx in range(nbcells - 1):
+        for idx in range(numcells - 1):
             numnodes[idx] = data[offsets[idx]]
             offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
 
-        idx = nbcells - 1
+        idx = numcells - 1
         numnodes[idx] = data[offsets[idx]]
         if not numpy.all(numnodes == data[offsets]):
             raise ReadError()
 
         # TODO: cell_data
-        for idx in range(nbcells):
-            nbedges = data[offsets[idx]]
+        for idx, vtk_cell_type in enumerate(types):
             start = offsets[idx] + 1
             end = start + numnodes[idx]
             cell = data[start:end]
-            if nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["triangle"]]:
-                cell_type = "triangle"
-            elif nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["quad"]]:
-                cell_type = "quad"
-            else:
-                cell_type = "polygon" + str(nbedges)
+
+            cell_type = vtk_to_meshio_type[vtk_cell_type]
+            if cell_type == "polygon":
+                cell_type += str(data[offsets[idx]])
 
             if len(cells) > 0 and cells[-1].type == cell_type:
                 cells[-1].data.append(cell)
