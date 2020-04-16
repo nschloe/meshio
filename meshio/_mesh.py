@@ -77,11 +77,9 @@ class Mesh:
         for c in self.cells:
             if c.type not in prune_list:
                 new_cells.append(c)
-                # items
                 for name, data in self.cell_data.items():
                     if name not in new_cell_data:
                         new_cell_data[name] = []
-                    # concatenate
                     new_cell_data[name] += data
 
         self.cells = new_cells
