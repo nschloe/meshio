@@ -87,7 +87,7 @@ def _read_cell_data(filename, cell_type):
         name = out.group(1)
 
         parser = ET.XMLParser()
-        tree = ET.parse(dir_name / f, parser)
+        tree = ET.parse((dir_name / f).as_posix(), parser)
         root = tree.getroot()
 
         mesh_functions = list(root)

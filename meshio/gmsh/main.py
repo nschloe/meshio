@@ -1,3 +1,4 @@
+import pathlib
 import struct
 
 from .._exceptions import ReadError, WriteError
@@ -13,7 +14,8 @@ _writers = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
 def read(filename):
     """Reads a Gmsh msh file.
     """
-    with open(filename, "rb") as f:
+    filename = pathlib.Path(filename)
+    with open(filename.as_posix(), "rb") as f:
         mesh = read_buffer(f)
     return mesh
 
