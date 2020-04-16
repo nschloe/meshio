@@ -1,4 +1,4 @@
-import os
+import pathlib
 
 import numpy
 import pytest
@@ -28,8 +28,9 @@ def test(mesh):
 
 @pytest.mark.parametrize("filename", ["cylinder.fem", "cylinder_cells_first.fem"])
 def test_reference_file(filename):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "nastran", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "nastran" / filename
+
     mesh = meshio.read(filename)
 
     # points

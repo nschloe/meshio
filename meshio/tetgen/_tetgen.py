@@ -4,6 +4,7 @@ I/O for the TetGen file format, c.f.
 """
 import logging
 import os
+import pathlib
 
 import numpy
 
@@ -14,12 +15,12 @@ from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
-    base, ext = os.path.splitext(filename)
-    if ext == ".node":
+    filename = pathlib.Path(filename)
+    if filename.suffix == ".node":
         node_filename = filename
-        ele_filename = base + ".ele"
-    elif ext == ".ele":
-        node_filename = base + ".node"
+        ele_filename = filename.parent / (filename.stem + ".ele")
+    elif filename.suffix == ".ele":
+        node_filename = filename.parent / (filename.stem + ".node")
         ele_filename = filename
     else:
         raise ReadError()
@@ -72,12 +73,12 @@ def read(filename):
 
 
 def write(filename, mesh, float_fmt=".15e"):
-    base, ext = os.path.splitext(filename)
-    if ext == ".node":
+    filename = pathlib.Path(filename)
+    if filename.suffix == ".node":
         node_filename = filename
-        ele_filename = base + ".ele"
-    elif ext == ".ele":
-        node_filename = base + ".node"
+        ele_filename = filename.parent / (filename.stem + ".ele")
+    elif filename.suffix == ".ele":
+        node_filename = filename.parent / (filename.stem + ".node")
         ele_filename = filename
     else:
         raise WriteError("Must specify .node or .ele file. Got {}.".format(filename))

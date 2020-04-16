@@ -1,4 +1,4 @@
-import os
+import pathlib
 from copy import deepcopy
 
 import numpy
@@ -17,8 +17,8 @@ def test(mesh):
 
 @pytest.mark.parametrize("filename", ["quad_zone_comma.tec", "quad_zone_space.tec"])
 def test_comma_space(filename):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "tecplot", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "tecplot" / filename
     mesh = meshio.read(filename)
 
     helpers.write_read(meshio.tecplot.write, meshio.tecplot.read, mesh, 1.0e-15)

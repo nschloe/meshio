@@ -1,4 +1,5 @@
 import os
+import pathlib
 import tempfile
 
 import numpy
@@ -38,8 +39,9 @@ def test(mesh):
     ],
 )
 def test_reference_file(filename, ref_sum, ref_num_cells, ref_num_cell_sets):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "abaqus", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "abaqus" / filename
+
     mesh = meshio.read(filename)
 
     assert numpy.isclose(numpy.sum(mesh.points), ref_sum)
