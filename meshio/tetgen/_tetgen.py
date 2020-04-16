@@ -25,7 +25,8 @@ def read(filename):
         raise ReadError()
 
     # read nodes
-    with open(node_filename) as f:
+    # TODO remove as_posix
+    with open(node_filename.as_posix()) as f:
         line = f.readline().strip()
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
@@ -51,7 +52,7 @@ def read(filename):
         points = points[:, 1:4]
 
     # read elements
-    with open(ele_filename) as f:
+    with open(ele_filename.as_posix()) as f:
         line = f.readline().strip()
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
