@@ -86,7 +86,8 @@ def write(filename, mesh, float_fmt=".15e"):
         raise WriteError("Can only write 3D points")
 
     # write nodes
-    with open(node_filename, "w") as fh:
+    # TODO remove .as_posix when requiring Python 3.6
+    with open(node_filename.as_posix(), "w") as fh:
         fh.write("# This file was created by meshio v{}\n".format(__version__))
         fh.write("{} {} {} {}\n".format(mesh.points.shape[0], 3, 0, 0))
         fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
@@ -104,7 +105,8 @@ def write(filename, mesh, float_fmt=".15e"):
         )
 
     # write cells
-    with open(ele_filename, "w") as fh:
+    # TODO remove .as_posix when requiring Python 3.6
+    with open(ele_filename.as_posix(), "w") as fh:
         fh.write("# This file was created by meshio v{}\n".format(__version__))
         for cell_type, data in filter(lambda c: c.type == "tetra", mesh.cells):
             fh.write("{} {} {}\n".format(data.shape[0], 4, 0))
