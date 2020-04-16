@@ -1,6 +1,6 @@
 import copy
-from functools import partial
 import pathlib
+from functools import partial
 
 import numpy
 import pytest
