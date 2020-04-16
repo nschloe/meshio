@@ -1,4 +1,4 @@
-import os
+import pathlib
 
 import numpy
 import pytest
@@ -43,8 +43,8 @@ def test_generic_io():
 
 
 def test_reference_file_with_mixed_cells():
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "med", "cylinder.med")
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "med" / "cylinder.med"
     mesh = meshio.read(filename)
 
     # Points
@@ -85,8 +85,8 @@ def test_reference_file_with_mixed_cells():
 
 
 def test_reference_file_with_point_cell_data():
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "med", "box.med")
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "med" / "box.med"
 
     mesh = meshio.read(filename)
 

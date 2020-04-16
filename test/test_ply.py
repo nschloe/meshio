@@ -1,4 +1,4 @@
-import os
+import pathlib
 
 import numpy
 import pytest
@@ -36,8 +36,9 @@ def test_ply(mesh, binary):
     [("bun_zipper_res4.ply", 3.414583969116211e01, 948)],
 )
 def test_reference_file(filename, ref_sum, ref_num_cells):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "ply", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "ply" / filename
+
     mesh = meshio.read(filename)
     tol = 1.0e-2
     s = numpy.sum(mesh.points)

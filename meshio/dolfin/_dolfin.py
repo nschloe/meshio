@@ -4,6 +4,7 @@ I/O for DOLFIN's XML format, cf.
 """
 import logging
 import os
+import pathlib
 import re
 import xml.etree.ElementTree as ET
 
@@ -72,13 +73,12 @@ def _read_cell_data(filename, cell_type):
     }
 
     cell_data = {}
-    dir_name = os.path.dirname(filename)
-    if not os.path.dirname(filename):
-        dir_name = os.getcwd()
+    dir_name = pathlib.Path(filename).resolve().parent
 
     # Loop over all files in the same directory as `filename`.
     basename = os.path.splitext(os.path.basename(filename))[0]
-    for f in os.listdir(dir_name):
+    # TODO remove .as_posix when requiring Python 3.6
+    for f in os.listdir(dir_name.as_posix()):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
         out = re.match("{}_([^\\.]+)\\.xml".format(basename), f)
@@ -87,7 +87,7 @@ def _read_cell_data(filename, cell_type):
         name = out.group(1)
 
         parser = ET.XMLParser()
-        tree = ET.parse(os.path.join(dir_name, f), parser)
+        tree = ET.parse((dir_name / f).as_posix(), parser)
         root = tree.getroot()
 
         mesh_functions = list(root)

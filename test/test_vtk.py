@@ -1,4 +1,3 @@
-import os
 import pathlib
 from functools import partial
 
@@ -54,8 +53,8 @@ def test_generic_io():
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_reference_file(filename, ref_sum, ref_num_cells, binary):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "vtk", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "vtk" / filename
 
     mesh = meshio.read(filename)
     tol = 1.0e-2
@@ -79,8 +78,8 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     ],
 )
 def test_structured(filename, ref_cells, ref_num_cells, ref_num_pnt):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "vtk", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "vtk" / filename
 
     mesh = meshio.read(filename)
     assert len(mesh.cells) == 1
@@ -90,8 +89,8 @@ def test_structured(filename, ref_cells, ref_num_cells, ref_num_pnt):
 
 
 def test_pathlike():
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    meshio.read(pathlib.Path(this_dir, "meshes", "vtk", "rbc_001.vtk"))
+    this_dir = pathlib.Path(__file__).resolve().parent
+    meshio.read(this_dir / "meshes" / "vtk" / "rbc_001.vtk")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-import os
+import pathlib
 
 import numpy
 import pytest
@@ -18,8 +18,9 @@ def test_neuroglancer(mesh):
 
 @pytest.mark.parametrize("filename, ref_sum, ref_num_cells", [("simple1", 20, 4)])
 def test_reference_file(filename, ref_sum, ref_num_cells):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "neuroglancer", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "neuroglancer" / filename
+
     mesh = meshio.read(filename, "neuroglancer")
     tol = 1.0e-5
     s = numpy.sum(mesh.points)

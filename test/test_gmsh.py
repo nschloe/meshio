@@ -1,5 +1,5 @@
 import copy
-import os
+import pathlib
 from functools import partial
 
 import numpy
@@ -123,8 +123,8 @@ def test_generic_io():
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_reference_file(filename, ref_sum, ref_num_cells, binary):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "msh", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "msh" / filename
     mesh = meshio.read(filename)
     tol = 1.0e-2
     s = mesh.points.sum()
@@ -143,8 +143,8 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     [("insulated-4.1.msh", 2.001762136876221, {"line": 21, "triangle": 111})],
 )
 def test_reference_file_readonly(filename, ref_sum, ref_num_cells):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "msh", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "msh" / filename
 
     mesh = meshio.read(filename)
     tol = 1.0e-2
