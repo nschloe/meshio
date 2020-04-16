@@ -3,7 +3,6 @@ I/O for the TetGen file format, c.f.
 <https://wias-berlin.de/software/tetgen/fformats.node.html>
 """
 import logging
-import os
 import pathlib
 
 import numpy
