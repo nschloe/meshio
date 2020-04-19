@@ -402,7 +402,7 @@ def write_binary_file(f, mesh):
                 "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
             )
         labels = (
-            mesh.point_data[labels_key] if labels_key else numpy.ones(n, dtype=itype)
+            mesh.point_data[labels_key] if labels_key else numpy.ones(num_verts, dtype=itype)
         )
 
         tmp_array = numpy.empty(num_verts, dtype=dtype)
