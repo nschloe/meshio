@@ -181,6 +181,7 @@ def read_ascii_buffer(f):
         "Triangles": ("triangle", 3),
         "Quadrilaterals": ("quad", 4),
         "Tetrahedra": ("tetra", 4),
+        "Prisms": ("wedge", 6),
         "Hexahedra": ("hexahedron", 8),  # Frey
         "Hexaedra": ("hexahedron", 8),  # Dobrzynski
     }
@@ -284,6 +285,7 @@ def write_ascii_file(filename, mesh, float_fmt=".15e"):
             "triangle": ("Triangles", 3),
             "quad": ("Quadrilaterals", 4),
             "tetra": ("Tetrahedra", 4),
+            "wedge":("Prisms",6),
             "hexahedron": ("Hexahedra", 8),
         }
 
