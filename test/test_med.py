@@ -1,4 +1,4 @@
-import os
+import pathlib
 
 import numpy
 import pytest
@@ -27,9 +27,9 @@ h5py = pytest.importorskip("h5py")
         helpers.add_point_data(helpers.tri_mesh, 2),
         helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_point_data(helpers.hex_mesh, 3),
-        helpers.add_cell_data(helpers.tri_mesh, 1),
-        helpers.add_cell_data(helpers.tri_mesh, 2),
-        helpers.add_cell_data(helpers.tri_mesh, 3),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
     ],
 )
 def test_io(mesh):
@@ -43,14 +43,14 @@ def test_generic_io():
 
 
 def test_reference_file_with_mixed_cells():
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "med", "cylinder.med")
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "med" / "cylinder.med"
     mesh = meshio.read(filename)
 
     # Points
     assert numpy.isclose(mesh.points.sum(), 16.53169892762988)
 
-    # Cells
+    # CellBlock
     ref_num_cells = {"pyramid": 18, "quad": 18, "line": 17, "tetra": 63, "triangle": 4}
     assert {k: len(v) for k, v in mesh.cells} == ref_num_cells
 
@@ -85,15 +85,15 @@ def test_reference_file_with_mixed_cells():
 
 
 def test_reference_file_with_point_cell_data():
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "med", "box.med")
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "med" / "box.med"
 
     mesh = meshio.read(filename)
 
     # Points
     assert numpy.isclose(mesh.points.sum(), 12)
 
-    # Cells
+    # CellBlock
     assert {k: len(v) for k, v in mesh.cells} == {"hexahedron": 1}
 
     # Point data

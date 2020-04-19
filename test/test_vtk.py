@@ -1,4 +1,3 @@
-import os
 import pathlib
 from functools import partial
 
@@ -24,10 +23,13 @@ test_set = [
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),
     helpers.add_point_data(helpers.tri_mesh, 3),
-    helpers.add_cell_data(helpers.tri_mesh, 1),
-    helpers.add_cell_data(helpers.tri_mesh, 2),
-    helpers.add_cell_data(helpers.tri_mesh, 3),
-    helpers.add_cell_data(helpers.add_point_data(helpers.tri_mesh_2d, 2), 2),
+    # VTK files float data is always stored in big endian
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (), ">f8")]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), ">f8")]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), ">f8")]),
+    helpers.add_cell_data(
+        helpers.add_point_data(helpers.tri_mesh_2d, 2), [("a", (2,), ">f8")]
+    ),
 ]
 
 
@@ -51,8 +53,8 @@ def test_generic_io():
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_reference_file(filename, ref_sum, ref_num_cells, binary):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "vtk", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "vtk" / filename
 
     mesh = meshio.read(filename)
     tol = 1.0e-2
@@ -76,8 +78,8 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     ],
 )
 def test_structured(filename, ref_cells, ref_num_cells, ref_num_pnt):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "vtk", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "vtk" / filename
 
     mesh = meshio.read(filename)
     assert len(mesh.cells) == 1
@@ -87,8 +89,8 @@ def test_structured(filename, ref_cells, ref_num_cells, ref_num_pnt):
 
 
 def test_pathlike():
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    meshio.read(pathlib.Path(this_dir, "meshes", "vtk", "rbc_001.vtk"))
+    this_dir = pathlib.Path(__file__).resolve().parent
+    meshio.read(this_dir / "meshes" / "vtk" / "rbc_001.vtk")
 
 
 if __name__ == "__main__":

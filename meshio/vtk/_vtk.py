@@ -11,7 +11,7 @@ from .._common import meshio_to_vtk_type, vtk_to_meshio_type
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 vtk_type_to_numnodes = numpy.array(
     [
@@ -126,11 +126,11 @@ class Info:
         self.is_ascii = False
         self.split = []
         self.num_items = 0
-        # One of the problem in reading VTK files are POINT_DATA and CELL_DATA fields. They
-        # can contain a number of SCALARS+LOOKUP_TABLE tables, without giving and indication
-        # of how many there are. Hence, SCALARS must be treated like a first-class section.
-        # To associate it with POINT/CELL_DATA, we store the `active` section in this
-        # variable.
+        # One of the problem in reading VTK files are POINT_DATA and CELL_DATA fields.
+        # They can contain a number of SCALARS+LOOKUP_TABLE tables, without giving and
+        # indication of how many there are. Hence, SCALARS must be treated like a
+        # first-class section.  To associate it with POINT/CELL_DATA, we store the
+        # `active` section in this variable.
         self.section = None
 
 
@@ -152,7 +152,7 @@ def read_buffer(f):
 
     data_type = f.readline().decode("utf-8").strip().upper()
     if data_type not in ["ASCII", "BINARY"]:
-        raise ReadError(f"Unknown VTK data type '{data_type}'.")
+        raise ReadError("Unknown VTK data type '{}'.".format(data_type))
     info.is_ascii = data_type == "ASCII"
 
     while True:
@@ -264,7 +264,7 @@ def _read_subsection(f, info):
     elif info.section == "FIELD":
         d.update(_read_fields(f, int(info.split[2]), info.is_ascii))
     else:
-        raise ReadError(f"Unknown section '{info.section}'.")
+        raise ReadError("Unknown section '{}'.".format(info.section))
 
 
 def _check_mesh(info):
@@ -474,6 +474,7 @@ def _read_fields(f, num_fields, is_ascii):
             name, shape0, shape1, data_type = f.readline().decode("utf-8").split()
         else:
             name, shape0, shape1, data_type = line
+
         shape0 = int(shape0)
         shape1 = int(shape1)
         dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type.lower()])
@@ -519,44 +520,43 @@ def translate_cells(data, types, cell_data_raw):
     if has_polygon:
         numnodes = numpy.empty(len(types), dtype=int)
         # If some polygons are in the VTK file, loop over the cells
-        nbcells = len(types)
+        numcells = len(types)
         offsets = numpy.empty(len(types), dtype=int)
         offsets[0] = 0
-        for idx in range(nbcells - 1):
+        for idx in range(numcells - 1):
             numnodes[idx] = data[offsets[idx]]
             offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
 
-        idx = nbcells - 1
+        idx = numcells - 1
         numnodes[idx] = data[offsets[idx]]
         if not numpy.all(numnodes == data[offsets]):
             raise ReadError()
 
         # TODO: cell_data
-        for idx in range(nbcells):
-            nbedges = data[offsets[idx]]
+        for idx, vtk_cell_type in enumerate(types):
             start = offsets[idx] + 1
             end = start + numnodes[idx]
             cell = data[start:end]
-            if nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["triangle"]]:
-                cell_type = "triangle"
-            elif nbedges == vtk_type_to_numnodes[meshio_to_vtk_type["quad"]]:
-                cell_type = "quad"
-            else:
-                cell_type = "polygon" + str(nbedges)
+
+            cell_type = vtk_to_meshio_type[vtk_cell_type]
+            if cell_type == "polygon":
+                cell_type += str(data[offsets[idx]])
 
             if len(cells) > 0 and cells[-1].type == cell_type:
                 cells[-1].data.append(cell)
             else:
-                cells.append(Cells(cell_type, [cell]))
+                cells.append(CellBlock(cell_type, [cell]))
 
         # convert data to numpy arrays
         for k, c in enumerate(cells):
-            cells[k] = Cells(c.type, numpy.array(c.data))
+            cells[k] = CellBlock(c.type, numpy.array(c.data))
     else:
         # Deduct offsets from the cell types. This is much faster than manually going
         # through the data array. Slight disadvantage: This doesn't work for cells with
         # a custom number of points.
         numnodes = vtk_type_to_numnodes[types]
+        if not numpy.all(numnodes > 0):
+            raise ReadError("File contains cells that meshio cannot handle.")
         offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
 
         if not numpy.all(numnodes == data[offsets]):
@@ -569,7 +569,7 @@ def translate_cells(data, types, cell_data_raw):
             meshio_type = vtk_to_meshio_type[types[start]]
             n = data[offsets[start]]
             indices = numpy.add.outer(offsets[start:end], numpy.arange(1, n + 1))
-            cells.append(Cells(meshio_type, data[indices]))
+            cells.append(CellBlock(meshio_type, data[indices]))
             for name, d in cell_data_raw.items():
                 if name not in cell_data:
                     cell_data[name] = []
@@ -614,7 +614,7 @@ def write(filename, mesh, binary=True):
 
     with open_file(filename, "wb") as f:
         f.write(b"# vtk DataFile Version 4.2\n")
-        f.write(f"written by meshio v{__version__}\n".encode("utf-8"))
+        f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
         f.write(("BINARY\n" if binary else "ASCII\n").encode("utf-8"))
         f.write(b"DATASET UNSTRUCTURED_GRID\n")
 
@@ -625,13 +625,13 @@ def write(filename, mesh, binary=True):
         # write point data
         if mesh.point_data:
             num_points = mesh.points.shape[0]
-            f.write(f"POINT_DATA {num_points}\n".encode("utf-8"))
+            f.write("POINT_DATA {}\n".format(num_points).encode("utf-8"))
             _write_field_data(f, mesh.point_data, binary)
 
         # write cell data
         if mesh.cell_data:
             total_num_cells = sum(len(c.data) for c in mesh.cells)
-            f.write(f"CELL_DATA {total_num_cells}\n".encode("utf-8"))
+            f.write("CELL_DATA {}\n".format(total_num_cells).encode("utf-8"))
             _write_field_data(f, mesh.cell_data, binary)
 
 
@@ -645,6 +645,10 @@ def _write_points(f, points, binary):
     if binary:
         # Binary data must be big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        # if points.dtype.byteorder == "<" or (
+        #     points.dtype.byteorder == "=" and sys.byteorder == "little"
+        # ):
+        #     logging.warn("Converting to new byte order")
         points.astype(points.dtype.newbyteorder(">")).tofile(f, sep="")
     else:
         # ascii
@@ -657,7 +661,7 @@ def _write_cells(f, cells, binary):
     total_num_idx = sum([numpy.prod(c.data.shape) for c in cells])
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
-    f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode("utf-8"))
+    f.write("CELLS {} {}\n".format(total_num_cells, total_num_idx).encode("utf-8"))
     if binary:
         for c in cells:
             n = c.data.shape[1]
@@ -679,7 +683,7 @@ def _write_cells(f, cells, binary):
             f.write(b"\n")
 
     # write cell types
-    f.write(f"CELL_TYPES {total_num_cells}\n".encode("utf-8"))
+    f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
     if binary:
         for c in cells:
             key_ = c.type[:7] if c.type[:7] == "polygon" else c.type
@@ -709,7 +713,9 @@ def _write_field_data(f, data, binary):
             num_components = values.shape[1]
 
         if " " in name:
-            raise WriteError(f"VTK doesn't support spaces in field names ('{name}').")
+            raise WriteError(
+                "VTK doesn't support spaces in field names ('{}').".format(name)
+            )
 
         f.write(
             (
@@ -730,13 +736,4 @@ def _write_field_data(f, data, binary):
         f.write(b"\n")
 
 
-register(
-    "vtk",
-    [".vtk"],
-    read,
-    {
-        "vtk": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "vtk-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-        "vtk-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-    },
-)
+register("vtk", [".vtk"], read, {"vtk": write})

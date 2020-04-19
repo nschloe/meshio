@@ -5,20 +5,29 @@ import tracemalloc
 
 import matplotlib.pyplot as plt
 import numpy
-import pygalmesh
+import meshzoo
 
 import meshio
 
 
-def generate_mesh():
+def generate_triangular_mesh():
+    if os.path.isfile("sphere.xdmf"):
+        mesh = meshio.read("sphere.xdmf")
+    else:
+        points, cells = meshzoo.icosa_sphere(300)
+        mesh = meshio.Mesh(points, {"triangle": cells})
+        mesh.write("sphere.xdmf")
+    return mesh
+
+
+def generate_tetrahedral_mesh():
     """Generates a fairly large mesh.
     """
-    # import meshzoo
-    # points, cells = meshzoo.rectangle(nx=300, ny=300)
-    # return meshio.Mesh(points, {"triangle": cells})
     if os.path.isfile("cache.xdmf"):
         mesh = meshio.read("cache.xdmf")
     else:
+        import pygalmesh
+
         s = pygalmesh.Ball([0, 0, 0], 1.0)
         mesh = pygalmesh.generate_mesh(s, cell_size=2.0e-2, verbose=True)
         # mesh = pygalmesh.generate_mesh(s, cell_size=1.0e-1, verbose=True)
@@ -26,7 +35,6 @@ def generate_mesh():
         mesh.point_data = []
         mesh.cell_data = {"tetra": {}}
         mesh.write("cache.xdmf")
-    print(mesh)
     return mesh
 
 
@@ -127,10 +135,12 @@ def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
 
 
 def read_write(plot=False):
-    mesh = generate_mesh()
+    # mesh = generate_tetrahedral_mesh()
+    mesh = generate_triangular_mesh()
+    print(mesh)
     mem_size = mesh.points.nbytes + mesh.cells[0].data.nbytes
     mem_size /= 1024.0 ** 2
-    print(f"mem_size: {mem_size:.2f} MB")
+    print("mem_size: {:.2f} MB".format(mem_size))
 
     formats = {
         "Abaqus": (meshio.abaqus.write, meshio.abaqus.read, ["out.inp"]),
@@ -145,9 +155,10 @@ def read_write(plot=False):
         #     ["out.ans"],
         # ),
         "AVS-UCD": (meshio.avsucd.write, meshio.avsucd.read, ["out.ucd"]),
-        "CGNS": (meshio.cgns.write, meshio.cgns.read, ["out.cgns"]),
+        # "CGNS": (meshio.cgns.write, meshio.cgns.read, ["out.cgns"]),
         "Dolfin-XML": (meshio.dolfin.write, meshio.dolfin.read, ["out.xml"]),
-        "FLAC3D": (meshio.flac3d.write, meshio.flac3d.read, ["out.f3grid"]),
+        "Exodus": (meshio.exodus.write, meshio.exodus.read, ["out.e"]),
+        # "FLAC3D": (meshio.flac3d.write, meshio.flac3d.read, ["out.f3grid"]),
         "Gmsh 4.1 (ASCII)": (
             lambda f, m: meshio.gmsh.write(f, m, binary=False),
             meshio.gmsh.read,
@@ -162,15 +173,31 @@ def read_write(plot=False):
         "MED": (meshio.med.write, meshio.med.read, ["out.med"]),
         "Medit": (meshio.medit.write, meshio.medit.read, ["out.mesh"]),
         "MOAB": (meshio.h5m.write, meshio.h5m.read, ["out.h5m"]),
-        # # "obj": ".obj",
-        # # "ply": ".ply",
-        # # "stl": ".stl",
         "Nastran": (meshio.nastran.write, meshio.nastran.read, ["out.bdf"]),
-        # # "off": ".off",
-        # # "exodus": ".e",
+        "OBJ": (meshio.obj.write, meshio.obj.read, ["out.obj"]),
+        "OFF": (meshio.off.write, meshio.off.read, ["out.off"]),  # TODO add
         "Permas": (meshio.permas.write, meshio.permas.read, ["out.dato"]),
-        # # "wkt": ".wkt",
-        "TetGen": (meshio.tetgen.write, meshio.tetgen.read, ["out.node", "out.ele"],),
+        "PLY (binary)": (
+            lambda f, m: meshio.ply.write(f, m, binary=True),
+            meshio.ply.read,
+            ["out.ply"],
+        ),
+        "PLY (ASCII)": (
+            lambda f, m: meshio.ply.write(f, m, binary=False),
+            meshio.ply.read,
+            ["out.ply"],
+        ),
+        "STL (binary)": (
+            lambda f, m: meshio.stl.write(f, m, binary=True),
+            meshio.stl.read,
+            ["out.stl"],
+        ),
+        "STL (ASCII)": (
+            lambda f, m: meshio.stl.write(f, m, binary=False),
+            meshio.stl.read,
+            ["out.stl"],
+        ),
+        # "TetGen": (meshio.tetgen.write, meshio.tetgen.read, ["out.node", "out.ele"],),
         "VTK (binary)": (
             lambda f, m: meshio.vtk.write(f, m, binary=True),
             meshio.vtk.read,
@@ -181,8 +208,18 @@ def read_write(plot=False):
             meshio.vtk.read,
             ["out.vtk"],
         ),
-        "VTU (binary)": (
-            lambda f, m: meshio.vtu.write(f, m, binary=True),
+        "VTU (binary, uncompressed)": (
+            lambda f, m: meshio.vtu.write(f, m, binary=True, compression=None),
+            meshio.vtu.read,
+            ["out.vtu"],
+        ),
+        "VTU (binary, zlib)": (
+            lambda f, m: meshio.vtu.write(f, m, binary=True, compression="zlib"),
+            meshio.vtu.read,
+            ["out.vtu"],
+        ),
+        "VTU (binary, LZMA)": (
+            lambda f, m: meshio.vtu.write(f, m, binary=True, compression="lzma"),
             meshio.vtu.read,
             ["out.vtu"],
         ),
@@ -191,6 +228,8 @@ def read_write(plot=False):
             meshio.vtu.read,
             ["out.vtu"],
         ),
+        "Wavefront .obj": (meshio.obj.write, meshio.obj.read, ["out.obj"]),
+        # "wkt": ".wkt",
         "XDMF (binary)": (
             lambda f, m: meshio.xdmf.write(f, m, data_format="Binary"),
             meshio.xdmf.read,
@@ -223,6 +262,8 @@ def read_write(plot=False):
     #     "MDPA": formats["MDPA"],
     # }
 
+    # max_key_length = max(len(key) for key in formats)
+
     elapsed_write = []
     elapsed_read = []
     file_sizes = []
@@ -231,7 +272,7 @@ def read_write(plot=False):
 
     print()
     print(
-        "format                  "
+        "format                      "
         + "write (s)    "
         + "read(s)      "
         + "file size    "
@@ -262,7 +303,7 @@ def read_write(plot=False):
             peak_memory_read.append(tracemalloc.get_traced_memory()[1])
             tracemalloc.stop()
             print(
-                "{:<22}  {:e} {:e} {:e} {:e} {:e}".format(
+                "{:<26}  {:e} {:e} {:e} {:e} {:e}".format(
                     name,
                     elapsed_write[-1],
                     elapsed_read[-1],

@@ -7,7 +7,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 abaqus_to_meshio_type = {
     # trusses
@@ -106,6 +106,8 @@ def read_buffer(f):
     cell_ids = []
     point_sets = {}
     cell_sets = {}
+    cell_sets_element = {}  # Handle cell sets defined in ELEMENT
+    cell_sets_element_order = []  # Order of keys is not preserved in Python 3.5
     field_data = {}
     cell_data = {}
     point_data = {}
@@ -124,9 +126,12 @@ def read_buffer(f):
         if keyword == "NODE":
             points, point_ids, line = _read_nodes(f)
         elif keyword == "ELEMENT":
-            cell_type, cells_data, ids, line = _read_cells(f, line, point_ids)
-            cells.append(Cells(cell_type, cells_data))
+            cell_type, cells_data, ids, sets, line = _read_cells(f, line, point_ids)
+            cells.append(CellBlock(cell_type, cells_data))
             cell_ids.append(ids)
+            if sets:
+                cell_sets_element.update(sets)
+                cell_sets_element_order += list(sets.keys())
         elif keyword == "NSET":
             params_map = get_param_map(line, required_keys=["NSET"])
             set_ids, line = _read_set(f, params_map)
@@ -148,6 +153,20 @@ def read_buffer(f):
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
+
+    # Parse cell sets defined in ELEMENT
+    for i, name in enumerate(cell_sets_element_order):
+        # Not sure whether this case would ever happen
+        if name in cell_sets.keys():
+            cell_sets[name][i] = cell_sets_element[name]
+        else:
+            cell_sets[name] = []
+            for ic in range(len(cells)):
+                cell_sets[name].append(
+                    cell_sets_element[name]
+                    if i == ic
+                    else numpy.array([], dtype="int32")
+                )
 
     return Mesh(
         points,
@@ -181,15 +200,17 @@ def _read_nodes(f):
 
 
 def _read_cells(f, line0, point_ids):
-    sline = line0.split(",")[1:]
+    values = {}
+    for pair in line0.split(",")[1:]:
+        k, v = pair.split("=")
+        values[k.strip().upper()] = v.strip()
 
-    etype_sline = sline[0].upper()
-    if "TYPE" not in etype_sline:
-        raise ReadError(etype_sline)
+    if "TYPE" not in values.keys():
+        raise ReadError()
 
-    etype = etype_sline.split("=")[1].strip()
-    if etype not in abaqus_to_meshio_type:
-        raise ReadError(f"Element type not available: {etype}")
+    etype = values["TYPE"]
+    if etype not in abaqus_to_meshio_type.keys():
+        raise ReadError("Element type not available: {}".format(etype))
 
     cell_type = abaqus_to_meshio_type[etype]
 
@@ -210,7 +231,14 @@ def _read_cells(f, line0, point_ids):
             cells.append([point_ids[k] for k in idx[1:]])
             idx = []
             counter += 1
-    return cell_type, numpy.array(cells), cell_ids, line
+
+    cell_sets = (
+        {values["ELSET"]: numpy.arange(counter, dtype="int32")}
+        if "ELSET" in values.keys()
+        else {}
+    )
+
+    return cell_type, numpy.array(cells), cell_ids, cell_sets, line
 
 
 def get_param_map(word, required_keys=None):
@@ -246,7 +274,7 @@ def get_param_map(word, required_keys=None):
     msg = ""
     for key in required_keys:
         if key not in param_map:
-            msg += f"{key!r} not found in {word!r}\n"
+            msg += "{} not found in {}\n".format(key, word)
     if msg:
         raise RuntimeError(msg)
     return param_map
@@ -271,13 +299,13 @@ def _read_set(f, params_map):
     return set_ids, line
 
 
-def write(filename, mesh, translate_cell_names=True):
+def write(filename, mesh, float_fmt=".15e", translate_cell_names=True):
     with open_file(filename, "wt") as f:
         f.write("*Heading\n")
         f.write("Abaqus DataFile Version 6.14\n")
-        f.write(f"written by meshio v{__version__}\n")
+        f.write("written by meshio v{}\n".format(__version__))
         f.write("*Node\n")
-        fmt = ", ".join(["{}"] + ["{!r}"] * mesh.points.shape[1]) + "\n"
+        fmt = ", ".join(["{}"] + ["{:" + float_fmt + "}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):
             f.write(fmt.format(k + 1, *x))
         eid = 0
@@ -292,16 +320,19 @@ def write(filename, mesh, translate_cell_names=True):
                 f.write(str(eid) + "," + ",".join(nids_strs) + "\n")
 
         nnl = 8
+        offset = 0
         for ic in range(len(mesh.cells)):
             for k, v in mesh.cell_sets.items():
-                els = [str(i + 1) for i in v[ic]]
-                f.write("*ELSET, ELSET=%s\n" % k)
-                f.write(
-                    ",\n".join(
-                        ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
+                if len(v[ic]) > 0:
+                    els = [str(i + 1 + offset) for i in v[ic]]
+                    f.write("*ELSET, ELSET=%s\n" % k)
+                    f.write(
+                        ",\n".join(
+                            ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
+                        )
+                        + "\n"
                     )
-                    + "\n"
-                )
+            offset += len(mesh.cells[ic].data)
 
         for k, v in mesh.point_sets.items():
             nds = [str(i + 1) for i in v]

@@ -11,6 +11,7 @@ num_nodes_per_cell = {
     "tetra": 4,
     "hexahedron": 8,
     "hexahedron20": 20,
+    "hexahedron24": 24,
     "wedge": 6,
     "pyramid": 5,
     #
@@ -72,11 +73,78 @@ num_nodes_per_cell = {
     "tetra220": 220,
     "wedge550": 550,
     "hexahedron1000": 1000,
+    "hexahedron1331": 1331,
     #
     "line11": 11,
     "triangle66": 66,
     "quad121": 121,
     "tetra286": 286,
+}
+
+_geometric_dimension = {
+    "line": 1,
+    "triangle": 2,
+    "quad": 2,
+    "tetra": 3,
+    "hexahedron": 3,
+    "wedge": 3,
+    "pyramid": 3,
+    "line3": 1,
+    "triangle6": 2,
+    "quad9": 2,
+    "tetra10": 3,
+    "hexahedron27": 3,
+    "wedge18": 3,
+    "pyramid14": 3,
+    "vertex": 0,
+    "quad8": 2,
+    "hexahedron20": 3,
+    "triangle10": 2,
+    "triangle15": 2,
+    "triangle21": 2,
+    "line4": 1,
+    "line5": 1,
+    "line6": 1,
+    "tetra20": 3,
+    "tetra35": 3,
+    "tetra56": 3,
+    "quad16": 2,
+    "quad25": 2,
+    "quad36": 2,
+    "triangle28": 2,
+    "triangle36": 2,
+    "triangle45": 2,
+    "triangle55": 2,
+    "triangle66": 2,
+    "quad49": 2,
+    "quad64": 2,
+    "quad81": 2,
+    "quad100": 2,
+    "quad121": 2,
+    "line7": 1,
+    "line8": 1,
+    "line9": 1,
+    "line10": 1,
+    "line11": 1,
+    "tetra84": 3,
+    "tetra120": 3,
+    "tetra165": 3,
+    "tetra220": 3,
+    "tetra286": 3,
+    "wedge40": 3,
+    "wedge75": 3,
+    "hexahedron64": 3,
+    "hexahedron125": 3,
+    "hexahedron216": 3,
+    "hexahedron343": 3,
+    "hexahedron512": 3,
+    "hexahedron729": 3,
+    "hexahedron1000": 3,
+    "wedge126": 3,
+    "wedge196": 3,
+    "wedge288": 3,
+    "wedge405": 3,
+    "wedge550": 3,
 }
 
 
@@ -100,9 +168,8 @@ ET._original_serialize_xml = ET._serialize_xml
 
 
 def _serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwargs):
-
     if elem.tag == "![CDATA[":
-        write(f"\n<{elem.tag}{elem.text}]]>\n")
+        write("\n<{}{}]]>\n".format(elem.tag, elem.text))
         if elem.tail:
             write(ET._escape_cdata(elem.tail))
     else:
@@ -119,6 +186,27 @@ def write_xml(filename, root):
     tree.write(filename)
 
 
+def _pick_first_int_data(data):
+    # pick out material
+    keys = list(data.keys())
+    candidate_keys = []
+    for key in keys:
+        # works for point_data and cell_data
+        if data[key][0].dtype.kind in ["i", "u"]:  # int or uint
+            candidate_keys.append(key)
+
+    if len(candidate_keys) > 0:
+        # pick the first
+        key = candidate_keys[0]
+        idx = keys.index(key)
+        other = keys[:idx] + keys[idx + 1 :]
+    else:
+        key = None
+        other = []
+
+    return key, other
+
+
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {
     0: "empty",
@@ -129,7 +217,7 @@ vtk_to_meshio_type = {
     5: "triangle",
     # 6: 'triangle_strip',
     7: "polygon",
-    # 8: 'pixel',
+    8: "pixel",
     9: "quad",
     10: "tetra",
     # 11: 'voxel',

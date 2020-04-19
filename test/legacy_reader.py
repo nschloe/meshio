@@ -100,7 +100,7 @@ def read(filetype, filename):
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
     else:
-        assert filetype == "exodus", f"Unknown file type '{filename}'."
+        assert filetype == "exodus", "Unknown file type '{}'.".format(filename)
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
         vtk_mesh = _read_exodusii_mesh(reader)

@@ -7,7 +7,7 @@ import numpy
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
-from .._mesh import Cells
+from .._mesh import CellBlock
 from .common import (
     attribute_type,
     dtype_to_format_string,
@@ -33,7 +33,7 @@ class TimeSeriesReader:
 
         version = root.get("Version")
         if version.split(".")[0] != "3":
-            raise ReadError(f"Unknown XDMF version {version}.")
+            raise ReadError("Unknown XDMF version {}.".format(version))
 
         domains = list(root)
         if len(domains) != 1:
@@ -90,7 +90,7 @@ class TimeSeriesReader:
         grid = self.mesh_grid
 
         points = None
-        cells = {}
+        cells = []
 
         for c in grid:
             if c.tag == "Topology":
@@ -113,8 +113,7 @@ class TimeSeriesReader:
                 if cell_type == "Mixed":
                     cells = translate_mixed_cells(data)
                 else:
-                    meshio_type = xdmf_to_meshio_type[cell_type]
-                    cells[meshio_type] = data
+                    cells.append(CellBlock(xdmf_to_meshio_type[cell_type], data))
 
             elif c.tag == "Geometry":
                 try:
@@ -288,6 +287,7 @@ class TimeSeriesWriter:
         write_xml(self.filename, self.xdmf_file)
 
     def write_data(self, t, point_data=None, cell_data=None):
+        cell_data = {} if cell_data is None else cell_data
         # <Grid>
         #   <xi:include xpointer="xpointer(//Grid[@Name=&quot;TimeSeries_phi&quot;]/Grid[1]/*[self::Topology or self::Geometry])" />
         #   <Time Value="3.3333333333333335e-05" />
@@ -302,7 +302,7 @@ class TimeSeriesWriter:
             self.mesh_name
         )
         ET.SubElement(grid, "{http://www.w3.org/2003/XInclude}include", xpointer=ptr)
-        ET.SubElement(grid, "Time", Value=f"{t}")
+        ET.SubElement(grid, "Time", Value=str(t))
 
         if point_data:
             self.point_data(point_data, grid)
@@ -334,7 +334,7 @@ class TimeSeriesWriter:
 
         if self.data_format != "HDF":
             raise WriteError()
-        name = f"data{self.data_counter}"
+        name = "data{}".format(self.data_counter)
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
         return os.path.basename(self.h5_filename) + ":/" + name
@@ -367,9 +367,9 @@ class TimeSeriesWriter:
                 '[("triangle", [[0, 1, 2], ...])]',
                 DeprecationWarning,
             )
-            cells = [Cells(cell_type, data) for cell_type, data in cells.items()]
+            cells = [CellBlock(cell_type, data) for cell_type, data in cells.items()]
         else:
-            cells = [Cells(cell_type, data) for cell_type, data in cells]
+            cells = [CellBlock(cell_type, data) for cell_type, data in cells]
         if len(cells) == 1:
             meshio_type = cells[0].type
             num_cells = len(cells[0].data)
@@ -392,20 +392,21 @@ class TimeSeriesWriter:
             )
             data_item.text = self.numpy_to_xml_string(cells[0].data)
         elif len(cells) > 1:
-            total_num_cells = sum(c.shape[0] for c in cells.values())
+            total_num_cells = sum(c.data.shape[0] for c in cells)
             topo = ET.SubElement(
                 grid,
                 "Topology",
                 TopologyType="Mixed",
                 NumberOfElements=str(total_num_cells),
             )
-            total_num_cell_items = sum(numpy.prod(c.shape) for c in cells.values())
+            total_num_cell_items = sum(numpy.prod(c.data.shape) for c in cells)
             dim = total_num_cell_items + total_num_cells
             # Lines translate to Polylines, and one needs to specify the exact
             # number of nodes. Hence, prepend 2.
-            if "line" in cells:
-                cells["line"] = numpy.insert(cells["line"], 0, 2, axis=1)
-                dim += len(cells["line"])
+            for c in cells:
+                if c.type == "line":
+                    c.data[:] = numpy.insert(c.data, 0, 2, axis=1)
+                    dim += len(c.data)
             dim = str(dim)
             cd = numpy.concatenate(
                 [
@@ -413,7 +414,7 @@ class TimeSeriesWriter:
                     numpy.insert(
                         value, 0, meshio_type_to_xdmf_index[key], axis=1
                     ).flatten()
-                    for key, value in cells.items()
+                    for key, value in cells
                 ]
             )
             dt, prec = numpy_to_xdmf_dtype[cd.dtype.name]

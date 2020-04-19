@@ -9,7 +9,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 permas_to_meshio_type = {
     "PLOT1": "vertex",
@@ -88,7 +88,7 @@ def read_buffer(f):
             points, point_gids = _read_nodes(f)
         elif keyword.startswith("ELEMENT"):
             key, idx = _read_cells(f, keyword, point_gids)
-            cells.append(Cells(key, idx))
+            cells.append(CellBlock(key, idx))
         elif keyword.startswith("NSET"):
             params_map = get_param_map(keyword, required_keys=["NSET"])
             setids = read_set(f, params_map)
@@ -140,7 +140,7 @@ def _read_cells(f, line0, point_gids):
         raise ReadError(etype_sline)
     etype = etype_sline.split("=")[1].strip()
     if etype not in permas_to_meshio_type:
-        raise ReadError(f"Element type not available: {etype}")
+        raise ReadError("Element type not available: {}".format(etype))
     cell_type = permas_to_meshio_type[etype]
     cells, idx = [], []
     while True:
@@ -192,7 +192,7 @@ def get_param_map(word, required_keys=None):
     msg = ""
     for key in required_keys:
         if key not in param_map:
-            msg += f"{key} not found in {word}\n"
+            msg += "{} not found in {}\n".format(key, word)
     if msg:
         raise RuntimeError(msg)
     return param_map
@@ -216,7 +216,6 @@ def read_set(f, params_map):
         try:
             set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
         except ValueError:
-            print(set_ids)
             raise
     return set_ids
 
@@ -233,7 +232,7 @@ def write(filename, mesh):
 
     with open_file(filename, "wt") as f:
         f.write("!PERMAS DataFile Version 17.0\n")
-        f.write(f"!written by meshio v{__version__}\n")
+        f.write("!written by meshio v{}\n".format(__version__))
         f.write("$ENTER COMPONENT NAME=DFLT_COMP\n")
         f.write("$STRUCTURE\n")
         f.write("$COOR\n")

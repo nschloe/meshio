@@ -7,12 +7,10 @@ import logging
 import numpy
 
 from ..__about__ import __version__ as version
+from .._common import _pick_first_int_data
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
-
-meshio_data = {"avsucd:material", "flac3d:zone", "gmsh:physical", "medit:ref"}
-
+from .._mesh import CellBlock, Mesh
 
 meshio_to_avsucd_type = {
     "vertex": "pt",
@@ -101,7 +99,7 @@ def _read_cells(f, num_cells, point_ids):
             cells[-1].data.append(corner)
             cell_data["avsucd:material"][-1].append(cell_mat)
         else:
-            cells.append(Cells(cell_type, [corner]))
+            cells.append(CellBlock(cell_type, [corner]))
             cell_data["avsucd:material"].append([cell_mat])
 
         cell_ids[cell_id] = count
@@ -109,7 +107,9 @@ def _read_cells(f, num_cells, point_ids):
 
     # Convert to numpy arrays
     for k, c in enumerate(cells):
-        cells[k] = Cells(c.type, numpy.array(c.data)[:, avsucd_to_meshio_order[c.type]])
+        cells[k] = CellBlock(
+            c.type, numpy.array(c.data)[:, avsucd_to_meshio_order[c.type]]
+        )
         cell_data["avsucd:material"][k] = numpy.array(cell_data["avsucd:material"][k])
     return cell_ids, cells, cell_data
 
@@ -156,7 +156,7 @@ def write(filename, mesh):
 
     with open_file(filename, "w") as f:
         # Write meshio version
-        f.write(f"# Written by meshio v{version}\n")
+        f.write("# Written by meshio v{}\n".format(version))
 
         # Write first line
         num_nodes = len(mesh.points)
@@ -165,14 +165,16 @@ def write(filename, mesh):
             1 if v.ndim == 1 else v.shape[1] for v in mesh.point_data.values()
         ]
         num_cell_data = [
-            1 if vv.ndim == 1 else vv.shape[1]
+            1 if numpy.concatenate(v).ndim == 1 else numpy.concatenate(v).shape[1]
             for k, v in mesh.cell_data.items()
-            for vv in v
-            if k not in meshio_data
         ]
         num_node_data_sum = sum(num_node_data)
         num_cell_data_sum = sum(num_cell_data)
-        f.write(f"{num_nodes} {num_cells} {num_node_data_sum} {num_cell_data_sum} 0\n")
+        f.write(
+            "{} {} {} {} 0\n".format(
+                num_nodes, num_cells, num_node_data_sum, num_cell_data_sum
+            )
+        )
 
         # Write nodes
         _write_nodes(f, mesh.points)
@@ -190,13 +192,9 @@ def write(filename, mesh):
 
         # Write cell data
         if num_cell_data_sum:
-            labels = [k for k in mesh.cell_data.keys() if k not in meshio_data]
+            labels = list(mesh.cell_data.keys())
             data_array = numpy.column_stack(
-                [
-                    numpy.concatenate(v)
-                    for k, v in mesh.cell_data.items()
-                    if k not in meshio_data
-                ]
+                [numpy.concatenate(v) for v in mesh.cell_data.values()]
             )
             _write_data(
                 f, labels, data_array, num_cells, num_cell_data, num_cell_data_sum
@@ -205,38 +203,40 @@ def write(filename, mesh):
 
 def _write_nodes(f, points):
     for i, (x, y, z) in enumerate(points):
-        f.write(f"{i+1} {x} {y} {z}\n")
+        f.write("{} {} {} {}\n".format(i + 1, x, y, z))
 
 
 def _write_cells(f, cells, cell_data, num_cells):
-    # Interoperability with other formats
-    mat_data = None
-    for k in cell_data.keys():
-        if k in meshio_data:
-            mat_data = k
-            break
-
-    # Material array
-    if mat_data:
-        material = numpy.concatenate(cell_data[mat_data])
-    else:
-        material = numpy.zeros(num_cells, dtype=int)
+    # try to find an appropriate materials array
+    key, other = _pick_first_int_data(cell_data)
+    if key and other:
+        logging.warning(
+            "AVS-UCD can only write one cell data array. "
+            "Picking {}, skipping {}.".format(key, ", ".join(other))
+        )
+    material = (
+        numpy.concatenate(cell_data[key]) if key else numpy.zeros(num_cells, dtype=int)
+    )
 
     # Loop over cells
     i = 0
-    for k, v in cells:
-        for cell in v[:, meshio_to_avsucd_order[k]]:
+    for cell_type, v in cells:
+        for cell in v[:, meshio_to_avsucd_order[cell_type]]:
             cell_str = " ".join(str(c + 1) for c in cell)
-            f.write(f"{i+1} {int(material[i])} {meshio_to_avsucd_type[k]} {cell_str}\n")
+            f.write(
+                "{} {} {} {}\n".format(
+                    i + 1, material[i], meshio_to_avsucd_type[cell_type], cell_str
+                )
+            )
             i += 1
 
 
 def _write_data(f, labels, data_array, num_entities, num_data, num_data_sum):
     num_data_str = " ".join(str(i) for i in num_data)
-    f.write(f"{len(num_data)} {num_data_str}\n")
+    f.write("{} {}\n".format(len(num_data), num_data_str))
 
     for label in labels:
-        f.write(f"{label}, real\n")
+        f.write("{}, real\n".format(label))
 
     data_array = numpy.column_stack((numpy.arange(1, num_entities + 1), data_array))
     numpy.savetxt(f, data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_data_sum)

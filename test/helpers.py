@@ -243,18 +243,16 @@ def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=numpy.float):
     return mesh2
 
 
-def add_cell_data(mesh, dim, num_tags=2, dtype=numpy.float):
+def add_cell_data(mesh, specs):
     mesh2 = copy.deepcopy(mesh)
     numpy.random.seed(0)
-    cell_data = {}
-    for k in range(num_tags):
-        shape = tuple() if dim == 1 else (dim,)
-        cell_data[string.ascii_lowercase[k]] = [
-            numpy.random.rand(*((len(cells),) + shape)).astype(dtype)
-            for cell_type, cells in mesh.cells
+    mesh2.cell_data = {
+        name: [
+            (100 * numpy.random.rand(*((len(cells),) + shape))).astype(dtype)
+            for _, cells in mesh.cells
         ]
-
-    mesh2.cell_data = cell_data
+        for name, shape, dtype in specs
+    }
     return mesh2
 
 
@@ -267,6 +265,17 @@ def add_field_data(mesh, value, dtype):
 def add_point_sets(mesh):
     mesh2 = copy.deepcopy(mesh)
     mesh2.point_sets = {"fixed": numpy.array([1, 2])}
+    return mesh2
+
+
+def add_cell_sets(mesh):
+    mesh2 = copy.deepcopy(mesh)
+    assert len(mesh.cells) == 1
+    n = len(mesh.cells[0])
+    mesh2.cell_sets = {
+        "grain0": [numpy.array([0])],
+        "grain1": [numpy.arange(1, n)],
+    }
     return mesh2
 
 
@@ -294,8 +303,9 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     n = in_mesh.points.shape[1]
     assert numpy.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
 
-    for cells0, cells1 in zip(input_mesh.cells, mesh.cells):
-        assert cells0.type == cells1.type
+    # to make sure we are testing same type of cells we sort the list
+    for cells0, cells1 in zip(sorted(input_mesh.cells), sorted(mesh.cells)):
+        assert cells0.type == cells1.type, "{} != {}".format(cells0.type, cells1.type)
         assert numpy.array_equal(cells0.data, cells1.data)
 
     for key in input_mesh.point_data.keys():
@@ -305,6 +315,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     for name, cell_type_data in input_mesh.cell_data.items():
         for d0, d1 in zip(cell_type_data, mesh.cell_data[name]):
+            # assert d0.dtype == d1.dtype, (d0.dtype, d1.dtype)
             assert numpy.allclose(d0, d1, atol=atol, rtol=0.0)
 
     for name, data in input_mesh.field_data.items():

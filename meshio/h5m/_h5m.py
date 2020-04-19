@@ -1,5 +1,6 @@
 """
-I/O for h5m, cf. <https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m>.
+I/O for h5m, cf.
+<https://www.mcs.anl.gov/~fathom/moab-docs/html/h5mmain.html>.
 """
 import logging
 from datetime import datetime
@@ -8,7 +9,7 @@ import numpy
 
 from .. import __about__
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 # def _int_to_bool_list(num):
 #     # From <https://stackoverflow.com/a/33608387/353337>.
@@ -38,14 +39,22 @@ def read(filename):
     # point_end_gid = point_start_gid + len(point_gids) - 1
     # assert all(point_gids == range(point_start_gid, point_end_gid + 1))
 
-    h5m_to_meshio_type = {"Edge2": "line", "Tri3": "triangle", "Tet4": "tetra"}
+    h5m_to_meshio_type = {
+        "Edge2": "line",
+        "Hex8": "hexahedron",
+        "Prism6": "wedge",
+        "Pyramid5": "pyramid",
+        "Quad4": "quad",
+        "Tri3": "triangle",
+        "Tet4": "tetra",
+    }
     cells = []
     cell_data = {}
     for h5m_type, data in dset["elements"].items():
         meshio_type = h5m_to_meshio_type[h5m_type]
         conn = data["connectivity"]
         # Note that the indices are off by 1 in h5m.
-        cells.append(Cells(meshio_type, conn[()] - 1))
+        cells.append(CellBlock(meshio_type, conn[()] - 1))
 
         # TODO bring cell data back
         # if 'tags' in data:
@@ -106,7 +115,7 @@ def read(filename):
     )
 
 
-def write(filename, mesh, add_global_ids=True):
+def write(filename, mesh, add_global_ids=True, compression="gzip", compression_opts=4):
     """Writes H5M files, cf.
     https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
     """
@@ -121,7 +130,12 @@ def write(filename, mesh, add_global_ids=True):
 
     # add nodes
     nodes = tstt.create_group("nodes")
-    coords = nodes.create_dataset("coordinates", data=mesh.points)
+    coords = nodes.create_dataset(
+        "coordinates",
+        data=mesh.points,
+        compression=compression,
+        compression_opts=compression_opts,
+    )
     coords.attrs.create("start_id", global_id)
     global_id += len(mesh.points)
 
@@ -142,13 +156,24 @@ def write(filename, mesh, add_global_ids=True):
     for key, data in pd.items():
         if len(data.shape) == 1:
             dtype = data.dtype
-            tags.create_dataset(key, data=data)
+            tags.create_dataset(
+                key,
+                data=data,
+                compression=compression,
+                compression_opts=compression_opts,
+            )
         else:
             # H5M doesn't accept n-x-k arrays as data; it wants an n-x-1
             # array with k-tuples as entries.
             n, k = data.shape
             dtype = numpy.dtype((data.dtype, (k,)))
-            dset = tags.create_dataset(key, (n,), dtype=dtype)
+            dset = tags.create_dataset(
+                key,
+                (n,),
+                dtype=dtype,
+                compression=compression,
+                compression_opts=compression_opts,
+            )
             dset[:] = data
 
         # Create entry in global tags
@@ -199,6 +224,8 @@ def write(filename, mesh, add_global_ids=True):
             __about__.__version__.encode("utf-8"),
             str(datetime.now()).encode("utf-8"),
         ],
+        compression=compression,
+        compression_opts=compression_opts,
     )
 
     # number of nodes to h5m name, element type
@@ -215,7 +242,12 @@ def write(filename, mesh, add_global_ids=True):
         elem_group = elements.create_group(this_type["name"])
         elem_group.attrs.create("element_type", this_type["type"], dtype=elem_dt)
         # h5m node indices are 1-based
-        conn = elem_group.create_dataset("connectivity", data=(data + 1))
+        conn = elem_group.create_dataset(
+            "connectivity",
+            data=(data + 1),
+            compression=compression,
+            compression_opts=compression_opts,
+        )
         conn.attrs.create("start_id", global_id)
         global_id += len(data)
 
@@ -224,7 +256,12 @@ def write(filename, mesh, add_global_ids=True):
         if cd:
             tags = elem_group.create_group("tags")
             for key, value in cd.items():
-                tags.create_dataset(key, data=value)
+                tags.create_dataset(
+                    key,
+                    data=value,
+                    compression=compression,
+                    compression_opts=compression_opts,
+                )
 
     # add empty set -- MOAB wants this
     sets = tstt.create_group("sets")
@@ -234,4 +271,4 @@ def write(filename, mesh, add_global_ids=True):
     tstt.attrs.create("max_id", global_id, dtype="u8")
 
 
-register("moab", [".h5m"], read, {"moab": write})
+register("h5m", [".h5m"], read, {"h5m": write})

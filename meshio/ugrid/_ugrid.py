@@ -11,10 +11,11 @@ import logging
 
 import numpy
 
+from .._common import _pick_first_int_data
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 # Float size and endianess are recorded by these suffixes
 # binary files come in C-type or FORTRAN type
@@ -44,7 +45,6 @@ def determine_file_type(filename):
         type_suffix = filename_parts[-2]
         if type_suffix in file_types.keys():
             file_type = file_types[type_suffix]
-
     return file_type
 
 
@@ -68,10 +68,9 @@ def read_buffer(f, file_type):
     itype = file_type["int_type"]
     ftype = file_type["float_type"]
 
-    # FORTRAN type includes a number of bytes before and after
-    # each record , according to documentation [1] there are
-    # two records in the file
-    # see also UG_IO freely available code at [2]
+    # Fortran type includes a number of bytes before and after each record, according to
+    # documentation [1] there are two records in the file; see also UG_IO freely
+    # available code at [2].
     if file_type["type"] == "F":
         _read_section(f, file_type, count=1, dtype=itype)
 
@@ -101,8 +100,7 @@ def read_buffer(f, file_type):
         nnodes, 3
     )
 
-    # TODO order plays a role here?
-    for key in ["quad", "triangle"]:
+    for key in ["triangle", "quad"]:
         nitems = ugrid_counts[key][0]
         nvertices = ugrid_counts[key][1]
         if nitems == 0:
@@ -111,7 +109,7 @@ def read_buffer(f, file_type):
             f, file_type, count=nitems * nvertices, dtype=itype
         ).reshape(nitems, nvertices)
         # UGRID is one-based
-        cells.append(Cells(key, out - 1))
+        cells.append(CellBlock(key, out - 1))
 
     cell_data = {"ugrid:ref": []}
     for key in ["triangle", "quad"]:
@@ -134,7 +132,7 @@ def read_buffer(f, file_type):
             out = out[:, [1, 0, 3, 4, 2]]
 
         # UGRID is one-based
-        cells.append(Cells(key, out - 1))
+        cells.append(CellBlock(key, out - 1))
 
         # fill volume element attributes with zero
         cell_data["ugrid:ref"].append(numpy.zeros(nitems, dtype=int))
@@ -174,14 +172,25 @@ def _write_buffer(f, file_type, mesh):
         "wedge": 0,
         "hexahedron": 0,
     }
+    # ugrid type to cell array id
+    ugrid_meshio_id = {
+        "points": -1,
+        "triangle": -1,
+        "quad": -1,
+        "tetra": -1,
+        "pyramid": -1,
+        "wedge": -1,
+        "hexahedron": -1,
+    }
 
     ugrid_counts["points"] = mesh.points.shape[0]
 
-    for key, data in mesh.cells:
+    for i, (key, data) in enumerate(mesh.cells):
         if key in ugrid_counts:
             ugrid_counts[key] = data.shape[0]
+            ugrid_meshio_id[key] = i
         else:
-            msg = ("UGRID mesh format doesn't know {} cells. Skipping.").format(key)
+            msg = "UGRID mesh format doesn't know {} cells. Skipping.".format(key)
             logging.warning(msg)
             continue
 
@@ -215,37 +224,45 @@ def _write_buffer(f, file_type, mesh):
 
     _write_section(f, file_type, mesh.points, ftype)
 
-    for cell_type, data in mesh.cells:
-        if cell_type not in ["triangle", "quad"]:
+    for key in ["triangle", "quad"]:
+        if ugrid_counts[key] == 0:
             continue
-        if ugrid_counts[key] > 0:
-            # UGRID is one-based
-            _write_section(f, file_type, data + 1, itype)
+        c = mesh.cells[ugrid_meshio_id[key]]
+        # UGRID is one-based
+        _write_section(f, file_type, c.data + 1, itype)
 
     # write boundary tags
     for key in ["triangle", "quad"]:
         if ugrid_counts[key] == 0:
             continue
-        if key in mesh.cell_data and "ugrid:ref" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["ugrid:ref"]
-        elif key in mesh.cell_data and "medit:ref" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["medit:ref"]
-        elif key in mesh.cell_data and "gmsh:physical" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["gmsh:physical"]
-        elif key in mesh.cell_data and "flac3d:zone" in mesh.cell_data[key]:
-            labels = mesh.cell_data[key]["flac3d:zone"]
-        else:
-            labels = numpy.ones(ugrid_counts[key], dtype=itype)
+
+        # pick out cell data
+        for data in mesh.cell_data.values():
+            if data.dtype in [numpy.int8, numpy.int16, numpy.int32, numpy.int64]:
+                labels = data
+                break
+
+        # pick out cell_data
+        labels_key, other = _pick_first_int_data(mesh.cell_data)
+        if labels_key and other:
+            logging.warning(
+                "UGRID can only write one cell data array. "
+                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+            )
+        labels = (
+            mesh.cell_data[labels_key]
+            if labels_key
+            else numpy.ones(ugrid_counts[key], dtype=int)
+        )
 
         labels = labels.reshape(ugrid_counts[key], 1)
         _write_section(f, file_type, labels, itype)
 
     # write volume elements
-    for c in mesh.cells:
-        if c.type not in ["tetra", "pyramid", "wedge", "hexahedron"]:
+    for key in ["tetra", "pyramid", "wedge", "hexahedron"]:
+        if ugrid_counts[key] == 0:
             continue
-        if ugrid_counts[c.type] == 0:
-            continue
+        c = mesh.cells[ugrid_meshio_id[key]]
         # UGRID is one-based
         out = c.data + 1
         if c.type == "pyramid":

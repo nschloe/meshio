@@ -1,10 +1,12 @@
 """
 I/O for VTU.
+<https://vtk.org/Wiki/VTK_XML_Formats>
+<https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf>
 """
 import base64
 import logging
+import lzma
 import sys
-import xml.etree.ElementTree as ET
 import zlib
 
 import numpy
@@ -18,7 +20,7 @@ from .._common import (
 )
 from .._exceptions import ReadError
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def num_bytes_to_num_base64_chars(num_bytes):
@@ -28,7 +30,7 @@ def num_bytes_to_num_base64_chars(num_bytes):
 
 
 def _cells_from_data(connectivity, offsets, types, cell_data_raw):
-    # Translate it into the Cells array.
+    # Translate it into the cells array.
     # `connectivity` is a one-dimensional vector with
     # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
     if len(offsets) != len(types):
@@ -41,12 +43,15 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     cells = []
     cell_data = {}
     for start, end in zip(b[:-1], b[1:]):
-        meshio_type = vtk_to_meshio_type[types[start]]
+        try:
+            meshio_type = vtk_to_meshio_type[types[start]]
+        except KeyError:
+            raise ReadError("File contains cells that meshio cannot handle.")
         n = num_nodes_per_cell[meshio_type]
         indices = numpy.add.outer(
             offsets[start:end], numpy.arange(-n, 0, dtype=offsets.dtype)
         )
-        cells.append(Cells(meshio_type, connectivity[indices]))
+        cells.append(CellBlock(meshio_type, connectivity[indices]))
         for name, d in cell_data_raw.items():
             if name not in cell_data:
                 cell_data[name] = []
@@ -65,7 +70,7 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
             cls["connectivity"], cls["offsets"], cls["types"], cdr
         )
         for c in cls:
-            out_cells.append(Cells(c.type, c.data + offset))
+            out_cells.append(CellBlock(c.type, c.data + offset))
 
     return out_cells, cell_data
 
@@ -80,7 +85,7 @@ def get_grid(root):
             grid = c
         else:
             if c.tag != "AppendedData":
-                raise ReadError(f"Unknown main tag '{c.tag}'.")
+                raise ReadError("Unknown main tag '{}'.".format(c.tag))
             if appended_data is not None:
                 raise ReadError("More than one AppendedData section found.")
             if c.attrib["encoding"] != "base64":
@@ -118,6 +123,8 @@ class VtuReader:
     """
 
     def __init__(self, filename):  # noqa: C901
+        import xml.etree.ElementTree as ET
+
         parser = ET.XMLParser()
         tree = ET.parse(filename, parser)
         root = tree.getroot()
@@ -131,11 +138,14 @@ class VtuReader:
                 "Unknown VTU file version '{}'.".format(root.attrib["version"])
             )
 
-        if (
-            "compressor" in root.attrib
-            and root.attrib["compressor"] != "vtkZLibDataCompressor"
-        ):
-            raise ReadError()
+        if "compressor" in root.attrib:
+            assert root.attrib["compressor"] in [
+                "vtkLZMADataCompressor",
+                "vtkZLibDataCompressor",
+            ]
+            self.compression = root.attrib["compressor"]
+        else:
+            self.compression = None
 
         self.header_type = (
             root.attrib["header_type"] if "header_type" in root.attrib else "UInt32"
@@ -144,7 +154,7 @@ class VtuReader:
         try:
             self.byte_order = root.attrib["byte_order"]
             if self.byte_order not in ["LittleEndian", "BigEndian"]:
-                raise ReadError(f"Unknown byte order '{self.byte_order}'.")
+                raise ReadError("Unknown byte order '{}'.".format(self.byte_order))
         except KeyError:
             self.byte_order = None
 
@@ -160,7 +170,7 @@ class VtuReader:
                 for data_array in c:
                     field_data[data_array.attrib["Name"]] = self.read_data(data_array)
             else:
-                raise ReadError(f"Unknown grid subtag '{c.tag}'.")
+                raise ReadError("Unknown grid subtag '{}'.".format(c.tag))
 
         if not pieces:
             raise ReadError("No Piece found.")
@@ -224,7 +234,7 @@ class VtuReader:
 
                     cell_data_raw.append(piece_cell_data_raw)
                 else:
-                    raise ReadError(f"Unknown tag '{child.tag}'.")
+                    raise ReadError("Unknown tag '{}'.".format(child.tag))
 
         if not cell_data_raw:
             cell_data_raw = [{}] * len(cells)
@@ -254,8 +264,27 @@ class VtuReader:
         )
         self.field_data = field_data
 
-    def read_binary(self, data, data_type):
-        # first read the the block size; it determines the size of the header
+    def read_uncompressed_binary(self, data, data_type):
+        byte_string = base64.b64decode(data)
+
+        dtype = vtu_to_numpy_type[self.header_type]
+        if self.byte_order is not None:
+            dtype = dtype.newbyteorder(
+                "<" if self.byte_order == "LittleEndian" else ">"
+            )
+        num_bytes_per_item = numpy.dtype(dtype).itemsize
+        # total_num_bytes = numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0]
+
+        # Read the block data; multiple blocks possible here?
+        dtype = vtu_to_numpy_type[data_type]
+        if self.byte_order is not None:
+            dtype = dtype.newbyteorder(
+                "<" if self.byte_order == "LittleEndian" else ">"
+            )
+        return numpy.frombuffer(byte_string[num_bytes_per_item:], dtype=dtype)
+
+    def read_compressed_binary(self, data, data_type):
+        # first read the block size; it determines the size of the header
         dtype = vtu_to_numpy_type[self.header_type]
         if self.byte_order is not None:
             dtype = dtype.newbyteorder(
@@ -267,7 +296,7 @@ class VtuReader:
         num_blocks = numpy.frombuffer(byte_string, dtype)[0]
 
         # read the entire header
-        num_header_items = 3 + num_blocks
+        num_header_items = 3 + int(num_blocks)
         num_header_bytes = num_bytes_per_item * num_header_items
         num_header_chars = num_bytes_to_num_base64_chars(num_header_bytes)
         byte_string = base64.b64decode(data[:num_header_chars])
@@ -291,11 +320,15 @@ class VtuReader:
         byte_offsets[0] = 0
         numpy.cumsum(block_sizes, out=byte_offsets[1:])
 
+        c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[
+            self.compression
+        ]
+
         # process the compressed data
         block_data = numpy.concatenate(
             [
                 numpy.frombuffer(
-                    zlib.decompress(byte_array[byte_offsets[k] : byte_offsets[k + 1]]),
+                    c.decompress(byte_array[byte_offsets[k] : byte_offsets[k + 1]]),
                     dtype=dtype,
                 )
                 for k in range(num_blocks)
@@ -313,12 +346,22 @@ class VtuReader:
                 c.text, dtype=vtu_to_numpy_type[c.attrib["type"]], sep=" "
             )
         elif fmt == "binary":
-            data = self.read_binary(c.text.strip(), c.attrib["type"])
+            reader = (
+                self.read_uncompressed_binary
+                if self.compression is None
+                else self.read_compressed_binary
+            )
+            data = reader(c.text.strip(), c.attrib["type"])
         elif fmt == "appended":
             offset = int(c.attrib["offset"])
-            data = self.read_binary(self.appended_data[offset:], c.attrib["type"])
+            reader = (
+                self.read_uncompressed_binary
+                if self.compression is None
+                else self.read_compressed_binary
+            )
+            data = reader(self.appended_data[offset:], c.attrib["type"])
         else:
-            raise ReadError(f"Unknown data format '{fmt}'.")
+            raise ReadError("Unknown data format '{}'.".format(fmt))
 
         if "NumberOfComponents" in c.attrib:
             data = data.reshape(-1, int(c.attrib["NumberOfComponents"]))
@@ -343,7 +386,7 @@ def _chunk_it(array, n):
         k += 1
 
 
-def write(filename, mesh, binary=True):
+def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     # Writing XML with an etree required first transforming the (potentially large)
     # arrays into string, which are much larger in memory still. This makes this writer
     # very memory hungry. See <https://stackoverflow.com/q/59272477/353337>.
@@ -361,8 +404,6 @@ def write(filename, mesh, binary=True):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    header_type = "UInt32"
-
     vtk_file = ET.Element(
         "VTKFile",
         type="UnstructuredGrid",
@@ -370,9 +411,19 @@ def write(filename, mesh, binary=True):
         # Use the native endianness. Not strictly necessary, but this simplifies things
         # a bit.
         byte_order=("LittleEndian" if sys.byteorder == "little" else "BigEndian"),
-        header_type=header_type,
-        compressor="vtkZLibDataCompressor",
     )
+    header_type = (
+        "UInt32" if header_type is None else vtk_file.set("header_type", header_type)
+    )
+
+    if binary and compression:
+        # TODO lz4, lzma <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>
+        compressions = {
+            "lzma": "vtkLZMADataCompressor",
+            "zlib": "vtkZLibDataCompressor",
+        }
+        assert compression in compressions
+        vtk_file.set("compressor", compressions[compression])
 
     # swap the data to match the system byteorder
     # Don't use byteswap to make sure that the dtype is changed; see
@@ -386,41 +437,55 @@ def write(filename, mesh, binary=True):
     for key, data in mesh.field_data.items():
         mesh.field_data[key] = data.astype(data.dtype.newbyteorder("="))
 
-    def numpy_to_xml_array(parent, name, fmt, data):
-        da = ET.SubElement(
-            parent, "DataArray", type=numpy_to_vtu_type[data.dtype], Name=name
-        )
+    def numpy_to_xml_array(parent, name, data):
+        vtu_type = numpy_to_vtu_type[data.dtype]
+        fmt = "{:.11e}" if vtu_type.startswith("Float") else "{:d}"
+        da = ET.SubElement(parent, "DataArray", type=vtu_type, Name=name)
         if len(data.shape) == 2:
             da.set("NumberOfComponents", "{}".format(data.shape[1]))
         if binary:
             da.set("format", "binary")
+            if compression:
+                # compressed write
+                def text_writer(f):
+                    max_block_size = 32768
+                    data_bytes = data.tostring()
 
-            def text_writer(f):
-                max_block_size = 32768
-                data_bytes = data.tostring()
+                    # round up
+                    num_blocks = -int(-len(data_bytes) // max_block_size)
+                    last_block_size = (
+                        len(data_bytes) - (num_blocks - 1) * max_block_size
+                    )
 
-                # round up
-                num_blocks = -int(-len(data_bytes) // max_block_size)
-                last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
+                    # It's too bad that we have to keep all blocks in memory. This is
+                    # necessary because the header, written first, needs to know the
+                    # lengths of all blocks. Also, the blocks are encoded _after_ having
+                    # been concatenated.
+                    c = {"lzma": lzma, "zlib": zlib}[compression]
+                    compressed_blocks = [
+                        # This compress is the slowest part of the writer
+                        c.compress(block)
+                        for block in _chunk_it(data_bytes, max_block_size)
+                    ]
 
-                # It's too bad that we have to keep all blocks in memory. This is
-                # necessary because the header, written first, needs to know the lengths
-                # of all blocks. Also, the blocks are encoded _after_ having been
-                # concatenated.
-                compressed_blocks = [
-                    # This zlib.compress is the slowest part of the writer
-                    zlib.compress(block)
-                    for block in _chunk_it(data_bytes, max_block_size)
-                ]
+                    # collect header
+                    header = numpy.array(
+                        [num_blocks, max_block_size, last_block_size]
+                        + [len(b) for b in compressed_blocks],
+                        dtype=vtu_to_numpy_type[header_type],
+                    )
+                    f.write(base64.b64encode(header.tostring()).decode())
+                    f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
 
-                # collect header
-                header = numpy.array(
-                    [num_blocks, max_block_size, last_block_size]
-                    + [len(b) for b in compressed_blocks],
-                    dtype=vtu_to_numpy_type[header_type],
-                )
-                f.write(base64.b64encode(header.tostring()).decode())
-                f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
+            else:
+                # uncompressed write
+                def text_writer(f):
+                    data_bytes = data.tostring()
+                    # collect header
+                    header = numpy.array(
+                        len(data_bytes), dtype=vtu_to_numpy_type[header_type]
+                    )
+                    f.write(base64.b64encode(header.tostring() + data_bytes).decode())
 
         else:
             da.set("format", "ascii")
@@ -438,7 +503,7 @@ def write(filename, mesh, binary=True):
         da.text_writer = text_writer
         return
 
-    comment = ET.Comment(f"This file was created by meshio v{__version__}")
+    comment = ET.Comment("This file was created by meshio v{}".format(__version__))
     vtk_file.insert(1, comment)
 
     grid = ET.SubElement(vtk_file, "UnstructuredGrid")
@@ -448,13 +513,13 @@ def write(filename, mesh, binary=True):
         grid,
         "Piece",
         NumberOfPoints="{}".format(len(points)),
-        NumberOfCells=f"{total_num_cells}",
+        NumberOfCells="{}".format(total_num_cells),
     )
 
     # points
     if points is not None:
         pts = ET.SubElement(piece, "Points")
-        numpy_to_xml_array(pts, "Points", "{:.11e}", points)
+        numpy_to_xml_array(pts, "Points", points)
 
     if mesh.cells is not None:
         cls = ET.SubElement(piece, "Cells")
@@ -464,43 +529,36 @@ def write(filename, mesh, binary=True):
 
         # offset (points to the first element of the next cell)
         offsets = [
-            v.data.shape[1] * numpy.arange(1, v.data.shape[0] + 1) for v in mesh.cells
+            v.data.shape[1]
+            * numpy.arange(1, v.data.shape[0] + 1, dtype=connectivity.dtype)
+            for v in mesh.cells
         ]
         for k in range(1, len(offsets)):
             offsets[k] += offsets[k - 1][-1]
         offsets = numpy.concatenate(offsets)
+
         # types
         types = numpy.concatenate(
             [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in mesh.cells]
         )
 
-        numpy_to_xml_array(cls, "connectivity", "{:d}", connectivity)
-        numpy_to_xml_array(cls, "offsets", "{:d}", offsets)
-        numpy_to_xml_array(cls, "types", "{:d}", types)
+        numpy_to_xml_array(cls, "connectivity", connectivity)
+        numpy_to_xml_array(cls, "offsets", offsets)
+        numpy_to_xml_array(cls, "types", types)
 
     if mesh.point_data:
         pd = ET.SubElement(piece, "PointData")
         for name, data in mesh.point_data.items():
-            numpy_to_xml_array(pd, name, "{:.11e}", data)
+            numpy_to_xml_array(pd, name, data)
 
     if mesh.cell_data:
         cd = ET.SubElement(piece, "CellData")
         for name, data in raw_from_cell_data(mesh.cell_data).items():
-            numpy_to_xml_array(cd, name, "{:.11e}", data)
+            numpy_to_xml_array(cd, name, data)
 
     # write_xml(filename, vtk_file, pretty_xml)
-
     tree = ET.ElementTree(vtk_file)
     tree.write(filename)
 
 
-register(
-    "vtu",
-    [".vtu"],
-    read,
-    {
-        "vtu": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-        "vtu-ascii": lambda f, m, **kwargs: write(f, m, **kwargs, binary=False),
-        "vtu-binary": lambda f, m, **kwargs: write(f, m, **kwargs, binary=True),
-    },
-)
+register("vtu", [".vtu"], read, {"vtu": write})

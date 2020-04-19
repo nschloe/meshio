@@ -13,6 +13,10 @@ from .._helpers import register
 from .._mesh import Mesh
 
 zone_key_to_type = {
+    "T": str,
+    "I": int,
+    "J": int,
+    "K": int,
     "N": int,
     "NODES": int,
     "E": int,
@@ -113,11 +117,16 @@ def read_buffer(f):
                 else:
                     f.seek(i)
                     break
-            line = "".join(lines)
+            line = " ".join(lines)
 
-            num_nodes, num_cells, zone_format, zone_type, is_cell_centered = _read_zone(
-                line, variables
-            )
+            zone = _read_zone(line)
+            (
+                num_nodes,
+                num_cells,
+                zone_format,
+                zone_type,
+                is_cell_centered,
+            ) = _parse_fezone(zone, variables)
 
             num_data = [num_cells if i else num_nodes for i in is_cell_centered]
             data, cells = _read_zone_data(
@@ -159,8 +168,20 @@ def read_buffer(f):
 
 def _read_variables(line):
     # Gather variables in a list
-    line = line.split("=")[1].split(",")
-    variables = [str(var).replace('"', "").strip() for var in line]
+    line = line.split("=")[1]
+    line = [x for x in line.replace(",", " ").split()]
+    variables = []
+
+    i = 0
+    while i < len(line):
+        if '"' in line[i] and not (line[i].startswith('"') and line[i].endswith('"')):
+            var = "{}_{}".format(line[i], line[i + 1])
+            i += 1
+        else:
+            var = line[i]
+
+        variables.append(var.replace('"', ""))
+        i += 1
 
     # Check that at least X and Y are defined
     if "X" not in variables and "x" not in variables:
@@ -171,56 +192,58 @@ def _read_variables(line):
     return variables
 
 
-def _read_zone(line, variables):
+def _read_zone(line):
     # Gather zone entries in a dict
-    # We can only process the zone record character by character due to
-    # value of VARLOCATION containing both comma and equality characters.
     line = line[5:]
     zone = {}
+
+    # Look for zone title
+    ivar = line.find('"')
+
+    # If zone contains a title, process it and save the title
+    if ivar >= 0:
+        i1, i2 = ivar, ivar + line[ivar + 1 :].find('"') + 2
+        zone_title = line[i1 + 1 : i2 - 1]
+        line = line.replace(line[i1:i2], "PLACEHOLDER")
+    else:
+        zone_title = None
+
+    # Look for VARLOCATION (problematic since it contains both ',' and '=')
+    ivar = line.find("VARLOCATION")
+
+    # If zone contains VARLOCATION, process it and remove the key/value pair
+    if ivar >= 0:
+        i1, i2 = line.find("("), line.find(")")
+        zone["VARLOCATION"] = line[i1 : i2 + 1].replace(" ", "")
+        line = line[:ivar] + line[i2 + 1 :]
+
+    # Split remaining key/value pairs separated by '='
+    line = [x for x in line.replace(",", " ").split() if x != "="]
     i = 0
-    key, value, read_key = "", "", True
-    is_varlocation, is_end = False, False
-    while True:
-        char = line[i] if line[i] != " " else ""
-
-        if char == "=":
-            read_key = False
-            is_varlocation = key == "VARLOCATION"
-
-        if is_varlocation:
-            i += 1
-            while True:
-                char = line[i] if line[i] != " " else ""
-                value += char
-                if line[i] == ")":
-                    break
-                else:
-                    i += 1
-            is_varlocation, is_end = False, True
-            i += 1  # Skip comma
-        else:
-            if char != ",":
-                if char != "=":
-                    if read_key:
-                        key += char
-                    else:
-                        value += char
+    while i < len(line) - 1:
+        if "=" in line[i]:
+            if not (line[i].startswith("=") or line[i].endswith("=")):
+                key, value = line[i].split("=")
             else:
-                is_end = True
-
-        if is_end:
-            if key in zone_key_to_type.keys():
-                zone[key] = zone_key_to_type[key](value)
-            key, value, read_key = "", "", True
-            is_end = False
-
-        if i >= len(line) - 1:
-            if key in zone_key_to_type.keys():
-                zone[key] = zone_key_to_type[key](value)
-            break
+                key = line[i].replace("=", "")
+                value = line[i + 1]
+                i += 1
         else:
+            key = line[i]
+            value = line[i + 1].replace("=", "")
             i += 1
 
+        zone[key] = zone_key_to_type[key](value)
+        i += 1
+
+    # Add zone title to zone dict
+    if zone_title:
+        zone["T"] = zone_title
+
+    return zone
+
+
+def _parse_fezone(zone, variables):
     # Check that the grid is unstructured
     if "F" in zone.keys():
         if zone["F"] not in {"FEPOINT", "FEBLOCK"}:
@@ -306,8 +329,10 @@ def write(filename, mesh):
             cell_blocks.append(ic)
         else:
             logging.warning(
-                f"Tecplot does not support cell type '{c.type}'. "
-                f"Skipping cell block {ic}."
+                (
+                    "Tecplot does not support cell type '{}'. "
+                    "Skipping cell block {}."
+                ).format(c.type, ic)
             )
 
     # Define cells and zone type
@@ -359,11 +384,11 @@ def write(filename, mesh):
                 varrange[0] += 1
             elif v.ndim == 2:
                 for i, vv in enumerate(v.T):
-                    variables += [f"{k}_{i}"]
+                    variables += ["{}_{}".format(k, i)]
                     data += [vv]
                     varrange[0] += 1
         else:
-            logging.warning(f"Skipping point data '{k}'.")
+            logging.warning("Skipping point data '{}'.".format(k))
 
     if mesh.cell_data:
         varrange[1] = varrange[0] - 1
@@ -376,33 +401,33 @@ def write(filename, mesh):
                     varrange[1] += 1
                 elif v.ndim == 2:
                     for i, vv in enumerate(v.T):
-                        variables += [f"{k}_{i}"]
+                        variables += ["{}_{}".format(k, i)]
                         data += [vv]
                         varrange[1] += 1
             else:
-                logging.warning(f"Skipping cell data '{k}'.")
+                logging.warning("Skipping cell data '{}'.".format(k))
 
     with open_file(filename, "w") as f:
         # Title
-        f.write(f'TITLE = "Written by meshio v{version}"\n')
+        f.write('TITLE = "Written by meshio v{}"\n'.format(version))
 
         # Variables
-        variables_str = ", ".join(f'"{var}"' for var in variables)
-        f.write(f"VARIABLES = {variables_str}\n")
+        variables_str = ", ".join('"{}"'.format(var) for var in variables)
+        f.write("VARIABLES = {}\n".format(variables_str))
 
         # Zone record
         num_nodes = len(mesh.points)
         num_cells = sum(len(mesh.cells[ic].data) for ic in cell_blocks)
-        f.write(f"ZONE NODES = {num_nodes}, ELEMENTS = {num_cells},\n")
-        f.write(f"DATAPACKING = BLOCK, ZONETYPE = {zone_type}")
-        if varrange[0] < varrange[1]:
+        f.write("ZONE NODES = {}, ELEMENTS = {},\n".format(num_nodes, num_cells))
+        f.write("DATAPACKING = BLOCK, ZONETYPE = {}".format(zone_type))
+        if varrange[0] <= varrange[1]:
             f.write(",\n")
             varlocation_str = (
-                f"{varrange[0]}"
+                "{}".format(varrange[0])
                 if varrange[0] == varrange[1]
-                else f"{varrange[0]}-{varrange[1]}"
+                else "{}-{}".format(varrange[0], varrange[1])
             )
-            f.write(f"VARLOCATION = ([{varlocation_str}] = CELLCENTERED)\n")
+            f.write("VARLOCATION = ([{}] = CELLCENTERED)\n".format(varlocation_str))
         else:
             f.write("\n")
 
@@ -410,7 +435,7 @@ def write(filename, mesh):
         for arr in data:
             _write_table(f, arr)
 
-        # Cells
+        # CellBlock
         cells = numpy.array(cells) + 1
         for cell in cells:
             f.write("{}\n".format(" ".join(str(c) for c in cell)))
@@ -424,4 +449,4 @@ def _write_table(f, data, ncol=20):
             f.write("{}\n".format(" ".join(str(l) for l in line)))
 
 
-register("tecplot", [".dat"], read, {"tecplot": write})
+register("tecplot", [".dat", ".tec"], read, {"tecplot": write})

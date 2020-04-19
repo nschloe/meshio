@@ -3,29 +3,30 @@ I/O for the TetGen file format, c.f.
 <https://wias-berlin.de/software/tetgen/fformats.node.html>
 """
 import logging
-import os
+import pathlib
 
 import numpy
 
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
-    base, ext = os.path.splitext(filename)
-    if ext == ".node":
+    filename = pathlib.Path(filename)
+    if filename.suffix == ".node":
         node_filename = filename
-        ele_filename = base + ".ele"
-    elif ext == ".ele":
-        node_filename = base + ".node"
+        ele_filename = filename.parent / (filename.stem + ".ele")
+    elif filename.suffix == ".ele":
+        node_filename = filename.parent / (filename.stem + ".node")
         ele_filename = filename
     else:
         raise ReadError()
 
     # read nodes
-    with open(node_filename) as f:
+    # TODO remove as_posix
+    with open(node_filename.as_posix()) as f:
         line = f.readline().strip()
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
@@ -51,7 +52,7 @@ def read(filename):
         points = points[:, 1:4]
 
     # read elements
-    with open(ele_filename) as f:
+    with open(ele_filename.as_posix()) as f:
         line = f.readline().strip()
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
@@ -68,29 +69,31 @@ def read(filename):
         cells = cells[:, 1:5]
         cells -= node_index_base
 
-    return Mesh(points, [Cells("tetra", cells)])
+    return Mesh(points, [CellBlock("tetra", cells)])
 
 
-def write(filename, mesh):
-    base, ext = os.path.splitext(filename)
-    if ext == ".node":
+def write(filename, mesh, float_fmt=".15e"):
+    filename = pathlib.Path(filename)
+    if filename.suffix == ".node":
         node_filename = filename
-        ele_filename = base + ".ele"
-    elif ext == ".ele":
-        node_filename = base + ".node"
+        ele_filename = filename.parent / (filename.stem + ".ele")
+    elif filename.suffix == ".ele":
+        node_filename = filename.parent / (filename.stem + ".node")
         ele_filename = filename
     else:
-        raise WriteError(f"Must specify .node or .ele file. Got {filename}.")
+        raise WriteError("Must specify .node or .ele file. Got {}.".format(filename))
 
     if mesh.points.shape[1] != 3:
         raise WriteError("Can only write 3D points")
 
     # write nodes
-    with open(node_filename, "w") as fh:
-        fh.write(f"# This file was created by meshio v{__version__}\n")
+    # TODO remove .as_posix when requiring Python 3.6
+    with open(node_filename.as_posix(), "w") as fh:
+        fh.write("# This file was created by meshio v{}\n".format(__version__))
         fh.write("{} {} {} {}\n".format(mesh.points.shape[0], 3, 0, 0))
+        fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, pt in enumerate(mesh.points):
-            fh.write("{} {:.15e} {:.15e} {:.15e}\n".format(k, pt[0], pt[1], pt[2]))
+            fh.write(fmt.format(k, pt[0], pt[1], pt[2]))
 
     if not any(c.type == "tetra" for c in mesh.cells):
         raise WriteError("TegGen only supports tetrahedra")
@@ -103,8 +106,9 @@ def write(filename, mesh):
         )
 
     # write cells
-    with open(ele_filename, "w") as fh:
-        fh.write(f"# This file was created by meshio v{__version__}\n")
+    # TODO remove .as_posix when requiring Python 3.6
+    with open(ele_filename.as_posix(), "w") as fh:
+        fh.write("# This file was created by meshio v{}\n".format(__version__))
         for cell_type, data in filter(lambda c: c.type == "tetra", mesh.cells):
             fh.write("{} {} {}\n".format(data.shape[0], 4, 0))
             for k, tet in enumerate(data):

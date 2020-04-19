@@ -5,16 +5,16 @@ import numpy
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
-from ._mesh import Mesh
+from ._mesh import CellBlock, Mesh
 
-_extension_to_filetype = {}
+extension_to_filetype = {}
 reader_map = {}
 _writer_map = {}
 
 
 def register(name, extensions, reader, writer_map):
     for ext in extensions:
-        _extension_to_filetype[ext] = name
+        extension_to_filetype[ext] = name
 
     if reader is not None:
         reader_map[name] = reader
@@ -25,12 +25,12 @@ def _filetype_from_path(path):
     ext = ""
     out = None
     for suffix in reversed(path.suffixes):
-        ext = suffix + ext
-        if ext in _extension_to_filetype:
-            out = _extension_to_filetype[ext]
+        ext = (suffix + ext).lower()
+        if ext in extension_to_filetype:
+            out = extension_to_filetype[ext]
 
     if out is None:
-        raise ReadError(f"Could not deduce file format from extension '{ext}'.")
+        raise ReadError("Could not deduce file format from extension '{}'.".format(ext))
     return out
 
 
@@ -50,17 +50,17 @@ def read(filename, file_format=None):
                 "tetgen format is spread across multiple files "
                 "and so cannot be read from a buffer"
             )
-        msg = f"Unknown file format '{file_format}'"
+        msg = "Unknown file format '{}'".format(file_format)
     else:
         path = pathlib.Path(filename)
         if not path.exists():
-            raise ReadError(f"File {filename} not found.")
+            raise ReadError("File {} not found.".format(filename))
 
         if not file_format:
             # deduce file format from extension
             file_format = _filetype_from_path(path)
 
-        msg = f"Unknown file format '{file_format}' of '{filename}'."
+        msg = "Unknown file format '{}' of '{}'.".format(file_format, filename)
 
     if file_format not in reader_map:
         raise ReadError(msg)
@@ -78,9 +78,11 @@ def write_points_cells(
     point_sets=None,
     cell_sets=None,
     file_format=None,
-    **kwargs,
+    **kwargs
 ):
     points = numpy.asarray(points)
+    if isinstance(cells, dict):
+        cells = [CellBlock(name, vals) for name, vals in cells.items()]
     cells = [(key, numpy.asarray(value)) for key, value in cells]
     mesh = Mesh(
         points,
@@ -119,7 +121,7 @@ def write(filename, mesh, file_format=None, **kwargs):
     try:
         writer = _writer_map[file_format]
     except KeyError:
-        raise KeyError(
+        raise WriteError(
             "Unknown format '{}'. Pick one of {}".format(
                 file_format, sorted(list(_writer_map.keys()))
             )

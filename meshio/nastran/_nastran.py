@@ -11,7 +11,7 @@ from ..__about__ import __version__
 from .._common import num_nodes_per_cell
 from .._files import open_file
 from .._helpers import register
-from .._mesh import Cells, Mesh
+from .._mesh import CellBlock, Mesh
 
 CHUNK_SIZE = 8
 nastran_to_meshio_type = {
@@ -98,7 +98,7 @@ def read_buffer(f):
             if cell_ref is not None:
                 cell_refs[-1].append(cell_ref)
         else:
-            cells.append(Cells(cell_type, [cell]))
+            cells.append(CellBlock(cell_type, [cell]))
             cells_id.append([cell_id])
             if cell_ref is not None:
                 cell_refs.append([cell_ref])
@@ -143,7 +143,7 @@ def read_buffer(f):
                 ]
             )
 
-        # Cells
+        # CellBlock
         elif keyword in nastran_to_meshio_type:
             # Add previous cell and cell_id
             if cell is not None:
@@ -163,7 +163,7 @@ def read_buffer(f):
 
             keyword_prev = keyword
 
-        # Cells card continuation for 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
+        # CellBlock card continuation for 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
         elif keyword[0] == "+":
             assert cell is not None
             cell.extend(chunks[1:])
@@ -175,7 +175,7 @@ def read_buffer(f):
     points = numpy.array(points)
     points_id = numpy.array(points_id, dtype=int)
     for k, (c, cid) in enumerate(zip(cells, cells_id)):
-        cells[k] = Cells(c.type, numpy.array(c.data, dtype=int))
+        cells[k] = CellBlock(c.type, numpy.array(c.data, dtype=int))
         cells_id[k] = numpy.array(cid, dtype=int)
 
     # Convert to natural point ordering
@@ -183,16 +183,16 @@ def read_buffer(f):
     points_id_dict = dict(zip(points_id, numpy.arange(len(points), dtype=int)))
     points_id_get = numpy.vectorize(points_id_dict.__getitem__)
     for k, c in enumerate(cells):
-        cells[k] = Cells(c.type, points_id_get(c.data))
+        cells[k] = CellBlock(c.type, points_id_get(c.data))
 
     # Construct the mesh object
     mesh = Mesh(points, cells)
     mesh.points_id = points_id
     mesh.cells_id = cells_id
     if len(point_refs) > 0:
-        mesh.point_data["nastran:ref"] = point_refs
+        mesh.point_data["nastran:ref"] = numpy.array(point_refs)
     if len(cell_refs) > 0:
-        mesh.cell_data["nastran:ref"] = cell_refs
+        mesh.cell_data["nastran:ref"] = [numpy.array(i) for i in cell_refs]
     return mesh
 
 
@@ -207,7 +207,7 @@ def write(filename, mesh):
         points = mesh.points
 
     with open_file(filename, "w") as f:
-        f.write(f"$ Nastran file written by meshio v{__version__}\n")
+        f.write("$ Nastran file written by meshio v{}\n".format(__version__))
         f.write("BEGIN BULK\n")
 
         # Points
@@ -227,7 +227,7 @@ def write(filename, mesh):
                     )
                 )
 
-        # Cells
+        # CellBlock
         cell_id = 0
         cell_refs = mesh.cell_data.get("nastran:ref", None)
         for ict, (cell_type, cells) in enumerate(mesh.cells):
@@ -240,7 +240,7 @@ def write(filename, mesh):
                 if cell_refs is not None:
                     cell_ref = " " + str(int(cell_refs_t[ic]))
                 cell_id += 1
-                cell_info = f"{nastran_type}, {cell_id:d},{cell_ref}, "
+                cell_info = "{}, {:d},{}, ".format(nastran_type, cell_id, cell_ref)
                 cell1 = cell + 1
                 cell1 = _convert_to_nastran_ordering(cell1, nastran_type)
                 conn = ", ".join(str(nid) for nid in cell1[:6])

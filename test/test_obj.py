@@ -1,4 +1,4 @@
-import os
+import pathlib
 
 import numpy
 import pytest
@@ -15,7 +15,7 @@ def test_obj(mesh):
         return meshio.obj.write(*args, **kwargs)
 
     for k, c in enumerate(mesh.cells):
-        mesh.cells[k] = meshio.Cells(c.type, c.data.astype(numpy.int32))
+        mesh.cells[k] = meshio.CellBlock(c.type, c.data.astype(numpy.int32))
 
     helpers.write_read(writer, meshio.obj.read, mesh, 1.0e-12)
 
@@ -24,8 +24,9 @@ def test_obj(mesh):
     "filename, ref_sum, ref_num_cells", [("elephav.obj", 3.678372172450000e05, 1148)]
 )
 def test_reference_file(filename, ref_sum, ref_num_cells):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "obj", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "obj" / filename
+
     mesh = meshio.read(filename)
     tol = 1.0e-5
     s = numpy.sum(mesh.points)
