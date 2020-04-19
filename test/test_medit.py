@@ -1,9 +1,10 @@
+import os
+
+import numpy
 import pytest
 
 import helpers
 import meshio
-import os
-import numpy
 
 
 @pytest.mark.parametrize(
@@ -28,6 +29,7 @@ def test_generic_io():
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.mesh")
     # same for binary files
+
 
 @pytest.mark.parametrize(
     "filename, ref_num_points, ref_num_triangle, ref_num_quad, ref_num_wedge, ref_num_tet, ref_num_hex, ref_tag_counts",
