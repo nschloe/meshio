@@ -76,7 +76,7 @@ def read_binary_buffer(f):
     itype = ""
     ftype = ""
     postype = ""
-    keytype="i4"
+    keytype = "i4"
 
     code = numpy.fromfile(f, count=1, dtype=keytype).item()
 
@@ -402,7 +402,9 @@ def write_binary_file(f, mesh):
                 "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
             )
         labels = (
-            mesh.point_data[labels_key] if labels_key else numpy.ones(num_verts, dtype=itype)
+            mesh.point_data[labels_key]
+            if labels_key
+            else numpy.ones(num_verts, dtype=itype)
         )
 
         tmp_array = numpy.empty(num_verts, dtype=dtype)
