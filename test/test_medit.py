@@ -29,7 +29,11 @@ def test_generic_io():
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.mesh")
     # same for binary files
+    helpers.generic_io("test.meshb")
+    helpers.generic_io("test.0.meshb")
 
+
+# same tests with ugrid format files converted with UGC from http://www.simcenter.msstate.edu
 
 @pytest.mark.parametrize(
     "filename, ref_num_points, ref_num_triangle, ref_num_quad, ref_num_wedge, ref_num_tet, ref_num_hex, ref_tag_counts",
@@ -64,7 +68,7 @@ def test_reference_file(
     assert mesh.points.shape[0] == ref_num_points
     assert mesh.points.shape[1] == 3
 
-    ugrid_meshio_id = {
+    medit_meshio_id = {
         "triangle": None,
         "quad": None,
         "tetra": None,
@@ -74,39 +78,39 @@ def test_reference_file(
     }
 
     for i, (key, data) in enumerate(mesh.cells):
-        if key in ugrid_meshio_id:
-            ugrid_meshio_id[key] = i
+        if key in medit_meshio_id:
+            medit_meshio_id[key] = i
 
     # validate element counts
     if ref_num_triangle > 0:
-        c = mesh.cells[ugrid_meshio_id["triangle"]]
+        c = mesh.cells[medit_meshio_id["triangle"]]
         assert c.data.shape == (ref_num_triangle, 3)
     else:
-        assert ugrid_meshio_id["triangle"] is None
+        assert medit_meshio_id["triangle"] is None
 
     if ref_num_quad > 0:
-        c = mesh.cells[ugrid_meshio_id["quad"]]
+        c = mesh.cells[medit_meshio_id["quad"]]
         assert c.data.shape == (ref_num_quad, 4)
     else:
-        assert ugrid_meshio_id["quad"] is None
+        assert medit_meshio_id["quad"] is None
 
     if ref_num_tet > 0:
-        c = mesh.cells[ugrid_meshio_id["tetra"]]
+        c = mesh.cells[medit_meshio_id["tetra"]]
         assert mesh.cells[1].data.shape == (ref_num_tet, 4)
     else:
-        assert ugrid_meshio_id["tetra"] is None
+        assert medit_meshio_id["tetra"] is None
 
     if ref_num_wedge > 0:
-        c = mesh.cells[ugrid_meshio_id["wedge"]]
+        c = mesh.cells[medit_meshio_id["wedge"]]
         assert c.data.shape == (ref_num_wedge, 6)
     else:
-        assert ugrid_meshio_id["wedge"] is None
+        assert medit_meshio_id["wedge"] is None
 
     if ref_num_hex > 0:
-        c = mesh.cells[ugrid_meshio_id["hexahedron"]]
+        c = mesh.cells[medit_meshio_id["hexahedron"]]
         assert c.data.shape == (ref_num_hex, 8)
     else:
-        assert ugrid_meshio_id["hexahedron"] is None
+        assert medit_meshio_id["hexahedron"] is None
 
     # validate boundary tags
 
