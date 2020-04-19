@@ -11,7 +11,6 @@ Latest official up-to-date documentation and reference implementation at
 """
 import logging
 from ctypes import c_double, c_float
-from inspect import currentframe
 
 import numpy
 
@@ -22,17 +21,6 @@ from .._helpers import register
 from .._mesh import Mesh
 from ._medit_internal import medit_codes
 
-# map medit element types to meshio
-meshio_from_medit = {
-    "GmfVertices": ("point", None),
-    "GmfEdges": ("line", 2),
-    "GmfTriangles": ("triangle", 3),
-    "GmfQuadrilaterals": ("quad", 4),
-    "GmfTetrahedra": ("tetra", 4),
-    "GmfPrisms": ("wedge", 6),
-    "GmfHexahedra": ("hexahedron", 8),
-}
-
 
 def read(filename):
 
@@ -40,7 +28,7 @@ def read(filename):
         if filename[-1] == "b":
             mesh = read_binary_buffer(f)
         else:
-            mesh = read_buffer(f)
+            mesh = read_ascii_buffer(f)
     return mesh
 
 
@@ -68,16 +56,18 @@ def _produce_dtype(string_type, dim, itype, ftype):
     return res
 
 
-def debug(variable):
-    print(variable, "--->", repr(eval(variable)))
-
-
-def get_linenumber():
-    cf = currentframe()
-    return cf.f_back.f_lineno
-
-
 def read_binary_buffer(f):
+
+    meshio_from_medit = {
+        "GmfVertices": ("point", None),
+        "GmfEdges": ("line", 2),
+        "GmfTriangles": ("triangle", 3),
+        "GmfQuadrilaterals": ("quad", 4),
+        "GmfTetrahedra": ("tetra", 4),
+        "GmfPrisms": ("wedge", 6),
+        "GmfHexahedra": ("hexahedron", 8),
+    }
+
     dim = 0
     cells = []
     point_data = {}
@@ -91,8 +81,6 @@ def read_binary_buffer(f):
     if code != 1 and code != 16777216:
         raise ReadError("Invalid code")
 
-    print("%d : %d " % (get_linenumber(), code))
-
     if code == 16777216:
         # swap endianess
         itype += "S"
@@ -100,7 +88,6 @@ def read_binary_buffer(f):
         postype += "S"
 
     version = numpy.fromfile(f, count=1, dtype="i4").item()
-    print("%d : %d " % (get_linenumber(), version))
 
     if version < 1 or version > 4:
         raise ReadError("Invalid version")
@@ -129,10 +116,8 @@ def read_binary_buffer(f):
         raise ReadError("Invalid dimension code : " + str(field) + " it should be 3")
 
     pos = numpy.fromfile(f, count=1, dtype=postype)
-    print("%d : %d " % (get_linenumber(), pos))
 
     dim = numpy.fromfile(f, count=1, dtype=postype).item()
-    print("%d : %d " % (get_linenumber(), dim))
 
     if dim != 2 and dim != 3:
         raise ReadError("Invalid mesh dimension : " + str(dim))
@@ -150,7 +135,6 @@ def read_binary_buffer(f):
             raise ReadError("Unsupported field")
 
         field_code = medit_codes[field]
-        print(field_code)
 
         if field_code[0] == "GmfEnd":
             break
@@ -159,7 +143,6 @@ def read_binary_buffer(f):
             continue
 
         pos = numpy.fromfile(f, count=1, dtype=postype)
-        print("%d : %d " % (get_linenumber(), pos))
 
         nitems = 1
         if field_code[1] == "i":
@@ -187,7 +170,7 @@ def read_binary_buffer(f):
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
-def read_buffer(f):
+def read_ascii_buffer(f):
     dim = 0
     cells = []
     point_data = {}
@@ -263,7 +246,6 @@ def read_buffer(f):
 
 
 def write(filename, mesh, float_fmt=".15e"):
-    print(filename)
     if filename[-1] == "b":
         write_binary_file(filename, mesh)
     else:
@@ -344,7 +326,7 @@ def write_ascii_file(filename, mesh, float_fmt=".15e"):
 def write_binary_file(f, mesh):
     with open_file(f, "wb") as fh:
 
-        version = 2
+        version = 3
         postype = "i4"
         itype = "i4"
         ftype = "f8"
@@ -468,9 +450,7 @@ def write_binary_file(f, mesh):
             tmp_array = numpy.empty(num_cells, dtype=dtype)
             i = 0
             for col_type in dtype.names[:-1]:
-                print(col_type)
                 tmp_array[col_type] = data[:, i] + 1
-                print(len(data[:, i]))
                 i += 1
 
             tmp_array[dtype.names[-1]] = labels
