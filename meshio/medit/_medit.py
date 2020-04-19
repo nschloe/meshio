@@ -338,8 +338,8 @@ def write_binary_file(f, mesh):
     with open_file(f, "wb") as fh:
 
         version = 3
-        postype = "i4"
         itype = "i4"
+        postype = "i8"
         ftype = "f8"
         # according to manual keywords are always written as i4 independently of
         # the file version
@@ -353,7 +353,6 @@ def write_binary_file(f, mesh):
                 break
 
         if has_big_ints:
-            postype = "i8"
             itype = "i8"
 
         itype_size = numpy.dtype(itype).itemsize
