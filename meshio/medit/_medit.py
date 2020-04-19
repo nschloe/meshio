@@ -11,6 +11,7 @@ Latest official up-to-date documentation and reference implementation at
 """
 import logging
 from ctypes import c_double, c_float
+from inspect import currentframe
 
 import numpy
 
@@ -67,51 +68,87 @@ def _produce_dtype(string_type, dim, itype, ftype):
     return res
 
 
+def debug(variable):
+    print(variable, "--->", repr(eval(variable)))
+
+
+def get_linenumber():
+    cf = currentframe()
+    return cf.f_back.f_lineno
+
+
 def read_binary_buffer(f):
     dim = 0
     cells = []
     point_data = {}
     cell_data = {"medit:ref": []}
+    itype = ""
+    ftype = ""
+    postype = ""
 
-    code = numpy.fromfile(f, count=1, dtype="i4")
+    code = numpy.fromfile(f, count=1, dtype="i4").item()
+
     if code != 1 and code != 16777216:
         raise ReadError("Invalid code")
-    # TODO endianess
+
+    print("% : % ", get_linenumber(), code)
+
+    if code == 16777216:
+        # swap endianess
+        itype += "S"
+        ftype += "S"
+        postype += "S"
 
     version = numpy.fromfile(f, count=1, dtype="i4")
+
     if version < 1 or version > 4:
         raise ReadError("Invalid version")
-    print("vertsion ", version)
 
-    # TODO size
-    itype = "i4"
-    ftype = "f8"
-    # append endianess
+    if version == 1:
+        itype += "i4"
+        ftype += "f4"
+    elif version == 2 or version == 3:
+        itype += "i4"
+        ftype += "f8"
+    else:
+        itype += "i8"
+        ftype += "f8"
+
+    postype += "i4"
+
     points = None
     cells = []
     point_data = dict()
     celldata = None
-    postype = "i4"
-    print("code ", code)
 
-    field = numpy.fromfile(f, count=1, dtype="i4")[0]
+    field = numpy.fromfile(f, count=1, dtype=postype).item()
 
     if field != 3:  # =  GmfDimension
         raise ReadError("Invalid dimension code")
 
-    pos = numpy.fromfile(f, count=1, dtype="i4")
+    pos = numpy.fromfile(f, count=1, dtype=postype)
+    print("%d : %d " % (get_linenumber(), pos))
 
-    dim = numpy.fromfile(f, count=1, dtype="i4")[0]
+    dim = numpy.fromfile(f, count=1, dtype=postype).item()
+    print("%d : %d " % (get_linenumber(), dim))
 
     if dim != 2 and dim != 3:
-        raise ReadError("Invalid mesh dimension")
+        raise ReadError("Invalid mesh dimension : " + str(dim))
 
     while True:
-        field = numpy.fromfile(f, count=1, dtype="i4")[0]
+        field = numpy.fromfile(f, count=1, dtype=postype)
+
+        if field.size == 0:
+            msg = "End-of-file reached before GmfEnd keyword"
+            logging.warning(msg)
+            break
+
+        field = field.item()
         if field not in medit_codes.keys():
             raise ReadError("Unsupported field")
 
         field_code = medit_codes[field]
+        print(field_code)
 
         if field_code[0] == "GmfEnd":
             break
@@ -119,16 +156,14 @@ def read_binary_buffer(f):
         if field_code[0] == "GmfReserved":
             continue
 
-        pos = numpy.fromfile(f, count=1, dtype="i4")
+        pos = numpy.fromfile(f, count=1, dtype=postype)
 
         nitems = 1
         if field_code[1] == "i":
-            nitems = numpy.fromfile(f, count=1, dtype=itype)[0]
+            nitems = numpy.fromfile(f, count=1, dtype=itype).item()
 
         field_template = field_code[2]
-        print(_produce_dtype(field_template, dim, itype, ftype))
         dtype = numpy.dtype(_produce_dtype(field_template, dim, itype, ftype))
-        print(dtype)
         out = numpy.asarray(numpy.fromfile(f, count=nitems, dtype=dtype))
         if field_code[0] not in meshio_from_medit.keys():
             msg = ("meshio doesn't know {} type. Skipping.").format(field_code[0])
@@ -139,16 +174,12 @@ def read_binary_buffer(f):
             points = out["f0"]
             point_data["medit:ref"] = out["f1"]
         else:
-            print(field_code)
             meshio_type, ncols = meshio_from_medit[field_code[0]]
-            print(out.shape)
-            print(type(out))
-            print(type(out[0]))
-            print(out[0])
-            print(dtype.names[:ncols])
-            print(out[[dtype.names]])
-            cells.append((meshio_type, out[dtype.names[:ncols]] - 1))
-            cell_data["medit:ref"].append(out[:][dtype.names[-1]])
+            # transform the structured array to integer array which suffices
+            # for the cell connectivity
+            out_view = out.view(itype).reshape(nitems, ncols + 1)
+            cells.append((meshio_type, out_view[:, :ncols] - 1))
+            cell_data["medit:ref"].append(out_view[:][-1])
 
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
