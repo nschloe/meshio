@@ -108,14 +108,16 @@ def read_binary_buffer(f):
     if version == 1:
         itype += "i4"
         ftype += "f4"
+        postype += "i4"
     elif version == 2 or version == 3:
         itype += "i4"
         ftype += "f8"
+        postype += "i4"
     else:
         itype += "i8"
         ftype += "f8"
+        postype += "i8"
 
-    postype += "i4"
 
     points = None
     cells = []
@@ -125,7 +127,7 @@ def read_binary_buffer(f):
     field = numpy.fromfile(f, count=1, dtype=postype).item()
 
     if field != 3:  # =  GmfDimension
-        raise ReadError("Invalid dimension code : " + str(field) + " it should be 3")
+        raise ReadError("Invalid dimension code : " +str(field) + " it should be 3")
 
     pos = numpy.fromfile(f, count=1, dtype=postype)
     print("%d : %d " % (get_linenumber(), pos))
@@ -181,7 +183,7 @@ def read_binary_buffer(f):
             # for the cell connectivity
             out_view = out.view(itype).reshape(nitems, ncols + 1)
             cells.append((meshio_type, out_view[:, :ncols] - 1))
-            cell_data["medit:ref"].append(out_view[:, -1])
+            cell_data["medit:ref"].append(out_view[:,-1])
 
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
@@ -264,10 +266,9 @@ def read_buffer(f):
 def write(filename, mesh, float_fmt=".15e"):
     print(filename)
     if filename[-1] == "b":
-        write_binary_file(filename, mesh)
+        write_binary_file(filename,mesh)
     else:
-        write_ascii_file(filename, mesh, float_fmt)
-
+        write_ascii_file(filename,mesh,float_fmt)
 
 def write_ascii_file(filename, mesh, float_fmt=".15e"):
     with open_file(filename, "wb") as fh:
@@ -339,13 +340,29 @@ def write_ascii_file(filename, mesh, float_fmt=".15e"):
 
         fh.write(b"\nEnd\n")
 
-
-def write_binary_file(f, mesh):
+def write_binary_file(f,mesh):
     with open_file(f, "wb") as fh:
 
-        postype = "i4"
-        itype = "i4"
-        ftype = "f8"
+        version = 2
+        postype="i4"
+        itype="i4"
+        ftype="f8"
+
+        # if we store internaly 64bit integers upgrade file version
+        has_big_ints = False
+        for _, data in mesh.cells:
+            if data.dtype.itemsize  == 8 :
+                has_big_ints = True
+                break;
+        
+        if has_big_ints:
+            postype="i8"
+            itype="i8"
+
+        itype_dt=numpy.dtype(itype)
+        ftype_dt=numpy.dtype(ftype)
+        postype_dt=numpy.dtype(postype)
+
         int_size = 4
 
         code = 1
@@ -354,31 +371,36 @@ def write_binary_file(f, mesh):
 
         field_code = 3  # GmfDimension
 
-        pos = 20  # header size in bytes
+        pos = 4*4 +postype_dt.itemsize
 
         num_verts, dim = mesh.points.shape
 
-        tmp_array = numpy.array([code, version, field_code, pos, dim], dtype="i4")
-
-        tmp_array.astype("i4").tofile(fh)
+        # this is always i4 see documentation of libMeshb
+        header_type = numpy.dtype( ",".join(["i4","i4","i4",postype,"i4"])) 
+        tmp_array = numpy.empty(1,dtype=header_type) 
+        tmp_array['f0'] = code
+        tmp_array['f1'] = version
+        tmp_array['f2'] = field_code
+        tmp_array['f3'] = pos
+        tmp_array['f4'] = dim
+        tmp_array.tofile(fh)
 
         # points
         field = 4  # GmfVertices
         field_code = medit_codes[field]
 
-        float_size = 4
-        # TODO is this safe ?
-        if mesh.points.dtype == "f8":
-            float_size = 8
-
-        pos += num_verts * dim * float_size + num_verts * int_size + 3 * 4
-
-        tmp_array = numpy.array([field, pos, num_verts], dtype="i4")
-        tmp_array.astype("i4").tofile(fh)
+        pos += num_verts*dim*ftype_dt.itemsize
+        pos += num_verts*itype_dt.itemsize
+        pos += 4 + postype_dt.itemsize + itype_dt.itemsize
+        header_type = numpy.dtype( ",".join(["i4",postype,itype])) 
+        tmp_array = numpy.empty(1,dtype=header_type)
+        tmp_array['f0'] = field
+        tmp_array['f1'] = pos
+        tmp_array['f2'] = num_verts
+        tmp_array.tofile(fh)
 
         field_template = field_code[2]
         dtype = numpy.dtype(_produce_dtype(field_template, dim, itype, ftype))
-        print(dtype)
 
         labels_key, other = _pick_first_int_data(mesh.point_data)
         if labels_key and other:
@@ -423,9 +445,14 @@ def write_binary_file(f, mesh):
 
             num_cells, num_verts = data.shape
 
-            pos += num_cells * (num_verts + 1) * int_size + 3 * 4
-
-            tmp_array = numpy.array([medit_key, pos, num_cells], dtype="i4")
+            pos += num_cells * (num_verts + 1) * itype_dt.itemsize
+            pos += 4 + postype_dt.itemsize + itype_dt.itemsize
+        
+            header_type = numpy.dtype( ",".join(["i4",postype,itype])) 
+            tmp_array = numpy.empty(1,dtype=header_type)
+            tmp_array['f0'] = medit_key
+            tmp_array['f1'] = pos
+            tmp_array['f2'] = num_cells
             tmp_array.tofile(fh)
 
             # pick out cell data
@@ -436,11 +463,9 @@ def write_binary_file(f, mesh):
             )
             field_template = medit_codes[medit_key][2]
             dtype = numpy.dtype(_produce_dtype(field_template, dim, itype, ftype))
-            print(dtype)
 
             tmp_array = numpy.empty(num_cells, dtype=dtype)
             i = 0
-            print(data.shape)
             for col_type in dtype.names[:-1]:
                 print(col_type)
                 tmp_array[col_type] = data[:, i] + 1
@@ -448,11 +473,9 @@ def write_binary_file(f, mesh):
                 i += 1
 
             tmp_array[dtype.names[-1]] = labels
-            print(tmp_array.shape)
-            print(tmp_array[0])
             tmp_array.tofile(fh)
 
-        pos = 0  # 2*int_size
+        pos = 0
         tmp_array = numpy.array([54, pos], dtype="i4")
         tmp_array.tofile(fh)
 
