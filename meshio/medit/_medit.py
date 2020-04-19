@@ -179,7 +179,7 @@ def read_binary_buffer(f):
             # for the cell connectivity
             out_view = out.view(itype).reshape(nitems, ncols + 1)
             cells.append((meshio_type, out_view[:, :ncols] - 1))
-            cell_data["medit:ref"].append(out_view[:][-1])
+            cell_data["medit:ref"].append(out_view[:,-1])
 
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
