@@ -65,6 +65,7 @@ def read_binary_buffer(f):
         "GmfQuadrilaterals": ("quad", 4),
         "GmfTetrahedra": ("tetra", 4),
         "GmfPrisms": ("wedge", 6),
+        "GmfPyramids": ("pyramid", 5),
         "GmfHexahedra": ("hexahedron", 8),
     }
 
@@ -182,6 +183,7 @@ def read_ascii_buffer(f):
         "Quadrilaterals": ("quad", 4),
         "Tetrahedra": ("tetra", 4),
         "Prisms": ("wedge", 6),
+        "Pyramids": ("pyramid", 5),
         "Hexahedra": ("hexahedron", 8),  # Frey
         "Hexaedra": ("hexahedron", 8),  # Dobrzynski
     }
@@ -285,7 +287,8 @@ def write_ascii_file(filename, mesh, float_fmt=".15e"):
             "triangle": ("Triangles", 3),
             "quad": ("Quadrilaterals", 4),
             "tetra": ("Tetrahedra", 4),
-            "wedge":("Prisms",6),
+            "wedge": ("Prisms", 6),
+            "pyramid": ("Pyramids", 5),
             "hexahedron": ("Hexahedra", 8),
         }
 
@@ -416,6 +419,7 @@ def write_binary_file(f, mesh):
             "quad": 7,
             "tetra": 8,
             "wedge": 9,
+            "pyramid": 49,
             "hexahedron": 10,
         }
         for k, (cell_type, data) in enumerate(mesh.cells):
