@@ -76,8 +76,9 @@ def read_binary_buffer(f):
     itype = ""
     ftype = ""
     postype = ""
+    keytype="i4"
 
-    code = numpy.fromfile(f, count=1, dtype="i4").item()
+    code = numpy.fromfile(f, count=1, dtype=keytype).item()
 
     if code != 1 and code != 16777216:
         raise ReadError("Invalid code")
@@ -87,8 +88,9 @@ def read_binary_buffer(f):
         itype += "S"
         ftype += "S"
         postype += "S"
+        keytype += "S"
 
-    version = numpy.fromfile(f, count=1, dtype="i4").item()
+    version = numpy.fromfile(f, count=1, dtype=keytype).item()
 
     if version < 1 or version > 4:
         raise ReadError("Invalid version")
@@ -97,10 +99,14 @@ def read_binary_buffer(f):
         itype += "i4"
         ftype += "f4"
         postype += "i4"
-    elif version == 2 or version == 3:
+    elif version == 2:
         itype += "i4"
         ftype += "f8"
         postype += "i4"
+    elif version == 3:
+        itype += "i4"
+        ftype += "f8"
+        postype += "i8"
     else:
         itype += "i8"
         ftype += "f8"
@@ -111,20 +117,20 @@ def read_binary_buffer(f):
     point_data = dict()
     celldata = None
 
-    field = numpy.fromfile(f, count=1, dtype=postype).item()
+    field = numpy.fromfile(f, count=1, dtype=keytype).item()
 
     if field != 3:  # =  GmfDimension
         raise ReadError("Invalid dimension code : " + str(field) + " it should be 3")
 
     pos = numpy.fromfile(f, count=1, dtype=postype)
 
-    dim = numpy.fromfile(f, count=1, dtype=postype).item()
+    dim = numpy.fromfile(f, count=1, dtype=keytype).item()
 
     if dim != 2 and dim != 3:
         raise ReadError("Invalid mesh dimension : " + str(dim))
 
     while True:
-        field = numpy.fromfile(f, count=1, dtype=postype)
+        field = numpy.fromfile(f, count=1, dtype=keytype)
 
         if field.size == 0:
             msg = "End-of-file reached before GmfEnd keyword"
