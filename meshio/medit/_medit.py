@@ -354,6 +354,7 @@ def write_binary_file(f, mesh):
 
         if has_big_ints:
             itype = "i8"
+            version = 4
 
         itype_size = numpy.dtype(itype).itemsize
         ftype_size = numpy.dtype(ftype).itemsize
@@ -361,8 +362,7 @@ def write_binary_file(f, mesh):
         keyword_size = numpy.dtype(keytype).itemsize
 
         code = 1
-        version = 2
-        field_code = 3  # GmfDimension
+        field = 3  # GmfDimension
         pos = 4 * keyword_size + postype_size
 
         num_verts, dim = mesh.points.shape
