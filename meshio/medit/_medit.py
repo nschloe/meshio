@@ -70,13 +70,13 @@ def read_binary_buffer(f):
     }
 
     dim = 0
+    points = None
     cells = []
     point_data = {}
     cell_data = {"medit:ref": []}
     itype = ""
     ftype = ""
     postype = ""
-    # according to manual keywords are always written as i4 independently of
     # the file version
     keytype = "i4"
 
@@ -114,17 +114,12 @@ def read_binary_buffer(f):
         ftype += "f8"
         postype += "i8"
 
-    points = None
-    cells = []
-    point_data = dict()
-    celldata = None
-
     field = numpy.fromfile(f, count=1, dtype=keytype).item()
 
     if field != 3:  # =  GmfDimension
         raise ReadError("Invalid dimension code : " + str(field) + " it should be 3")
 
-    pos = numpy.fromfile(f, count=1, dtype=postype)
+    numpy.fromfile(f, count=1, dtype=postype)
 
     dim = numpy.fromfile(f, count=1, dtype=keytype).item()
 
@@ -151,7 +146,7 @@ def read_binary_buffer(f):
         if field_code[0] == "GmfReserved":
             continue
 
-        pos = numpy.fromfile(f, count=1, dtype=postype)
+        numpy.fromfile(f, count=1, dtype=postype)
 
         nitems = 1
         if field_code[1] == "i":
