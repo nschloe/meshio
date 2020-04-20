@@ -1,8 +1,9 @@
 # Key is the enum value of each keyword
 # values follow the design of GmfKwdFmt array of
 # https://github.com/LoicMarechal/libMeshb/blob/master/sources/libmeshb7.c
-# For each keyword we assign wether there is a counter associated with it (second column) and
+# For each keyword we assign whether there is a counter associated with it (second column) and
 # its format as a string of numbers
+#
 # i:integer, f:float, d:dimension
 medit_codes = {
     0: ("GmfReserved", "", ""),

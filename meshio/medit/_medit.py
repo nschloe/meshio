@@ -76,6 +76,8 @@ def read_binary_buffer(f):
     itype = ""
     ftype = ""
     postype = ""
+    # according to manual keywords are always written as i4 independently of
+    # the file version
     keytype = "i4"
 
     code = numpy.fromfile(f, count=1, dtype=keytype).item()
