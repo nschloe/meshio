@@ -373,7 +373,7 @@ def write_binary_file(f, mesh):
         tmp_array = numpy.empty(1, dtype=header_type)
         tmp_array["f0"] = code
         tmp_array["f1"] = version
-        tmp_array["f2"] = field_code
+        tmp_array["f2"] = field
         tmp_array["f3"] = pos
         tmp_array["f4"] = dim
         tmp_array.tofile(fh)
@@ -470,83 +470,12 @@ def write_binary_file(f, mesh):
             tmp_array.tofile(fh)
 
         pos = 0
-        tmp_array = numpy.array([54, pos], dtype=keytype)
+        field = 54  # GmfEnd
+        header_type = numpy.dtype(",".join([keytype, postype]))
+        tmp_array = numpy.empty(1, dtype=header_type)
+        tmp_array["f0"] = field
+        tmp_array["f1"] = pos
         tmp_array.tofile(fh)
-
-
-def read_buffer(f):
-    dim = 0
-    cells = []
-    point_data = {}
-    cell_data = {"medit:ref": []}
-
-    meshio_from_medit = {
-        "Edges": ("line", 2),
-        "Triangles": ("triangle", 3),
-        "Quadrilaterals": ("quad", 4),
-        "Tetrahedra": ("tetra", 4),
-        "Hexahedra": ("hexahedron", 8),  # Frey
-        "Hexaedra": ("hexahedron", 8),  # Dobrzynski
-    }
-
-    while True:
-        line = f.readline()
-        if not line:
-            # EOF
-            break
-
-        line = line.strip()
-        if len(line) == 0 or line[0] == "#":
-            continue
-
-        items = line.split()
-
-        if not items[0].isalpha():
-            raise ReadError()
-
-        if items[0] == "MeshVersionFormatted":
-            version = items[1]
-            dtype = {"1": c_float, "2": c_double}[version]
-        elif items[0] == "Dimension":
-            dim = int(items[1])
-        elif items[0] == "Vertices":
-            if dim <= 0:
-                raise ReadError()
-            num_verts = int(f.readline())
-            out = numpy.fromfile(
-                f, count=num_verts * (dim + 1), dtype=dtype, sep=" "
-            ).reshape(num_verts, dim + 1)
-            points = out[:, :dim]
-            point_data["medit:ref"] = out[:, dim].astype(int)
-        elif items[0] in meshio_from_medit:
-            meshio_type, points_per_cell = meshio_from_medit[items[0]]
-            # The first value is the number of elements
-            num_cells = int(f.readline())
-
-            out = numpy.fromfile(
-                f, count=num_cells * (points_per_cell + 1), dtype=int, sep=" "
-            ).reshape(num_cells, points_per_cell + 1)
-
-            # adapt for 0-base
-            cells.append((meshio_type, out[:, :points_per_cell] - 1))
-            cell_data["medit:ref"].append(out[:, -1])
-        elif items[0] == "Normals":
-            # those are just discarded
-            num_normals = int(f.readline())
-            numpy.fromfile(f, count=num_normals * dim, dtype=dtype, sep=" ").reshape(
-                num_normals, dim
-            )
-        elif items[0] == "NormalAtVertices":
-            # those are just discarded
-            num_normal_at_vertices = int(f.readline())
-            numpy.fromfile(
-                f, count=num_normal_at_vertices * 2, dtype=int, sep=" "
-            ).reshape(num_normal_at_vertices, 2)
-        else:
-            if items[0] != "End":
-                raise ReadError("Unknown keyword '{}'.".format(items[0]))
-
-    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
 register("medit", [".mesh", ".meshb"], read, {"medit": write})
