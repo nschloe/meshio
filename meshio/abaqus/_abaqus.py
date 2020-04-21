@@ -135,22 +135,31 @@ def read_buffer(f):
                 cell_sets_element_order += list(sets.keys())
         elif keyword == "NSET":
             params_map = get_param_map(line, required_keys=["NSET"])
-            set_ids, line = _read_set(f, params_map)
+            set_ids, _, line = _read_set(f, params_map)
             name = params_map["NSET"]
             point_sets[name] = numpy.array(
                 [point_ids[point_id] for point_id in set_ids], dtype="int32"
             )
         elif keyword == "ELSET":
             params_map = get_param_map(line, required_keys=["ELSET"])
-            set_ids, line = _read_set(f, params_map)
+            set_ids, set_names, line = _read_set(f, params_map)
             name = params_map["ELSET"]
             cell_sets[name] = []
-            for cell_ids_ in cell_ids:
-                cell_sets_ = numpy.array(
-                    [cell_ids_[set_id] for set_id in set_ids if set_id in cell_ids_],
-                    dtype="int32",
-                )
-                cell_sets[name].append(cell_sets_)
+            if set_ids.size:
+                for cell_ids_ in cell_ids:
+                    cell_sets_ = numpy.array(
+                        [cell_ids_[set_id] for set_id in set_ids if set_id in cell_ids_],
+                        dtype="int32",
+                    )
+                    cell_sets[name].append(cell_sets_)
+            elif set_names:
+                for set_name in set_names:
+                    if set_name in cell_sets.keys():
+                        cell_sets[name].append(cell_sets[set_name])
+                    elif set_name in cell_sets_element.keys():
+                        cell_sets[name].append(cell_sets_element[set_name])
+                    else:
+                        raise ReadError(f"Unknown cell set '{set_name}'")
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
@@ -275,6 +284,7 @@ def get_param_map(word, required_keys=None):
 
 def _read_set(f, params_map):
     set_ids = []
+    set_names = []
     while True:
         line = f.readline()
         if not line or line.startswith("*"):
@@ -282,14 +292,18 @@ def _read_set(f, params_map):
         if line.strip() == "":
             continue
 
-        set_ids += [int(k) for k in line.strip().strip(",").split(",")]
+        line = line.strip().strip(",").split(",")
+        if line[0].isnumeric():
+            set_ids += [int(k) for k in line]
+        else:
+            set_names.append(line[0])
 
     set_ids = numpy.array(set_ids, dtype="int32")
     if "GENERATE" in params_map:
         if len(set_ids) != 3:
             raise ReadError(set_ids)
         set_ids = numpy.arange(set_ids[0], set_ids[1] + 1, set_ids[2], dtype="int32")
-    return set_ids, line
+    return set_ids, set_names, line
 
 
 def write(filename, mesh, float_fmt=".15e", translate_cell_names=True):
