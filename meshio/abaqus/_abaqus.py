@@ -127,7 +127,9 @@ def read_buffer(f):
             points, point_ids, line = _read_nodes(f)
         elif keyword == "ELEMENT":
             params_map = get_param_map(line, required_keys=["TYPE"])
-            cell_type, cells_data, ids, sets, line = _read_cells(f, params_map, point_ids)
+            cell_type, cells_data, ids, sets, line = _read_cells(
+                f, params_map, point_ids
+            )
             cells.append(CellBlock(cell_type, cells_data))
             cell_ids.append(ids)
             if sets:
@@ -148,7 +150,11 @@ def read_buffer(f):
             if set_ids.size:
                 for cell_ids_ in cell_ids:
                     cell_sets_ = numpy.array(
-                        [cell_ids_[set_id] for set_id in set_ids if set_id in cell_ids_],
+                        [
+                            cell_ids_[set_id]
+                            for set_id in set_ids
+                            if set_id in cell_ids_
+                        ],
                         dtype="int32",
                     )
                     cell_sets[name].append(cell_sets_)
