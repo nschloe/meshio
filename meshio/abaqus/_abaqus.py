@@ -165,7 +165,7 @@ def read_buffer(f):
                     elif set_name in cell_sets_element.keys():
                         cell_sets[name].append(cell_sets_element[set_name])
                     else:
-                        raise ReadError(f"Unknown cell set '{set_name}'")
+                        raise ReadError("Unknown cell set '{}'".format(set_name))
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
