@@ -126,7 +126,8 @@ def read_buffer(f):
         if keyword == "NODE":
             points, point_ids, line = _read_nodes(f)
         elif keyword == "ELEMENT":
-            cell_type, cells_data, ids, sets, line = _read_cells(f, line, point_ids)
+            params_map = get_param_map(line, required_keys=["TYPE"])
+            cell_type, cells_data, ids, sets, line = _read_cells(f, params_map, point_ids)
             cells.append(CellBlock(cell_type, cells_data))
             cell_ids.append(ids)
             if sets:
@@ -199,16 +200,8 @@ def _read_nodes(f):
     return numpy.array(points, dtype=float), point_ids, line
 
 
-def _read_cells(f, line0, point_ids):
-    values = {}
-    for pair in line0.split(",")[1:]:
-        k, v = pair.split("=")
-        values[k.strip().upper()] = v.strip()
-
-    if "TYPE" not in values.keys():
-        raise ReadError()
-
-    etype = values["TYPE"]
+def _read_cells(f, params_map, point_ids):
+    etype = params_map["TYPE"]
     if etype not in abaqus_to_meshio_type.keys():
         raise ReadError("Element type not available: {}".format(etype))
 
@@ -233,8 +226,8 @@ def _read_cells(f, line0, point_ids):
             counter += 1
 
     cell_sets = (
-        {values["ELSET"]: numpy.arange(counter, dtype="int32")}
-        if "ELSET" in values.keys()
+        {params_map["ELSET"]: numpy.arange(counter, dtype="int32")}
+        if "ELSET" in params_map.keys()
         else {}
     )
 
