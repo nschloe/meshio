@@ -206,8 +206,12 @@ def _read_families(fas_data):
     return families
 
 
-def write(filename, mesh, add_global_ids=True, compression="gzip", compression_opts=4):
+def write(filename, mesh, add_global_ids=True):
     import h5py
+
+    # MED doesn't support compression,
+    # <https://github.com/nschloe/meshio/issues/781#issuecomment-616438066>
+    # compression = None
 
     f = h5py.File(filename, "w")
 
@@ -248,23 +252,13 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     nodes_group.attrs.create("CGS", 1)
     profile = "MED_NO_PROFILE_INTERNAL"
     nodes_group.attrs.create("PFL", numpy.string_(profile))
-    coo = nodes_group.create_dataset(
-        "COO",
-        data=mesh.points.flatten(order="F"),
-        compression=compression,
-        compression_opts=compression_opts,
-    )
+    coo = nodes_group.create_dataset("COO", data=mesh.points.flatten(order="F"))
     coo.attrs.create("CGT", 1)
     coo.attrs.create("NBR", len(mesh.points))
 
     # Point tags
     if "point_tags" in mesh.point_data:  # only works for med -> med
-        family = nodes_group.create_dataset(
-            "FAM",
-            data=mesh.point_data["point_tags"],
-            compression=compression,
-            compression_opts=compression_opts,
-        )
+        family = nodes_group.create_dataset("FAM", data=mesh.point_data["point_tags"])
         family.attrs.create("CGT", 1)
         family.attrs.create("NBR", len(mesh.points))
 
@@ -279,22 +273,14 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
         med_cells.attrs.create("CGT", 1)
         med_cells.attrs.create("CGS", 1)
         med_cells.attrs.create("PFL", numpy.string_(profile))
-        nod = med_cells.create_dataset(
-            "NOD",
-            data=cells.flatten(order="F") + 1,
-            compression=compression,
-            compression_opts=compression_opts,
-        )
+        nod = med_cells.create_dataset("NOD", data=cells.flatten(order="F") + 1)
         nod.attrs.create("CGT", 1)
         nod.attrs.create("NBR", len(cells))
 
         # Cell tags
         if "cell_tags" in mesh.cell_data:  # works only for med -> med
             family = med_cells.create_dataset(
-                "FAM",
-                data=mesh.cell_data["cell_tags"][k],
-                compression=compression,
-                compression_opts=compression_opts,
+                "FAM", data=mesh.cell_data["cell_tags"][k]
             )
             family.attrs.create("CGT", 1)
             family.attrs.create("NBR", len(cells))
@@ -309,7 +295,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     try:
         if len(mesh.point_tags) > 0:
             node = families.create_group("NOEUD")
-            _write_families(node, mesh.point_tags, compression, compression_opts)
+            _write_families(node, mesh.point_tags)
     except AttributeError:
         pass
 
@@ -317,7 +303,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     try:
         if len(mesh.cell_tags) > 0:
             element = families.create_group("ELEME")
-            _write_families(element, mesh.cell_tags, compression, compression_opts)
+            _write_families(element, mesh.cell_tags)
     except AttributeError:
         pass
 
@@ -329,9 +315,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
         if name == "point_tags":  # ignore point_tags already written under FAS
             continue
         supp = "NOEU"  # nodal data
-        _write_data(
-            fields, mesh_name, profile, name, supp, data, compression, compression_opts
-        )
+        _write_data(fields, mesh_name, profile, name, supp, data)
 
     # Cell data
     # Only support writing ELEM fields with only 1 Gauss point per cell
@@ -351,28 +335,12 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
             else:  # general ELGA data defined at unknown Gauss points
                 supp = "ELGA"
             _write_data(
-                fields,
-                mesh_name,
-                profile,
-                name,
-                supp,
-                data,
-                compression,
-                compression_opts,
-                med_type,
+                fields, mesh_name, profile, name, supp, data, med_type,
             )
 
 
 def _write_data(
-    fields,
-    mesh_name,
-    profile,
-    name,
-    supp,
-    data,
-    compression,
-    compression_opts,
-    med_type=None,
+    fields, mesh_name, profile, name, supp, data, med_type=None,
 ):
     # Skip for general ELGA fields defined at unknown Gauss points
     if supp == "ELGA":
@@ -422,12 +390,7 @@ def _write_data(
     profile.attrs.create("GAU", numpy_void_str)
 
     # Dataset
-    profile.create_dataset(
-        "CO",
-        data=data.flatten(order="F"),
-        compression=compression,
-        compression_opts=compression_opts,
-    )
+    profile.create_dataset("CO", data=data.flatten(order="F"))
 
 
 def _component_names(n_components):
@@ -447,7 +410,7 @@ def _family_name(set_id, name):
     return "FAM" + "_" + str(set_id) + "_" + "_".join(name)
 
 
-def _write_families(fm_group, tags, compression, compression_opts):
+def _write_families(fm_group, tags):
     """
     Write point/cell tag information under FAS/[mesh_name]
     """
@@ -456,13 +419,7 @@ def _write_families(fm_group, tags, compression, compression_opts):
         family.attrs.create("NUM", set_id)
         group = family.create_group("GRO")
         group.attrs.create("NBR", len(name))  # number of subsets
-        dataset = group.create_dataset(
-            "NOM",
-            (len(name),),
-            dtype="80int8",
-            compression=compression,
-            compression_opts=compression_opts,
-        )
+        dataset = group.create_dataset("NOM", (len(name),), dtype="80int8")
         for i in range(len(name)):
             name_80 = name[i] + "\x00" * (80 - len(name[i]))  # make name 80 characters
             dataset[i] = [ord(x) for x in name_80]
