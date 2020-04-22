@@ -35,7 +35,7 @@ def test(mesh):
     [
         ("UUea.inp", 4950.0, 50, 10),
         ("nle1xf3c.inp", 32.215275528, 12, 3),
-        ("element_elset.inp", 6.0, 2, 2),
+        ("element_elset.inp", 6.0, 2, 3),
     ],
 )
 def test_reference_file(filename, ref_sum, ref_num_cells, ref_num_cell_sets):
