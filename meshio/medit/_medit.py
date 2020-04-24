@@ -1,12 +1,6 @@
 """
-I/O for Medit's format, cf.
-<https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html>.
-Check out
-<https://hal.inria.fr/inria-00069921/fr/>
-<https://www.ljll.math.upmc.fr/frey/publications/RT-0253.pdf>
-<https://www.math.u-bordeaux.fr/~dobrzyns/logiciels/RT-422/node58.html>
-for something like a specification.
-Latest official up-to-date documentation and reference implementation at
+I/O for Medit's format/Gamma Mesh Format , 
+Latest official up-to-date documentation and a reference C implementation at
 <https://github.com/LoicMarechal/libMeshb>
 """
 import logging
