@@ -342,7 +342,7 @@ def write_binary_file(f, mesh):
         # the file version
         keytype = "i4"
 
-        # if we store internaly 64bit integers upgrade file version
+        # if we store internally 64bit integers upgrade file version
         has_big_ints = False
         for _, data in mesh.cells:
             if data.dtype.itemsize == 8:
