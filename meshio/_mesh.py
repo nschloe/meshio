@@ -74,7 +74,7 @@ class Mesh:
 
         new_cells = []
         new_cell_data = {}
-        for block_counter, c in self.cells:
+        for block_counter, c in enumerate(self.cells):
             if c.type not in prune_list:
                 new_cells.append(c)
                 for name, data in self.cell_data.items():
