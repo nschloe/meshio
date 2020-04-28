@@ -273,11 +273,11 @@ def _read_periodic(f, is_ascii, data_size):
     return periodic
 
 
-def write(filename, mesh, binary=True):
-    write4_1(filename, mesh, binary=binary)
+def write(filename, mesh, float_fmt=".15e", binary=True):
+    write4_1(filename, mesh, float_fmt=float_fmt, binary=binary)
 
 
-def write4_1(filename, mesh, binary=True):
+def write4_1(filename, mesh, float_fmt=".15e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
     """
@@ -314,7 +314,7 @@ def write4_1(filename, mesh, binary=True):
             _write_physical_names(fh, mesh.field_data)
 
         _write_entities(fh, cells, binary)
-        _write_nodes(fh, mesh.points, mesh.cells, binary)
+        _write_nodes(fh, mesh.points, mesh.cells, binary, float_fmt)
         _write_elements(fh, cells, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, binary)
@@ -359,7 +359,7 @@ def _write_entities(fh, cells, binary):
     return
 
 
-def _write_nodes(fh, points, cells, binary):
+def _write_nodes(fh, points, cells, binary, float_fmt):
     fh.write(b"$Nodes\n")
 
     # The entity_dim and entity_tag in the $Elements section must correspond to an
@@ -414,7 +414,7 @@ def _write_nodes(fh, points, cells, binary):
         )
         numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh, "\n", "%d")
         fh.write(b"\n")
-        numpy.savetxt(fh, points, delimiter=" ")
+        numpy.savetxt(fh, points, delimiter=" ", fmt="%" + float_fmt)
 
     fh.write(b"$EndNodes\n")
     return
