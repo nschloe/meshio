@@ -70,9 +70,11 @@ def create_logo2(y=0.0):
 
     mesh = pygmsh.generate_mesh(geom)
     # return mesh.points, mesh.cells["triangle"]
+    X = mesh.points
+    cells = mesh.get_cells_type("triangle")
 
     X, cells = optimesh.cvt.quasi_newton_uniform_full(
-        mesh.points, mesh.cells["triangle"], 1.0e-10, 100
+        X, cells, 1.0e-10, 100, verbose=True
     )
     return X, cells
 
@@ -80,7 +82,8 @@ def create_logo2(y=0.0):
 if __name__ == "__main__":
     X, cells = create_logo2(y=0.08)
 
-    meshio.write_points_cells("logo.svg", X, {"triangle": cells})
+    mesh = meshio.Mesh(X, {"triangle": cells})
+    meshio.svg.write("logo.svg", mesh, force_width=300)
 
     X = numpy.column_stack([X[:, 0], X[:, 1], numpy.zeros(X.shape[0])])
-    meshio.write_points_cells("logo.vtk", X, {"triangle": cells})
+    meshio.write("logo.vtk", meshio.Mesh(X, {"triangle": cells}))
