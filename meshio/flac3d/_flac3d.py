@@ -72,14 +72,101 @@ meshio_to_flac3d_order_2 = {
 
 def read(filename):
     """
-    Read FLAC3D f3grid grid file (only ASCII).
+    Read FLAC3D f3grid grid file.
     """
-    with open_file(filename, "r") as f:
-        out = read_buffer(f)
+    # Read a small block of the file to determine its type
+    # See <http://code.activestate.com/recipes/173220/>
+    with open_file(filename, "rb") as f:
+        block = f.read(8)
+        is_binary = b"\x00" in block
+
+    with open_file(filename) as f:
+        if is_binary:
+            out = read_binary_buffer(f)
+        else:
+            out = read_ascii_buffer(f)
+
     return out
 
 
-def read_buffer(f):
+def read_binary_buffer(f):
+    """
+    Read binary file.
+    """
+    points = []
+    point_ids = {}
+    cells = []
+    mapper = {}
+    field_data = {}
+    slots = set()
+
+    # Not sure what the first bytes represent
+    _ = numpy.fromfile(f, "u4", 2)
+
+    # Points
+    num_nodes, = numpy.fromfile(f, int, 1)
+    for pidx in range(num_nodes):
+        pid, = numpy.fromfile(f, int, 1)
+        point = numpy.fromfile(f, float, 3)
+        points.append(point)
+        point_ids[pid] = pidx
+
+    # Cells
+    num_cells, = numpy.fromfile(f, int, 1)
+    for cidx in range(num_cells):
+        cid, num_verts = numpy.fromfile(f, int, 2)
+        cell = numpy.fromfile(f, int, num_verts)
+        cell = [point_ids[int(l)] for l in cell]
+        if num_verts == 7:
+            cell.append(cell[-1])
+        cell_type = numnodes_to_meshio_type[num_verts]
+        if len(cells) > 0 and cell_type == cells[-1][0]:
+            cells[-1][1].append(cell)
+        else:
+            cells.append((cell_type, [cell]))
+        mapper[cid] = [cidx]
+
+    # Zone groups
+    num_groups, = numpy.fromfile(f, int, 1)
+    for zidx in range(num_groups):
+        # Group name
+        num_chars, = numpy.fromfile(f, numpy.dtype("u2"), 1)
+        name, = numpy.fromfile(f, "|S{}".format(num_chars), 1).astype("|U{}".format(num_chars))
+
+        # Slot name
+        num_chars, = numpy.fromfile(f, numpy.dtype("u2"), 1)
+        slot, = numpy.fromfile(f, "|S{}".format(num_chars), 1).astype("|U{}".format(num_chars))
+
+        # Zones
+        num_zones, = numpy.fromfile(f, int, 1)
+        data = numpy.fromfile(f, int, num_zones)
+
+        for cid in data:
+            mapper[cid].append(zidx + 1)
+            field_data[name] = numpy.array([zidx + 1, 3])
+        
+        slots.add(slot)
+        if len(slots) > 1:
+            raise ReadError("Multiple slots are not supported")
+
+    if zidx:
+        n_cells = numpy.cumsum([len(c[1]) for c in cells])
+        cell_data = numpy.empty(n_cells[-1], dtype=int)
+        for cid, zid in mapper.values():
+            cell_data[cid] = zid
+        cell_data = {"flac3d:zone": numpy.split(cell_data, n_cells[:-1])}
+    else:
+        cell_data = {}
+
+    return Mesh(
+        points=numpy.array(points),
+        cells=[(k, numpy.array(v)[:, flac3d_to_meshio_order[k]]) for k, v in cells],
+        cell_data=cell_data,
+        field_data=field_data,
+    )
+
+
+def read_ascii_buffer(f):
     """
     Read ASCII file line by line. Use combination of readline, tell and
     seek since we need to rewind to the previous line when we read last
