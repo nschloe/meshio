@@ -72,25 +72,21 @@ meshio_to_flac3d_order_2 = {
 
 
 def read(filename):
-    """
-    Read FLAC3D f3grid grid file.
-    """
+    """Read FLAC3D f3grid grid file."""
     # Read a small block of the file to assess its type
     # See <http://code.activestate.com/recipes/173220/>
     with open_file(filename, "rb") as f:
         block = f.read(8)
-        is_binary = b"\x00" in block
+        binary = b"\x00" in block
 
     with open_file(filename) as f:
-        out = read_buffer(f, is_binary)
+        out = read_buffer(f, binary)
 
     return out
 
 
-def read_buffer(f, is_binary):
-    """
-    Read binary or ASCII file.
-    """
+def read_buffer(f, binary):
+    """Read binary or ASCII file."""
     points = []
     point_ids = {}
     cells = []
@@ -98,32 +94,30 @@ def read_buffer(f, is_binary):
     field_data = {}
     slots = set()
 
-    if is_binary:
+    if binary:
         # Not sure what the first bytes represent, the format might be wrong
         # It does not seem to be useful anyway
         _ = numpy.fromfile(f, "u4", 2)
 
-        # Points
-        num_nodes, = numpy.fromfile(f, int, 1)
+        (num_nodes,) = numpy.fromfile(f, int, 1)
         for pidx in range(num_nodes):
-            pid, point = _read_point(f, is_binary)
+            pid, point = _read_point(f, binary)
             points.append(point)
             point_ids[pid] = pidx
 
-        # Cells
-        num_cells, = numpy.fromfile(f, int, 1)
+        (num_cells,) = numpy.fromfile(f, int, 1)
         for cidx in range(num_cells):
-            cid, cell = _read_cell(f, point_ids, is_binary)
+            cid, cell = _read_cell(f, point_ids, binary)
             cells = _update_cells(cells, cell)
             mapper[cid] = [cidx]
 
-        # Zone groups
-        num_groups, = numpy.fromfile(f, int, 1)
+        (num_groups,) = numpy.fromfile(f, int, 1)
         for zidx in range(num_groups):
-            name, slot, data = _read_zgroup(f, is_binary)
-            field_data, mapper = _update_field_data(field_data, mapper, data, name, zidx + 1)
+            name, slot, data = _read_zgroup(f, binary)
+            field_data, mapper = _update_field_data(
+                field_data, mapper, data, name, zidx + 1
+            )
             slots = _update_slots(slots, slot)
-
     else:
         pidx = 0
         zidx = 0
@@ -132,21 +126,23 @@ def read_buffer(f, is_binary):
         line = f.readline().rstrip().split()
         while line:
             if line[0] == "G":
-                pid, point = _read_point(line, is_binary)
+                pid, point = _read_point(line, binary)
                 points.append(point)
                 point_ids[pid] = pidx
                 pidx += 1
             elif line[0] == "Z":
-                cid, cell = _read_cell(line, point_ids, is_binary)
+                cid, cell = _read_cell(line, point_ids, binary)
                 cells = _update_cells(cells, cell)
                 mapper[cid] = [count]
                 count += 1
             elif line[0] == "ZGROUP":
-                name, slot, data = _read_zgroup(f, is_binary, line)
-                field_data, mapper = _update_field_data(field_data, mapper, data, name, zidx + 1)
+                name, slot, data = _read_zgroup(f, binary, line)
+                field_data, mapper = _update_field_data(
+                    field_data, mapper, data, name, zidx + 1
+                )
                 slots = _update_slots(slots, slot)
                 zidx += 1
-            
+
             line = f.readline().rstrip().split()
 
     if field_data:
@@ -166,25 +162,21 @@ def read_buffer(f, is_binary):
     )
 
 
-def _read_point(buf_or_line, is_binary):
-    """
-    Read point coordinates.
-    """
-    if is_binary:
-        pid, = numpy.fromfile(buf_or_line, int, 1)
+def _read_point(buf_or_line, binary):
+    """Read point coordinates."""
+    if binary:
+        (pid,) = numpy.fromfile(buf_or_line, int, 1)
         point = numpy.fromfile(buf_or_line, float, 3)
     else:
         pid = int(buf_or_line[1])
         point = [float(l) for l in buf_or_line[2:]]
-    
+
     return pid, point
 
 
-def _read_cell(buf_or_line, point_ids, is_binary):
-    """
-    Read cell corners.
-    """
-    if is_binary:
+def _read_cell(buf_or_line, point_ids, binary):
+    """Read cell connectivity."""
+    if binary:
         cid, num_verts = numpy.fromfile(buf_or_line, int, 2)
         cell = numpy.fromfile(buf_or_line, int, num_verts)
         is_b7 = num_verts == 7
@@ -192,7 +184,7 @@ def _read_cell(buf_or_line, point_ids, is_binary):
         cid = int(buf_or_line[2])
         cell = buf_or_line[3:]
         is_b7 = buf_or_line[1] == "B7"
-    
+
     cell = [point_ids[int(l)] for l in cell]
     if is_b7:
         cell.append(cell[-1])
@@ -200,21 +192,23 @@ def _read_cell(buf_or_line, point_ids, is_binary):
     return cid, cell
 
 
-def _read_zgroup(buf_or_line, is_binary, line=None):
-    """
-    Read cell group.
-    """
-    if is_binary:
+def _read_zgroup(buf_or_line, binary, line=None):
+    """Read cell group."""
+    if binary:
         # Group name
-        num_chars, = numpy.fromfile(buf_or_line, "u2", 1)
-        name, = numpy.fromfile(buf_or_line, "|S{}".format(num_chars), 1).astype("|U{}".format(num_chars))
+        (num_chars,) = numpy.fromfile(buf_or_line, "u2", 1)
+        (name,) = numpy.fromfile(buf_or_line, "|S{}".format(num_chars), 1).astype(
+            "|U{}".format(num_chars)
+        )
 
         # Slot name
-        num_chars, = numpy.fromfile(buf_or_line, "u2", 1)
-        slot, = numpy.fromfile(buf_or_line, "|S{}".format(num_chars), 1).astype("|U{}".format(num_chars))
+        (num_chars,) = numpy.fromfile(buf_or_line, "u2", 1)
+        (slot,) = numpy.fromfile(buf_or_line, "|S{}".format(num_chars), 1).astype(
+            "|U{}".format(num_chars)
+        )
 
         # Zones
-        num_zones, = numpy.fromfile(buf_or_line, int, 1)
+        (num_zones,) = numpy.fromfile(buf_or_line, int, 1)
         data = numpy.fromfile(buf_or_line, int, num_zones)
     else:
         name = line[1].replace('"', "")
@@ -237,9 +231,7 @@ def _read_zgroup(buf_or_line, is_binary, line=None):
 
 
 def _update_cells(cells, cell):
-    """
-    Update cell list.
-    """
+    """Update cell list."""
     cell_type = numnodes_to_meshio_type[len(cell)]
     if len(cells) > 0 and cell_type == cells[-1][0]:
         cells[-1][1].append(cell)
@@ -250,9 +242,7 @@ def _update_cells(cells, cell):
 
 
 def _update_field_data(field_data, mapper, data, name, zidx):
-    """
-    Update field data dict.
-    """
+    """Update field data dict."""
     for cid in data:
         mapper[cid].append(zidx)
     field_data[name] = numpy.array([zidx, 3])
@@ -261,26 +251,24 @@ def _update_field_data(field_data, mapper, data, name, zidx):
 
 
 def _update_slots(slots, slot):
-    """
-    Update slot set. Only one slot is supported.
-    """
+    """Update slot set. Only one slot is supported."""
     slots.add(slot)
     if len(slots) > 1:
         raise ReadError("Multiple slots are not supported")
-        
+
     return slots
 
 
 def write(filename, mesh, float_fmt=".15e", binary=False):
-    """
-    Write FLAC3D f3grid grid file.
-    """
+    """Write FLAC3D f3grid grid file."""
     if not any(c.type in meshio_only.keys() for c in mesh.cells):
         raise WriteError("FLAC3D format only supports 3D cells")
 
     if binary:
         with open_file(filename, "wb") as f:
-            numpy.array([1375135718, 3]).tofile(f)  # Don't know what these values represent, but it works
+            numpy.array([1375135718, 3]).tofile(
+                f
+            )  # Don't know what these values represent, but it works
             _write_points(f, mesh.points, binary)
             _write_cells(f, mesh.points, mesh.cells, binary)
             _write_zgroups(f, mesh.cell_data, mesh.field_data, binary)
@@ -295,9 +283,7 @@ def write(filename, mesh, float_fmt=".15e", binary=False):
 
 
 def _write_points(f, points, binary, float_fmt=None):
-    """
-    Write points coordinates.
-    """
+    """Write points coordinates."""
     if binary:
         f.write(struct.pack("I", len(points)))
         for i, point in enumerate(points):
@@ -311,8 +297,7 @@ def _write_points(f, points, binary, float_fmt=None):
 
 
 def _write_cells(f, points, cells, binary):
-    """Write zones.
-    """
+    """Write zones."""
     zones = _translate_zones(points, cells)
 
     count = 0
@@ -320,11 +305,13 @@ def _write_cells(f, points, cells, binary):
         f.write(struct.pack("I", sum(len(c.data) for c in cells)))
         for _, zone in zones:
             num_cells, num_verts = zone.shape
-            numpy.column_stack((
-                numpy.arange(1, num_cells + 1) + count,
-                numpy.full(num_cells, num_verts),
-                zone + 1,
-            )).tofile(f)
+            numpy.column_stack(
+                (
+                    numpy.arange(1, num_cells + 1) + count,
+                    numpy.full(num_cells, num_verts),
+                    zone + 1,
+                )
+            ).tofile(f)
             count += num_cells
     else:
         f.write("* ZONES\n")
@@ -336,9 +323,7 @@ def _write_cells(f, points, cells, binary):
 
 
 def _write_zgroups(f, cell_data, field_data, binary):
-    """
-    Write zone groups.
-    """
+    """Write zone groups."""
     if cell_data:
         # Pick out material
         key, other = _pick_first_int_data(cell_data)
@@ -371,9 +356,10 @@ def _write_zgroups(f, cell_data, field_data, binary):
 
 
 def _translate_zones(points, cells):
-    """Reorder meshio cells to FLAC3D zones. Four first points must form a right-handed
-    coordinate system (outward normal vectors). Reorder corner points according to sign
-    of scalar triple products.
+    """Reorder meshio cells to FLAC3D zones.
+    
+    Four first points must form a right-handed coordinate system (outward normal vectors).
+    Reorder corner points according to sign of scalar triple products.
     """
     # See <https://stackoverflow.com/a/42386330/353337>
     def slicing_summing(a, b, c):
@@ -403,8 +389,7 @@ def _translate_zones(points, cells):
 
 
 def _translate_zgroups(zone_data, field_data):
-    """Convert meshio cell_data to FLAC3D zone groups.
-    """
+    """Convert meshio cell_data to FLAC3D zone groups."""
     zgroups = {k: numpy.nonzero(zone_data == k)[0] + 1 for k in numpy.unique(zone_data)}
 
     labels = {k: str(k) for k in zgroups.keys()}
@@ -415,8 +400,7 @@ def _translate_zgroups(zone_data, field_data):
 
 
 def _write_table(f, data, ncol=20):
-    """Write zone group data table.
-    """
+    """Write zone group data table."""
     nrow = len(data) // ncol
     lines = numpy.split(data, numpy.full(nrow, ncol).cumsum())
     for line in lines:
