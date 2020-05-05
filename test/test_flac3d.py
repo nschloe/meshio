@@ -1,3 +1,4 @@
+import copy
 import pathlib
 import sys
 
@@ -9,16 +10,20 @@ import meshio
 
 
 @pytest.mark.parametrize(
-    "mesh, binary",
+    "mesh, binary, data",
     [
-        (helpers.tet_mesh, False),
-        (helpers.hex_mesh, False),
-        (helpers.tet_mesh, True),
-        (helpers.hex_mesh, True),
-        # helpers.add_cell_data(helpers.tet_mesh, [("a", (), int)]),  # TODO
+        (helpers.tet_mesh, False, []),
+        (helpers.hex_mesh, False, []),
+        (helpers.tet_mesh, False, [1, 2]),
+        (helpers.tet_mesh, True, []),
+        (helpers.hex_mesh, True, []),
+        (helpers.tet_mesh, True, [1, 2]),
     ],
 )
-def test(mesh, binary):
+def test(mesh, binary, data):
+    if data:
+        mesh = copy.deepcopy(mesh)
+        mesh.cell_data["flac3d:zone"] = [numpy.array(data)]
     helpers.write_read(meshio.flac3d.write, meshio.flac3d.read, mesh, 1.0e-15)
 
 
