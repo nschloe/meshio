@@ -24,7 +24,8 @@ def test(mesh, binary, data):
     if data:
         mesh = copy.deepcopy(mesh)
         mesh.cell_data["flac3d:zone"] = [numpy.array(data)]
-    helpers.write_read(meshio.flac3d.write, meshio.flac3d.read, mesh, 1.0e-15)
+    writer = lambda f, m: meshio.flac3d.write(f, m, binary=binary)
+    helpers.write_read(writer, meshio.flac3d.read, mesh, 1.0e-15)
 
 
 # the failure perhaps has to do with dictionary ordering
