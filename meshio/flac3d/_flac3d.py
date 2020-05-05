@@ -75,103 +75,21 @@ def read(filename):
     """
     Read FLAC3D f3grid grid file.
     """
-    # Read a small block of the file to determine its type
+    # Read a small block of the file to assess its type
     # See <http://code.activestate.com/recipes/173220/>
     with open_file(filename, "rb") as f:
         block = f.read(8)
         is_binary = b"\x00" in block
 
     with open_file(filename) as f:
-        if is_binary:
-            out = read_binary_buffer(f)
-        else:
-            out = read_ascii_buffer(f)
+        out = read_buffer(f, is_binary)
 
     return out
 
 
-def read_binary_buffer(f):
+def read_buffer(f, is_binary):
     """
-    Read binary file.
-    """
-    points = []
-    point_ids = {}
-    cells = []
-    mapper = {}
-    field_data = {}
-    slots = set()
-
-    # Not sure what the first bytes represent
-    _ = numpy.fromfile(f, "u4", 2)
-
-    # Points
-    num_nodes, = numpy.fromfile(f, int, 1)
-    for pidx in range(num_nodes):
-        pid, = numpy.fromfile(f, int, 1)
-        point = numpy.fromfile(f, float, 3)
-        points.append(point)
-        point_ids[pid] = pidx
-
-    # Cells
-    num_cells, = numpy.fromfile(f, int, 1)
-    for cidx in range(num_cells):
-        cid, num_verts = numpy.fromfile(f, int, 2)
-        cell = numpy.fromfile(f, int, num_verts)
-        cell = [point_ids[int(l)] for l in cell]
-        if num_verts == 7:
-            cell.append(cell[-1])
-        cell_type = numnodes_to_meshio_type[num_verts]
-        if len(cells) > 0 and cell_type == cells[-1][0]:
-            cells[-1][1].append(cell)
-        else:
-            cells.append((cell_type, [cell]))
-        mapper[cid] = [cidx]
-
-    # Zone groups
-    num_groups, = numpy.fromfile(f, int, 1)
-    for zidx in range(num_groups):
-        # Group name
-        num_chars, = numpy.fromfile(f, numpy.dtype("u2"), 1)
-        name, = numpy.fromfile(f, "|S{}".format(num_chars), 1).astype("|U{}".format(num_chars))
-
-        # Slot name
-        num_chars, = numpy.fromfile(f, numpy.dtype("u2"), 1)
-        slot, = numpy.fromfile(f, "|S{}".format(num_chars), 1).astype("|U{}".format(num_chars))
-
-        # Zones
-        num_zones, = numpy.fromfile(f, int, 1)
-        data = numpy.fromfile(f, int, num_zones)
-
-        for cid in data:
-            mapper[cid].append(zidx + 1)
-            field_data[name] = numpy.array([zidx + 1, 3])
-        
-        slots.add(slot)
-        if len(slots) > 1:
-            raise ReadError("Multiple slots are not supported")
-
-    if zidx:
-        n_cells = numpy.cumsum([len(c[1]) for c in cells])
-        cell_data = numpy.empty(n_cells[-1], dtype=int)
-        for cid, zid in mapper.values():
-            cell_data[cid] = zid
-        cell_data = {"flac3d:zone": numpy.split(cell_data, n_cells[:-1])}
-    else:
-        cell_data = {}
-
-    return Mesh(
-        points=numpy.array(points),
-        cells=[(k, numpy.array(v)[:, flac3d_to_meshio_order[k]]) for k, v in cells],
-        cell_data=cell_data,
-        field_data=field_data,
-    )
-
-
-def read_ascii_buffer(f):
-    """
-    Read ASCII file line by line. Use combination of readline, tell and
-    seek since we need to rewind to the previous line when we read last
-    data line of a ZGROUP section.
+    Read binary or ASCII file.
     """
     points = []
     point_ids = {}
@@ -180,42 +98,63 @@ def read_ascii_buffer(f):
     field_data = {}
     slots = set()
 
-    pidx = 0
-    zidx = 0
-    count = 0
-    line = f.readline().rstrip().split()
-    while line:
-        if line[0] == "G":
-            pid, point = _read_point(line)
+    if is_binary:
+        # Not sure what the first bytes represent, the format might be wrong
+        # It does not seem to be useful anyway
+        _ = numpy.fromfile(f, "u4", 2)
+
+        # Points
+        num_nodes, = numpy.fromfile(f, int, 1)
+        for pidx in range(num_nodes):
+            pid, point = _read_point(f, is_binary)
             points.append(point)
             point_ids[pid] = pidx
-            pidx += 1
-        elif line[0] == "Z":
-            cid, cell = _read_cell(line, point_ids)
-            cell_type = numnodes_to_meshio_type[len(cell)]
-            if len(cells) > 0 and cell_type == cells[-1][0]:
-                cells[-1][1].append(cell)
-            else:
-                cells.append((cell_type, [cell]))
-            mapper[cid] = [count]
-            count += 1
-        elif line[0] == "ZGROUP":
-            name, data, slot = _read_zgroup(f, line)
-            zidx += 1
-            for cid in data:
-                mapper[cid].append(zidx)
-            field_data[name] = numpy.array([zidx, 3])
-            slots.add(slot)
-            if len(slots) > 1:
-                raise ReadError("Multiple slots are not supported")
-        line = f.readline().rstrip().split()
 
-    if zidx:
-        n_cells = numpy.cumsum([len(c[1]) for c in cells])
-        cell_data = numpy.empty(n_cells[-1], dtype=int)
+        # Cells
+        num_cells, = numpy.fromfile(f, int, 1)
+        for cidx in range(num_cells):
+            cid, cell = _read_cell(f, point_ids, is_binary)
+            cells = _update_cells(cells, cell)
+            mapper[cid] = [cidx]
+
+        # Zone groups
+        num_groups, = numpy.fromfile(f, int, 1)
+        for zidx in range(num_groups):
+            name, slot, data = _read_zgroup(f, is_binary)
+            field_data, mapper = _update_field_data(field_data, mapper, data, name, zidx + 1)
+            slots = _update_slots(slots, slot)
+
+    else:
+        pidx = 0
+        zidx = 0
+        count = 0
+
+        line = f.readline().rstrip().split()
+        while line:
+            if line[0] == "G":
+                pid, point = _read_point(line, is_binary)
+                points.append(point)
+                point_ids[pid] = pidx
+                pidx += 1
+            elif line[0] == "Z":
+                cid, cell = _read_cell(line, point_ids, is_binary)
+                cells = _update_cells(cells, cell)
+                mapper[cid] = [count]
+                count += 1
+            elif line[0] == "ZGROUP":
+                name, slot, data = _read_zgroup(f, is_binary, line)
+                field_data, mapper = _update_field_data(field_data, mapper, data, name, zidx + 1)
+                slots = _update_slots(slots, slot)
+                zidx += 1
+            
+            line = f.readline().rstrip().split()
+
+    if field_data:
+        num_cells = numpy.cumsum([len(c[1]) for c in cells])
+        cell_data = numpy.empty(num_cells[-1], dtype=int)
         for cid, zid in mapper.values():
             cell_data[cid] = zid
-        cell_data = {"flac3d:zone": numpy.split(cell_data, n_cells[:-1])}
+        cell_data = {"flac3d:zone": numpy.split(cell_data, num_cells[:-1])}
     else:
         cell_data = {}
 
@@ -227,43 +166,109 @@ def read_ascii_buffer(f):
     )
 
 
-def _read_point(line):
+def _read_point(buf_or_line, is_binary):
     """
     Read point coordinates.
     """
-    return int(line[1]), [float(l) for l in line[2:]]
+    if is_binary:
+        pid, = numpy.fromfile(buf_or_line, int, 1)
+        point = numpy.fromfile(buf_or_line, float, 3)
+    else:
+        pid = int(buf_or_line[1])
+        point = [float(l) for l in buf_or_line[2:]]
+    
+    return pid, point
 
 
-def _read_cell(line, point_ids):
+def _read_cell(buf_or_line, point_ids, is_binary):
     """
     Read cell corners.
     """
-    cell = [point_ids[int(l)] for l in line[3:]]
-    if line[1] == "B7":
+    if is_binary:
+        cid, num_verts = numpy.fromfile(buf_or_line, int, 2)
+        cell = numpy.fromfile(buf_or_line, int, num_verts)
+        is_b7 = num_verts == 7
+    else:
+        cid = int(buf_or_line[2])
+        cell = buf_or_line[3:]
+        is_b7 = buf_or_line[1] == "B7"
+    
+    cell = [point_ids[int(l)] for l in cell]
+    if is_b7:
         cell.append(cell[-1])
-    return int(line[2]), cell
+
+    return cid, cell
 
 
-def _read_zgroup(f, line):
+def _read_zgroup(buf_or_line, is_binary, line=None):
     """
     Read cell group.
     """
-    name = line[1].replace('"', "")
-    data = []
-    slot = "" if "SLOT" not in line else line[-1]
+    if is_binary:
+        # Group name
+        num_chars, = numpy.fromfile(buf_or_line, "u2", 1)
+        name, = numpy.fromfile(buf_or_line, "|S{}".format(num_chars), 1).astype("|U{}".format(num_chars))
 
-    i = f.tell()
-    line = f.readline()
-    while True:
-        line = line.rstrip().split()
-        if line and (line[0] not in {"*", "ZGROUP"}):
-            data += [int(l) for l in line]
-        else:
-            f.seek(i)
-            break
-        i = f.tell()
-        line = f.readline()
-    return name, data, slot
+        # Slot name
+        num_chars, = numpy.fromfile(buf_or_line, "u2", 1)
+        slot, = numpy.fromfile(buf_or_line, "|S{}".format(num_chars), 1).astype("|U{}".format(num_chars))
+
+        # Zones
+        num_zones, = numpy.fromfile(buf_or_line, int, 1)
+        data = numpy.fromfile(buf_or_line, int, num_zones)
+    else:
+        name = line[1].replace('"', "")
+        data = []
+        slot = "" if "SLOT" not in line else line[-1]
+
+        i = buf_or_line.tell()
+        line = buf_or_line.readline()
+        while True:
+            line = line.rstrip().split()
+            if line and (line[0] not in {"*", "ZGROUP"}):
+                data += [int(l) for l in line]
+            else:
+                buf_or_line.seek(i)
+                break
+            i = buf_or_line.tell()
+            line = buf_or_line.readline()
+
+    return name, slot, data
+
+
+def _update_cells(cells, cell):
+    """
+    Update cell list.
+    """
+    cell_type = numnodes_to_meshio_type[len(cell)]
+    if len(cells) > 0 and cell_type == cells[-1][0]:
+        cells[-1][1].append(cell)
+    else:
+        cells.append((cell_type, [cell]))
+
+    return cells
+
+
+def _update_field_data(field_data, mapper, data, name, zidx):
+    """
+    Update field data dict.
+    """
+    for cid in data:
+        mapper[cid].append(zidx)
+    field_data[name] = numpy.array([zidx, 3])
+
+    return field_data, mapper
+
+
+def _update_slots(slots, slot):
+    """
+    Update slot set. Only one slot is supported.
+    """
+    slots.add(slot)
+    if len(slots) > 1:
+        raise ReadError("Multiple slots are not supported")
+        
+    return slots
 
 
 def write(filename, mesh, float_fmt=".15e", binary=False):
