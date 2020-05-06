@@ -79,7 +79,8 @@ def read(filename):
         block = f.read(8)
         binary = b"\x00" in block
 
-    with open_file(filename) as f:
+    mode = "rb" if binary else "r"
+    with open_file(filename, mode) as f:
         out = read_buffer(f, binary)
 
     return out
@@ -97,21 +98,21 @@ def read_buffer(f, binary):
     if binary:
         # Not sure what the first bytes represent, the format might be wrong
         # It does not seem to be useful anyway
-        _ = numpy.fromfile(f, "u4", 2)
+        _ = struct.unpack("<2I", f.read(8))
 
-        (num_nodes,) = numpy.fromfile(f, int, 1)
+        (num_nodes,) = struct.unpack("<I", f.read(4))
         for pidx in range(num_nodes):
             pid, point = _read_point(f, binary)
             points.append(point)
             point_ids[pid] = pidx
 
-        (num_cells,) = numpy.fromfile(f, int, 1)
+        (num_cells,) = struct.unpack("<I", f.read(4))
         for cidx in range(num_cells):
             cid, cell = _read_cell(f, point_ids, binary)
             cells = _update_cells(cells, cell)
             mapper[cid] = [cidx]
 
-        (num_groups,) = numpy.fromfile(f, int, 1)
+        (num_groups,) = struct.unpack("<I", f.read(4))
         for zidx in range(num_groups):
             name, slot, data = _read_zgroup(f, binary)
             field_data, mapper = _update_field_data(
@@ -165,8 +166,8 @@ def read_buffer(f, binary):
 def _read_point(buf_or_line, binary):
     """Read point coordinates."""
     if binary:
-        (pid,) = numpy.fromfile(buf_or_line, int, 1)
-        point = numpy.fromfile(buf_or_line, float, 3)
+        pid, x, y, z = struct.unpack("<I3d", buf_or_line.read(28))
+        point = [x, y, z]
     else:
         pid = int(buf_or_line[1])
         point = [float(l) for l in buf_or_line[2:]]
@@ -177,8 +178,8 @@ def _read_point(buf_or_line, binary):
 def _read_cell(buf_or_line, point_ids, binary):
     """Read cell connectivity."""
     if binary:
-        cid, num_verts = numpy.fromfile(buf_or_line, int, 2)
-        cell = numpy.fromfile(buf_or_line, int, num_verts)
+        cid, num_verts = struct.unpack("<2I", buf_or_line.read(8))
+        cell = struct.unpack("<{}I".format(num_verts), buf_or_line.read(4 * num_verts))
         is_b7 = num_verts == 7
     else:
         cid = int(buf_or_line[2])
@@ -196,20 +197,18 @@ def _read_zgroup(buf_or_line, binary, line=None):
     """Read cell group."""
     if binary:
         # Group name
-        (num_chars,) = numpy.fromfile(buf_or_line, "u2", 1)
-        (name,) = numpy.fromfile(buf_or_line, "|S{}".format(num_chars), 1).astype(
-            "|U{}".format(num_chars)
-        )
+        (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
+        (name,) = struct.unpack("<{}s".format(num_chars), buf_or_line.read(num_chars))
+        name = name.decode("utf-8")
 
         # Slot name
-        (num_chars,) = numpy.fromfile(buf_or_line, "u2", 1)
-        (slot,) = numpy.fromfile(buf_or_line, "|S{}".format(num_chars), 1).astype(
-            "|U{}".format(num_chars)
-        )
+        (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
+        (slot,) = struct.unpack("<{}s".format(num_chars), buf_or_line.read(num_chars))
+        slot = slot.decode("utf-8")
 
         # Zones
-        (num_zones,) = numpy.fromfile(buf_or_line, int, 1)
-        data = numpy.fromfile(buf_or_line, int, num_zones)
+        (num_zones,) = struct.unpack("<I", buf_or_line.read(4))
+        data = struct.unpack("<{}I".format(num_zones), buf_or_line.read(4 * num_zones))
     else:
         name = line[1].replace('"', "")
         data = []
