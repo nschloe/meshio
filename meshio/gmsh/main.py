@@ -87,7 +87,9 @@ def _read_header(f):
     return fmt_version, data_size, is_ascii
 
 
-def write(filename, mesh, fmt_version="4.1", binary=True, float_fmt=".15e"):
+# Gmsh ASCII output uses `%.16g` for floating point values,
+# meshio uses same precision but exponential notation `%.16e`.
+def write(filename, mesh, fmt_version="4.1", binary=True, float_fmt=".16e"):
     """Writes a Gmsh msh file.
     """
     try:
@@ -102,7 +104,7 @@ def write(filename, mesh, fmt_version="4.1", binary=True, float_fmt=".15e"):
                 )
             )
 
-    writer.write(filename, mesh, binary=binary, float_fmt=".15e")
+    writer.write(filename, mesh, binary=binary, float_fmt=float_fmt)
 
 
 register(

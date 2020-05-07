@@ -257,7 +257,7 @@ def _read_periodic(f, is_ascii):
     return periodic
 
 
-def write(filename, mesh, float_fmt=".15e", binary=True):
+def write(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
@@ -299,7 +299,7 @@ def write(filename, mesh, float_fmt=".15e", binary=True):
         _write_nodes(fh, mesh.points, float_fmt, binary)
         _write_elements(fh, cells, binary)
         if mesh.gmsh_periodic is not None:
-            _write_periodic(fh, mesh.gmsh_periodic, binary)
+            _write_periodic(fh, mesh.gmsh_periodic, float_fmt, binary)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, binary)
         cell_data_raw = raw_from_cell_data(mesh.cell_data)
@@ -410,16 +410,16 @@ def _write_elements(fh, cells, binary):
     fh.write(b"$EndElements\n")
 
 
-def _write_periodic(fh, periodic, binary):
+def _write_periodic(fh, periodic, float_fmt, binary):
     def tofile(fh, value, dtype, **kwargs):
         ary = numpy.array(value, dtype=dtype)
         if binary:
             ary.tofile(fh)
         else:
             ary = numpy.atleast_2d(ary)
-            fmt = "%.16g" if dtype == c_double else "%d"
-            fmt = kwargs.pop("fmt", fmt)
-            numpy.savetxt(fh, ary, fmt, **kwargs)
+            fmt = float_fmt if dtype == c_double else "d"
+            fmt = "%" + kwargs.pop("fmt", fmt)
+            numpy.savetxt(fh, ary, fmt=fmt, **kwargs)
 
     fh.write(b"$Periodic\n")
     tofile(fh, len(periodic), c_int)
@@ -427,7 +427,7 @@ def _write_periodic(fh, periodic, binary):
         tofile(fh, [dim, stag, mtag], c_int)
         if affine is not None and len(affine) > 0:
             tofile(fh, -1, c_long)
-            tofile(fh, affine, c_double)
+            tofile(fh, affine, c_double, fmt=float_fmt)
         slave_master = numpy.array(slave_master, dtype=c_int)
         slave_master = slave_master.reshape(-1, 2)
         slave_master = slave_master + 1  # Add one, Gmsh is 1-based
