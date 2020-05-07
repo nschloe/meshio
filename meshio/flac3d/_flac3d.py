@@ -269,7 +269,7 @@ def write(filename, mesh, float_fmt=".15e", binary=False):
             _write_points(f, mesh.points, binary)
             _write_cells(f, mesh.points, mesh.cells, binary)
             _write_zgroups(f, mesh.cell_data, mesh.field_data, binary)
-            f.write(struct.pack("2I", 0, 0))  # No face and face group
+            f.write(struct.pack("<2I", 0, 0))  # No face and face group
     else:
         with open_file(filename, "w") as f:
             f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
@@ -282,7 +282,7 @@ def write(filename, mesh, float_fmt=".15e", binary=False):
 def _write_points(f, points, binary, float_fmt=None):
     """Write points coordinates."""
     if binary:
-        f.write(struct.pack("I", len(points)))
+        f.write(struct.pack("<I", len(points)))
         for i, point in enumerate(points):
             f.write(struct.pack("<I3d", i + 1, *point))
     else:
@@ -298,7 +298,7 @@ def _write_cells(f, points, cells, binary):
 
     count = 0
     if binary:
-        f.write(struct.pack("I", sum(len(c.data) for c in cells)))
+        f.write(struct.pack("<I", sum(len(c.data) for c in cells)))
         for _, zone in zones:
             num_cells, num_verts = zone.shape
             tmp = numpy.column_stack(
@@ -336,7 +336,7 @@ def _write_zgroups(f, cell_data, field_data, binary):
         if binary:
             slot = "Default".encode("utf-8")
 
-            f.write(struct.pack("I", len(zgroups)))
+            f.write(struct.pack("<I", len(zgroups)))
             for k in sorted(zgroups.keys()):
                 num_chars, num_zones = len(labels[k]), len(zgroups[k])
                 fmt = "<H{}sH7sI{}I".format(num_chars, num_zones)
@@ -349,7 +349,7 @@ def _write_zgroups(f, cell_data, field_data, binary):
                 _write_table(f, zgroups[k])
     else:
         if binary:
-            f.write(struct.pack("I", 0))
+            f.write(struct.pack("<I", 0))
 
 
 def _translate_zones(points, cells):
