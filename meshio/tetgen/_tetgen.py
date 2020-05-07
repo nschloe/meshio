@@ -72,7 +72,7 @@ def read(filename):
     return Mesh(points, [CellBlock("tetra", cells)])
 
 
-def write(filename, mesh, float_fmt=".15e"):
+def write(filename, mesh, float_fmt=".16e"):
     filename = pathlib.Path(filename)
     if filename.suffix == ".node":
         node_filename = filename

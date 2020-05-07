@@ -423,7 +423,7 @@ def write(filename, mesh, binary=True):
             fh.write(b"\n)")
             fh.write(b"End of Binary Section 3010)\n")
         else:
-            numpy.savetxt(fh, mesh.points, fmt="%.15e")
+            numpy.savetxt(fh, mesh.points, fmt="%.16e")
             fh.write(b"))\n")
 
         # Write cells

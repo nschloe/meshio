@@ -463,7 +463,7 @@ def _write_data(fh, tag, name, data, binary):
     fh.write(("End " + tag + " " + name + "\n\n").encode("utf-8"))
 
 
-def write(filename, mesh, float_fmt=".15e", binary=False):
+def write(filename, mesh, float_fmt=".16e", binary=False):
     """Writes mdpa files, cf.
     <https://github.com/KratosMultiphysics/Kratos/wiki/Input-data>.
     """
