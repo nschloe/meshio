@@ -265,9 +265,7 @@ def write(filename, mesh, float_fmt=".15e", binary=False):
 
     if binary:
         with open_file(filename, "wb") as f:
-            numpy.array([1375135718, 3]).tofile(
-                f
-            )  # Don't know what these values represent, but it works
+            f.write(struct.pack("<2I", 1375135718, 3))  # Don't know what these values represent
             _write_points(f, mesh.points, binary)
             _write_cells(f, mesh.points, mesh.cells, binary)
             _write_zgroups(f, mesh.cell_data, mesh.field_data, binary)
@@ -286,8 +284,7 @@ def _write_points(f, points, binary, float_fmt=None):
     if binary:
         f.write(struct.pack("I", len(points)))
         for i, point in enumerate(points):
-            f.write(struct.pack("I", i + 1))
-            point.tofile(f)
+            f.write(struct.pack("<I3d", i + 1, *point))
     else:
         f.write("* GRIDPOINTS\n")
         for i, point in enumerate(points):
@@ -304,13 +301,14 @@ def _write_cells(f, points, cells, binary):
         f.write(struct.pack("I", sum(len(c.data) for c in cells)))
         for _, zone in zones:
             num_cells, num_verts = zone.shape
-            numpy.column_stack(
+            tmp = numpy.column_stack(
                 (
                     numpy.arange(1, num_cells + 1) + count,
                     numpy.full(num_cells, num_verts),
                     zone + 1,
                 )
-            ).tofile(f)
+            )
+            f.write(struct.pack("<{}I".format((num_verts + 2) * num_cells), *tmp.ravel()))
             count += num_cells
     else:
         f.write("* ZONES\n")
@@ -336,14 +334,14 @@ def _write_zgroups(f, cell_data, field_data, binary):
             zgroups, labels = _translate_zgroups(material, field_data)
 
         if binary:
+            slot = "Default".encode("utf-8")
+
             f.write(struct.pack("I", len(zgroups)))
             for k in sorted(zgroups.keys()):
-                numpy.array([len(labels[k])], dtype="u2").tofile(f)
-                numpy.array([labels[k]], dtype="|S").tofile(f)
-                numpy.array([7], dtype="u2").tofile(f)
-                numpy.array(["Default"], dtype="|S").tofile(f)
-                f.write(struct.pack("I", len(zgroups[k])))
-                zgroups[k].astype(int).tofile(f)
+                num_chars, num_zones = len(labels[k]), len(zgroups[k])
+                fmt = "<H{}sH7sI{}I".format(num_chars, num_zones)
+                tmp = [num_chars, labels[k].encode("utf-8"), 7, slot, num_zones, *zgroups[k]]
+                f.write(struct.pack(fmt, *tmp))
         else:
             f.write("* ZONE GROUPS\n")
             for k in sorted(zgroups.keys()):
