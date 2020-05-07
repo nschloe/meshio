@@ -265,7 +265,9 @@ def write(filename, mesh, float_fmt=".15e", binary=False):
 
     if binary:
         with open_file(filename, "wb") as f:
-            f.write(struct.pack("<2I", 1375135718, 3))  # Don't know what these values represent
+            f.write(
+                struct.pack("<2I", 1375135718, 3)
+            )  # Don't know what these values represent
             _write_points(f, mesh.points, binary)
             _write_cells(f, mesh.points, mesh.cells, binary)
             _write_zgroups(f, mesh.cell_data, mesh.field_data, binary)
@@ -308,7 +310,9 @@ def _write_cells(f, points, cells, binary):
                     zone + 1,
                 )
             )
-            f.write(struct.pack("<{}I".format((num_verts + 2) * num_cells), *tmp.ravel()))
+            f.write(
+                struct.pack("<{}I".format((num_verts + 2) * num_cells), *tmp.ravel())
+            )
             count += num_cells
     else:
         f.write("* ZONES\n")
@@ -340,7 +344,14 @@ def _write_zgroups(f, cell_data, field_data, binary):
             for k in sorted(zgroups.keys()):
                 num_chars, num_zones = len(labels[k]), len(zgroups[k])
                 fmt = "<H{}sH7sI{}I".format(num_chars, num_zones)
-                tmp = [num_chars, labels[k].encode("utf-8"), 7, slot, num_zones, *zgroups[k]]
+                tmp = [
+                    num_chars,
+                    labels[k].encode("utf-8"),
+                    7,
+                    slot,
+                    num_zones,
+                    *zgroups[k],
+                ]
                 f.write(struct.pack(fmt, *tmp))
         else:
             f.write("* ZONE GROUPS\n")
