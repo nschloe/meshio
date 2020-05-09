@@ -19,7 +19,7 @@ dtype_to_format_string = {
     "unit32": "%d",
     "uint64": "%d",
     "float32": "%.7e",
-    "float64": "%.15e",
+    "float64": "%.16e",
 }
 
 

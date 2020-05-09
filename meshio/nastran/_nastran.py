@@ -215,14 +215,14 @@ def write(filename, mesh):
         if point_refs is not None:
             for point_id, x in enumerate(points):
                 f.write(
-                    "GRID, {:d}, {:d}, {:.15e}, {:.15e}, {:.15e}\n".format(
+                    "GRID, {:d}, {:d}, {:.16e}, {:.16e}, {:.16e}\n".format(
                         point_id + 1, point_refs[point_id], x[0], x[1], x[2]
                     )
                 )
         else:
             for point_id, x in enumerate(points):
                 f.write(
-                    "GRID, {:d},, {:.15e}, {:.15e}, {:.15e}\n".format(
+                    "GRID, {:d},, {:.16e}, {:.16e}, {:.16e}\n".format(
                         point_id + 1, x[0], x[1], x[2]
                     )
                 )

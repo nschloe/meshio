@@ -273,11 +273,11 @@ def _read_periodic(f, is_ascii, data_size):
     return periodic
 
 
-def write(filename, mesh, float_fmt=".15e", binary=True):
+def write(filename, mesh, float_fmt=".16e", binary=True):
     write4_1(filename, mesh, float_fmt=float_fmt, binary=binary)
 
 
-def write4_1(filename, mesh, float_fmt=".15e", binary=True):
+def write4_1(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
     """
@@ -314,10 +314,10 @@ def write4_1(filename, mesh, float_fmt=".15e", binary=True):
             _write_physical_names(fh, mesh.field_data)
 
         _write_entities(fh, cells, binary)
-        _write_nodes(fh, mesh.points, mesh.cells, binary, float_fmt)
+        _write_nodes(fh, mesh.points, mesh.cells, float_fmt, binary)
         _write_elements(fh, cells, binary)
         if mesh.gmsh_periodic is not None:
-            _write_periodic(fh, mesh.gmsh_periodic, binary)
+            _write_periodic(fh, mesh.gmsh_periodic, float_fmt, binary)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, binary)
 
@@ -359,7 +359,7 @@ def _write_entities(fh, cells, binary):
     return
 
 
-def _write_nodes(fh, points, cells, binary, float_fmt):
+def _write_nodes(fh, points, cells, float_fmt, binary):
     fh.write(b"$Nodes\n")
 
     # The entity_dim and entity_tag in the $Elements section must correspond to an
@@ -503,7 +503,7 @@ def _write_elements(fh, cells, binary):
     return
 
 
-def _write_periodic(fh, periodic, binary):
+def _write_periodic(fh, periodic, float_fmt, binary):
     """write the $Periodic block
 
     specified as
@@ -526,9 +526,9 @@ def _write_periodic(fh, periodic, binary):
             ary.tofile(fh)
         else:
             ary = numpy.atleast_2d(ary)
-            fmt = "%.16g" if dtype == c_double else "%d"
-            fmt = kwargs.pop("fmt", fmt)
-            numpy.savetxt(fh, ary, fmt, **kwargs)
+            fmt = float_fmt if dtype == c_double else "d"
+            fmt = "%" + kwargs.pop("fmt", fmt)
+            numpy.savetxt(fh, ary, fmt=fmt, **kwargs)
 
     fh.write(b"$Periodic\n")
     tofile(fh, len(periodic), c_size_t)
@@ -538,7 +538,7 @@ def _write_periodic(fh, periodic, binary):
             tofile(fh, 0, c_size_t)
         else:
             tofile(fh, len(affine), c_size_t, newline=" ")
-            tofile(fh, affine, c_double, fmt="%.16g")
+            tofile(fh, affine, c_double, fmt=float_fmt)
         slave_master = numpy.array(slave_master, dtype=c_size_t)
         slave_master = slave_master.reshape(-1, 2)
         slave_master = slave_master + 1  # Add one, Gmsh is 1-based

@@ -259,7 +259,7 @@ def _read_periodic(f):
     return periodic
 
 
-def write(filename, mesh, float_fmt=".15e", binary=True):
+def write(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
@@ -310,7 +310,7 @@ def write(filename, mesh, float_fmt=".15e", binary=True):
         _write_nodes(fh, mesh.points, float_fmt, binary)
         _write_elements(fh, cells, tag_data, binary)
         if mesh.gmsh_periodic is not None:
-            _write_periodic(fh, mesh.gmsh_periodic)
+            _write_periodic(fh, mesh.gmsh_periodic, float_fmt)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodeData", name, dat, binary)
 
@@ -393,7 +393,7 @@ def _write_elements(fh, cells, tag_data, binary):
     fh.write(b"$EndElements\n")
 
 
-def _write_periodic(fh, periodic):
+def _write_periodic(fh, periodic, float_fmt):
     fh.write(b"$Periodic\n")
     fh.write("{}\n".format(len(periodic)).encode("utf-8"))
     for dim, (stag, mtag), affine, slave_master in periodic:
@@ -402,7 +402,7 @@ def _write_periodic(fh, periodic):
             fh.write(b"Affine ")
             affine = numpy.array(affine, dtype=float)
             affine = numpy.atleast_2d(affine.ravel())
-            numpy.savetxt(fh, affine, "%.16g")
+            numpy.savetxt(fh, affine, fmt="%" + float_fmt)
         slave_master = numpy.array(slave_master, dtype=c_int).reshape(-1, 2)
         slave_master = slave_master + 1  # Add one, Gmsh is 0-based
         fh.write("{}\n".format(len(slave_master)).encode("utf-8"))

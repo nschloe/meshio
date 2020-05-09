@@ -258,7 +258,7 @@ def _update_slots(slots, slot):
     return slots
 
 
-def write(filename, mesh, float_fmt=".15e", binary=False):
+def write(filename, mesh, float_fmt=".16e", binary=False):
     """Write FLAC3D f3grid grid file."""
     if not any(c.type in meshio_only.keys() for c in mesh.cells):
         raise WriteError("FLAC3D format only supports 3D cells")
