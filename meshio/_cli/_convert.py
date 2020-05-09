@@ -93,7 +93,7 @@ def _get_convert_parser():
         "--float-format",
         "-f",
         type=str,
-        help="float format used in output ASCII files (default: .15e)",
+        help="float format used in output ASCII files (default: .16e)",
     )
 
     parser.add_argument(
