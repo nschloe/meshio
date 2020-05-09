@@ -204,7 +204,12 @@ def read_ascii_buffer(f):
             version = items[1]
             dtype = {"1": c_float, "2": c_double}[version]
         elif items[0] == "Dimension":
-            dim = int(items[1])
+            if len(items) >= 2:
+                dim = int(items[1])
+            else:
+                dim = int(
+                    int(f.readline())
+                )  # e.g. Dimension\n3, where the number of dimensions is on the next line
         elif items[0] == "Vertices":
             if dim <= 0:
                 raise ReadError()
