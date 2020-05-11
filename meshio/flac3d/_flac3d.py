@@ -263,22 +263,22 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
     if not any(c.type in meshio_only.keys() for c in mesh.cells):
         raise WriteError("FLAC3D format only supports 3D cells")
 
-    if binary:
-        with open_file(filename, "wb") as f:
+    mode = "wb" if binary else "w"
+    with open_file(filename, mode) as f:
+        if binary:
             f.write(
                 struct.pack("<2I", 1375135718, 3)
             )  # Don't know what these values represent
-            _write_points(f, mesh.points, binary)
-            _write_cells(f, mesh.points, mesh.cells, binary)
-            _write_zgroups(f, mesh.cell_data, mesh.field_data, binary)
-            f.write(struct.pack("<2I", 0, 0))  # No face and face group
-    else:
-        with open_file(filename, "w") as f:
+        else:
             f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
             f.write("* {}\n".format(time.ctime()))
-            _write_points(f, mesh.points, binary, float_fmt)
-            _write_cells(f, mesh.points, mesh.cells, binary)
-            _write_zgroups(f, mesh.cell_data, mesh.field_data, binary)
+
+        _write_points(f, mesh.points, binary, float_fmt)
+        _write_cells(f, mesh.points, mesh.cells, binary)
+        _write_zgroups(f, mesh.cell_data, mesh.field_data, binary)
+
+        if binary:
+            f.write(struct.pack("<2I", 0, 0))  # No face and face group
 
 
 def _write_points(f, points, binary, float_fmt=None):
