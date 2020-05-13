@@ -8,7 +8,7 @@ from io import BytesIO
 
 import numpy
 
-from .._common import CDATA, cell_data_from_raw, raw_from_cell_data, write_xml
+from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
@@ -339,12 +339,12 @@ class XdmfWriter:
 
         domain = ET.SubElement(xdmf_file, "Domain")
         grid = ET.SubElement(domain, "Grid", Name="Grid")
-        information = ET.SubElement(
-            grid, "Information", Name="Information", Value=str(len(mesh.field_data))
-        )
+        # information = ET.SubElement(
+        #     grid, "Information", Name="Information", Value=str(len(mesh.field_data))
+        # )
 
         self.points(grid, mesh.points)
-        self.field_data(mesh.field_data, information)
+        # self.field_data(mesh.field_data, information)
         self.cells(mesh.cells, grid)
         self.point_data(mesh.point_data, grid)
         self.cell_data(mesh.cell_data, grid)
@@ -510,13 +510,18 @@ class XdmfWriter:
             )
             data_item.text = self.numpy_to_xml_string(data)
 
-    def field_data(self, field_data, information):
-        info = ET.Element("main")
-        for name, data in field_data.items():
-            data_item = ET.SubElement(info, "map", key=name, dim=str(data[1]))
-            data_item.text = str(data[0])
-        # information.text = ET.CDATA(ET.tostring(info))
-        information.append(CDATA(ET.tostring(info).decode("utf-8")))
+    # The original idea was to implement field data as XML CDATA. Unfortunately, in
+    # Python's XML, CDATA handled poorly. There are workarounds, e.g.,
+    # <https://stackoverflow.com/a/30019607/353337>, but those mess around with
+    # ET._serialize_xml and lead to bugs elsewhere
+    # <https://github.com/nschloe/meshio/issues/806>.
+    # def field_data(self, field_data, information):
+    #     info = ET.Element("main")
+    #     for name, data in field_data.items():
+    #         data_item = ET.SubElement(info, "map", key=name, dim=str(data[1]))
+    #         data_item.text = str(data[0])
+    #     information.text = ET.CDATA(ET.tostring(info))
+    #     information.append(CDATA(ET.tostring(info).decode("utf-8")))
 
 
 def write(*args, **kwargs):
