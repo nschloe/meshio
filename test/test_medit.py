@@ -50,6 +50,7 @@ def test_generic_io():
             {1: 432, 2: 216, 3: 216},
         ),
         ("hch_strct.4.meshb", 306, 12, 178, 96, 0, 144, {1: 15, 2: 15, 3: 160}),
+        ("cube86.mesh", 39, 72, 0, 0, 86, 0, {1: 14, 2: 14, 3: 14, 4: 8, 5: 14, 6: 8}),
     ],
 )
 def test_reference_file(
@@ -97,7 +98,7 @@ def test_reference_file(
 
     if ref_num_tet > 0:
         c = mesh.cells[medit_meshio_id["tetra"]]
-        assert mesh.cells[1].data.shape == (ref_num_tet, 4)
+        assert c.data.shape == (ref_num_tet, 4)
     else:
         assert medit_meshio_id["tetra"] is None
 

@@ -312,7 +312,7 @@ def _read_set(f, params_map):
     return set_ids, set_names, line
 
 
-def write(filename, mesh, float_fmt=".15e", translate_cell_names=True):
+def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
     with open_file(filename, "wt") as f:
         f.write("*Heading\n")
         f.write("Abaqus DataFile Version 6.14\n")

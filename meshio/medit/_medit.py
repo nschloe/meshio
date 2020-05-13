@@ -204,7 +204,12 @@ def read_ascii_buffer(f):
             version = items[1]
             dtype = {"1": c_float, "2": c_double}[version]
         elif items[0] == "Dimension":
-            dim = int(items[1])
+            if len(items) >= 2:
+                dim = int(items[1])
+            else:
+                dim = int(
+                    int(f.readline())
+                )  # e.g. Dimension\n3, where the number of dimensions is on the next line
         elif items[0] == "Vertices":
             if dim <= 0:
                 raise ReadError()
@@ -245,14 +250,14 @@ def read_ascii_buffer(f):
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
-def write(filename, mesh, float_fmt=".15e"):
+def write(filename, mesh, float_fmt=".16e"):
     if filename[-1] == "b":
         write_binary_file(filename, mesh)
     else:
         write_ascii_file(filename, mesh, float_fmt)
 
 
-def write_ascii_file(filename, mesh, float_fmt=".15e"):
+def write_ascii_file(filename, mesh, float_fmt=".16e"):
     with open_file(filename, "wb") as fh:
         version = {numpy.dtype(c_float): 1, numpy.dtype(c_double): 2}[mesh.points.dtype]
         # N. B.: PEP 461 Adding % formatting to bytes and bytearray
