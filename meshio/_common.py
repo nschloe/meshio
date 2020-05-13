@@ -157,30 +157,6 @@ def raw_from_cell_data(cell_data):
     return {name: numpy.concatenate(value) for name, value in cell_data.items()}
 
 
-# https://stackoverflow.com/a/30019607/353337
-def CDATA(text=None):
-    element = ET.Element("![CDATA[")
-    element.text = text
-    return element
-
-
-ET._original_serialize_xml = ET._serialize_xml
-
-
-def _serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwargs):
-    if elem.tag == "![CDATA[":
-        write("\n<{}{}]]>\n".format(elem.tag, elem.text))
-        if elem.tail:
-            write(ET._escape_cdata(elem.tail))
-    else:
-        return ET._original_serialize_xml(
-            write, elem, qnames, namespaces, short_empty_elements, **kwargs
-        )
-
-
-ET._serialize_xml = ET._serialize["xml"] = _serialize_xml
-
-
 def write_xml(filename, root):
     tree = ET.ElementTree(root)
     tree.write(filename)
