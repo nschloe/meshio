@@ -1,3 +1,4 @@
+import copy
 import pathlib
 import sys
 
@@ -9,22 +10,36 @@ import meshio
 
 
 @pytest.mark.parametrize(
-    "mesh",
+    "mesh, binary, data",
     [
-        helpers.tet_mesh,
-        helpers.hex_mesh,
-        # helpers.add_cell_data(helpers.tet_mesh, [("a", (), int)]),  # TODO
+        (helpers.tet_mesh, False, []),
+        (helpers.hex_mesh, False, []),
+        (helpers.tet_mesh, False, [1, 2]),
+        (helpers.tet_mesh, True, []),
+        (helpers.hex_mesh, True, []),
+        (helpers.tet_mesh, True, [1, 2]),
     ],
 )
-def test(mesh):
-    helpers.write_read(meshio.flac3d.write, meshio.flac3d.read, mesh, 1.0e-15)
+def test(mesh, binary, data):
+    if data:
+        mesh = copy.deepcopy(mesh)
+        mesh.cell_data["flac3d:zone"] = [numpy.array(data)]
+    helpers.write_read(
+        lambda f, m: meshio.flac3d.write(f, m, binary=binary),
+        meshio.flac3d.read,
+        mesh,
+        1.0e-15,
+    )
 
 
 # the failure perhaps has to do with dictionary ordering
 @pytest.mark.skipif(sys.version_info < (3, 6), reason="Fails with 3.5")
-def test_reference_file():
+@pytest.mark.parametrize(
+    "filename", ["flac3d_mesh_ex.f3grid", "flac3d_mesh_ex_bin.f3grid"],
+)
+def test_reference_file(filename):
     this_dir = pathlib.Path(__file__).resolve().parent
-    filename = this_dir / "meshes" / "flac3d" / "flac3d_mesh_ex.f3grid"
+    filename = this_dir / "meshes" / "flac3d" / filename
 
     mesh = meshio.read(filename)
 

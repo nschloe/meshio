@@ -2,7 +2,7 @@ import argparse
 import os
 import pathlib
 
-from .. import ansys, gmsh, mdpa, ply, stl, vtk, vtu, xdmf
+from .. import ansys, flac3d, gmsh, mdpa, ply, stl, vtk, vtu, xdmf
 from .._helpers import _filetype_from_path, read, reader_map
 from ._helpers import _get_version_text
 
@@ -25,6 +25,8 @@ def binary(argv=None):
     # write it out
     if fmt == "ansys":
         ansys.write(args.infile, mesh, binary=True)
+    elif fmt == "flac3d":
+        flac3d.write(args.infile, mesh, binary=True)
     elif fmt == "gmsh":
         gmsh.write(args.infile, mesh, binary=True)
     elif fmt == "mdpa":
