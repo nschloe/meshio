@@ -325,6 +325,7 @@ def _write_cells(f, points, cells, binary):
 
 def _write_zgroups(f, cell_data, field_data, binary):
     """Write zone groups."""
+    zgroups = None
     if cell_data:
         # Pick out material
         key, other = _pick_first_int_data(cell_data)
@@ -337,6 +338,7 @@ def _write_zgroups(f, cell_data, field_data, binary):
                 )
             zgroups, labels = _translate_zgroups(material, field_data)
 
+    if zgroups:
         if binary:
             slot = "Default".encode("utf-8")
 
