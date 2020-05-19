@@ -11,10 +11,12 @@ test_set = [
     helpers.quad_mesh,
     helpers.quad8_mesh,
     helpers.tri_quad_mesh,
+    helpers.polygon_mesh,
     helpers.tet_mesh,
     helpers.tet10_mesh,
     helpers.hex_mesh,
     helpers.hex20_mesh,
+    helpers.polyhedron_mesh,
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),
     helpers.add_point_data(helpers.tri_mesh, 3),
@@ -22,6 +24,8 @@ test_set = [
     helpers.add_cell_data(helpers.tri_quad_mesh, [("a", (), numpy.float64)]),
     helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float32)]),
     helpers.add_cell_data(helpers.tri_mesh, [("b", (3,), numpy.float64)]),
+    helpers.add_cell_data(helpers.polygon_mesh, [("a", (), numpy.float32)]),
+    helpers.add_cell_data(helpers.polyhedron_mesh, [("a", (2,), numpy.float32)]),
 ]
 
 
