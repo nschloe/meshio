@@ -384,7 +384,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
             out = numpy.rec.fromarrays(
                 [coord for coord in mesh.points.T] + list(mesh.point_data.values())
             )
-            out.tofile(fh)
+            fh.write(out.tobytes())
 
             # cells
             for cell_type, data in cells:
@@ -393,7 +393,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 # prepend with count
                 count = numpy.full(data.shape[0], data.shape[1], dtype=data.dtype)
                 out = numpy.column_stack([count, data])
-                out.tofile(fh)
+                fh.write(out.tobytes())
         else:
             # vertices
             # numpy.savetxt(fh, mesh.points, "%r")  # slower
