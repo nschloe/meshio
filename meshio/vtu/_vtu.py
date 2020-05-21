@@ -128,16 +128,16 @@ def _parse_raw_binary(filename):
     appended_data_tag = root.find("AppendedData")
     appended_data_tag.set("encoding", "base64")
 
-    blocks = []
+    blocks = ""
     i = 0
     while i < len(data):
         block_size = int.from_bytes(data[i : i + 4], byteorder=byteorder, signed=True)
         da_tag = root.find(".//DataArray[@offset='%d']" % i)
-        da_tag.set("offset", "%d" % sum(map(lambda x: len(x), blocks)))
-        blocks.append(base64.b64encode(data[i : i + block_size + 4]).decode())
+        da_tag.set("offset", "%d" % len(blocks))
+        blocks += base64.b64encode(data[i : i + block_size + 4]).decode()
         i += block_size + 4
 
-    appended_data_tag.text = "_" + "".join(blocks)
+    appended_data_tag.text = "_" + blocks
     return root
 
 
