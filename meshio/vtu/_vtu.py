@@ -101,6 +101,7 @@ def get_grid(root):
         raise ReadError("No UnstructuredGrid found.")
     return grid, appended_data
 
+
 def _parse_raw_binary(filename):
     import xml.etree.ElementTree as ET
 
@@ -108,21 +109,21 @@ def _parse_raw_binary(filename):
         raw = f.read()
 
     try:
-        i_start = re.search(re.compile(b"<AppendedData[^>]+(?:\">)"), raw).end()
-        i_stop  = raw.find(b"</AppendedData>")
+        i_start = re.search(re.compile(b'<AppendedData[^>]+(?:">)'), raw).end()
+        i_stop = raw.find(b"</AppendedData>")
     except Exception:
         raise ReadError()
 
     header = raw[:i_start].decode()
     footer = raw[i_stop:].decode()
-    data   = raw[i_start:i_stop].split(b"_",1)[1].rsplit(b"\n",1)[0]
+    data = raw[i_start:i_stop].split(b"_", 1)[1].rsplit(b"\n", 1)[0]
 
     root = ET.fromstring(header + footer)
 
     if "compressor" in root.attrib:
         raise ReadError("Compressed raw binary VTU files not supported.")
 
-    byteorder = ("little" if root.attrib["byte_order"] == "LittleEndian" else "big")
+    byteorder = "little" if root.attrib["byte_order"] == "LittleEndian" else "big"
 
     appended_data_tag = root.find("AppendedData")
     appended_data_tag.set("encoding", "base64")
@@ -130,14 +131,15 @@ def _parse_raw_binary(filename):
     blocks = []
     i = 0
     while i < len(data):
-        block_size = int.from_bytes(data[i:i+4], byteorder=byteorder, signed=True)
+        block_size = int.from_bytes(data[i : i + 4], byteorder=byteorder, signed=True)
         da_tag = root.find(".//DataArray[@offset='%d']" % i)
         da_tag.set("offset", "%d" % sum(map(lambda x: len(x), blocks)))
-        blocks.append(base64.b64encode(data[i:i+block_size+4]).decode())
+        blocks.append(base64.b64encode(data[i : i + block_size + 4]).decode())
         i += block_size + 4
 
     appended_data_tag.text = "_" + "".join(blocks)
     return root
+
 
 vtu_to_numpy_type = {
     "Float32": numpy.dtype(numpy.float32),
