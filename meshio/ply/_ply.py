@@ -262,50 +262,92 @@ def _read_binary(
         for dtype in cell_data_dtypes
     ]
 
-    # read cell data -- this part is really slow
-    cells = []
-    last_cell_type = None
-    cell_data = {name: [] for name in cell_data_names if name != "vertex_indices"}
-    for _ in range(num_cells):
-        for name, dt in zip(cell_data_names, dts):
-            if name == "vertex_indices":
-                assert isinstance(dt, tuple)
-                count = numpy.frombuffer(
-                    f.read(numpy.dtype(dt[0]).itemsize), dtype=dt[0]
-                )[0]
-                data = numpy.frombuffer(
-                    f.read(count * numpy.dtype(dt[1]).itemsize), dtype=dt[1]
-                )
-                if count not in [3, 4]:
-                    raise ReadError("Expected count 3 or 4, got {}.".format(count))
-                cell_type = "triangle" if count == 3 else "quad"
-                is_new_block = last_cell_type != cell_type
-                if is_new_block:
-                    cells.append(CellBlock(cell_type, []))
-                    last_cell_type = cell_type
-                cells[-1].data.append(data)
-            else:
-                if isinstance(dt, tuple):
-                    count = numpy.frombuffer(
-                        f.read(numpy.dtype(dt[0]).itemsize), dtype=dt[0]
-                    )[0]
-                    data = numpy.frombuffer(
-                        f.read(count * numpy.dtype(dt[1]).itemsize), dtype=dt[1]
-                    )
-                else:
-                    data = numpy.frombuffer(f.read(numpy.dtype(dt).itemsize), dtype=dt)[
-                        0
-                    ]
-                if is_new_block:
-                    cell_data[name].append([])
-                cell_data[name][-1].append(data)
+    # memoryviews can be sliced and passed around without copying. However, the
+    # `bytearray()` call here redundantly copies so that the final output arrays
+    # are writeable.
+    buffer = memoryview(bytearray(f.read()))
+    buffer_position = 0
 
-    # convert to numpy arrays
-    cells = [CellBlock(block.type, numpy.array(block.data)) for block in cells]
-    for key, values in cell_data.items():
-        cell_data[key] = [numpy.array(val) for val in values]
+    cell_data = {}
+    for (name, dt) in zip(cell_data_names, dts):
+        if isinstance(dt, tuple):
+            buffer_increment, cell_data[name] = _read_binary_list(
+                buffer[buffer_position:], *dt, num_cells, endianness
+            )
+        else:
+            buffer_increment = numpy.dtype(dt).itemsize
+            cell_data[name] = numpy.frombuffer(
+                buffer[buffer_position : buffer_position + buffer_increment], dtype=dt
+            )[0]
+        buffer_position += buffer_increment
+
+    cells = cell_data.pop("vertex_indices", [])
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
+
+
+def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
+    """Parse a ply ragged list into a :class:`CellBlock` for each change in row
+    length. The only way to know how many bytes the list takes up is to parse
+    it. Hence this function also returns the number of bytes consumed.
+    """
+    count_dtype, data_dtype = numpy.dtype(count_dtype), numpy.dtype(data_dtype)
+    count_itemsize = count_dtype.itemsize
+    data_itemsize = data_dtype.itemsize
+    byteorder = "little" if endianness == "<" else "big"
+
+    # Firstly, walk the buffer to extract all start and end ids (in bytes) of
+    # each row into `byte_starts_ends`. Using `numpy.fromiter(generator)` is
+    # 2-3x faster than list comprehension or manually populating an array with
+    # a for loop. This is still very much the bottleneck - might be worth
+    # ctype-ing in future?
+    def parse_ragged(start, num_cells):
+        at = start
+        yield at
+        for i in range(num_cells):
+            count = int.from_bytes(buffer[at : at + count_itemsize], byteorder)
+            at += count * data_itemsize + count_itemsize
+            yield at
+
+    # Row `i` is given by `buffer[byte_starts_ends[i]: byte_starts_ends[i+1]]`.
+    byte_starts_ends = numpy.fromiter(
+        parse_ragged(0, num_cells), count_dtype, num_cells + 1
+    )
+
+    # Next, find where the row length changes and list the (start, end) row ids
+    # of each homogenous block into `block_bounds`.
+    row_lengths = numpy.diff(byte_starts_ends)
+    count_changed_ids = numpy.nonzero(numpy.diff(row_lengths))[0] + 1
+
+    block_bounds = []
+    start = 0
+    for end in count_changed_ids:
+        block_bounds.append((start, end))
+        start = end
+    block_bounds.append((start, len(byte_starts_ends) - 1))
+
+    # Finally, parse each homogenous block. Constructing an appropriate
+    # `block_dtype` to include the initial counts in each row avoids any
+    # wasteful copy operations.
+    blocks = []
+    for (start, end) in block_bounds:
+        if start == end:
+            # This should only happen if the element was empty to begin with.
+            continue
+        block_buffer = buffer[byte_starts_ends[start] : byte_starts_ends[end]]
+        cells_per_row = (row_lengths[start] - count_itemsize) // data_itemsize
+        block_dtype = numpy.dtype(
+            [("count", count_dtype), ("data", data_dtype * cells_per_row)]
+        )
+        cells = numpy.frombuffer(block_buffer, dtype=block_dtype)["data"]
+
+        if cells_per_row not in [3, 4]:
+            raise ReadError("Expected count 3 or 4, got {}.".format(cells_per_row))
+        cell_type = "triangle" if cells_per_row == 3 else "quad"
+
+        blocks.append(CellBlock(cell_type, cells))
+
+    return byte_starts_ends[-1], blocks
 
 
 def write(filename, mesh, binary=True):  # noqa: C901
