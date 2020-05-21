@@ -4,6 +4,7 @@ Latest official up-to-date documentation and a reference C implementation at
 <https://github.com/LoicMarechal/libMeshb>
 """
 import logging
+import struct
 from ctypes import c_double, c_float
 
 import numpy
@@ -81,10 +82,11 @@ def read_binary_buffer(f):
 
     if code == 16777216:
         # swap endianess
-        itype += "S"
-        ftype += "S"
-        postype += "S"
-        keytype += "S"
+        swapped = ">" if struct.unpack("=l", struct.pack("<l", 1))[0] == 1 else "<"
+        itype += swapped
+        ftype += swapped
+        postype += swapped
+        keytype = swapped + keytype
 
     version = numpy.fromfile(f, count=1, dtype=keytype).item()
 
