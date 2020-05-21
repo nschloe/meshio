@@ -241,7 +241,9 @@ def _read_binary(
         (name, endianness + ply_to_numpy_dtype_string[fmt])
         for name, fmt in zip(point_data_names, formats)
     ]
-    point_data = numpy.fromfile(f, count=num_verts, dtype=dtype)
+    point_data = numpy.frombuffer(
+        f.read(num_verts * numpy.dtype(dtype).itemsize), dtype=dtype
+    )
     verts = numpy.column_stack([point_data["x"], point_data["y"], point_data["z"]])
     point_data = {
         name: point_data[name]
@@ -268,8 +270,12 @@ def _read_binary(
         for name, dt in zip(cell_data_names, dts):
             if name == "vertex_indices":
                 assert isinstance(dt, tuple)
-                count = numpy.fromfile(f, count=1, dtype=dt[0])[0]
-                data = numpy.fromfile(f, count=count, dtype=dt[1])
+                count = numpy.frombuffer(
+                    f.read(numpy.dtype(dt[0]).itemsize), dtype=dt[0]
+                )[0]
+                data = numpy.frombuffer(
+                    f.read(count * numpy.dtype(dt[1]).itemsize), dtype=dt[1]
+                )
                 if count not in [3, 4]:
                     raise ReadError("Expected count 3 or 4, got {}.".format(count))
                 cell_type = "triangle" if count == 3 else "quad"
@@ -280,10 +286,16 @@ def _read_binary(
                 cells[-1].data.append(data)
             else:
                 if isinstance(dt, tuple):
-                    count = numpy.fromfile(f, count=1, dtype=dt[0])[0]
-                    data = numpy.fromfile(f, count=count, dtype=dt[1])
+                    count = numpy.frombuffer(
+                        f.read(numpy.dtype(dt[0]).itemsize), dtype=dt[0]
+                    )[0]
+                    data = numpy.frombuffer(
+                        f.read(count * numpy.dtype(dt[1]).itemsize), dtype=dt[1]
+                    )
                 else:
-                    data = numpy.fromfile(f, count=1, dtype=dt)[0]
+                    data = numpy.frombuffer(f.read(numpy.dtype(dt).itemsize), dtype=dt)[
+                        0
+                    ]
                 if is_new_block:
                     cell_data[name].append([])
                 cell_data[name][-1].append(data)
