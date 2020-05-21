@@ -6,9 +6,9 @@ I/O for VTU.
 import base64
 import logging
 import lzma
+import re
 import sys
 import zlib
-import re
 
 import numpy
 
