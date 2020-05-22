@@ -201,7 +201,7 @@ class VtuReader:
         try:
             tree = ET.parse(filename, parser)
             root = tree.getroot()
-        except ET.ParseError:
+        except (ET.ParseError, TypeError):
             root = _parse_raw_binary(filename)
 
         if root.tag != "VTKFile":
