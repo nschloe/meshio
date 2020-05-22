@@ -47,15 +47,47 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
             meshio_type = vtk_to_meshio_type[types[start]]
         except KeyError:
             raise ReadError("File contains cells that meshio cannot handle.")
-        n = num_nodes_per_cell[meshio_type]
-        indices = numpy.add.outer(
-            offsets[start:end], numpy.arange(-n, 0, dtype=offsets.dtype)
-        )
-        cells.append(CellBlock(meshio_type, connectivity[indices]))
-        for name, d in cell_data_raw.items():
-            if name not in cell_data:
-                cell_data[name] = []
-            cell_data[name].append(d[start:end])
+        if meshio_type == "polygon" or meshio_type == "polyhedron":
+            # Polygons and polyhedra have unknown and varying number of nodes per cell.
+
+            # Index where the previous block of cells stopped. Needed to know the number
+            # of nodes for the first cell in the block.
+            if start == 0:
+                # This is the very start of the offset array
+                first_node = 0
+            else:
+                # First node is the end of the offset for the previous block
+                first_node = offsets[start - 1]
+
+            # Start of the cell-node relation for each cell in this block
+            start_cn = numpy.hstack((first_node, offsets[start:end]))
+            # Find the size of each cell
+            size = numpy.diff(start_cn)
+
+            # Loop over all cell sizes, find all cells with this size, and assign
+            # connectivity
+            for sz in numpy.unique(size):
+                items = numpy.where(size == sz)[0]
+                indices = numpy.add.outer(
+                    start_cn[items + 1], numpy.arange(-sz, 0, dtype=offsets.dtype)
+                )
+                cells.append(CellBlock(meshio_type + str(sz), connectivity[indices]))
+                # Store cell data for this set of cells
+                for name, d in cell_data_raw.items():
+                    if name not in cell_data:
+                        cell_data[name] = []
+                    cell_data[name].append(d[start + items])
+        else:
+            # Same number of nodes per cell
+            n = num_nodes_per_cell[meshio_type]
+            indices = numpy.add.outer(
+                offsets[start:end], numpy.arange(-n, 0, dtype=offsets.dtype)
+            )
+            cells.append(CellBlock(meshio_type, connectivity[indices]))
+            for name, d in cell_data_raw.items():
+                if name not in cell_data:
+                    cell_data[name] = []
+                cell_data[name].append(d[start:end])
 
     return cells, cell_data
 
@@ -538,8 +570,22 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         offsets = numpy.concatenate(offsets)
 
         # types
+        types_array = []
+        for k, v in mesh.cells:
+            # For polygon and polyhedron grids, the number of nodes is part of the cell
+            # type key. This part must be stripped away.
+            if k[:7] == "polygon":
+                key_ = k[:7]
+            elif k[:10] == "polyhedron":
+                key_ = k[:10]
+            else:
+                # No special treatment
+                key_ = k
+            types_array.append(numpy.full(len(v), meshio_to_vtk_type[key_]))
+
         types = numpy.concatenate(
-            [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in mesh.cells]
+            types_array
+            # [numpy.full(len(v), meshio_to_vtk_type[k]) for k, v in mesh.cells]
         )
 
         numpy_to_xml_array(cls, "connectivity", connectivity)

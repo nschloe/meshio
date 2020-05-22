@@ -231,6 +231,33 @@ polygon_mesh = meshio.Mesh(
     ],
 )
 
+polyhedron_mesh = meshio.Mesh(
+    numpy.array(
+        [  # Three layers of a unit square
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [0.0, 1.0, 1.0],
+            [0.0, 0.0, 2.0],
+            [1.0, 0.0, 2.0],
+            [1.0, 1.0, 2.0],
+            [0.0, 1.0, 2.0],
+        ]
+    ),
+    [  # Split the lower cube into tets and pyramids. The upper cube is hexahedron
+        ("polyhedron4", numpy.array([[1, 2, 5, 7], [2, 5, 6, 7]])),  # two tets
+        ("hexahedron", numpy.array([[4, 5, 6, 7, 8, 9, 10, 11]])),  # unit cube
+        (
+            "polyhedron5",
+            numpy.array([[0, 1, 2, 3, 7], [0, 1, 6, 5, 7]]),
+        ),  # two pyramids
+    ],
+)
+
 
 def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=numpy.float):
     numpy.random.seed(seed)
