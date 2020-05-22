@@ -1,4 +1,5 @@
 import pathlib
+
 import numpy
 import pytest
 
@@ -52,7 +53,7 @@ def test_generic_io():
 
 @pytest.mark.parametrize(
     "filename, ref_cells, ref_num_cells, ref_num_pnt",
-    [("00_raw_binary.vtu", "tetra", 162, 64),],
+    [("00_raw_binary.vtu", "tetra", 162, 64)],
 )
 def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
     this_dir = pathlib.Path(__file__).resolve().parent
