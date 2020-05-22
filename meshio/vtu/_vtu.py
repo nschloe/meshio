@@ -6,6 +6,7 @@ I/O for VTU.
 import base64
 import logging
 import lzma
+import re
 import sys
 import zlib
 
@@ -133,6 +134,45 @@ def get_grid(root):
     return grid, appended_data
 
 
+def _parse_raw_binary(filename):
+    import xml.etree.ElementTree as ET
+
+    with open(filename, "rb") as f:
+        raw = f.read()
+
+    try:
+        i_start = re.search(re.compile(b'<AppendedData[^>]+(?:">)'), raw).end()
+        i_stop = raw.find(b"</AppendedData>")
+    except Exception:
+        raise ReadError()
+
+    header = raw[:i_start].decode()
+    footer = raw[i_stop:].decode()
+    data = raw[i_start:i_stop].split(b"_", 1)[1].rsplit(b"\n", 1)[0]
+
+    root = ET.fromstring(header + footer)
+
+    if "compressor" in root.attrib:
+        raise ReadError("Compressed raw binary VTU files not supported.")
+
+    byteorder = "little" if root.attrib["byte_order"] == "LittleEndian" else "big"
+
+    appended_data_tag = root.find("AppendedData")
+    appended_data_tag.set("encoding", "base64")
+
+    blocks = ""
+    i = 0
+    while i < len(data):
+        block_size = int.from_bytes(data[i : i + 4], byteorder=byteorder, signed=True)
+        da_tag = root.find(".//DataArray[@offset='%d']" % i)
+        da_tag.set("offset", "%d" % len(blocks))
+        blocks += base64.b64encode(data[i : i + block_size + 4]).decode()
+        i += block_size + 4
+
+    appended_data_tag.text = "_" + blocks
+    return root
+
+
 vtu_to_numpy_type = {
     "Float32": numpy.dtype(numpy.float32),
     "Float64": numpy.dtype(numpy.float64),
@@ -158,8 +198,11 @@ class VtuReader:
         import xml.etree.ElementTree as ET
 
         parser = ET.XMLParser()
-        tree = ET.parse(filename, parser)
-        root = tree.getroot()
+        try:
+            tree = ET.parse(filename, parser)
+            root = tree.getroot()
+        except ET.ParseError:
+            root = _parse_raw_binary(filename)
 
         if root.tag != "VTKFile":
             raise ReadError()
@@ -169,6 +212,10 @@ class VtuReader:
             raise ReadError(
                 "Unknown VTU file version '{}'.".format(root.attrib["version"])
             )
+
+        # fix empty NumberOfComponents attributes as produced by Firedrake
+        for da_tag in root.findall(".//DataArray[@NumberOfComponents='']"):
+            da_tag.attrib.pop("NumberOfComponents")
 
         if "compressor" in root.attrib:
             assert root.attrib["compressor"] in [

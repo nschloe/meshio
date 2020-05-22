@@ -1,3 +1,5 @@
+import pathlib
+
 import numpy
 import pytest
 
@@ -51,6 +53,21 @@ def test_generic_io():
     helpers.generic_io("test.vtu")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.vtu")
+
+
+@pytest.mark.parametrize(
+    "filename, ref_cells, ref_num_cells, ref_num_pnt",
+    [("00_raw_binary.vtu", "tetra", 162, 64)],
+)
+def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "vtu" / filename
+
+    mesh = meshio.read(filename)
+    assert len(mesh.cells) == 1
+    assert ref_cells == mesh.cells[0].type
+    assert len(mesh.cells[0].data) == ref_num_cells
+    assert len(mesh.points) == ref_num_pnt
 
 
 if __name__ == "__main__":
