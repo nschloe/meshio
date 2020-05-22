@@ -391,7 +391,9 @@ class VtuReader:
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
         num_bytes_per_item = numpy.dtype(dtype).itemsize
-        total_num_bytes = int(numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0])
+        total_num_bytes = int(
+            numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0]
+        )
 
         # Check if block size was decoded separately
         # (so decoding stopped after block size due to padding)
