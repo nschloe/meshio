@@ -152,24 +152,64 @@ def _parse_raw_binary(filename):
 
     root = ET.fromstring(header + footer)
 
-    if "compressor" in root.attrib:
-        raise ReadError("Compressed raw binary VTU files not supported.")
-
-    byteorder = "little" if root.attrib["byte_order"] == "LittleEndian" else "big"
+    dtype = vtu_to_numpy_type[root.get("header_type", "UInt32")]
+    if "byte_order" in root.attrib:
+        dtype = dtype.newbyteorder(
+            "<" if root.get("byte_order") == "LittleEndian" else ">"
+        )
 
     appended_data_tag = root.find("AppendedData")
     appended_data_tag.set("encoding", "base64")
 
-    blocks = ""
-    i = 0
-    while i < len(data):
-        block_size = int.from_bytes(data[i : i + 4], byteorder=byteorder, signed=True)
-        da_tag = root.find(".//DataArray[@offset='%d']" % i)
-        da_tag.set("offset", "%d" % len(blocks))
-        blocks += base64.b64encode(data[i : i + block_size + 4]).decode()
-        i += block_size + 4
+    if "compressor" in root.attrib:
+        c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[
+            root.get("compressor")
+        ]
+        root.attrib.pop("compressor")
 
-    appended_data_tag.text = "_" + blocks
+        # raise ReadError("Compressed raw binary VTU files not supported.")
+        arrays = ""
+        i = 0
+        while i < len(data):
+            da_tag = root.find(".//DataArray[@offset='%d']" % i)
+            da_tag.set("offset", "%d" % len(arrays))
+
+            num_blocks = int(numpy.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
+            num_header_items = 3 + num_blocks
+            num_header_bytes = num_header_items * dtype.itemsize
+            header = numpy.frombuffer(data[i : i + num_header_bytes], dtype)
+
+            block_data = b""
+            j = 0
+            for k in range(num_blocks):
+                block_size = int(header[k + 3])
+                block_data += c.decompress(
+                    data[
+                        i + j + num_header_bytes : i + j + block_size + num_header_bytes
+                    ]
+                )
+                j += block_size
+
+            block_size = numpy.array([len(block_data)]).astype(dtype).tobytes()
+            arrays += base64.b64encode(block_size + block_data).decode()
+
+            i += j + num_header_bytes
+
+    else:
+        # TODO rename blocks to arrays
+        arrays = ""
+        i = 0
+        while i < len(data):
+            da_tag = root.find(".//DataArray[@offset='%d']" % i)
+            da_tag.set("offset", "%d" % len(arrays))
+
+            block_size = int(numpy.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
+            arrays += base64.b64encode(
+                data[i : i + block_size + dtype.itemsize]
+            ).decode()
+            i += block_size + dtype.itemsize
+
+    appended_data_tag.text = "_" + arrays
     return root
 
 

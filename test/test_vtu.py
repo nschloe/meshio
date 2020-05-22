@@ -39,9 +39,7 @@ def test(mesh, data_type):
     binary, compression = data_type
 
     def writer(*args, **kwargs):
-        return meshio.vtu.write(
-            *args, binary=binary, compression=compression, **kwargs,
-        )
+        return meshio.vtu.write(*args, binary=binary, compression=compression, **kwargs)
 
     # ASCII files are only meant for debugging, VTK stores only 11 digits
     # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
@@ -57,7 +55,11 @@ def test_generic_io():
 
 @pytest.mark.parametrize(
     "filename, ref_cells, ref_num_cells, ref_num_pnt",
-    [("00_raw_binary.vtu", "tetra", 162, 64)],
+    [
+        ("00_raw_binary.vtu", "tetra", 162, 64),
+        ("01_raw_binary_int64.vtu", "tetra", 162, 64),
+        ("02_raw_compressed.vtu", "tetra", 162, 64),
+    ],
 )
 def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
     this_dir = pathlib.Path(__file__).resolve().parent
