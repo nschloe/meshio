@@ -167,6 +167,7 @@ def _read_ascii(
         point_data_names[i]: pd[point_data_names[i]]
         for i in range(k, len(point_data_names))
     }
+    cell_data = {}
 
     # the faces must be read line-by-line
     triangles = []
@@ -287,6 +288,7 @@ def _read_binary(
 
 
 def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
+    print(count_dtype)
     """Parse a ply ragged list into a :class:`CellBlock` for each change in row
     length. The only way to know how many bytes the list takes up is to parse
     it. Hence this function also returns the number of bytes consumed.
@@ -311,7 +313,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
 
     # Row `i` is given by `buffer[byte_starts_ends[i]: byte_starts_ends[i+1]]`.
     byte_starts_ends = numpy.fromiter(
-        parse_ragged(0, num_cells), count_dtype, num_cells + 1
+        parse_ragged(0, num_cells), numpy.intp, num_cells + 1
     )
 
     # Next, find where the row length changes and list the (start, end) row ids
@@ -414,8 +416,6 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 "PLY doesn't support 64-bit integers. Casting down to 32-bit."
             )
 
-        # TODO use uint8 for cell count
-
         # assert that all cell dtypes are equal
         cell_dtype = None
         for _, cell in cells:
@@ -427,9 +427,9 @@ def write(filename, mesh, binary=True):  # noqa: C901
         if cell_dtype is not None:
             ply_type = numpy_to_ply_dtype[cell_dtype]
             fh.write(
-                "property list {} {} vertex_indices\n".format(
-                    ply_type, ply_type
-                ).encode("utf-8")
+                "property list {} {} vertex_indices\n".format("uint8", ply_type).encode(
+                    "utf-8"
+                )
             )
 
         # TODO other cell data
@@ -447,8 +447,12 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 if cell_type not in ["triangle", "quad"]:
                     continue
                 # prepend with count
-                count = numpy.full(data.shape[0], data.shape[1], dtype=data.dtype)
-                out = numpy.column_stack([count, data])
+                out = numpy.rec.fromarrays(
+                    [
+                        numpy.broadcast_to(numpy.uint8(data.shape[1]), data.shape[0]),
+                        *data.T,
+                    ]
+                )
                 fh.write(out.tobytes())
         else:
             # vertices

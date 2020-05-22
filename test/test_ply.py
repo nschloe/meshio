@@ -46,13 +46,14 @@ def test_reference_file(filename, ref_sum, ref_num_cells):
     assert len(mesh.get_cells_type("triangle")) == ref_num_cells
 
 
-def test_no_cells():
+@pytest.mark.parametrize("binary", [False, True])
+def test_no_cells(binary):
     import io
 
     vertices = numpy.random.random((30, 3))
     mesh = meshio.Mesh(vertices, [])
     file = io.BytesIO()
-    mesh.write(file, "ply")
+    mesh.write(file, "ply", binary=binary)
     mesh2 = meshio.read(io.BytesIO(file.getvalue()), "ply")
     assert numpy.array_equal(mesh.points, mesh2.points)
     assert len(mesh2.cells) == 0
