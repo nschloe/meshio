@@ -196,7 +196,6 @@ def _parse_raw_binary(filename):
             i += j + num_header_bytes
 
     else:
-        # TODO rename blocks to arrays
         arrays = ""
         i = 0
         while i < len(data):
@@ -392,7 +391,15 @@ class VtuReader:
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
         num_bytes_per_item = numpy.dtype(dtype).itemsize
-        # total_num_bytes = numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0]
+        total_num_bytes = int(numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0])
+
+        # Check if block size was decoded separately
+        # (so decoding stopped after block size due to padding)
+        if len(byte_string) == num_bytes_per_item:
+            header_len = len(base64.b64encode(byte_string))
+            byte_string = base64.b64decode(data[header_len:])
+        else:
+            byte_string = byte_string[num_bytes_per_item:]
 
         # Read the block data; multiple blocks possible here?
         dtype = vtu_to_numpy_type[data_type]
@@ -400,7 +407,7 @@ class VtuReader:
             dtype = dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
-        return numpy.frombuffer(byte_string[num_bytes_per_item:], dtype=dtype)
+        return numpy.frombuffer(byte_string[:total_num_bytes], dtype=dtype)
 
     def read_compressed_binary(self, data, data_type):
         # first read the block size; it determines the size of the header
