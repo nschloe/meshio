@@ -85,7 +85,7 @@ def read_buffer(f):
     m = re.match("element face (\\d+)", line)
     num_cells = int(m.groups()[0])
 
-    assert num_cells > 0
+    assert num_cells >= 0
 
     # read property lists
     line = _fast_forward(f)
@@ -424,12 +424,14 @@ def write(filename, mesh, binary=True):  # noqa: C901
             if cell.dtype != cell_dtype:
                 raise WriteError()
 
-        ply_type = numpy_to_ply_dtype[cell_dtype]
-        fh.write(
-            "property list {} {} vertex_indices\n".format(ply_type, ply_type).encode(
-                "utf-8"
+        if cell_dtype is not None:
+            ply_type = numpy_to_ply_dtype[cell_dtype]
+            fh.write(
+                "property list {} {} vertex_indices\n".format(
+                    ply_type, ply_type
+                ).encode("utf-8")
             )
-        )
+
         # TODO other cell data
         fh.write(b"end_header\n")
 

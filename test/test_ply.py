@@ -44,3 +44,15 @@ def test_reference_file(filename, ref_sum, ref_num_cells):
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * abs(ref_sum)
     assert len(mesh.get_cells_type("triangle")) == ref_num_cells
+
+
+def test_no_cells():
+    import io
+
+    vertices = numpy.random.random((30, 3))
+    mesh = meshio.Mesh(vertices, [])
+    file = io.BytesIO()
+    mesh.write(file, "ply")
+    mesh2 = meshio.read(io.BytesIO(file.getvalue()), "ply")
+    assert numpy.array_equal(mesh.points, mesh2.points)
+    assert len(mesh2.cells) == 0
