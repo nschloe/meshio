@@ -10,9 +10,9 @@ import meshio
 @pytest.mark.parametrize(
     "mesh",
     [
-        # helpers.tri_mesh,
-        # helpers.quad_mesh,
-        # helpers.tri_quad_mesh,
+        helpers.tri_mesh,
+        helpers.quad_mesh,
+        helpers.tri_quad_mesh,
         helpers.add_point_data(helpers.tri_mesh, 1, dtype=int),
         helpers.add_point_data(helpers.tri_mesh, 1, dtype=float),
         # helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
@@ -44,3 +44,16 @@ def test_reference_file(filename, ref_sum, ref_num_cells):
     s = numpy.sum(mesh.points)
     assert abs(s - ref_sum) < tol * abs(ref_sum)
     assert len(mesh.get_cells_type("triangle")) == ref_num_cells
+
+
+@pytest.mark.parametrize("binary", [False, True])
+def test_no_cells(binary):
+    import io
+
+    vertices = numpy.random.random((30, 3))
+    mesh = meshio.Mesh(vertices, [])
+    file = io.BytesIO()
+    mesh.write(file, "ply", binary=binary)
+    mesh2 = meshio.read(io.BytesIO(file.getvalue()), "ply")
+    assert numpy.array_equal(mesh.points, mesh2.points)
+    assert len(mesh2.cells) == 0

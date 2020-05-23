@@ -85,7 +85,7 @@ def read_buffer(f):
     m = re.match("element face (\\d+)", line)
     num_cells = int(m.groups()[0])
 
-    assert num_cells > 0
+    assert num_cells >= 0
 
     # read property lists
     line = _fast_forward(f)
@@ -167,6 +167,7 @@ def _read_ascii(
         point_data_names[i]: pd[point_data_names[i]]
         for i in range(k, len(point_data_names))
     }
+    cell_data = {}
 
     # the faces must be read line-by-line
     triangles = []
@@ -241,7 +242,9 @@ def _read_binary(
         (name, endianness + ply_to_numpy_dtype_string[fmt])
         for name, fmt in zip(point_data_names, formats)
     ]
-    point_data = numpy.fromfile(f, count=num_verts, dtype=dtype)
+    point_data = numpy.frombuffer(
+        f.read(num_verts * numpy.dtype(dtype).itemsize), dtype=dtype
+    )
     verts = numpy.column_stack([point_data["x"], point_data["y"], point_data["z"]])
     point_data = {
         name: point_data[name]
@@ -260,40 +263,93 @@ def _read_binary(
         for dtype in cell_data_dtypes
     ]
 
-    # read cell data -- this part is really slow
-    cells = []
-    last_cell_type = None
-    cell_data = {name: [] for name in cell_data_names if name != "vertex_indices"}
-    for _ in range(num_cells):
-        for name, dt in zip(cell_data_names, dts):
-            if name == "vertex_indices":
-                assert isinstance(dt, tuple)
-                count = numpy.fromfile(f, count=1, dtype=dt[0])[0]
-                data = numpy.fromfile(f, count=count, dtype=dt[1])
-                if count not in [3, 4]:
-                    raise ReadError("Expected count 3 or 4, got {}.".format(count))
-                cell_type = "triangle" if count == 3 else "quad"
-                is_new_block = last_cell_type != cell_type
-                if is_new_block:
-                    cells.append(CellBlock(cell_type, []))
-                    last_cell_type = cell_type
-                cells[-1].data.append(data)
-            else:
-                if isinstance(dt, tuple):
-                    count = numpy.fromfile(f, count=1, dtype=dt[0])[0]
-                    data = numpy.fromfile(f, count=count, dtype=dt[1])
-                else:
-                    data = numpy.fromfile(f, count=1, dtype=dt)[0]
-                if is_new_block:
-                    cell_data[name].append([])
-                cell_data[name][-1].append(data)
+    # memoryviews can be sliced and passed around without copying. However, the
+    # `bytearray()` call here redundantly copies so that the final output arrays
+    # are writeable.
+    buffer = memoryview(bytearray(f.read()))
+    buffer_position = 0
 
-    # convert to numpy arrays
-    cells = [CellBlock(block.type, numpy.array(block.data)) for block in cells]
-    for key, values in cell_data.items():
-        cell_data[key] = [numpy.array(val) for val in values]
+    cell_data = {}
+    for (name, dt) in zip(cell_data_names, dts):
+        if isinstance(dt, tuple):
+            buffer_increment, cell_data[name] = _read_binary_list(
+                buffer[buffer_position:], *dt, num_cells, endianness
+            )
+        else:
+            buffer_increment = numpy.dtype(dt).itemsize
+            cell_data[name] = numpy.frombuffer(
+                buffer[buffer_position : buffer_position + buffer_increment], dtype=dt
+            )[0]
+        buffer_position += buffer_increment
+
+    cells = cell_data.pop("vertex_indices", [])
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
+
+
+def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
+    print(count_dtype)
+    """Parse a ply ragged list into a :class:`CellBlock` for each change in row
+    length. The only way to know how many bytes the list takes up is to parse
+    it. Hence this function also returns the number of bytes consumed.
+    """
+    count_dtype, data_dtype = numpy.dtype(count_dtype), numpy.dtype(data_dtype)
+    count_itemsize = count_dtype.itemsize
+    data_itemsize = data_dtype.itemsize
+    byteorder = "little" if endianness == "<" else "big"
+
+    # Firstly, walk the buffer to extract all start and end ids (in bytes) of
+    # each row into `byte_starts_ends`. Using `numpy.fromiter(generator)` is
+    # 2-3x faster than list comprehension or manually populating an array with
+    # a for loop. This is still very much the bottleneck - might be worth
+    # ctype-ing in future?
+    def parse_ragged(start, num_cells):
+        at = start
+        yield at
+        for i in range(num_cells):
+            count = int.from_bytes(buffer[at : at + count_itemsize], byteorder)
+            at += count * data_itemsize + count_itemsize
+            yield at
+
+    # Row `i` is given by `buffer[byte_starts_ends[i]: byte_starts_ends[i+1]]`.
+    byte_starts_ends = numpy.fromiter(
+        parse_ragged(0, num_cells), numpy.intp, num_cells + 1
+    )
+
+    # Next, find where the row length changes and list the (start, end) row ids
+    # of each homogenous block into `block_bounds`.
+    row_lengths = numpy.diff(byte_starts_ends)
+    count_changed_ids = numpy.nonzero(numpy.diff(row_lengths))[0] + 1
+
+    block_bounds = []
+    start = 0
+    for end in count_changed_ids:
+        block_bounds.append((start, end))
+        start = end
+    block_bounds.append((start, len(byte_starts_ends) - 1))
+
+    # Finally, parse each homogenous block. Constructing an appropriate
+    # `block_dtype` to include the initial counts in each row avoids any
+    # wasteful copy operations.
+    blocks = []
+    for (start, end) in block_bounds:
+        if start == end:
+            # This should only happen if the element was empty to begin with.
+            continue
+        block_buffer = buffer[byte_starts_ends[start] : byte_starts_ends[end]]
+        cells_per_row = (row_lengths[start] - count_itemsize) // data_itemsize
+        block_dtype = numpy.dtype(
+            [("count", count_dtype), ("data", data_dtype * cells_per_row)]
+        )
+        cells = numpy.frombuffer(block_buffer, dtype=block_dtype)["data"]
+
+        if cells_per_row not in [3, 4]:
+            raise ReadError("Expected count 3 or 4, got {}.".format(cells_per_row))
+        cell_type = "triangle" if cells_per_row == 3 else "quad"
+
+        blocks.append(CellBlock(cell_type, cells))
+
+    return byte_starts_ends[-1], blocks
 
 
 def write(filename, mesh, binary=True):  # noqa: C901
@@ -360,8 +416,6 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 "PLY doesn't support 64-bit integers. Casting down to 32-bit."
             )
 
-        # TODO use uint8 for cell count
-
         # assert that all cell dtypes are equal
         cell_dtype = None
         for _, cell in cells:
@@ -370,12 +424,14 @@ def write(filename, mesh, binary=True):  # noqa: C901
             if cell.dtype != cell_dtype:
                 raise WriteError()
 
-        ply_type = numpy_to_ply_dtype[cell_dtype]
-        fh.write(
-            "property list {} {} vertex_indices\n".format(ply_type, ply_type).encode(
-                "utf-8"
+        if cell_dtype is not None:
+            ply_type = numpy_to_ply_dtype[cell_dtype]
+            fh.write(
+                "property list {} {} vertex_indices\n".format("uint8", ply_type).encode(
+                    "utf-8"
+                )
             )
-        )
+
         # TODO other cell data
         fh.write(b"end_header\n")
 
@@ -384,16 +440,20 @@ def write(filename, mesh, binary=True):  # noqa: C901
             out = numpy.rec.fromarrays(
                 [coord for coord in mesh.points.T] + list(mesh.point_data.values())
             )
-            out.tofile(fh)
+            fh.write(out.tobytes())
 
             # cells
             for cell_type, data in cells:
                 if cell_type not in ["triangle", "quad"]:
                     continue
                 # prepend with count
-                count = numpy.full(data.shape[0], data.shape[1], dtype=data.dtype)
-                out = numpy.column_stack([count, data])
-                out.tofile(fh)
+                out = numpy.rec.fromarrays(
+                    [
+                        numpy.broadcast_to(numpy.uint8(data.shape[1]), data.shape[0]),
+                        *data.T,
+                    ]
+                )
+                fh.write(out.tobytes())
         else:
             # vertices
             # numpy.savetxt(fh, mesh.points, "%r")  # slower
