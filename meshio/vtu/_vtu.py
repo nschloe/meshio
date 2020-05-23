@@ -137,7 +137,7 @@ def get_grid(root):
 def _parse_raw_binary(filename):
     import xml.etree.ElementTree as ET
 
-    with open(filename, "rb") as f:
+    with open(str(filename), "rb") as f:
         raw = f.read()
 
     try:
