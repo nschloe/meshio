@@ -137,7 +137,7 @@ def get_grid(root):
 def _parse_raw_binary(filename):
     import xml.etree.ElementTree as ET
 
-    with open(str(filename), "rb") as f:
+    with open(filename, "rb") as f:
         raw = f.read()
 
     try:
@@ -238,10 +238,10 @@ class VtuReader:
 
         parser = ET.XMLParser()
         try:
-            tree = ET.parse(filename, parser)
+            tree = ET.parse(str(filename), parser)
             root = tree.getroot()
         except ET.ParseError:
-            root = _parse_raw_binary(filename)
+            root = _parse_raw_binary(str(filename))
 
         if root.tag != "VTKFile":
             raise ReadError()
