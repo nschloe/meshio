@@ -44,7 +44,7 @@ meshio can read and write all of the following and smoothly converts between the
  [SVG](https://www.w3.org/TR/SVG/) (2D only, output only),
  [UGRID](http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html),
  [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf),
- [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats) (except compressed raw binary data),
+ [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats),
  [WKT](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry) ([TIN](https://en.wikipedia.org/wiki/Triangulated_irregular_network)),
  [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format).
 
