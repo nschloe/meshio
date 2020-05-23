@@ -1,3 +1,5 @@
+import pathlib
+
 import numpy
 import pytest
 
@@ -11,10 +13,12 @@ test_set = [
     helpers.quad_mesh,
     helpers.quad8_mesh,
     helpers.tri_quad_mesh,
+    helpers.polygon_mesh,
     helpers.tet_mesh,
     helpers.tet10_mesh,
     helpers.hex_mesh,
     helpers.hex20_mesh,
+    helpers.polyhedron_mesh,
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),
     helpers.add_point_data(helpers.tri_mesh, 3),
@@ -22,6 +26,8 @@ test_set = [
     helpers.add_cell_data(helpers.tri_quad_mesh, [("a", (), numpy.float64)]),
     helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float32)]),
     helpers.add_cell_data(helpers.tri_mesh, [("b", (3,), numpy.float64)]),
+    helpers.add_cell_data(helpers.polygon_mesh, [("a", (), numpy.float32)]),
+    helpers.add_cell_data(helpers.polyhedron_mesh, [("a", (2,), numpy.float32)]),
 ]
 
 
@@ -47,6 +53,21 @@ def test_generic_io():
     helpers.generic_io("test.vtu")
     # With additional, insignificant suffix:
     helpers.generic_io("test.0.vtu")
+
+
+@pytest.mark.parametrize(
+    "filename, ref_cells, ref_num_cells, ref_num_pnt",
+    [("00_raw_binary.vtu", "tetra", 162, 64)],
+)
+def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "vtu" / filename
+
+    mesh = meshio.read(filename)
+    assert len(mesh.cells) == 1
+    assert ref_cells == mesh.cells[0].type
+    assert len(mesh.cells[0].data) == ref_num_cells
+    assert len(mesh.points) == ref_num_pnt
 
 
 if __name__ == "__main__":

@@ -217,6 +217,7 @@ vtk_to_meshio_type = {
     33: "hexahedron24",
     34: "triangle7",
     35: "line4",
+    42: "polyhedron",
     #
     # 60: VTK_HIGHER_ORDER_EDGE,
     # 61: VTK_HIGHER_ORDER_TRIANGLE,
