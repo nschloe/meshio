@@ -158,10 +158,9 @@ def write(filename, mesh, binary=False):
             )
         )
     if len(mesh.cells) > 1:
-        keys = set(mesh.cells.keys())
-        keys.remove("triangle")
+        invalid = set(block.type for block in mesh.cells if block.type != "triangle")
         logging.warning(
-            "STL can only write triangle cells. Discarding {}.".format(", ".join(keys))
+            "STL can only write triangle cells. Discarding {}.".format(", ".join(invalid))
         )
 
     if mesh.points.shape[1] == 2:
