@@ -36,16 +36,19 @@ ply_to_numpy_dtype = {
 numpy_to_ply_dtype = {numpy.dtype(v): k for k, v in ply_to_numpy_dtype.items()}
 
 
-cell_type_to_count = {
-    "line": 2,
-    "triangle": 3,
-    "quad": 4,
-    "polygon5": 5,
-    "polygon6": 6,
-    "quad8": 8,
-}
+_cell_type_to_count = {"vertex": 1, "line": 2, "triangle": 3, "quad": 4}
 
-_cell_type_from_count = {val: key for (key, val) in cell_type_to_count.items()}
+
+def cell_type_to_count(cell_type):
+    if cell_type in _cell_type_to_count:
+        return _cell_type_to_count[cell_type]
+
+    match = re.fullmatch(r"polygon(\d+)", cell_type)
+    if match:
+        return int(match.group(1))
+
+
+_cell_type_from_count = {val: key for (key, val) in _cell_type_to_count.items()}
 
 
 def cell_type_from_count(count):
@@ -406,7 +409,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
         num_cells = 0
         for cell_type, c in mesh.cells:
-            if cell_type in cell_type_to_count.keys():
+            if cell_type_to_count(cell_type):
                 num_cells += c.data.shape[0]
         fh.write("element face {:d}\n".format(num_cells).encode("utf-8"))
 
@@ -451,7 +454,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
             # cells
             for cell_type, data in cells:
-                if cell_type not in cell_type_to_count.keys():
+                if cell_type_to_count(cell_type) is None:
                     warnings.warn(
                         'cell_type "{}" is not supported by ply format - skipping'
                     )
