@@ -42,7 +42,6 @@ cell_type_to_count = {
     "quad": 4,
     "polygon5": 5,
     "polygon6": 6,
-    "triangle6": 6,
     "quad8": 8,
 }
 
