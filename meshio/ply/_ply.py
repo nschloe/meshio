@@ -303,7 +303,6 @@ def _read_binary(
 
 
 def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
-    print(count_dtype)
     """Parse a ply ragged list into a :class:`CellBlock` for each change in row
     length. The only way to know how many bytes the list takes up is to parse
     it. Hence this function also returns the number of bytes consumed.
