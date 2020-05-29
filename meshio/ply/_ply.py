@@ -3,6 +3,7 @@ I/O for the PLY format, cf.
 <https://en.wikipedia.org/wiki/PLY_(file_format)>.
 <https://web.archive.org/web/20161221115231/http://www.cs.virginia.edu/~gfx/Courses/2001/Advanced.spring.01/plylib/Ply.txt>.
 """
+import collections
 import re
 import sys
 import warnings
@@ -33,6 +34,27 @@ ply_to_numpy_dtype = {
     "double": numpy.float64,
 }
 numpy_to_ply_dtype = {numpy.dtype(v): k for k, v in ply_to_numpy_dtype.items()}
+
+
+_cell_type_to_count = {"vertex": 1, "line": 2, "triangle": 3, "quad": 4}
+
+
+def cell_type_to_count(cell_type):
+    if cell_type in _cell_type_to_count:
+        return _cell_type_to_count[cell_type]
+
+    match = re.fullmatch(r"polygon(\d+)", cell_type)
+    if match:
+        return int(match.group(1))
+
+
+_cell_type_from_count = {val: key for (key, val) in _cell_type_to_count.items()}
+
+
+def cell_type_from_count(count):
+    """Reverse of ``cell_type_to_count``, defaults to ``"polygon" + str(counr)``
+    if unknown."""
+    return _cell_type_from_count.get(count) or "polygon" + str(count)
 
 
 def read(filename):
@@ -170,8 +192,7 @@ def _read_ascii(
     cell_data = {}
 
     # the faces must be read line-by-line
-    triangles = []
-    quads = []
+    polygons = collections.defaultdict(list)
     for k in range(num_cells):
         line = f.readline().decode("utf-8").strip()
         data = line.split()
@@ -192,21 +213,15 @@ def _read_ascii(
             dtype = ply_to_numpy_dtype[dtype[1]]
             data = [dtype(data[j]) for j in range(i + 1, i + n + 1)]
             if name == "vertex_indices":
-                if n == 3:
-                    triangles.append(data)
-                else:
-                    if n != 4:
-                        raise ReadError()
-                    quads.append(data)
+                polygons[n].append(data)
             else:
                 cell_data[name].append(data)
             i += n + 1
 
-    cells = []
-    if len(triangles) > 0:
-        cells.append(CellBlock("triangle", numpy.array(triangles)))
-    if len(quads) > 0:
-        cells.append(CellBlock("quad", numpy.array(quads)))
+    cells = [
+        CellBlock(cell_type_from_count(n), numpy.array(data))
+        for (n, data) in polygons.items()
+    ]
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
@@ -343,9 +358,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
         )
         cells = numpy.frombuffer(block_buffer, dtype=block_dtype)["data"]
 
-        if cells_per_row not in [3, 4]:
-            raise ReadError("Expected count 3 or 4, got {}.".format(cells_per_row))
-        cell_type = "triangle" if cells_per_row == 3 else "quad"
+        cell_type = cell_type_from_count(cells.shape[1])
 
         blocks.append(CellBlock(cell_type, cells))
 
@@ -353,9 +366,6 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
 
 
 def write(filename, mesh, binary=True):  # noqa: C901
-    for key in mesh.cells:
-        if not any(c.type in ["triangle", "quad"] for c in mesh.cells):
-            raise WriteError("Can only deal with triangular and quadrilateral faces")
 
     with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")
@@ -399,7 +409,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
         num_cells = 0
         for cell_type, c in mesh.cells:
-            if cell_type in ["triangle", "quad"]:
+            if cell_type_to_count(cell_type):
                 num_cells += c.data.shape[0]
         fh.write("element face {:d}\n".format(num_cells).encode("utf-8"))
 
@@ -444,7 +454,10 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
             # cells
             for cell_type, data in cells:
-                if cell_type not in ["triangle", "quad"]:
+                if cell_type_to_count(cell_type) is None:
+                    warnings.warn(
+                        'cell_type "{}" is not supported by ply format - skipping'
+                    )
                     continue
                 # prepend with count
                 out = numpy.rec.fromarrays(
@@ -467,8 +480,8 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
             # cells
             for cell_type, data in cells:
-                if cell_type not in ["triangle", "quad"]:
-                    continue
+                #                if cell_type not in cell_type_to_count.keys():
+                #                    continue
                 out = numpy.column_stack(
                     [numpy.full(data.shape[0], data.shape[1], dtype=data.dtype), data]
                 )
