@@ -491,7 +491,7 @@ class VtuReader:
         else:
             raise ReadError("Unknown data format '{}'.".format(fmt))
 
-        if "NumberOfComponents" in c.attrib:
+        if "NumberOfComponents" in c.attrib and int(c.attrib["NumberOfComponents"]) > 1:
             data = data.reshape(-1, int(c.attrib["NumberOfComponents"]))
         return data
 
