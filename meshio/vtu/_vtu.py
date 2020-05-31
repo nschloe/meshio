@@ -100,7 +100,10 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
     out_cells = []
     for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
         cls, cell_data = _cells_from_data(
-            cls["connectivity"], cls["offsets"], cls["types"], cdr
+            cls["connectivity"].ravel(),
+            cls["offsets"].ravel(),
+            cls["types"].ravel(),
+            cdr,
         )
         for c in cls:
             out_cells.append(CellBlock(c.type, c.data + offset))
@@ -491,7 +494,7 @@ class VtuReader:
         else:
             raise ReadError("Unknown data format '{}'.".format(fmt))
 
-        if "NumberOfComponents" in c.attrib and int(c.attrib["NumberOfComponents"]) > 1:
+        if "NumberOfComponents" in c.attrib:
             data = data.reshape(-1, int(c.attrib["NumberOfComponents"]))
         return data
 
