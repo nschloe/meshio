@@ -560,6 +560,8 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     # Don't use byteswap to make sure that the dtype is changed; see
     # <https://github.com/numpy/numpy/issues/10372>.
     points = mesh.points.astype(mesh.points.dtype.newbyteorder("="))
+    for k, (cell_type, data) in enumerate(mesh.cells):
+        mesh.cells[k] = CellBlock(cell_type, data.astype(data.dtype.newbyteorder("=")))
     for key, data in mesh.point_data.items():
         mesh.point_data[key] = data.astype(data.dtype.newbyteorder("="))
     for data in mesh.cell_data.values():
