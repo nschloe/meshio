@@ -390,7 +390,7 @@ def _read_cells(f, is_ascii, num_items):
     if is_ascii:
         c = numpy.fromfile(f, count=num_items, sep=" ", dtype=int)
     else:
-        c = numpy.fromfile(f, count=num_items, dtype=">i4").astype(int)
+        c = numpy.fromfile(f, count=num_items, dtype=">i4")
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
@@ -402,7 +402,7 @@ def _read_cell_types(f, is_ascii, num_items):
         ct = numpy.fromfile(f, count=int(num_items), sep=" ", dtype=int)
     else:
         # binary
-        ct = numpy.fromfile(f, count=int(num_items), dtype=">i4").astype(int)
+        ct = numpy.fromfile(f, count=int(num_items), dtype=">i4")
         line = f.readline().decode("utf-8")
         # Sometimes, there's no newline at the end
         if line.strip() != "":
