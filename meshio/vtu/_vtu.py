@@ -584,7 +584,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                 # compressed write
                 def text_writer(f):
                     max_block_size = 32768
-                    data_bytes = data.tostring()
+                    data_bytes = data.tobytes()
 
                     # round up
                     num_blocks = -int(-len(data_bytes) // max_block_size)
@@ -609,18 +609,18 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                         + [len(b) for b in compressed_blocks],
                         dtype=vtu_to_numpy_type[header_type],
                     )
-                    f.write(base64.b64encode(header.tostring()).decode())
+                    f.write(base64.b64encode(header.tobytes()).decode())
                     f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
 
             else:
                 # uncompressed write
                 def text_writer(f):
-                    data_bytes = data.tostring()
+                    data_bytes = data.tobytes()
                     # collect header
                     header = numpy.array(
                         len(data_bytes), dtype=vtu_to_numpy_type[header_type]
                     )
-                    f.write(base64.b64encode(header.tostring() + data_bytes).decode())
+                    f.write(base64.b64encode(header.tobytes() + data_bytes).decode())
 
         else:
             da.set("format", "ascii")
