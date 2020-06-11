@@ -114,7 +114,7 @@ def read_buffer(f, binary):
 
         (num_groups,) = struct.unpack("<I", f.read(4))
         for zidx in range(num_groups):
-            name, slot, data = _read_zgroup(f, binary)
+            name, slot, data = _read_group(f, binary)
             field_data, mapper = _update_field_data(
                 field_data, mapper, data, name, zidx + 1
             )
@@ -137,7 +137,7 @@ def read_buffer(f, binary):
                 mapper[cid] = [count]
                 count += 1
             elif line[0] == "ZGROUP":
-                name, slot, data = _read_zgroup(f, binary, line)
+                name, slot, data = _read_group(f, binary, line)
                 field_data, mapper = _update_field_data(
                     field_data, mapper, data, name, zidx + 1
                 )
@@ -193,7 +193,7 @@ def _read_cell(buf_or_line, point_ids, binary):
     return cid, cell
 
 
-def _read_zgroup(buf_or_line, binary, line=None):
+def _read_group(buf_or_line, binary, line=None):
     """Read cell group."""
     if binary:
         # Group name
