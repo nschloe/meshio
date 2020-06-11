@@ -46,11 +46,6 @@ jobs:
       run: |
           pip install tox
           tox
-    # No codecov until
-    # https://github.com/codecov/codecov-action/issues/43
-    # is solved. :(
-    # - name: Submit to codecov
-    #   uses: codecov/codecov-action@v1.0.5
-    #   with:
-    #     token: ${{ secrets.CODECOV_TOKEN }}
-    #     flags: ${{ matrix.python-version }}
+    - name: Submit to codecov
+      if: ${{ matrix.python-version == '3.8' }}
+      run: bash <(curl -s https://codecov.io/bash)
