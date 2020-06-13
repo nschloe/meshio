@@ -31,15 +31,22 @@ meshio_only = {
 
 
 numnodes_to_meshio_type = {
-    4: "tetra",
-    5: "pyramid",
-    6: "wedge",
-    8: "hexahedron",
+    "zone": {
+        4: "tetra",
+        5: "pyramid",
+        6: "wedge",
+        8: "hexahedron",
+    },
+    "face": {
+        3: "triangle",
+        4: "quad",
+    },
 }
-meshio_type_to_numnodes = {v: k for k, v in numnodes_to_meshio_type.items()}
 
 
 meshio_to_flac3d_type = {
+    "triangle": "T3",
+    "quad": "Q4",
     "tetra": "T4",
     "pyramid": "P5",
     "wedge": "W6",
@@ -48,6 +55,8 @@ meshio_to_flac3d_type = {
 
 
 flac3d_to_meshio_order = {
+    "triangle": [0, 1, 2],
+    "quad": [0, 1, 2, 3],
     "tetra": [0, 1, 2, 3],
     "pyramid": [0, 1, 4, 2, 3],
     "wedge": [0, 1, 3, 2, 4, 5],
@@ -56,6 +65,8 @@ flac3d_to_meshio_order = {
 
 
 meshio_to_flac3d_order = {
+    "triangle": [0, 1, 2],
+    "quad": [0, 1, 2, 3],
     "tetra": [0, 1, 2, 3],
     "pyramid": [0, 1, 3, 4, 2],
     "wedge": [0, 1, 3, 2, 4, 5],
@@ -64,10 +75,18 @@ meshio_to_flac3d_order = {
 
 
 meshio_to_flac3d_order_2 = {
+    "triangle": [0, 1, 2],
+    "quad": [0, 1, 2, 3],
     "tetra": [0, 2, 1, 3],
     "pyramid": [0, 3, 1, 4, 2],
     "wedge": [0, 2, 3, 1, 5, 4],
     "hexahedron": [0, 3, 1, 4, 2, 5, 7, 6],
+}
+
+
+flag_to_numdim = {
+    "zone": 3,
+    "face": 2,
 }
 
 
@@ -88,12 +107,22 @@ def read(filename):
 
 def read_buffer(f, binary):
     """Read binary or ASCII file."""
+    flags = {
+        "Z": "zone",
+        "F": "face",
+        "ZGROUP": "zone",
+        "FGROUP": "face",
+    }
+
     points = []
     point_ids = {}
     cells = []
-    mapper = {}
     field_data = {}
-    slots = set()
+
+    # Zones and faces do not share the same cell ID pool in FLAC3D
+    # i.e. a given cell ID can be assigned to a zone and a face concurrently
+    mapper = {"zone": {}, "face": {}}
+    slots = {"zone": set(), "face": set()}
 
     if binary:
         # Not sure what the first bytes represent, the format might be wrong
@@ -109,19 +138,19 @@ def read_buffer(f, binary):
         (num_cells,) = struct.unpack("<I", f.read(4))
         for cidx in range(num_cells):
             cid, cell = _read_cell(f, point_ids, binary)
-            cells = _update_cells(cells, cell)
-            mapper[cid] = [cidx]
+            cells = _update_cells(cells, cell, "zone")
+            mapper["zone"][cid] = [cidx]
 
         (num_groups,) = struct.unpack("<I", f.read(4))
-        for zidx in range(num_groups):
+        for gidx in range(num_groups):
             name, slot, data = _read_group(f, binary)
-            field_data, mapper = _update_field_data(
-                field_data, mapper, data, name, zidx + 1
+            field_data, mapper["zone"] = _update_field_data(
+                field_data, mapper["zone"], data, name, gidx + 1, "zone",
             )
-            slots = _update_slots(slots, slot)
+            slots["zone"] = _update_slots(slots["zone"], slot)
     else:
         pidx = 0
-        zidx = 0
+        gidx = 0
         count = 0
 
         line = f.readline().rstrip().split()
@@ -131,27 +160,60 @@ def read_buffer(f, binary):
                 points.append(point)
                 point_ids[pid] = pidx
                 pidx += 1
-            elif line[0] == "Z":
+            elif line[0] in {"Z", "F"}:
+                flag = flags[line[0]]
                 cid, cell = _read_cell(line, point_ids, binary)
-                cells = _update_cells(cells, cell)
-                mapper[cid] = [count]
+                cells = _update_cells(cells, cell, flag)
+                mapper[flag][cid] = [count]
                 count += 1
-            elif line[0] == "ZGROUP":
+            elif line[0] in {"ZGROUP", "FGROUP"}:
+                flag = flags[line[0]]
                 name, slot, data = _read_group(f, binary, line)
-                field_data, mapper = _update_field_data(
-                    field_data, mapper, data, name, zidx + 1
+                field_data, mapper[flag] = _update_field_data(
+                    field_data, mapper[flag], data, name, gidx + 1, flag,
                 )
-                slots = _update_slots(slots, slot)
-                zidx += 1
+                slots[flag] = _update_slots(slots[flag], slot)
+                gidx += 1
 
             line = f.readline().rstrip().split()
 
     if field_data:
-        num_cells = numpy.cumsum([len(c[1]) for c in cells])
-        cell_data = numpy.empty(num_cells[-1], dtype=int)
-        for cid, zid in mapper.values():
-            cell_data[cid] = zid
-        cell_data = {"flac3d:zone": numpy.split(cell_data, num_cells[:-1])}
+        # Assume zone groups are defined before face groups
+        # (which is the case for mesh written by FLAC3D)
+        num_cells_zone = numpy.cumsum([len(c[1]) for c in cells if c[0] not in {"triangle", "quad"}])
+        num_cells_face = numpy.cumsum([len(c[1]) for c in cells if c[0] in {"triangle", "quad"}])
+
+        if slots["zone"]:
+            cell_data_zone = numpy.empty(num_cells_zone[-1], dtype=int)
+            for cid, zid in mapper["zone"].values():
+                cell_data_zone[cid] = zid
+            cell_data_zone = numpy.split(cell_data_zone, num_cells_zone[:-1])
+        else:
+            cell_data_zone = []
+
+        if slots["face"]:
+            cell_data_face = numpy.empty(num_cells_face[-1], dtype=int)
+            for cid, zid in mapper["face"].values():
+                cell_data_face[cid - num_cells_zone[-1]] = zid
+            cell_data_face = numpy.split(cell_data_face, num_cells_face[:-1])
+        else:
+            cell_data_face = []
+
+        num_cells_zone = [len(c[1]) for c in cells if c[0] not in {"triangle", "quad"}]
+        num_cells_face = [len(c[1]) for c in cells if c[0] in {"triangle", "quad"}]
+        if cell_data_zone and cell_data_face:
+            cell_data = {
+                "flac3d:zone": cell_data_zone + [numpy.zeros(n, dtype=int) for n in num_cells_face],
+                "flac3d:face": [numpy.zeros(n, dtype=int) for n in num_cells_zone] + cell_data_face,
+            }
+        elif cell_data_zone and not cell_data_face:
+            cell_data = {
+                "flac3d:zone": cell_data_zone + [numpy.zeros(n, dtype=int) for n in num_cells_face],
+            }
+        else:
+            cell_data = {
+                "flac3d:face": [numpy.zeros(n, dtype=int) for n in num_cells_zone] + cell_data_face,
+            }
     else:
         cell_data = {}
 
@@ -229,9 +291,9 @@ def _read_group(buf_or_line, binary, line=None):
     return name, slot, data
 
 
-def _update_cells(cells, cell):
+def _update_cells(cells, cell, flag):
     """Update cell list."""
-    cell_type = numnodes_to_meshio_type[len(cell)]
+    cell_type = numnodes_to_meshio_type[flag][len(cell)]
     if len(cells) > 0 and cell_type == cells[-1][0]:
         cells[-1][1].append(cell)
     else:
@@ -240,11 +302,11 @@ def _update_cells(cells, cell):
     return cells
 
 
-def _update_field_data(field_data, mapper, data, name, zidx):
+def _update_field_data(field_data, mapper, data, name, gidx, flag):
     """Update field data dict."""
     for cid in data:
-        mapper[cid].append(zidx)
-    field_data[name] = numpy.array([zidx, 3])
+        mapper[cid].append(gidx)
+    field_data[name] = numpy.array([gidx, flag_to_numdim[flag]])
 
     return field_data, mapper
 
