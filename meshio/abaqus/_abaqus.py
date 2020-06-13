@@ -355,8 +355,8 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
                 + "\n"
             )
 
-        # https://github.com/nschloe/meshio/issues/747#issuecomment-641895555
-        f.write("*END STEP")
+        # https://github.com/nschloe/meshio/issues/747#issuecomment-643479921
+        # f.write("*END")
 
 
 register("abaqus", [".inp"], read, {"abaqus": write})
