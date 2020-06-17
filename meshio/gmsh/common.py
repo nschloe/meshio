@@ -155,11 +155,11 @@ def _gmsh_to_meshio_order(cells):
         "hexahedron20": [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13,
             9, 16, 18, 19, 17, 10, 12, 14, 15,
-        ],  # https://vtk.org/doc/release/4.2/html/classvtkQuadraticHexahedron.html
+        ],  # https://vtk.org/doc/release/4.2/html/classvtkQuadraticHexahedron.html and https://gmsh.info/doc/texinfo/gmsh.html#Node-ordering
         "wedge15": [
             0, 1, 2, 3, 4, 5, 6, 9, 7, 12, 14, 13, 8, 10, 11
         ],
-        # http://davis.lbl.gov/Manuals/VTK-4.5/classvtkQuadraticWedge.html
+        # http://davis.lbl.gov/Manuals/VTK-4.5/classvtkQuadraticWedge.html and https://gmsh.info/doc/texinfo/gmsh.html#Node-ordering
         # fmt: on
     }
     return _reorder_cells(cells, meshio_ordering)
