@@ -7,6 +7,8 @@ from itertools import chain, islice
 
 import numpy
 
+from .._common import _pick_first_int_data
+
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
@@ -31,6 +33,15 @@ su2_to_meshio_type = {
     13: "wedge",
     14: "pyramid",
 }
+meshio_to_su2_type = {
+    "line": 3,
+    "triangle": 5,
+    "quad": 9,
+    "tetra": 10,
+    "hexahedron": 12,
+    "wedge": 13,
+    "pyramid": 14,
+}
 
 
 def read(filename):
@@ -42,7 +53,7 @@ def read(filename):
 
 def read_buffer(f):
     cells = []
-    cell_data = {"su2:tag": numpy.empty(0)}
+    cell_data = {"su2:tag": []}
 
     itype = "i8"
     ftype = "f8"
@@ -50,6 +61,7 @@ def read_buffer(f):
 
     next_tag_id = 0
     expected_nmarkers = 0
+    markers_found = 0
     while True:
         line = f.readline()
         if not line:
@@ -62,25 +74,49 @@ def read_buffer(f):
         if line[0] == "%":
             continue
 
-        name, nitems = line.split("=")
+        try:
+            name, rest_of_line = line.split("=")
+        except:
+            logging.warning(
+                    "meshio could not parse line\n {}\n skipping....."
+                    .format(line)
+                    )
+            continue
+
+
 
         if name == "NDIME":
-            dim = int(nitems)
+            dim = int(rest_of_line)
             if dim != 2 and dim != 3:
                 raise ReadError("Invalid dimension value {}".format(line))
 
         elif name == "NPOIN":
-            num_verts = int(nitems)
+            # according to documentation rest_of_line should just be a int, 
+            # and the next block should be just the coordinates of the points
+            # However, some file have one or two extra indices not related to the
+            # actual coordinates.
+            # So lets read the next line to find its actual number of columns 
+            #
+            first_line = f.readline()
+            first_line = first_line.split()
+
+            extra_columns = len(first_line) - dim 
+
+            num_verts = int(rest_of_line.split()[0]) - 1
             points = numpy.fromfile(
-                f, count=num_verts * (dim + 1), dtype=ftype, sep=" "
-            ).reshape(num_verts, dim + 1)[:, :-1]
+                f, count=num_verts * (dim + extra_columns), dtype=ftype, sep=" "
+            ).reshape(num_verts, dim + extra_columns)[:, :-extra_columns]
+            
+            # add the first line we read separately
+            first_line = numpy.array(first_line[:-extra_columns], dtype=ftype)
+            points = numpy.vstack( [first_line ,points] )
 
         elif name == "NELEM" or name == "MARKER_ELEMS":
             # we cannot? read at onece using numpy becasue we do not know the
             # total size. Read, instead next num_elems as is and re-use the
             # translate_cells function from vtk reader
 
-            num_elems = int(nitems)
+            num_elems = int(rest_of_line)
             gen = islice(f, num_elems)
 
             # some files has an extra int column while other not
@@ -106,17 +142,16 @@ def read_buffer(f):
 
             for eltype, data in cells_.items():
                 cells.append(CellBlock(eltype, data))
-            if name == "NELEM=":
-                cell_data["su2:tag"] = numpy.hstack(
-                    (cell_data["su2:tag"], numpy.full(num_elems, 0))
-                )
-            else:
-                tags = numpy.full(num_elems, next_tag_id)
-                cell_data["su2:tag"] = numpy.hstack((cell_data["su2:tag"], tags))
+                if name == "NELEM":
+                    cell_data["su2:tag"].append(numpy.full(num_elems, 0,dtype='i'))
+                else:
+                    tags = numpy.full(num_elems, next_tag_id,dtype='i')
+                    cell_data["su2:tag"].append(tags)
+
         elif name == "NMARK":
-            expected_nmarkers = int(nitems)
+            expected_nmarkers = int(rest_of_line)
         elif name == "MARKER_TAG":
-            next_tag = nitems
+            next_tag = rest_of_line
             try:
                 next_tag_id = int(next_tag)
             except ValueError:
@@ -124,13 +159,14 @@ def read_buffer(f):
                 logging.warning(
                     "meshio does not support tags of string type.\n"
                     "    Surface tag {} will be replaced by {}".format(
-                        name, next_tag_id
+                        rest_of_line, next_tag_id
                     )
                 )
-            expected_nmarkers -= 1
+            markers_found+=1
 
-    if expected_nmarkers != 0:
-        raise ReadError("NMARK does not match the number of markers found")
+        
+        #if markers_found > 0 and markers_found == expected_nmarkers :
+        #    break
 
     return Mesh(points, cells, cell_data=cell_data)
 
@@ -177,6 +213,113 @@ def _translate_cells(data, has_extra_column=False):
 
 
 def write(filename, mesh):
+    with open_file(filename, "wb") as f:
+        dim = mesh.points.shape[1]
+        f.write("NDIME= {}\n".format(dim).encode("utf-8"))
+
+        # write points
+        num_points = mesh.points.shape[0]
+        f.write("NPOIN= {}\n".format(num_points).encode("utf-8"))
+        numpy.savetxt(f, mesh.points)
+
+        # write `volume` cells
+
+        types = None
+        if dim == 2:
+            # `volume` cells are considered to be triangles and quads
+            types = ["triangle", "quad"]
+        else:
+            types = ["tetra", "hexahedron", "wedge", "pyramid"]
+
+        cells = [c for c in mesh.cells if c.type in types]
+        total_num_volume_cells = sum(len(c.data) for c in cells)
+        f.write("NELEM= {}\n".format(total_num_volume_cells).encode("utf-8"))
+
+        for cell_block in cells:
+            cell_type = meshio_to_su2_type[cell_block.type]
+            # create a column with the value cell_type
+            type_column = numpy.full(
+                cell_block.data.shape[0], cell_type, dtype=cell_block.data.dtype,
+            )
+
+            # prepend a column with the value cell_type
+            cell_block_to_write = numpy.column_stack([type_column, cell_block.data])
+            numpy.savetxt(f, cell_block_to_write, fmt="%d")
+
+        # write boundary information
+
+        labels_key, other = _pick_first_int_data(mesh.cell_data)
+        if labels_key and other:
+            logging.warning(
+                "su2 file format can only write one cell data array. "
+                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+            )
+
+        if dim == 2:
+            types = ["line"]
+        else:
+            types = ["triangle", "quad"]
+
+        tags_per_cell_block = dict()
+
+        # We want to separate boundary elements in groups of same tag
+
+        # first find unique tags and how many elements per tags we have
+        for index, (cell_type, data) in enumerate(mesh.cells):
+
+            if cell_type not in types:
+                continue
+
+            labels = (
+                mesh.cell_data[labels_key][index]
+                if labels_key
+                else numpy.ones(len(data), dtype=data.dtype)
+            )
+
+            # get unique tags and number of instances of each tag for this Cell block
+            tags_tmp , counts_tmp = numpy.unique(labels, return_counts = True)
+
+            for tag,count in zip(tags_tmp,counts_tmp):
+                if tag not in tags_per_cell_block:
+                    tags_per_cell_block[tag] = count
+                else:
+                    tags_per_cell_block[tag] += count
+
+        f.write("NMARK= {}\n".format( len(tags_per_cell_block) ).encode("utf-8"))
+
+        
+        # write the blocks you found in previous step
+        for tag,count in tags_per_cell_block.items():
+        
+            f.write("MARKER_TAG= {}\n".format( tag ).encode("utf-8"))
+            f.write("MARKER_ELEMS= {}\n".format( count ).encode("utf-8"))
+
+            for index, (cell_type, data) in enumerate(mesh.cells):
+
+                if cell_type not in types:
+                    continue
+
+                labels = (
+                    mesh.cell_data[labels_key][index]
+                    if labels_key
+                    else numpy.ones(len(data), dtype=data.dtype)
+                )
+
+                mask = numpy.where( labels == tag )
+
+                cells_to_write = data[mask]
+
+                cell_type = meshio_to_su2_type[cell_type]
+
+                # create a column with the value cell_type
+                type_column = numpy.full(
+                    cells_to_write.shape[0], cell_type, dtype=cells_to_write.dtype,
+                )
+
+                # prepend a column with the value cell_type
+                cell_block_to_write = numpy.column_stack([type_column, cells_to_write])
+                numpy.savetxt(f, cell_block_to_write, fmt="%d")
+
     return
 
 
