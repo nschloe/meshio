@@ -39,13 +39,13 @@ test_set = [
 # netCDF4/_netCDF4.pyx:1887: RuntimeError
 # ```
 # Skip for now
-@pytest.mark.skip("Failing on gh-actions")
+# @pytest.mark.skip("Failing on gh-actions")
 @pytest.mark.parametrize("mesh", test_set)
 def test_io(mesh):
     helpers.write_read(meshio.exodus.write, meshio.exodus.read, mesh, 1.0e-15)
 
 
-@pytest.mark.skip("Failing on gh-actions")
+# @pytest.mark.skip("Failing on gh-actions")
 def test_generic_io():
     helpers.generic_io("test.e")
     # With additional, insignificant suffix:

@@ -163,9 +163,10 @@ def read(filename):  # noqa: C901
         k = 0
         for cell_type, cell in cells:
             n = len(cell)
-            cell_data[cell_type] = {}
             for name, data in zip(cell_data_names, cd.values()):
-                cell_data[cell_type][name] = data[k : k + n]
+                if name not in cell_data:
+                    cell_data[name] = []
+                cell_data[name].append(data[k : k + n])
             k += n
 
         point_sets = {name: dat for name, dat in zip(ns_names, ns)}
