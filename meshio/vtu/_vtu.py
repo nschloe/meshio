@@ -363,7 +363,7 @@ class VtuReader:
         if len(cell_data_raw) != len(cells):
             raise ReadError()
 
-        point_offsets = numpy.cumsum([0]+[pts.shape[0] for pts in points][:-1])
+        point_offsets = numpy.cumsum([0] + [pts.shape[0] for pts in points][:-1])
 
         # Now merge across pieces
         if not points:
