@@ -45,7 +45,7 @@ permas_to_meshio_type = {
     "LOADA6": "triangle6",
     "TRIMS6": "triangle6",
     "HEXE8": "hexahedron",
-    "HEXEFO8": "hexahedron",
+    "HEXFO8": "hexahedron",
     "HEXE20": "hexahedron20",
     "HEXE27": "hexahedron27",
     "TET4": "tetra",
