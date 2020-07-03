@@ -11,7 +11,7 @@ good commit messages, e.g., following [these
 guidelines](https://chris.beams.io/posts/git-commit/).
 
 By submitting a pull request, you are licensing your code under the
-project [license](LICENSE) and affirming that you either own copyright
+project [license](LICENSE.txt) and affirming that you either own copyright
 (automatic for most individuals) or are authorized to distribute under
 the project license (e.g., in case your employer retains copyright on
 your work).
