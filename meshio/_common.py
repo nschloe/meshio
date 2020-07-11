@@ -229,3 +229,17 @@ vtk_to_meshio_type = {
     # 67: VTK_HIGHER_ORDER_HEXAHEDRON,
 }
 meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
+
+
+def _vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
+    if vtk_type == 13:
+        return numpy.array([0, 2, 1, 3, 5, 4], dtype=dtype)
+    else:
+        return numpy.arange(0, numnodes, dtype=dtype)
+
+
+def _meshio_to_vtk_order(meshio_type, numnodes, dtype=int):
+    if meshio_type == "wedge":
+        return numpy.array([0, 2, 1, 3, 5, 4], dtype=dtype)
+    else:
+        return numpy.arange(0, numnodes, dtype=dtype)
