@@ -138,7 +138,7 @@ def get_grid(root):
 
 
 def _parse_raw_binary(filename):
-    import xml.etree.ElementTree as ET
+    from xml.etree import ElementTree as ET
 
     with open(filename, "rb") as f:
         raw = f.read()
@@ -237,7 +237,7 @@ class VtuReader:
     """
 
     def __init__(self, filename):  # noqa: C901
-        import xml.etree.ElementTree as ET
+        from xml.etree import ElementTree as ET
 
         parser = ET.XMLParser()
         try:
