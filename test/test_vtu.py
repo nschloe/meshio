@@ -1,9 +1,9 @@
 import pathlib
 
+import helpers
 import numpy
 import pytest
 
-import helpers
 import meshio
 
 test_set = [

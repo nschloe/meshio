@@ -1,9 +1,9 @@
 import os
 import tempfile
 
+import helpers
 import pytest
 
-import helpers
 import meshio
 
 test_set = [helpers.line_mesh, helpers.tri_mesh, helpers.tri_mesh_2d, helpers.quad_mesh]
