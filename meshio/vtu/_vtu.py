@@ -14,6 +14,8 @@ import numpy
 
 from ..__about__ import __version__
 from .._common import (
+    _meshio_to_vtk_order,
+    _vtk_to_meshio_order,
     meshio_to_vtk_type,
     num_nodes_per_cell,
     raw_from_cell_data,
@@ -70,7 +72,8 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
             for sz in numpy.unique(size):
                 items = numpy.where(size == sz)[0]
                 indices = numpy.add.outer(
-                    start_cn[items + 1], numpy.arange(-sz, 0, dtype=offsets.dtype)
+                    start_cn[items + 1],
+                    _vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
                 )
                 cells.append(CellBlock(meshio_type + str(sz), connectivity[indices]))
                 # Store cell data for this set of cells
@@ -82,7 +85,8 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
             # Same number of nodes per cell
             n = num_nodes_per_cell[meshio_type]
             indices = numpy.add.outer(
-                offsets[start:end], numpy.arange(-n, 0, dtype=offsets.dtype)
+                offsets[start:end],
+                _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype) - n,
             )
             cells.append(CellBlock(meshio_type, connectivity[indices]))
             for name, d in cell_data_raw.items():
@@ -658,7 +662,12 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         cls = ET.SubElement(piece, "Cells")
 
         # create connectivity, offset, type arrays
-        connectivity = numpy.concatenate([v.data.reshape(-1) for v in mesh.cells])
+        connectivity = numpy.concatenate(
+            [
+                v.data[:, _meshio_to_vtk_order(v.type, v.data.shape[1])].reshape(-1)
+                for v in mesh.cells
+            ]
+        )
 
         # offset (points to the first element of the next cell)
         offsets = [
