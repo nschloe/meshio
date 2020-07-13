@@ -1,6 +1,4 @@
 import numpy as np
-
-import meshio
 from paraview.util.vtkAlgorithm import (
     VTKPythonAlgorithmBase,
     smdomain,
@@ -10,6 +8,8 @@ from paraview.util.vtkAlgorithm import (
 )
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from vtkmodules.vtkCommonDataModel import vtkUnstructuredGrid
+
+import meshio
 
 paraview_plugin_version = meshio.__version__
 vtk_to_meshio_type = meshio.vtk._vtk.vtk_to_meshio_type

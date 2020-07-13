@@ -1,6 +1,6 @@
+import helpers
 import pytest
 
-import helpers
 import meshio
 
 netCDF4 = pytest.importorskip("netCDF4")

@@ -1,9 +1,9 @@
 import pathlib
 
+import helpers
 import numpy
 import pytest
 
-import helpers
 import meshio
 
 h5py = pytest.importorskip("h5py")
