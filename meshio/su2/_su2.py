@@ -99,17 +99,23 @@ def read_buffer(f):
             #
             first_line = f.readline()
             first_line = first_line.split()
+            first_line = numpy.array(first_line, dtype=ftype)
 
-            extra_columns = len(first_line) - dim 
+            extra_columns = first_line.shape[0] - dim 
 
             num_verts = int(rest_of_line.split()[0]) - 1
             points = numpy.fromfile(
                 f, count=num_verts * (dim + extra_columns), dtype=ftype, sep=" "
-            ).reshape(num_verts, dim + extra_columns)[:, :-extra_columns]
-            
+            ).reshape(num_verts, dim + extra_columns) 
+
+            # save off any extra info
+            if extra_columns > 0:
+                first_line = first_line[:-extra_columns]
+                points = points[:,:-extra_columns]
+
             # add the first line we read separately
-            first_line = numpy.array(first_line[:-extra_columns], dtype=ftype)
             points = numpy.vstack( [first_line ,points] )
+
 
         elif name == "NELEM" or name == "MARKER_ELEMS":
             # we cannot? read at onece using numpy becasue we do not know the
@@ -143,9 +149,9 @@ def read_buffer(f):
             for eltype, data in cells_.items():
                 cells.append(CellBlock(eltype, data))
                 if name == "NELEM":
-                    cell_data["su2:tag"].append(numpy.full(num_elems, 0,dtype='i'))
+                    cell_data["su2:tag"].append(numpy.full(num_elems, 0,dtype=numpy.int32))
                 else:
-                    tags = numpy.full(num_elems, next_tag_id,dtype='i')
+                    tags = numpy.full(num_elems, next_tag_id,dtype=numpy.int32)
                     cell_data["su2:tag"].append(tags)
 
         elif name == "NMARK":
