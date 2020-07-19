@@ -12,3 +12,4 @@
 *.mesh filter=lfs diff=lfs merge=lfs -text
 *.meshb filter=lfs diff=lfs merge=lfs -text
 *.tec filter=lfs diff=lfs merge=lfs -text
+*.su2 filter=lfs diff=lfs merge=lfs -text
