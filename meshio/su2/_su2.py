@@ -8,7 +8,6 @@ from itertools import chain, islice
 import numpy
 
 from .._common import _pick_first_int_data
-
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
@@ -76,14 +75,11 @@ def read_buffer(f):
 
         try:
             name, rest_of_line = line.split("=")
-        except:
+        except ValueError:
             logging.warning(
-                    "meshio could not parse line\n {}\n skipping....."
-                    .format(line)
-                    )
+                "meshio could not parse line\n {}\n skipping.....".format(line)
+            )
             continue
-
-
 
         if name == "NDIME":
             dim = int(rest_of_line)
@@ -91,31 +87,30 @@ def read_buffer(f):
                 raise ReadError("Invalid dimension value {}".format(line))
 
         elif name == "NPOIN":
-            # according to documentation rest_of_line should just be a int, 
+            # according to documentation rest_of_line should just be a int,
             # and the next block should be just the coordinates of the points
             # However, some file have one or two extra indices not related to the
             # actual coordinates.
-            # So lets read the next line to find its actual number of columns 
+            # So lets read the next line to find its actual number of columns
             #
             first_line = f.readline()
             first_line = first_line.split()
             first_line = numpy.array(first_line, dtype=ftype)
 
-            extra_columns = first_line.shape[0] - dim 
+            extra_columns = first_line.shape[0] - dim
 
             num_verts = int(rest_of_line.split()[0]) - 1
             points = numpy.fromfile(
                 f, count=num_verts * (dim + extra_columns), dtype=ftype, sep=" "
-            ).reshape(num_verts, dim + extra_columns) 
+            ).reshape(num_verts, dim + extra_columns)
 
             # save off any extra info
             if extra_columns > 0:
                 first_line = first_line[:-extra_columns]
-                points = points[:,:-extra_columns]
+                points = points[:, :-extra_columns]
 
             # add the first line we read separately
-            points = numpy.vstack( [first_line ,points] )
-
+            points = numpy.vstack([first_line, points])
 
         elif name == "NELEM" or name == "MARKER_ELEMS":
             # we cannot? read at onece using numpy becasue we do not know the
@@ -149,9 +144,11 @@ def read_buffer(f):
             for eltype, data in cells_.items():
                 cells.append(CellBlock(eltype, data))
                 if name == "NELEM":
-                    cell_data["su2:tag"].append(numpy.full(num_elems, 0,dtype=numpy.int32))
+                    cell_data["su2:tag"].append(
+                        numpy.full(num_elems, 0, dtype=numpy.int32)
+                    )
                 else:
-                    tags = numpy.full(num_elems, next_tag_id,dtype=numpy.int32)
+                    tags = numpy.full(num_elems, next_tag_id, dtype=numpy.int32)
                     cell_data["su2:tag"].append(tags)
 
         elif name == "NMARK":
@@ -168,11 +165,14 @@ def read_buffer(f):
                         rest_of_line, next_tag_id
                     )
                 )
-            markers_found+=1
+            markers_found += 1
 
-        
-        #if markers_found > 0 and markers_found == expected_nmarkers :
-        #    break
+    if markers_found != markers_found == expected_nmarkers:
+        logging.warning(
+            "expected {} markes according to NMARK value but found only {}".format(
+                expected_nmarkers, markers_found
+            )
+        )
 
     return Mesh(points, cells, cell_data=cell_data)
 
@@ -283,22 +283,21 @@ def write(filename, mesh):
             )
 
             # get unique tags and number of instances of each tag for this Cell block
-            tags_tmp , counts_tmp = numpy.unique(labels, return_counts = True)
+            tags_tmp, counts_tmp = numpy.unique(labels, return_counts=True)
 
-            for tag,count in zip(tags_tmp,counts_tmp):
+            for tag, count in zip(tags_tmp, counts_tmp):
                 if tag not in tags_per_cell_block:
                     tags_per_cell_block[tag] = count
                 else:
                     tags_per_cell_block[tag] += count
 
-        f.write("NMARK= {}\n".format( len(tags_per_cell_block) ).encode("utf-8"))
+        f.write("NMARK= {}\n".format(len(tags_per_cell_block)).encode("utf-8"))
 
-        
         # write the blocks you found in previous step
-        for tag,count in tags_per_cell_block.items():
-        
-            f.write("MARKER_TAG= {}\n".format( tag ).encode("utf-8"))
-            f.write("MARKER_ELEMS= {}\n".format( count ).encode("utf-8"))
+        for tag, count in tags_per_cell_block.items():
+
+            f.write("MARKER_TAG= {}\n".format(tag).encode("utf-8"))
+            f.write("MARKER_ELEMS= {}\n".format(count).encode("utf-8"))
 
             for index, (cell_type, data) in enumerate(mesh.cells):
 
@@ -311,7 +310,7 @@ def write(filename, mesh):
                     else numpy.ones(len(data), dtype=data.dtype)
                 )
 
-                mask = numpy.where( labels == tag )
+                mask = numpy.where(labels == tag)
 
                 cells_to_write = data[mask]
 
