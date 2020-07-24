@@ -2,6 +2,8 @@ from xml.etree import ElementTree as ET
 
 import numpy
 
+# See <https://github.com/nschloe/meshio/wiki/Node-ordering-in-cells> for the node
+# ordering.
 num_nodes_per_cell = {
     "vertex": 1,
     "line": 2,
