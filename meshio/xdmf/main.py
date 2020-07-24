@@ -3,8 +3,8 @@ I/O for XDMF.
 http://www.xdmf.org/index.php/XDMF_Model_and_Format
 """
 import os
-import xml.etree.ElementTree as ET
 from io import BytesIO
+from xml.etree import ElementTree as ET
 
 import numpy
 

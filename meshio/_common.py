@@ -1,7 +1,9 @@
-import xml.etree.ElementTree as ET
+from xml.etree import ElementTree as ET
 
 import numpy
 
+# See <https://github.com/nschloe/meshio/wiki/Node-ordering-in-cells> for the node
+# ordering.
 num_nodes_per_cell = {
     "vertex": 1,
     "line": 2,
@@ -229,3 +231,23 @@ vtk_to_meshio_type = {
     # 67: VTK_HIGHER_ORDER_HEXAHEDRON,
 }
 meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
+
+
+def _vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
+    # meshio uses the same node ordering as VTK for most cell types. However, for the
+    # linear wedge, the ordering of the gmsh Prism [1] is adopted since this is found in
+    # most codes (Abaqus, Ansys, Nastran,...). In the vtkWedge [2], the normal of the
+    # (0,1,2) triangle points outwards, while in gmsh this normal points inwards.
+    # [1] http://gmsh.info/doc/texinfo/gmsh.html#Node-ordering
+    # [2] https://vtk.org/doc/nightly/html/classvtkWedge.html
+    if vtk_type == 13:
+        return numpy.array([0, 2, 1, 3, 5, 4], dtype=dtype)
+    else:
+        return numpy.arange(0, numnodes, dtype=dtype)
+
+
+def _meshio_to_vtk_order(meshio_type, numnodes, dtype=int):
+    if meshio_type == "wedge":
+        return numpy.array([0, 2, 1, 3, 5, 4], dtype=dtype)
+    else:
+        return numpy.arange(0, numnodes, dtype=dtype)

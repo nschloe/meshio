@@ -1,10 +1,10 @@
 import os
 import sys
 
+import helpers
 import numpy
 import pytest
 
-import helpers
 import meshio
 
 

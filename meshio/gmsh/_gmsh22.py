@@ -74,8 +74,13 @@ def read_buffer(f, is_ascii, data_size):
     for tag_name, tag_dict in cell_tags.items():
         if tag_name not in cell_data:
             cell_data[tag_name] = []
-        for cell_type, _ in cells:
+        offset = {}
+        for cell_type, cell_array in cells:
+            start = offset.setdefault(cell_type, 0)
+            end = start + len(cell_array)
+            offset[cell_type] = end
             tags = tag_dict.get(cell_type, [])
+            tags = numpy.array(tags[start:end], dtype=c_int)
             cell_data[tag_name].append(tags)
 
     return Mesh(

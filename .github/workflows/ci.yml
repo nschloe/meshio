@@ -6,7 +6,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/setup-python@v1
+    - uses: actions/setup-python@v2
       with:
         python-version: "3.x"
     - uses: actions/checkout@v2
@@ -16,7 +16,7 @@ jobs:
         pip install .[all]
         pip install pytest
         pip install isort
-        isort -rc --check .
+        isort --check .
     - name: Lint with flake8
       run: |
         pip install flake8
@@ -32,25 +32,20 @@ jobs:
       matrix:
         python-version: [3.5, 3.6, 3.7, 3.8]
     steps:
-    - uses: actions/setup-python@v1
+    - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - uses: actions/checkout@v2
       with:
         lfs: true
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y python3-h5py python3-netcdf4
+        sudo apt-get install -y libhdf5-dev libnetcdf-dev
     - name: Test with tox
       run: |
           pip install tox
           tox
-    # No codecov until
-    # https://github.com/codecov/codecov-action/issues/43
-    # is solved. :(
-    # - name: Submit to codecov
-    #   uses: codecov/codecov-action@v1.0.5
-    #   with:
-    #     token: ${{ secrets.CODECOV_TOKEN }}
-    #     flags: ${{ matrix.python-version }}
+    - name: Submit to codecov
+      if: ${{ matrix.python-version == '3.8' }}
+      run: bash <(curl -s https://codecov.io/bash)

@@ -402,9 +402,19 @@ def write(filename, mesh, binary=True):  # noqa: C901
         for k in range(mesh.points.shape[1]):
             type_name = type_name_table[mesh.points.dtype]
             fh.write("property {} {}\n".format(type_name, dim_names[k]).encode("utf-8"))
+
+        pd = []
         for key, value in mesh.point_data.items():
+            if len(value.shape) > 1:
+                warnings.warn(
+                    "PLY writer doesn't support multidimensional point data yet. Skipping {}.".format(
+                        key
+                    )
+                )
+                continue
             type_name = type_name_table[value.dtype]
             fh.write("property {} {}\n".format(type_name, key).encode("utf-8"))
+            pd.append(value)
 
         num_cells = 0
         for cell_type, c in mesh.cells:
@@ -446,9 +456,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
         if binary:
             # points and point_data
-            out = numpy.rec.fromarrays(
-                [coord for coord in mesh.points.T] + list(mesh.point_data.values())
-            )
+            out = numpy.rec.fromarrays([coord for coord in mesh.points.T] + pd)
             fh.write(out.tobytes())
 
             # cells
@@ -470,9 +478,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
             # vertices
             # numpy.savetxt(fh, mesh.points, "%r")  # slower
             # out = numpy.column_stack([mesh.points] + list(mesh.point_data.values()))
-            out = numpy.rec.fromarrays(
-                [coord for coord in mesh.points.T] + list(mesh.point_data.values())
-            )
+            out = numpy.rec.fromarrays([coord for coord in mesh.points.T] + pd)
             fmt = " ".join(["{}"] * len(out[0]))
             out = "\n".join([fmt.format(*row) for row in out]) + "\n"
             fh.write(out.encode("utf-8"))

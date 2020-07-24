@@ -1,6 +1,6 @@
+import helpers
 import pytest
 
-import helpers
 import meshio
 
 netCDF4 = pytest.importorskip("netCDF4")
@@ -24,28 +24,11 @@ test_set = [
 ]
 
 
-# The tests on gh suddenly and mysteriously fail with
-# ```
-#  data[:] = 0.0
-# netCDF4/_netCDF4.pyx:4950: in netCDF4._netCDF4.Variable.__setitem__
-#     ???
-# netCDF4/_netCDF4.pyx:5229: in netCDF4._netCDF4.Variable._put
-#     ???
-# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-#
-# >   ???
-# E   RuntimeError: NetCDF: HDF error
-#
-# netCDF4/_netCDF4.pyx:1887: RuntimeError
-# ```
-# Skip for now
-@pytest.mark.skip("Failing on gh-actions")
 @pytest.mark.parametrize("mesh", test_set)
 def test_io(mesh):
     helpers.write_read(meshio.exodus.write, meshio.exodus.read, mesh, 1.0e-15)
 
 
-@pytest.mark.skip("Failing on gh-actions")
 def test_generic_io():
     helpers.generic_io("test.e")
     # With additional, insignificant suffix:

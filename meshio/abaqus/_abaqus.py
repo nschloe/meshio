@@ -314,10 +314,10 @@ def _read_set(f, params_map):
 
 def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
     with open_file(filename, "wt") as f:
-        f.write("*Heading\n")
+        f.write("*HEADING\n")
         f.write("Abaqus DataFile Version 6.14\n")
         f.write("written by meshio v{}\n".format(__version__))
-        f.write("*Node\n")
+        f.write("*NODE\n")
         fmt = ", ".join(["{}"] + ["{:" + float_fmt + "}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):
             f.write(fmt.format(k + 1, *x))
@@ -326,7 +326,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
             name = (
                 meshio_to_abaqus_type[cell_type] if translate_cell_names else cell_type
             )
-            f.write("*Element,type=" + name + "\n")
+            f.write("*ELEMENT, TYPE={}\n".format(name))
             for row in node_idcs:
                 eid += 1
                 nids_strs = (str(nid + 1) for nid in row.tolist())
@@ -338,7 +338,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
             for k, v in mesh.cell_sets.items():
                 if len(v[ic]) > 0:
                     els = [str(i + 1 + offset) for i in v[ic]]
-                    f.write("*ELSET, ELSET=%s\n" % k)
+                    f.write("*ELSET, ELSET={}\n".format(k))
                     f.write(
                         ",\n".join(
                             ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
@@ -349,13 +349,14 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
 
         for k, v in mesh.point_sets.items():
             nds = [str(i + 1) for i in v]
-            f.write("*NSET, NSET=%s\n" % k)
+            f.write("*NSET, NSET={}\n".format(k))
             f.write(
                 ",\n".join(",".join(nds[i : i + nnl]) for i in range(0, len(nds), nnl))
                 + "\n"
             )
 
-        f.write("*end")
+        # https://github.com/nschloe/meshio/issues/747#issuecomment-643479921
+        # f.write("*END")
 
 
 register("abaqus", [".inp"], read, {"abaqus": write})
