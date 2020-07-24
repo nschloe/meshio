@@ -51,7 +51,7 @@ def ascii(argv=None):
 
 def _get_parser():
     parser = argparse.ArgumentParser(
-        description=("Covert mesh file to ASCII format."),
+        description=("Convert mesh file to ASCII format."),
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
