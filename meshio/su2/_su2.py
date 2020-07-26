@@ -143,12 +143,13 @@ def read_buffer(f):
 
             for eltype, data in cells_.items():
                 cells.append(CellBlock(eltype, data))
+                num_block_elems = len(data)
                 if name == "NELEM":
                     cell_data["su2:tag"].append(
-                        numpy.full(num_elems, 0, dtype=numpy.int32)
+                        numpy.full(num_block_elems, 0, dtype=numpy.int32)
                     )
                 else:
-                    tags = numpy.full(num_elems, next_tag_id, dtype=numpy.int32)
+                    tags = numpy.full(num_block_elems, next_tag_id, dtype=numpy.int32)
                     cell_data["su2:tag"].append(tags)
 
         elif name == "NMARK":
@@ -174,6 +175,38 @@ def read_buffer(f):
             )
         )
 
+    # merge boundary elements in a single cellblock per cell type
+    if dim == 2:
+        types = ["line"]
+    else:
+        types = ["triangle", "quad"]
+
+    indices_to_merge = {}
+    for t in types:
+        indices_to_merge[t] = []
+
+    for index, cell_block in enumerate(cells):
+        if cell_block.type in types:
+            indices_to_merge[cell_block.type].append(index)
+
+    cdata = cell_data["su2:tag"]
+    for type, indices in indices_to_merge.items():
+        if len(indices) > 1:
+            cells[indices[0]] = CellBlock(
+                type, numpy.concatenate([cells[i].data for i in indices])
+            )
+            cdata[indices[0]] = numpy.concatenate([cdata[i] for i in indices])
+
+    # delete merged blocks
+    idelete = []
+    for type, indices in indices_to_merge.items():
+        idelete += indices[1:]
+
+    for i in sorted(idelete, reverse=True):
+        del cells[i]
+        del cdata[i]
+
+    cell_data["su2:tag"] = cdata
     return Mesh(points, cells, cell_data=cell_data)
 
 
@@ -219,20 +252,29 @@ def _translate_cells(data, has_extra_column=False):
 
 
 def write(filename, mesh):
+
     with open_file(filename, "wb") as f:
         dim = mesh.points.shape[1]
         f.write("NDIME= {}\n".format(dim).encode("utf-8"))
 
-        # write points
+        # Write points
         num_points = mesh.points.shape[0]
         f.write("NPOIN= {}\n".format(num_points).encode("utf-8"))
         numpy.savetxt(f, mesh.points)
 
-        # write `volume` cells
+        # Through warnings about unsupported types
+        for type, _ in mesh.cells:
+            if type not in meshio_to_su2_type:
+                logging.warning(
+                    ".su2 does not support tags elements of type {}.\n"
+                    "Skipping ...".format(type)
+                )
+
+        # Write `internal` cells
 
         types = None
         if dim == 2:
-            # `volume` cells are considered to be triangles and quads
+            # `internal` cells are considered to be triangles and quads
             types = ["triangle", "quad"]
         else:
             types = ["tetra", "hexahedron", "wedge", "pyramid"]
@@ -270,7 +312,7 @@ def write(filename, mesh):
 
         # We want to separate boundary elements in groups of same tag
 
-        # first find unique tags and how many elements per tags we have
+        # First, find unique tags and how many elements per tags we have
         for index, (cell_type, data) in enumerate(mesh.cells):
 
             if cell_type not in types:
@@ -282,7 +324,7 @@ def write(filename, mesh):
                 else numpy.ones(len(data), dtype=data.dtype)
             )
 
-            # get unique tags and number of instances of each tag for this Cell block
+            # Get unique tags and number of instances of each tag for this Cell block
             tags_tmp, counts_tmp = numpy.unique(labels, return_counts=True)
 
             for tag, count in zip(tags_tmp, counts_tmp):
@@ -310,6 +352,7 @@ def write(filename, mesh):
                     else numpy.ones(len(data), dtype=data.dtype)
                 )
 
+                # Pick elements with given tag
                 mask = numpy.where(labels == tag)
 
                 cells_to_write = data[mask]
