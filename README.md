@@ -41,6 +41,7 @@ meshio can read and write all of the following and smoothly converts between the
  [Tecplot .dat](http://paulbourke.net/dataformats/tp/),
  [TetGen .node/.ele](https://wias-berlin.de/software/tetgen/fformats.html),
  [SVG](https://www.w3.org/TR/SVG/) (2D only, output only),
+ [SU2](https://su2code.github.io/docs_v7/Mesh-File),
  [UGRID](http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html),
  [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf),
  [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats),
