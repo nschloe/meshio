@@ -60,8 +60,8 @@ vtk_type_to_numnodes = numpy.array(
 )
 
 
-# These are all VTK data types. One sometimes finds 'vtktypeint64', but
-# this is ill-formed.
+# These are all VTK data types.
+# One sometimes finds 'vtktypeint64', but this is ill-formed.
 vtk_to_numpy_dtype_name = {
     "bit": "bool",
     "unsigned_char": "uint8",
@@ -70,7 +70,7 @@ vtk_to_numpy_dtype_name = {
     "short": "int16",
     "unsigned_int": "uint32",
     "int": "int32",
-    "unsigned_long": "int64",
+    "unsigned_long": "uint64",
     "long": "int64",
     "float": "float32",
     "double": "float64",
