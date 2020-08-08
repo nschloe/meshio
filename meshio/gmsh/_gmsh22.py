@@ -352,10 +352,10 @@ def _write_elements(fh, cells, tag_data, binary):
     for k, (cell_type, node_idcs) in enumerate(cells):
         tags = []
         for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
-            try:
+            if name in tag_data:
                 tags.append(tag_data[name][k])
-            except KeyError:
-                pass
+            elif name in ["gmsh:physical", "gmsh:geometrical"]:
+                tags.append(numpy.zeros(len(node_idcs), dtype=int))
         fcd = numpy.concatenate([tags]).astype(c_int).T
 
         if len(fcd) == 0:
