@@ -17,6 +17,11 @@ from .._mesh import CellBlock, Mesh
 
 # Reference dtypes
 ply_to_numpy_dtype = {
+    # [u]char is often used as [u]int, e.g., from Wikipedia:
+    # > The word 'list' indicates that the data is a list of values, the first of which
+    # > is the number of entries in the list (represented as a 'uchar' in this case).
+    "char": numpy.int,
+    "uchar": numpy.uint,
     "short": numpy.int16,
     "ushort": numpy.uint16,
     "int": numpy.int32,
