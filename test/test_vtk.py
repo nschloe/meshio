@@ -93,5 +93,17 @@ def test_pathlike():
     meshio.read(this_dir / "meshes" / "vtk" / "rbc_001.vtk")
 
 
+@pytest.mark.parametrize(
+    "filename, ref_num_points, ref_num_cells", [("06_color_scalars.vtk", 5, 2)]
+)
+def test_color_scalars(filename, ref_num_points, ref_num_cells):
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "vtk" / filename
+
+    mesh = meshio.read(filename)
+    assert len(mesh.points) == ref_num_points
+    assert len(mesh.cells) == ref_num_cells
+
+
 if __name__ == "__main__":
     test(helpers.tri_mesh, binary=True)
