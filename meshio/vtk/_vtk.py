@@ -76,6 +76,7 @@ vtk_to_numpy_dtype_name = {
     "double": "float64",
     "vtktypeint32": "int32",  # vtk DataFile Version 5.1
     "vtktypeint64": "int64",  # vtk DataFile Version 5.1
+    "vtkidtype": "int32",  # may be either 32-bit or 64-bit (VTK_USE_64BIT_IDS)
 }
 
 numpy_to_vtk_dtype = {
