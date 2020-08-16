@@ -164,8 +164,7 @@ def read_buffer(f):
             keyword_prev = keyword
 
         # CellBlock card continuation for 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
-        elif keyword[0] == "+":
-            assert cell is not None
+        elif keyword[0] == "+" and cell is not None:
             cell.extend(chunks[1:])
 
     # Add the last cell
