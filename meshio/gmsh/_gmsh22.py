@@ -277,6 +277,25 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
+    # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the rest is
+    # actual cell data.
+    tag_data = {}
+    other_data = {}
+    for key, d in mesh.cell_data.items():
+        if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
+            tag_data[key] = d
+        else:
+            other_data[key] = d
+
+    # Always include the physical and geometrical tags. See also the quoted excerpt from
+    # the gmsh documentation in the _read_cells_ascii function above.
+    for tag in ["gmsh:physical", "gmsh:geometrical"]:
+        if tag not in tag_data:
+            logging.warning(
+                "Appending zeros to replace the missing {} tag data.".format(tag[5:])
+            )
+            tag_data[tag] = [numpy.zeros(len(x.data), dtype=c_int) for x in mesh.cells]
+
     if binary:
         for k, (key, value) in enumerate(mesh.cells):
             if value.dtype != c_int:
@@ -301,16 +320,6 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
 
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
-
-        # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the rest is
-        # actual cell data.
-        tag_data = {}
-        other_data = {}
-        for key, d in mesh.cell_data.items():
-            if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
-                tag_data[key] = d
-            else:
-                other_data[key] = d
 
         _write_nodes(fh, mesh.points, float_fmt, binary)
         _write_elements(fh, cells, tag_data, binary)
@@ -352,10 +361,8 @@ def _write_elements(fh, cells, tag_data, binary):
     for k, (cell_type, node_idcs) in enumerate(cells):
         tags = []
         for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
-            try:
+            if name in tag_data:
                 tags.append(tag_data[name][k])
-            except KeyError:
-                pass
         fcd = numpy.concatenate([tags]).astype(c_int).T
 
         if len(fcd) == 0:
