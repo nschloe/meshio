@@ -292,7 +292,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     for tag in ["gmsh:physical", "gmsh:geometrical"]:
         if tag not in tag_data:
             logging.warning(
-                "Appending zeroes to replace the missing {} tag data.".format(tag[5:])
+                "Appending zeros to replace the missing {} tag data.".format(tag[5:])
             )
             tag_data[tag] = [numpy.zeros(len(x.data), dtype=c_int) for x in mesh.cells]
 
