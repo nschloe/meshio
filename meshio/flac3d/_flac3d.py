@@ -41,16 +41,8 @@ meshio_only = {
 
 
 numnodes_to_meshio_type = {
-    "zone": {
-        4: "tetra",
-        5: "pyramid",
-        6: "wedge",
-        8: "hexahedron",
-    },
-    "face": {
-        3: "triangle",
-        4: "quad",
-    },
+    "zone": {4: "tetra", 5: "pyramid", 6: "wedge", 8: "hexahedron"},
+    "face": {3: "triangle", 4: "quad"},
 }
 
 
@@ -191,9 +183,11 @@ def read_buffer(f, binary):
         num_cells = numpy.cumsum([len(c[1]) for c in cells])
         cell_data = numpy.zeros(num_cells[-1], dtype=int)
         for k, v in mapper.items():
-            if slots[k]:
-                for cid, zid in v.values():
-                    cell_data[cid] = zid
+            if not slots[k]:
+                continue
+
+            for cid, zid in v.values():
+                cell_data[cid] = zid
         cell_data = {"flac3d:group": numpy.split(cell_data, num_cells[:-1])}
     else:
         cell_data = {}
@@ -357,7 +351,11 @@ def _write_cells(f, points, cells, flag, binary):
         cells = _translate_faces(cells)
 
     if binary:
-        f.write(struct.pack("<I", sum(len(c[1]) for c in cells if c[0] in meshio_only[flag])))
+        f.write(
+            struct.pack(
+                "<I", sum(len(c[1]) for c in cells if c[0] in meshio_only[flag])
+            )
+        )
         for _, cdata in cells:
             num_cells, num_verts = cdata.shape
             tmp = numpy.column_stack(
@@ -379,7 +377,11 @@ def _write_cells(f, points, cells, flag, binary):
 
         f.write(f"* {flag_to_text[flag][0]}\n")
         for ctype, cdata in cells:
-            fmt = f"{flag_to_text[flag][1]} {{}} {{}} " + " ".join(["{}"] * cdata.shape[1]) + "\n"
+            fmt = (
+                f"{flag_to_text[flag][1]} {{}} {{}} "
+                + " ".join(["{}"] * cdata.shape[1])
+                + "\n"
+            )
             for entry in cdata + 1:
                 count += 1
                 f.write(fmt.format(meshio_to_flac3d_type[ctype], count, *entry))
@@ -389,7 +391,7 @@ def _write_groups(f, cells, cell_data, field_data, flag, binary):
     """Write groups."""
     if cell_data is not None:
         groups, labels = _translate_groups(cells, cell_data, field_data, flag)
-        
+
         if binary:
             slot = "Default".encode("utf-8")
 
@@ -471,15 +473,25 @@ def _translate_faces(cells):
 
 def _translate_groups(cells, cell_data, field_data, flag):
     """Convert meshio cell_data to FLAC3D groups."""
-    num_dims = numpy.concatenate([numpy.full(len(c[1]), 2 if c[0] in meshio_only["face"] else 3) for c in cells])
-    groups = {k: numpy.nonzero(numpy.logical_and(cell_data == k, num_dims == flag_to_numdim[flag]))[0] + 1 for k in numpy.unique(cell_data)}
+    num_dims = numpy.concatenate(
+        [numpy.full(len(c[1]), 2 if c[0] in meshio_only["face"] else 3) for c in cells]
+    )
+    groups = {
+        k: numpy.nonzero(
+            numpy.logical_and(cell_data == k, num_dims == flag_to_numdim[flag])
+        )[0]
+        + 1
+        for k in numpy.unique(cell_data)
+    }
     groups = {k: v for k, v in groups.items() if v.size}
 
     labels = {k: str(k) for k in groups.keys()}
     labels[0] = "None"
     if field_data:
-        labels.update({v[0]: k for k, v in field_data.items() if v[1] == flag_to_numdim[flag]})
-        
+        labels.update(
+            {v[0]: k for k, v in field_data.items() if v[1] == flag_to_numdim[flag]}
+        )
+
     return groups, labels
 
 
