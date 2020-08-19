@@ -113,6 +113,7 @@ vtk_sections = [
     "POINT_DATA",
     "CELL_DATA",
     "LOOKUP_TABLE",
+    "COLOR_SCALARS",
 ]
 
 
@@ -232,6 +233,15 @@ def _read_section(f, info):
         info.num_items = int(info.split[2])
         data = numpy.fromfile(f, count=info.num_items * 4, sep=" ", dtype=float)
         rgba = data.reshape((info.num_items, 4))  # noqa F841
+
+    elif info.section == "COLOR_SCALARS":
+        nValues = int(info.split[2])
+        # re-use num_items from active POINT/CELL_DATA
+        num_items = info.num_items
+        dtype = numpy.ubyte
+        if info.is_ascii:
+            dtype = float
+        data = numpy.fromfile(f, count=num_items * nValues, dtype=dtype)
 
 
 def _read_subsection(f, info):
