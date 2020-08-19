@@ -15,18 +15,28 @@ from .._helpers import register
 from .._mesh import Mesh
 
 meshio_only = {
-    "tetra": "tetra",
-    "tetra10": "tetra",
-    "pyramid": "pyramid",
-    "pyramid13": "pyramid",
-    "wedge": "wedge",
-    "wedge12": "wedge",
-    "wedge15": "wedge",
-    "wedge18": "wedge",
-    "hexahedron": "hexahedron",
-    "hexahedron20": "hexahedron",
-    "hexahedron24": "hexahedron",
-    "hexahedron27": "hexahedron",
+    "zone": {
+        "tetra": "tetra",
+        "tetra10": "tetra",
+        "pyramid": "pyramid",
+        "pyramid13": "pyramid",
+        "wedge": "wedge",
+        "wedge12": "wedge",
+        "wedge15": "wedge",
+        "wedge18": "wedge",
+        "hexahedron": "hexahedron",
+        "hexahedron20": "hexahedron",
+        "hexahedron24": "hexahedron",
+        "hexahedron27": "hexahedron",
+    },
+    "face": {
+        "triangle": "triangle",
+        "triangle6": "triangle",
+        "triangle7": "triangle",
+        "quad": "quad",
+        "quad8": "quad",
+        "quad9": "quad",
+    },
 }
 
 
@@ -75,8 +85,6 @@ meshio_to_flac3d_order = {
 
 
 meshio_to_flac3d_order_2 = {
-    "triangle": [0, 1, 2],
-    "quad": [0, 1, 2, 3],
     "tetra": [0, 2, 1, 3],
     "pyramid": [0, 3, 1, 4, 2],
     "wedge": [0, 2, 3, 1, 5, 4],
@@ -295,8 +303,20 @@ def _update_slots(slots, slot):
 
 def write(filename, mesh, float_fmt=".16e", binary=False):
     """Write FLAC3D f3grid grid file."""
-    if not any(c.type in meshio_only.keys() for c in mesh.cells):
+    if not any(c.type in meshio_only["zone"].keys() for c in mesh.cells):
         raise WriteError("FLAC3D format only supports 3D cells")
+
+    # Pick out material
+    material = None
+    if mesh.cell_data:
+        key, other = _pick_first_int_data(mesh.cell_data)
+        if key:
+            material = numpy.concatenate(mesh.cell_data[key])
+            if other:
+                logging.warning(
+                    "FLAC3D can only write one cell data array. "
+                    "Picking {}, skipping {}.".format(key, ", ".join(other))
+                )
 
     mode = "wb" if binary else "w"
     with open_file(filename, mode) as f:
@@ -309,11 +329,9 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
             f.write("* {}\n".format(time.ctime()))
 
         _write_points(f, mesh.points, binary, float_fmt)
-        _write_cells(f, mesh.points, mesh.cells, binary)
-        _write_zgroups(f, mesh.cell_data, mesh.field_data, binary)
-
-        if binary:
-            f.write(struct.pack("<2I", 0, 0))  # No face and face group
+        for flag in ["zone", "face"]:
+            _write_cells(f, mesh.points, mesh.cells, flag, binary)
+            _write_groups(f, mesh.cells, material, mesh.field_data, flag, binary)
 
 
 def _write_points(f, points, binary, float_fmt=None):
@@ -329,20 +347,24 @@ def _write_points(f, points, binary, float_fmt=None):
             f.write(fmt.format(i + 1, *point))
 
 
-def _write_cells(f, points, cells, binary):
-    """Write zones."""
-    zones = _translate_zones(points, cells)
+def _write_cells(f, points, cells, flag, binary):
+    """Write cells."""
+    if flag == "zone":
+        count = 0
+        cells = _translate_zones(points, cells)
+    else:
+        count = sum(len(c[1]) for c in cells if c.type in meshio_only["zone"])
+        cells = _translate_faces(cells)
 
-    count = 0
     if binary:
-        f.write(struct.pack("<I", sum(len(c.data) for c in cells)))
-        for _, zone in zones:
-            num_cells, num_verts = zone.shape
+        f.write(struct.pack("<I", sum(len(c[1]) for c in cells if c[0] in meshio_only[flag])))
+        for _, cdata in cells:
+            num_cells, num_verts = cdata.shape
             tmp = numpy.column_stack(
                 (
                     numpy.arange(1, num_cells + 1) + count,
                     numpy.full(num_cells, num_verts),
-                    zone + 1,
+                    cdata + 1,
                 )
             )
             f.write(
@@ -350,36 +372,30 @@ def _write_cells(f, points, cells, binary):
             )
             count += num_cells
     else:
-        f.write("* ZONES\n")
-        for meshio_type, zone in zones:
-            fmt = "Z {} {} " + " ".join(["{}"] * zone.shape[1]) + "\n"
-            for entry in zone + 1:
+        flag_to_text = {
+            "zone": ("ZONES", "Z"),
+            "face": ("FACES", "F"),
+        }
+
+        f.write(f"* {flag_to_text[flag][0]}\n")
+        for ctype, cdata in cells:
+            fmt = f"{flag_to_text[flag][1]} {{}} {{}} " + " ".join(["{}"] * cdata.shape[1]) + "\n"
+            for entry in cdata + 1:
                 count += 1
-                f.write(fmt.format(meshio_to_flac3d_type[meshio_type], count, *entry))
+                f.write(fmt.format(meshio_to_flac3d_type[ctype], count, *entry))
 
 
-def _write_zgroups(f, cell_data, field_data, binary):
-    """Write zone groups."""
-    zgroups = None
-    if cell_data:
-        # Pick out material
-        key, other = _pick_first_int_data(cell_data)
-        if key:
-            material = numpy.concatenate(cell_data[key])
-            if other:
-                logging.warning(
-                    "FLAC3D can only write one cell data array. "
-                    "Picking {}, skipping {}.".format(key, ", ".join(other))
-                )
-            zgroups, labels = _translate_zgroups(material, field_data)
-
-    if zgroups:
+def _write_groups(f, cells, cell_data, field_data, flag, binary):
+    """Write groups."""
+    if cell_data is not None:
+        groups, labels = _translate_groups(cells, cell_data, field_data, flag)
+        
         if binary:
             slot = "Default".encode("utf-8")
 
-            f.write(struct.pack("<I", len(zgroups)))
-            for k in sorted(zgroups.keys()):
-                num_chars, num_zones = len(labels[k]), len(zgroups[k])
+            f.write(struct.pack("<I", len(groups)))
+            for k in sorted(groups.keys()):
+                num_chars, num_zones = len(labels[k]), len(groups[k])
                 fmt = "<H{}sH7sI{}I".format(num_chars, num_zones)
                 tmp = [
                     num_chars,
@@ -387,14 +403,19 @@ def _write_zgroups(f, cell_data, field_data, binary):
                     7,
                     slot,
                     num_zones,
-                    *zgroups[k],
+                    *groups[k],
                 ]
                 f.write(struct.pack(fmt, *tmp))
         else:
-            f.write("* ZONE GROUPS\n")
-            for k in sorted(zgroups.keys()):
-                f.write('ZGROUP "{}"\n'.format(labels[k]))
-                _write_table(f, zgroups[k])
+            flag_to_text = {
+                "zone": "ZGROUP",
+                "face": "FGROUP",
+            }
+
+            f.write(f"* {flag.upper()} GROUPS\n")
+            for k in sorted(groups.keys()):
+                f.write(f'{flag_to_text[flag]} "{labels[k]}"\n')
+                _write_table(f, groups[k])
     else:
         if binary:
             f.write(struct.pack("<I", 0))
@@ -415,13 +436,14 @@ def _translate_zones(points, cells):
 
     zones = []
     for key, idx in cells:
-        if key not in meshio_only.keys():
+        if key not in meshio_only["zone"].keys():
             continue
 
         # Compute scalar triple products
-        key = meshio_only[key]
+        key = meshio_only["zone"][key]
         tmp = points[idx[:, meshio_to_flac3d_order[key][:4]].T]
         det = slicing_summing(tmp[1] - tmp[0], tmp[2] - tmp[0], tmp[3] - tmp[0])
+
         # Reorder corner points
         data = numpy.where(
             (det > 0)[:, None],
@@ -433,19 +455,36 @@ def _translate_zones(points, cells):
     return zones
 
 
-def _translate_zgroups(zone_data, field_data):
-    """Convert meshio cell_data to FLAC3D zone groups."""
-    zgroups = {k: numpy.nonzero(zone_data == k)[0] + 1 for k in numpy.unique(zone_data)}
+def _translate_faces(cells):
+    """Reorder meshio cells to FLAC3D faces."""
+    faces = []
+    for key, idx in cells:
+        if key not in meshio_only["face"].keys():
+            continue
 
-    labels = {k: str(k) for k in zgroups.keys()}
+        key = meshio_only["face"][key]
+        data = idx[:, meshio_to_flac3d_order[key]]
+        faces.append((key, data))
+
+    return faces
+
+
+def _translate_groups(cells, cell_data, field_data, flag):
+    """Convert meshio cell_data to FLAC3D groups."""
+    num_dims = numpy.concatenate([numpy.full(len(c[1]), 2 if c[0] in meshio_only["face"] else 3) for c in cells])
+    groups = {k: numpy.nonzero(numpy.logical_and(cell_data == k, num_dims == flag_to_numdim[flag]))[0] + 1 for k in numpy.unique(cell_data)}
+    groups = {k: v for k, v in groups.items() if v.size}
+
+    labels = {k: str(k) for k in groups.keys()}
     labels[0] = "None"
     if field_data:
-        labels.update({v[0]: k for k, v in field_data.items() if v[1] == 3})
-    return zgroups, labels
+        labels.update({v[0]: k for k, v in field_data.items() if v[1] == flag_to_numdim[flag]})
+        
+    return groups, labels
 
 
 def _write_table(f, data, ncol=20):
-    """Write zone group data table."""
+    """Write group data table."""
     nrow = len(data) // ncol
     lines = numpy.split(data, numpy.full(nrow, ncol).cumsum())
     for line in lines:
