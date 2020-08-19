@@ -416,7 +416,7 @@ def _write_groups(f, cells, cell_data, field_data, flag, binary):
 
             f.write("* {} GROUPS\n".format(flag.upper()))
             for k in sorted(groups.keys()):
-                f.write(f'{flag_to_text[flag]} "{labels[k]}"\n')
+                f.write('{} "{}"\n'.format(flag_to_text[flag], labels[k]))
                 _write_table(f, groups[k])
     else:
         if binary:
