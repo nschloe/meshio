@@ -187,9 +187,9 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
             (num_ele, -1)
         )
         if physical_tags is None:
-            data.append((None, tpe, d))
+            data.append((None, tag_entity, tpe, d))
         else:
-            data.append((physical_tags[dim_entity][tag_entity], tpe, d))
+            data.append((physical_tags[dim_entity][tag_entity], tag_entity, tpe, d))
 
     if not is_ascii:
         line = f.readline().decode("utf-8")
@@ -207,18 +207,24 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     itags[point_tags] = numpy.arange(len(point_tags))
 
     # Note that the first column in the data array is the element tag; discard it.
-    data = [(physical_tag, tpe, itags[d[:, 1:]]) for physical_tag, tpe, d in data]
+    data = [
+        (physical_tag, geom_tag, tpe, itags[d[:, 1:]])
+        for physical_tag, geom_tag, tpe, d in data
+    ]
 
     cells = []
     cell_data = {}
-    for physical_tag, key, values in data:
+    for physical_tag, geom_tag, key, values in data:
         cells.append((key, values))
         if physical_tag:
             if "gmsh:physical" not in cell_data:
                 cell_data["gmsh:physical"] = []
             cell_data["gmsh:physical"].append(
-                physical_tag[0] * numpy.ones(len(values), int)
+                numpy.full(len(values), physical_tag[0], int)
             )
+        if "gmsh:geometrical" not in cell_data:
+            cell_data["gmsh:geometrical"] = []
+        cell_data["gmsh:geometrical"].append(numpy.full(len(values), geom_tag, int))
     cells[:] = _gmsh_to_meshio_order(cells)
 
     return cells, cell_data
