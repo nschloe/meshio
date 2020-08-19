@@ -124,6 +124,9 @@ def read_buffer(f, binary):
     mapper = {"zone": {}, "face": {}}
     slots = {"zone": set(), "face": set()}
 
+    pidx = 0
+    cidx = 0
+    gidx = 0
     if binary:
         # Not sure what the first bytes represent, the format might be wrong
         # It does not seem to be useful anyway
@@ -135,24 +138,23 @@ def read_buffer(f, binary):
             points.append(point)
             point_ids[pid] = pidx
 
-        (num_cells,) = struct.unpack("<I", f.read(4))
-        for cidx in range(num_cells):
-            cid, cell = _read_cell(f, point_ids, binary)
-            cells = _update_cells(cells, cell, "zone")
-            mapper["zone"][cid] = [cidx]
+        for flag in ["zone", "face"]:
+            (num_cells,) = struct.unpack("<I", f.read(4))
+            for _ in range(num_cells):
+                cid, cell = _read_cell(f, point_ids, binary)
+                cells = _update_cells(cells, cell, flag)
+                mapper[flag][cid] = [cidx]
+                cidx += 1
 
-        (num_groups,) = struct.unpack("<I", f.read(4))
-        for gidx in range(num_groups):
-            name, slot, data = _read_group(f, binary)
-            field_data, mapper["zone"] = _update_field_data(
-                field_data, mapper["zone"], data, name, gidx + 1, "zone",
-            )
-            slots["zone"] = _update_slots(slots["zone"], slot)
+            (num_groups,) = struct.unpack("<I", f.read(4))
+            for _ in range(num_groups):
+                name, slot, data = _read_group(f, binary)
+                field_data, mapper[flag] = _update_field_data(
+                    field_data, mapper[flag], data, name, gidx + 1, flag,
+                )
+                slots[flag] = _update_slots(slots[flag], slot)
+                gidx += 1
     else:
-        pidx = 0
-        gidx = 0
-        count = 0
-
         line = f.readline().rstrip().split()
         while line:
             if line[0] == "G":
@@ -164,8 +166,8 @@ def read_buffer(f, binary):
                 flag = flags[line[0]]
                 cid, cell = _read_cell(line, point_ids, binary)
                 cells = _update_cells(cells, cell, flag)
-                mapper[flag][cid] = [count]
-                count += 1
+                mapper[flag][cid] = [cidx]
+                cidx += 1
             elif line[0] in {"ZGROUP", "FGROUP"}:
                 flag = flags[line[0]]
                 name, slot, data = _read_group(f, binary, line)
