@@ -23,7 +23,7 @@ import meshio
 def test(mesh, binary, data):
     if data:
         mesh = copy.deepcopy(mesh)
-        mesh.cell_data["flac3d:zone"] = [numpy.array(data)]
+        mesh.cell_data["flac3d:group"] = [numpy.array(data)]
     helpers.write_read(
         lambda f, m: meshio.flac3d.write(f, m, binary=binary),
         meshio.flac3d.read,
@@ -62,4 +62,4 @@ def test_reference_file(filename):
     assert [(k, len(v)) for k, v in mesh.cells] == ref_num_cells
     # Cell data
     ref_sum_cell_data = [45, 9, 18, 9, 6, 3, 6, 3, 6, 3]
-    assert [len(arr) for arr in mesh.cell_data["flac3d:zone"]] == ref_sum_cell_data
+    assert [len(arr) for arr in mesh.cell_data["flac3d:group"]] == ref_sum_cell_data

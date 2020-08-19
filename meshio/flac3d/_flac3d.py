@@ -178,42 +178,13 @@ def read_buffer(f, binary):
             line = f.readline().rstrip().split()
 
     if field_data:
-        # Assume zone groups are defined before face groups
-        # (which is the case for mesh written by FLAC3D)
-        num_cells_zone = numpy.cumsum([len(c[1]) for c in cells if c[0] not in {"triangle", "quad"}])
-        num_cells_face = numpy.cumsum([len(c[1]) for c in cells if c[0] in {"triangle", "quad"}])
-
-        if slots["zone"]:
-            cell_data_zone = numpy.empty(num_cells_zone[-1], dtype=int)
-            for cid, zid in mapper["zone"].values():
-                cell_data_zone[cid] = zid
-            cell_data_zone = numpy.split(cell_data_zone, num_cells_zone[:-1])
-        else:
-            cell_data_zone = []
-
-        if slots["face"]:
-            cell_data_face = numpy.empty(num_cells_face[-1], dtype=int)
-            for cid, zid in mapper["face"].values():
-                cell_data_face[cid - num_cells_zone[-1]] = zid
-            cell_data_face = numpy.split(cell_data_face, num_cells_face[:-1])
-        else:
-            cell_data_face = []
-
-        num_cells_zone = [len(c[1]) for c in cells if c[0] not in {"triangle", "quad"}]
-        num_cells_face = [len(c[1]) for c in cells if c[0] in {"triangle", "quad"}]
-        if cell_data_zone and cell_data_face:
-            cell_data = {
-                "flac3d:zone": cell_data_zone + [numpy.zeros(n, dtype=int) for n in num_cells_face],
-                "flac3d:face": [numpy.zeros(n, dtype=int) for n in num_cells_zone] + cell_data_face,
-            }
-        elif cell_data_zone and not cell_data_face:
-            cell_data = {
-                "flac3d:zone": cell_data_zone + [numpy.zeros(n, dtype=int) for n in num_cells_face],
-            }
-        else:
-            cell_data = {
-                "flac3d:face": [numpy.zeros(n, dtype=int) for n in num_cells_zone] + cell_data_face,
-            }
+        num_cells = numpy.cumsum([len(c[1]) for c in cells])
+        cell_data = numpy.zeros(num_cells[-1], dtype=int)
+        for k, v in mapper.items():
+            if slots[k]:
+                for cid, zid in v.values():
+                    cell_data[cid] = zid
+        cell_data = {"flac3d:group": numpy.split(cell_data, num_cells[:-1])}
     else:
         cell_data = {}
 
