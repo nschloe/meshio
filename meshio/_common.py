@@ -229,7 +229,6 @@ vtk_to_meshio_type = {
     # 65: VTK_HIGHER_ORDER_WEDGE,
     # 66: VTK_HIGHER_ORDER_PYRAMID,
     # 67: VTK_HIGHER_ORDER_HEXAHEDRON,
-
     # Arbitrary order Lagrange elements
     68: "VTK_LAGRANGE_CURVE",
     69: "VTK_LAGRANGE_TRIANGLE",
@@ -238,7 +237,6 @@ vtk_to_meshio_type = {
     72: "VTK_LAGRANGE_HEXAHEDRON",
     73: "VTK_LAGRANGE_WEDGE",
     74: "VTK_LAGRANGE_PYRAMID",
-
     # Arbitrary order Bezier elements
     75: "VTK_BEZIER_CURVE",
     76: "VTK_BEZIER_TRIANGLE",
