@@ -229,6 +229,24 @@ vtk_to_meshio_type = {
     # 65: VTK_HIGHER_ORDER_WEDGE,
     # 66: VTK_HIGHER_ORDER_PYRAMID,
     # 67: VTK_HIGHER_ORDER_HEXAHEDRON,
+
+    # Arbitrary order Lagrange elements
+    68: "VTK_LAGRANGE_CURVE",
+    69: "VTK_LAGRANGE_TRIANGLE",
+    70: "VTK_LAGRANGE_QUADRILATERAL",
+    71: "VTK_LAGRANGE_TETRAHEDRON",
+    72: "VTK_LAGRANGE_HEXAHEDRON",
+    73: "VTK_LAGRANGE_WEDGE",
+    74: "VTK_LAGRANGE_PYRAMID",
+
+    # Arbitrary order Bezier elements
+    75: "VTK_BEZIER_CURVE",
+    76: "VTK_BEZIER_TRIANGLE",
+    77: "VTK_BEZIER_QUADRILATERAL",
+    78: "VTK_BEZIER_TETRAHEDRON",
+    79: "VTK_BEZIER_HEXAHEDRON",
+    80: "VTK_BEZIER_WEDGE",
+    81: "VTK_BEZIER_PYRAMID",
 }
 meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
