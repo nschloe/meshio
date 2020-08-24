@@ -223,7 +223,11 @@ def _read_section(f, info):
             line = f.readline().decode("utf-8")
         except UnicodeDecodeError:
             line = ""
-        if "OFFSETS" in line:  # vtk DataFile Version 5.1
+        if "OFFSETS" in line:
+            # vtk DataFile Version 5.1 - appearing in Paraview 5.8.1 outputs
+            # No specification found for this file format.
+            # See the question on ParaView Discourse Forum:
+            # <https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127>.
             info.num_offsets = int(info.split[1])
             info.num_items = int(info.split[2])
             dtype = numpy.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
