@@ -479,9 +479,7 @@ class VtuReader:
 
         if fmt == "ascii":
             # ascii
-            data = numpy.fromstring(
-                c.text, dtype=dtype, sep=" "
-            )
+            data = numpy.fromstring(c.text, dtype=dtype, sep=" ")
         elif fmt == "binary":
             reader = (
                 self.read_uncompressed_binary
