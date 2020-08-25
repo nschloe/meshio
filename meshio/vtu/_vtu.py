@@ -387,17 +387,17 @@ class VtuReader:
         )
         self.field_data = field_data
 
-    def read_uncompressed_binary(self, data, data_type):
+    def read_uncompressed_binary(self, data, dtype):
         byte_string = base64.b64decode(data)
 
-        dtype = vtu_to_numpy_type[self.header_type]
+        header_dtype = vtu_to_numpy_type[self.header_type]
         if self.byte_order is not None:
-            dtype = dtype.newbyteorder(
+            header_dtype = header_dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
-        num_bytes_per_item = numpy.dtype(dtype).itemsize
+        num_bytes_per_item = numpy.dtype(header_dtype).itemsize
         total_num_bytes = int(
-            numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0]
+            numpy.frombuffer(byte_string[:num_bytes_per_item], header_dtype)[0]
         )
 
         # Check if block size was decoded separately
@@ -409,31 +409,30 @@ class VtuReader:
             byte_string = byte_string[num_bytes_per_item:]
 
         # Read the block data; multiple blocks possible here?
-        dtype = vtu_to_numpy_type[data_type]
         if self.byte_order is not None:
             dtype = dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
         return numpy.frombuffer(byte_string[:total_num_bytes], dtype=dtype)
 
-    def read_compressed_binary(self, data, data_type):
+    def read_compressed_binary(self, data, dtype):
         # first read the block size; it determines the size of the header
-        dtype = vtu_to_numpy_type[self.header_type]
+        header_dtype = vtu_to_numpy_type[self.header_type]
         if self.byte_order is not None:
-            dtype = dtype.newbyteorder(
+            header_dtype = header_dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
-        num_bytes_per_item = numpy.dtype(dtype).itemsize
+        num_bytes_per_item = numpy.dtype(header_dtype).itemsize
         num_chars = num_bytes_to_num_base64_chars(num_bytes_per_item)
         byte_string = base64.b64decode(data[:num_chars])[:num_bytes_per_item]
-        num_blocks = numpy.frombuffer(byte_string, dtype)[0]
+        num_blocks = numpy.frombuffer(byte_string, header_dtype)[0]
 
         # read the entire header
         num_header_items = 3 + int(num_blocks)
         num_header_bytes = num_bytes_per_item * num_header_items
         num_header_chars = num_bytes_to_num_base64_chars(num_header_bytes)
         byte_string = base64.b64decode(data[:num_header_chars])
-        header = numpy.frombuffer(byte_string, dtype)
+        header = numpy.frombuffer(byte_string, header_dtype)
 
         # num_blocks = header[0]
         # max_uncompressed_block_size = header[1]
@@ -442,7 +441,6 @@ class VtuReader:
 
         # Read the block data
         byte_array = base64.b64decode(data[num_header_chars:])
-        dtype = vtu_to_numpy_type[data_type]
         if self.byte_order is not None:
             dtype = dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
@@ -473,10 +471,16 @@ class VtuReader:
     def read_data(self, c):
         fmt = c.attrib["format"] if "format" in c.attrib else "ascii"
 
+        data_type = c.attrib["type"]
+        try:
+            dtype = vtu_to_numpy_type[data_type]
+        except KeyError:
+            raise ReadError("Illegal data type '{}'.".format(data_type))
+
         if fmt == "ascii":
             # ascii
             data = numpy.fromstring(
-                c.text, dtype=vtu_to_numpy_type[c.attrib["type"]], sep=" "
+                c.text, dtype=dtype, sep=" "
             )
         elif fmt == "binary":
             reader = (
@@ -484,7 +488,7 @@ class VtuReader:
                 if self.compression is None
                 else self.read_compressed_binary
             )
-            data = reader(c.text.strip(), c.attrib["type"])
+            data = reader(c.text.strip(), dtype)
         elif fmt == "appended":
             offset = int(c.attrib["offset"])
             reader = (
@@ -492,7 +496,7 @@ class VtuReader:
                 if self.compression is None
                 else self.read_compressed_binary
             )
-            data = reader(self.appended_data[offset:], c.attrib["type"])
+            data = reader(self.appended_data[offset:], dtype)
         else:
             raise ReadError("Unknown data format '{}'.".format(fmt))
 
