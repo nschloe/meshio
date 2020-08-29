@@ -7,7 +7,12 @@ from functools import partial
 
 import numpy
 
-from .._common import _geometric_dimension, cell_data_from_raw, raw_from_cell_data
+from .._common import (
+    _geometric_dimension,
+    cell_data_from_raw,
+    num_nodes_per_cell,
+    raw_from_cell_data,
+)
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
@@ -19,7 +24,6 @@ from .common import (
     _read_physical_names,
     _write_data,
     _write_physical_names,
-    num_nodes_per_cell,
 )
 
 c_int = numpy.dtype("i")
