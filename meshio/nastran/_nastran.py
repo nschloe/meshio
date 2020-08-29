@@ -54,13 +54,11 @@ def read(filename):
 
 def read_buffer(f):
     # Skip until BEGIN BULK
-    begin_bulk = False
-    while not begin_bulk:
+    while True:
         line = f.readline()
         if not line:
             raise RuntimeError('"BEGIN BULK" statement not found')
         if line.strip().startswith("BEGIN BULK"):
-            begin_bulk = True
             break
 
     # Reading data
