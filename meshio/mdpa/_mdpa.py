@@ -240,8 +240,6 @@ def _prepare_cells(cells, cell_tags):
             ],
         ]
 
-    cell_tags = output_cell_tags
-
     return has_additional_tag_data
 
 
