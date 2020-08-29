@@ -59,7 +59,6 @@ def read_buffer(f):
         line = f.readline()
         if not line:
             raise RuntimeError('"BEGIN BULK" statement not found')
-            break
         if line.strip().startswith("BEGIN BULK"):
             begin_bulk = True
             break

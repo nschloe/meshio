@@ -44,7 +44,7 @@ def _produce_dtype(string_type, dim, itype, ftype):
             c += 1
             continue
         else:
-            ReadError("Invalid string type")
+            raise ReadError("Invalid string type")
         c += 1
         if c != len(string_type):
             res += ","

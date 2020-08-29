@@ -264,7 +264,7 @@ def write(filename, mesh, add_global_ids=True):
 
     # Cells (mailles in French)
     if len(mesh.cells) != len(numpy.unique([c.type for c in mesh.cells])):
-        WriteError("MED files cannot have two sections of the same cell type.")
+        raise WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
     for k, (cell_type, cells) in enumerate(mesh.cells):
