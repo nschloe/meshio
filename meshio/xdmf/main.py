@@ -530,5 +530,8 @@ def write(*args, **kwargs):
 
 # TODO register all xdmf except hdf outside this try block
 register(
-    "xdmf", [".xdmf", ".xmf"], read, {"xdmf": write},
+    "xdmf",
+    [".xdmf", ".xmf"],
+    read,
+    {"xdmf": write},
 )

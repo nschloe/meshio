@@ -264,7 +264,7 @@ def write(filename, mesh, add_global_ids=True):
 
     # Cells (mailles in French)
     if len(mesh.cells) != len(numpy.unique([c.type for c in mesh.cells])):
-        WriteError("MED files cannot have two sections of the same cell type.")
+        raise WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
     for k, (cell_type, cells) in enumerate(mesh.cells):
@@ -335,12 +335,24 @@ def write(filename, mesh, add_global_ids=True):
             else:  # general ELGA data defined at unknown Gauss points
                 supp = "ELGA"
             _write_data(
-                fields, mesh_name, profile, name, supp, data, med_type,
+                fields,
+                mesh_name,
+                profile,
+                name,
+                supp,
+                data,
+                med_type,
             )
 
 
 def _write_data(
-    fields, mesh_name, profile, name, supp, data, med_type=None,
+    fields,
+    mesh_name,
+    profile,
+    name,
+    supp,
+    data,
+    med_type=None,
 ):
     # Skip for general ELGA fields defined at unknown Gauss points
     if supp == "ELGA":

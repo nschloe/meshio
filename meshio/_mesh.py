@@ -212,8 +212,7 @@ class Mesh:
         self.cell_sets = {}
 
     def int_data_to_sets(self):
-        """Convert all int data to {point,cell}_sets, where possible.
-        """
+        """Convert all int data to {point,cell}_sets, where possible."""
         keys = []
         for key, data in self.cell_data.items():
             # handle all int and uint data

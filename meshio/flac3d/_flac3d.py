@@ -150,7 +150,12 @@ def read_buffer(f, binary):
             for _ in range(num_groups):
                 name, slot, data = _read_group(f, binary)
                 field_data, mapper[flag] = _update_field_data(
-                    field_data, mapper[flag], data, name, gidx + 1, flag,
+                    field_data,
+                    mapper[flag],
+                    data,
+                    name,
+                    gidx + 1,
+                    flag,
                 )
                 slots[flag] = _update_slots(slots[flag], slot)
                 gidx += 1
@@ -172,7 +177,12 @@ def read_buffer(f, binary):
                 flag = flags[line[0]]
                 name, slot, data = _read_group(f, binary, line)
                 field_data, mapper[flag] = _update_field_data(
-                    field_data, mapper[flag], data, name, gidx + 1, flag,
+                    field_data,
+                    mapper[flag],
+                    data,
+                    name,
+                    gidx + 1,
+                    flag,
                 )
                 slots[flag] = _update_slots(slots[flag], slot)
                 gidx += 1

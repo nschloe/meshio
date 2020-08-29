@@ -12,8 +12,7 @@ _writers = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
 
 
 def read(filename):
-    """Reads a Gmsh msh file.
-    """
+    """Reads a Gmsh msh file."""
     filename = pathlib.Path(filename)
     with open(filename.as_posix(), "rb") as f:
         mesh = read_buffer(f)
@@ -90,8 +89,7 @@ def _read_header(f):
 # Gmsh ASCII output uses `%.16g` for floating point values,
 # meshio uses same precision but exponential notation `%.16e`.
 def write(filename, mesh, fmt_version="4.1", binary=True, float_fmt=".16e"):
-    """Writes a Gmsh msh file.
-    """
+    """Writes a Gmsh msh file."""
     try:
         writer = _writers[fmt_version]
     except KeyError:

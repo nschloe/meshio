@@ -146,8 +146,7 @@ class Info:
 
 
 def read(filename):
-    """Reads a VTK vtk file.
-    """
+    """Reads a VTK vtk file."""
     with open_file(filename, "rb") as f:
         out = read_buffer(f)
     return out
@@ -257,8 +256,8 @@ def _read_section(f, info):
 
     elif info.section == "LOOKUP_TABLE":
         info.num_items = int(info.split[2])
-        data = numpy.fromfile(f, count=info.num_items * 4, sep=" ", dtype=float)
-        rgba = data.reshape((info.num_items, 4))  # noqa F841
+        numpy.fromfile(f, count=info.num_items * 4, sep=" ", dtype=float)
+        # rgba = data.reshape((info.num_items, 4))
 
     elif info.section == "COLOR_SCALARS":
         nValues = int(info.split[2])
@@ -267,7 +266,7 @@ def _read_section(f, info):
         dtype = numpy.ubyte
         if info.is_ascii:
             dtype = float
-        data = numpy.fromfile(f, count=num_items * nValues, dtype=dtype)
+        numpy.fromfile(f, count=num_items * nValues, dtype=dtype)
 
 
 def _read_subsection(f, info):

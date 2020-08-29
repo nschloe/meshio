@@ -185,7 +185,6 @@ def _numpy_type_to_dolfin_type(dtype):
                 return key
 
     raise WriteError("Could not convert NumPy data type to DOLFIN data type.")
-    return None
 
 
 def _write_cell_data(filename, dim, cell_data):

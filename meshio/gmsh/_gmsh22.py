@@ -6,7 +6,7 @@ import logging
 
 import numpy
 
-from .._common import cell_data_from_raw, raw_from_cell_data
+from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
@@ -18,7 +18,6 @@ from .common import (
     _read_physical_names,
     _write_data,
     _write_physical_names,
-    num_nodes_per_cell,
 )
 
 c_int = numpy.dtype("i")
@@ -389,11 +388,11 @@ def _write_elements(fh, cells, tag_data, binary):
                 + str(fcd.shape[1])
                 + " {} {}\n"
             )
-            for k, c in enumerate(node_idcs):
+            for i, c in enumerate(node_idcs):
                 fh.write(
                     form.format(
-                        consecutive_index + k + 1,
-                        " ".join([str(val) for val in fcd[k]]),
+                        consecutive_index + i + 1,
+                        " ".join([str(val) for val in fcd[i]]),
                         # a bit clumsy for `c+1`, but if c is uint64, c+1 is float64
                         " ".join([str(cc) for cc in c + numpy.array(1, dtype=c.dtype)]),
                     ).encode("utf-8")

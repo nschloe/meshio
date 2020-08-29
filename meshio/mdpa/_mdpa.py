@@ -90,8 +90,7 @@ local_dimension_types = {
 
 
 def read(filename):
-    """Reads a KratosMultiphysics mdpa file.
-    """
+    """Reads a KratosMultiphysics mdpa file."""
     # if (have_kratos is True): # TODO: Implement natively
     # pass
     # else:
@@ -240,8 +239,6 @@ def _prepare_cells(cells, cell_tags):
                 26,
             ],
         ]
-
-    cell_tags = output_cell_tags
 
     return has_additional_tag_data
 

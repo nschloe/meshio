@@ -287,7 +287,9 @@ def write(filename, mesh):
             cell_type = meshio_to_su2_type[cell_block.type]
             # create a column with the value cell_type
             type_column = numpy.full(
-                cell_block.data.shape[0], cell_type, dtype=cell_block.data.dtype,
+                cell_block.data.shape[0],
+                cell_type,
+                dtype=cell_block.data.dtype,
             )
 
             # prepend a column with the value cell_type
@@ -361,7 +363,9 @@ def write(filename, mesh):
 
                 # create a column with the value cell_type
                 type_column = numpy.full(
-                    cells_to_write.shape[0], cell_type, dtype=cells_to_write.dtype,
+                    cells_to_write.shape[0],
+                    cell_type,
+                    dtype=cells_to_write.dtype,
                 )
 
                 # prepend a column with the value cell_type

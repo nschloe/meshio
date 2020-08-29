@@ -85,7 +85,11 @@ def _get_parser():
     )
 
     parser.add_argument(
-        "--max", "-max", action="store_true", help="maximum compression", default=False,
+        "--max",
+        "-max",
+        action="store_true",
+        help="maximum compression",
+        default=False,
     )
 
     parser.add_argument(
