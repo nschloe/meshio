@@ -57,8 +57,7 @@ meshio_to_permas_type = {v: k for k, v in permas_to_meshio_type.items()}
 
 
 def read(filename):
-    """Reads a PERMAS dat file.
-    """
+    """Reads a PERMAS dat file."""
     with open_file(filename, "r") as f:
         out = read_buffer(f)
     return out

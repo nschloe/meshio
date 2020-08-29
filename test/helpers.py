@@ -307,8 +307,7 @@ def add_cell_sets(mesh):
 
 
 def write_read(writer, reader, input_mesh, atol, extension=".dat"):
-    """Write and read a file, and make sure the data is the same as before.
-    """
+    """Write and read a file, and make sure the data is the same as before."""
     in_mesh = copy.deepcopy(input_mesh)
 
     with tempfile.TemporaryDirectory() as temp_dir:

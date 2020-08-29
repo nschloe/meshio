@@ -21,8 +21,7 @@ def generate_triangular_mesh():
 
 
 def generate_tetrahedral_mesh():
-    """Generates a fairly large mesh.
-    """
+    """Generates a fairly large mesh."""
     if os.path.isfile("cache.xdmf"):
         mesh = meshio.read("cache.xdmf")
     else:

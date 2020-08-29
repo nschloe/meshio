@@ -35,7 +35,8 @@ def test(mesh, binary, data):
 # the failure perhaps has to do with dictionary ordering
 @pytest.mark.skipif(sys.version_info < (3, 6), reason="Fails with 3.5")
 @pytest.mark.parametrize(
-    "filename", ["flac3d_mesh_ex.f3grid", "flac3d_mesh_ex_bin.f3grid"],
+    "filename",
+    ["flac3d_mesh_ex.f3grid", "flac3d_mesh_ex_bin.f3grid"],
 )
 def test_reference_file(filename):
     this_dir = pathlib.Path(__file__).resolve().parent

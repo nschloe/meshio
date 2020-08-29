@@ -146,8 +146,7 @@ class Info:
 
 
 def read(filename):
-    """Reads a VTK vtk file.
-    """
+    """Reads a VTK vtk file."""
     with open_file(filename, "rb") as f:
         out = read_buffer(f)
     return out

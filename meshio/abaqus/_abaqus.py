@@ -93,8 +93,7 @@ meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
 
 def read(filename):
-    """Reads a Abaqus inp file.
-    """
+    """Reads a Abaqus inp file."""
     with open_file(filename, "r") as f:
         out = read_buffer(f)
     return out

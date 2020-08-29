@@ -73,7 +73,9 @@ def write(filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None):
             )
         for cell in cell_block.data:
             ET.SubElement(
-                svg, "path", d=fmt.format(*pts[cell].flatten()),
+                svg,
+                "path",
+                d=fmt.format(*pts[cell].flatten()),
             )
 
     tree = ET.ElementTree(svg)

@@ -436,9 +436,8 @@ def write(filename, mesh):
             _write_table(f, arr)
 
         # CellBlock
-        cells = numpy.array(cells) + 1
         for cell in cells:
-            f.write("{}\n".format(" ".join(str(c) for c in cell)))
+            f.write("{}\n".format(" ".join(str(c + 1) for c in cell)))
 
 
 def _write_table(f, data, ncol=20):

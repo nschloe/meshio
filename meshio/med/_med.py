@@ -335,12 +335,24 @@ def write(filename, mesh, add_global_ids=True):
             else:  # general ELGA data defined at unknown Gauss points
                 supp = "ELGA"
             _write_data(
-                fields, mesh_name, profile, name, supp, data, med_type,
+                fields,
+                mesh_name,
+                profile,
+                name,
+                supp,
+                data,
+                med_type,
             )
 
 
 def _write_data(
-    fields, mesh_name, profile, name, supp, data, med_type=None,
+    fields,
+    mesh_name,
+    profile,
+    name,
+    supp,
+    data,
+    med_type=None,
 ):
     # Skip for general ELGA fields defined at unknown Gauss points
     if supp == "ELGA":
