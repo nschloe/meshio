@@ -445,7 +445,6 @@ class VtuReader:
             dtype = dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
-        num_bytes_per_item = numpy.dtype(dtype).itemsize
 
         byte_offsets = numpy.empty(block_sizes.shape[0] + 1, dtype=block_sizes.dtype)
         byte_offsets[0] = 0

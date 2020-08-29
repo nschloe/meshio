@@ -237,10 +237,10 @@ def _write_buffer(f, file_type, mesh):
             continue
 
         # pick out cell data
-        for data in mesh.cell_data.values():
-            if data.dtype in [numpy.int8, numpy.int16, numpy.int32, numpy.int64]:
-                labels = data
-                break
+        # for data in mesh.cell_data.values():
+        #     if data.dtype in [numpy.int8, numpy.int16, numpy.int32, numpy.int64]:
+        #         labels = data
+        #         break
 
         # pick out cell_data
         labels_key, other = _pick_first_int_data(mesh.cell_data)
