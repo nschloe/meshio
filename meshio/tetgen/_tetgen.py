@@ -24,6 +24,9 @@ def read(filename):
     else:
         raise ReadError()
 
+    point_data = {}
+    cell_data = {}
+
     # read nodes
     # TODO remove as_posix
     with open(node_filename.as_posix()) as f:
@@ -48,6 +51,13 @@ def read(filename):
             == numpy.arange(node_index_base, node_index_base + points.shape[0])
         ):
             raise ReadError()
+        # read point attributes
+        for k in range(num_attrs):
+            point_data["tetgen:attr{}".format(k + 1)] = points[:, 4 + k]
+        # read boundary markers, the first is "ref", the others are "ref2", "ref3", ...
+        for k in range(num_bmarkers):
+            flag = "" if k == 0 else str(k + 1)
+            point_data["tetgen:ref" + flag] = points[:, 4 + num_attrs + k]
         # remove the leading index column, the attributes, and the boundary markers
         points = points[:, 1:4]
 
@@ -65,11 +75,17 @@ def read(filename):
         cells = numpy.fromfile(
             f, dtype=int, count=(5 + num_attrs) * num_tets, sep=" "
         ).reshape(num_tets, 5 + num_attrs)
+        # read cell (region) attributes, the first is "ref", the others are "ref2", "ref3", ...
+        for k in range(num_attrs):
+            flag = "" if k == 0 else str(k + 1)
+            cell_data["tetgen:ref" + flag] = [cells[:, 5 + k]]
         # remove the leading index column and the attributes
         cells = cells[:, 1:5]
         cells -= node_index_base
 
-    return Mesh(points, [CellBlock("tetra", cells)])
+    return Mesh(
+        points, [CellBlock("tetra", cells)], point_data=point_data, cell_data=cell_data
+    )
 
 
 def write(filename, mesh, float_fmt=".16e"):
