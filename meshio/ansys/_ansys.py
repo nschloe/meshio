@@ -428,12 +428,14 @@ def write(filename, mesh, binary=True):
 
         # Write cells
         meshio_to_ansys_type = {
+            # "mixed": 0,
             "triangle": 1,
             "tetra": 2,
             "quad": 3,
             "hexahedron": 4,
             "pyra": 5,
             "wedge": 6,
+            # "polyhedral": 7,
         }
         first_index = 0
         binary_dtypes = {
@@ -444,10 +446,19 @@ def write(filename, mesh, binary=True):
         for cell_type, values in mesh.cells:
             key = binary_dtypes[values.dtype] if binary else "12"
             last_index = first_index + len(values) - 1
+            try:
+                ansys_cell_type = meshio_to_ansys_type[cell_type]
+            except KeyError:
+                legal_keys = ", ".join(meshio_to_ansys_type.keys())
+                raise KeyError(
+                    "Illegal ANSYS cell type '{}'. (legal: {})".format(
+                        cell_type, legal_keys
+                    )
+                )
             fh.write(
                 (
                     "({} (1 {:x} {:x} 1 {})(\n".format(
-                        key, first_index, last_index, meshio_to_ansys_type[cell_type]
+                        key, first_index, last_index, ansys_cell_type
                     )
                 ).encode("utf8")
             )
