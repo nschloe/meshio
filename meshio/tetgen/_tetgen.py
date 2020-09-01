@@ -105,11 +105,39 @@ def write(filename, mesh, float_fmt=".16e"):
     # write nodes
     # TODO remove .as_posix when requiring Python 3.6
     with open(node_filename.as_posix(), "w") as fh:
+        # identify ":ref" key
+        attr_keys = list(mesh.point_data.keys())
+        ref_keys = [k for k in attr_keys if ":ref" in k]
+        if len(attr_keys) > 0:
+            if len(ref_keys) > 0:
+                ref_keys = ref_keys[:1]
+                attr_keys.remove(ref_keys[0])
+            else:
+                ref_keys = attr_keys[:1]
+                attr_keys = attr_keys[1:]
+
+        nattr, nref = len(attr_keys), len(ref_keys)
         fh.write("# This file was created by meshio v{}\n".format(__version__))
-        fh.write("{} {} {} {}\n".format(mesh.points.shape[0], 3, 0, 0))
-        fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
+        if (nattr + nref) > 0:
+            fh.write(
+                "# attribute and marker names: {}\n".format(
+                    ", ".join(attr_keys + ref_keys)
+                )
+            )
+        fh.write("{} {} {} {}\n".format(mesh.points.shape[0], 3, nattr, nref))
+        fmt = (
+            "{} "
+            + " ".join((3 + nattr) * ["{:" + float_fmt + "}"])
+            + "".join((nref) * [" {}"])
+            + "\n"
+        )
         for k, pt in enumerate(mesh.points):
-            fh.write(fmt.format(k, pt[0], pt[1], pt[2]))
+            data = (
+                list(pt[:3])
+                + [mesh.point_data[key][k] for key in attr_keys]
+                + [mesh.point_data[key][k] for key in ref_keys]
+            )
+            fh.write(fmt.format(k, *data))
 
     if not any(c.type == "tetra" for c in mesh.cells):
         raise WriteError("TegGen only supports tetrahedra")
@@ -124,11 +152,25 @@ def write(filename, mesh, float_fmt=".16e"):
     # write cells
     # TODO remove .as_posix when requiring Python 3.6
     with open(ele_filename.as_posix(), "w") as fh:
+        attr_keys = list(mesh.cell_data.keys())
+        ref_keys = [k for k in attr_keys if ":ref" in k]
+        if len(attr_keys) > 0:
+            if len(ref_keys) > 0:
+                attr_keys.remove(ref_keys[0])
+                attr_keys = ref_keys[:1] + attr_keys
+
+        nattr = len(attr_keys)
         fh.write("# This file was created by meshio v{}\n".format(__version__))
-        for cell_type, data in filter(lambda c: c.type == "tetra", mesh.cells):
-            fh.write("{} {} {}\n".format(data.shape[0], 4, 0))
+        if nattr > 0:
+            fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))
+        for id, (cell_type, data) in enumerate(
+            filter(lambda c: c.type == "tetra", mesh.cells)
+        ):
+            fh.write("{} {} {}\n".format(data.shape[0], 4, nattr))
+            fmt = " ".join((5 + nattr) * ["{}"]) + "\n"
             for k, tet in enumerate(data):
-                fh.write("{} {} {} {} {}\n".format(k, tet[0], tet[1], tet[2], tet[3]))
+                data = list(tet[:4]) + [mesh.cell_data[key][id][k] for key in attr_keys]
+                fh.write(fmt.format(k, *data))
 
 
 register("tetgen", [".ele", ".node"], read, {"tetgen": write})
