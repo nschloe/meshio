@@ -52,6 +52,7 @@ permas_to_meshio_type = {
     "TET10": "tetra10",
     "PYRA5": "pyramid",
     "PENTA6": "wedge",
+    "PENTA15": "wedge15",
 }
 meshio_to_permas_type = {v: k for k, v in permas_to_meshio_type.items()}
 
@@ -230,7 +231,7 @@ def write(filename, mesh):
         )
 
     with open_file(filename, "wt") as f:
-        f.write("!PERMAS DataFile Version 17.0\n")
+        f.write("!PERMAS DataFile Version 18.0\n")
         f.write("!written by meshio v{}\n".format(__version__))
         f.write("$ENTER COMPONENT NAME=DFLT_COMP\n")
         f.write("$STRUCTURE\n")
@@ -241,6 +242,7 @@ def write(filename, mesh):
         tria6_order = [0, 3, 1, 4, 2, 5]
         tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]
         quad9_order = [0, 4, 1, 7, 8, 5, 3, 6, 2]
+        wedge15_order = [0, 6, 1, 7, 2, 8, 9, 10, 11, 3, 12, 4, 13, 5, 14]
         for cell_type, node_idcs in mesh.cells:
             f.write("!\n")
             f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_type] + "\n")
@@ -263,6 +265,13 @@ def write(filename, mesh):
                     eid += 1
                     mylist = row.tolist()
                     mylist = [mylist[i] for i in quad9_order]
+                    nids_strs = (str(nid + 1) for nid in mylist)
+                    f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
+            elif cell_type == "wedge15":
+                for row in node_idcs:
+                    eid += 1
+                    mylist = row.tolist()
+                    mylist = [mylist[i] for i in wedge15_order]
                     nids_strs = (str(nid + 1) for nid in mylist)
                     f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
             else:
