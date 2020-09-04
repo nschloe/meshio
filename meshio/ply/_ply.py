@@ -452,9 +452,9 @@ def write(filename, mesh, binary=True):  # noqa: C901
             if cell_dtype is not None:
                 ply_type = numpy_to_ply_dtype[cell_dtype]
                 fh.write(
-                    "property list {} {} vertex_indices\n".format("uint8", ply_type).encode(
-                        "utf-8"
-                    )
+                    "property list {} {} vertex_indices\n".format(
+                        "uint8", ply_type
+                    ).encode("utf-8")
                 )
 
         # TODO other cell data
