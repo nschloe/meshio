@@ -4,12 +4,14 @@ I/O for the PLY format, cf.
 <https://web.archive.org/web/20161221115231/http://www.cs.virginia.edu/~gfx/Courses/2001/Advanced.spring.01/plylib/Ply.txt>.
 """
 import collections
+import datetime
 import re
 import sys
 import warnings
 
 import numpy
 
+from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
@@ -381,7 +383,11 @@ def write(filename, mesh, binary=True):  # noqa: C901
         else:
             fh.write(b"format ascii 1.0\n")
 
-        fh.write(b"comment Created by meshio\n")
+        fh.write(
+            "comment Created by meshio v{}, {}\n".format(
+                __version__, datetime.datetime.now().isoformat()
+            ).encode("utf-8")
+        )
 
         # counts
         fh.write("element vertex {:d}\n".format(mesh.points.shape[0]).encode("utf-8"))
