@@ -373,7 +373,6 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
     with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")
-        fh.write(b"comment Created by meshio\n")
 
         if binary:
             fh.write(
@@ -381,6 +380,8 @@ def write(filename, mesh, binary=True):  # noqa: C901
             )
         else:
             fh.write(b"format ascii 1.0\n")
+
+        fh.write(b"comment Created by meshio\n")
 
         # counts
         fh.write("element vertex {:d}\n".format(mesh.points.shape[0]).encode("utf-8"))
