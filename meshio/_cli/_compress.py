@@ -16,7 +16,7 @@ def compress(argv=None):
     fmt = args.input_format or _filetype_from_path(pathlib.Path(args.infile))
 
     size = os.stat(args.infile).st_size
-    print("File size before: {:.2f} MB".format(size / 1024 ** 2))
+    print(f"File size before: {size / 1024 ** 2:.2f} MB")
     mesh = read(args.infile, file_format=args.input_format)
 
     # # Some converters (like VTK) require `points` to be contiguous.
@@ -64,7 +64,7 @@ def compress(argv=None):
         exit(1)
 
     size = os.stat(args.infile).st_size
-    print("File size after:  {:.2f} MB".format(size / 1024 ** 2))
+    print(f"File size after: {size / 1024 ** 2:.2f} MB")
 
 
 def _get_parser():

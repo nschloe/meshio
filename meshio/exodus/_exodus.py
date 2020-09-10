@@ -265,9 +265,8 @@ def write(filename, mesh):
 
     with netCDF4.Dataset(filename, "w") as rootgrp:
         # set global data
-        rootgrp.title = "Created by meshio v{}, {}".format(
-            __version__, datetime.datetime.now().isoformat()
-        )
+        now = datetime.datetime.now().isoformat()
+        rootgrp.title = f"Created by meshio v{__version__}, {now}"
         rootgrp.version = numpy.float32(5.1)
         rootgrp.api_version = numpy.float32(5.1)
         rootgrp.floating_point_word_size = 8
@@ -311,14 +310,12 @@ def write(filename, mesh):
         for k in range(len(mesh.cells)):
             data[k] = k
         for k, (key, values) in enumerate(mesh.cells):
-            dim1 = "num_el_in_blk{}".format(k + 1)
-            dim2 = "num_nod_per_el{}".format(k + 1)
+            dim1 = f"num_el_in_blk{k + 1}"
+            dim2 = f"num_nod_per_el{k + 1}"
             rootgrp.createDimension(dim1, values.shape[0])
             rootgrp.createDimension(dim2, values.shape[1])
             dtype = numpy_to_exodus_dtype[values.dtype.name]
-            data = rootgrp.createVariable(
-                "connect{}".format(k + 1), dtype, (dim1, dim2)
-            )
+            data = rootgrp.createVariable(f"connect{k + 1}", dtype, (dim1, dim2))
             data.elem_type = meshio_to_exodus_type[key]
             # Exodus is 1-based
             data[:] = values + 1
@@ -347,7 +344,7 @@ def write(filename, mesh):
                     f"dim_nod_var{k}{i}" for i in range(len(data.shape))
                 ]
                 node_data = rootgrp.createVariable(
-                    "vals_nod_var{}".format(k + 1),
+                    f"vals_nod_var{k + 1}",
                     numpy_to_exodus_dtype[data.dtype.name],
                     tuple(dims),
                     fill_value=False,
@@ -366,10 +363,10 @@ def write(filename, mesh):
                 for i, letter in enumerate(name):
                     data_names[k, i] = letter.encode("utf-8")
             for k, (key, values) in enumerate(mesh.point_sets.items()):
-                dim1 = "num_nod_ns{}".format(k + 1)
+                dim1 = f"num_nod_ns{k + 1}"
                 rootgrp.createDimension(dim1, values.shape[0])
                 dtype = numpy_to_exodus_dtype[values.dtype.name]
-                data = rootgrp.createVariable("node_ns{}".format(k + 1), dtype, (dim1,))
+                data = rootgrp.createVariable(f"node_ns{k + 1}", dtype, (dim1,))
                 # Exodus is 1-based
                 data[:] = values + 1
 

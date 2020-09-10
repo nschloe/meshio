@@ -48,10 +48,7 @@ class Mesh:
             )
 
     def __repr__(self):
-        lines = [
-            "<meshio mesh object>",
-            f"  Number of points: {len(self.points)}"
-        ]
+        lines = ["<meshio mesh object>", f"  Number of points: {len(self.points)}"]
         if len(self.cells) > 0:
             lines.append("  Number of cells:")
             for tpe, elems in self.cells:

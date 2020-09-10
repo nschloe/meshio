@@ -95,7 +95,8 @@ class XdmfReader:
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
         elif data_item.get("Format") != "HDF":
-            raise ReadError("Unknown XDMF Format '{}'.".format(data_item.get("Format")))
+            fmt = data_item.get("Format")
+            raise ReadError(f"Unknown XDMF Format '{fmt}'.")
 
         info = data_item.text.strip()
         filename, h5path = info.split(":")
@@ -322,7 +323,7 @@ class XdmfWriter:
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
-                "'{}' (use 'XML', 'Binary', or 'HDF'.)".format(data_format)
+                f"'{data_format}' (use 'XML', 'Binary', or 'HDF'.)"
             )
 
         self.filename = filename
@@ -360,9 +361,8 @@ class XdmfWriter:
             numpy.savetxt(s, data, fmt)
             return "\n" + s.getvalue().decode()
         elif self.data_format == "Binary":
-            bin_filename = "{}{}.bin".format(
-                os.path.splitext(self.filename)[0], self.data_counter
-            )
+            base = os.path.splitext(self.filename)[0]
+            bin_filename = f"{base}{self.data_counter}.bin"
             self.data_counter += 1
             # write binary data to file
             with open(bin_filename, "wb") as f:
