@@ -229,7 +229,7 @@ class Mesh:
             names = sorted(list(set(key.split("-"))))
             if len(names) != len(tags):
                 # alternative names
-                names = ["set{}".format(tag) for tag in tags]
+                names = [f"set{tag}" for tag in tags]
 
             for name, tag in zip(names, tags):
                 self.cell_sets[name] = []

@@ -42,7 +42,7 @@ def binary(argv=None):
     elif fmt == "xdmf":
         xdmf.write(args.infile, mesh, data_format="HDF")
     else:
-        print("Don't know how to convert {} to binary format.".format(args.infile))
+        print(f"Don't know how to convert {args.infile} to binary format.")
         exit(1)
 
     size = os.stat(args.infile).st_size

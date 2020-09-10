@@ -342,9 +342,9 @@ def write(filename, mesh):
             # <https://gitlab.kitware.com/paraview/paraview/issues/18403>.
             for k, (name, data) in enumerate(mesh.point_data.items()):
                 for i, s in enumerate(data.shape):
-                    rootgrp.createDimension("dim_nod_var{}{}".format(k, i), s)
+                    rootgrp.createDimension(f"dim_nod_var{k}{i}", s)
                 dims = ["time_step"] + [
-                    "dim_nod_var{}{}".format(k, i) for i in range(len(data.shape))
+                    f"dim_nod_var{k}{i}" for i in range(len(data.shape))
                 ]
                 node_data = rootgrp.createVariable(
                     "vals_nod_var{}".format(k + 1),

@@ -34,7 +34,7 @@ def decompress(argv=None):
     elif fmt == "xdmf":
         xdmf.write(args.infile, mesh, data_format="HDF", compression=None)
     else:
-        print("Don't know how to decompress {}.".format(args.infile))
+        print(f"Don't know how to decompress {args.infile}.")
         exit(1)
 
     size = os.stat(args.infile).st_size

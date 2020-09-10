@@ -162,7 +162,7 @@ def read_buffer(f):
 
     data_type = f.readline().decode("utf-8").strip().upper()
     if data_type not in ["ASCII", "BINARY"]:
-        raise ReadError("Unknown VTK data type '{}'.".format(data_type))
+        raise ReadError(f"Unknown VTK data type '{data_type}'.")
     info.is_ascii = data_type == "ASCII"
 
     while True:
@@ -304,7 +304,7 @@ def _read_subsection(f, info):
     elif info.section == "FIELD":
         d.update(_read_fields(f, int(info.split[2]), info.is_ascii))
     else:
-        raise ReadError("Unknown section '{}'.".format(info.section))
+        raise ReadError(f"Unknown section '{info.section}'.")
 
 
 def _check_mesh(info):
@@ -667,7 +667,7 @@ def write(filename, mesh, binary=True):
 
     with open_file(filename, "wb") as f:
         f.write(b"# vtk DataFile Version 4.2\n")
-        f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
+        f.write(f"written by meshio v{__version__}\n".encode("utf-8"))
         f.write(("BINARY\n" if binary else "ASCII\n").encode("utf-8"))
         f.write(b"DATASET UNSTRUCTURED_GRID\n")
 
@@ -678,13 +678,13 @@ def write(filename, mesh, binary=True):
         # write point data
         if mesh.point_data:
             num_points = mesh.points.shape[0]
-            f.write("POINT_DATA {}\n".format(num_points).encode("utf-8"))
+            f.write(f"POINT_DATA {num_points}\n".encode("utf-8"))
             _write_field_data(f, mesh.point_data, binary)
 
         # write cell data
         if mesh.cell_data:
             total_num_cells = sum(len(c.data) for c in mesh.cells)
-            f.write("CELL_DATA {}\n".format(total_num_cells).encode("utf-8"))
+            f.write(f"CELL_DATA {total_num_cells}\n".encode("utf-8"))
             _write_field_data(f, mesh.cell_data, binary)
 
 
@@ -714,7 +714,7 @@ def _write_cells(f, cells, binary):
     total_num_idx = sum([c.data.size for c in cells])
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
-    f.write("CELLS {} {}\n".format(total_num_cells, total_num_idx).encode("utf-8"))
+    f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode("utf-8"))
     if binary:
         for c in cells:
             n = c.data.shape[1]
@@ -744,7 +744,7 @@ def _write_cells(f, cells, binary):
             f.write(b"\n")
 
     # write cell types
-    f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
+    f.write(f"CELL_TYPES {total_num_cells}\n".encode("utf-8"))
     if binary:
         for c in cells:
             key_ = c.type[:7] if c.type[:7] == "polygon" else c.type
@@ -774,9 +774,7 @@ def _write_field_data(f, data, binary):
             num_components = values.shape[1]
 
         if " " in name:
-            raise WriteError(
-                "VTK doesn't support spaces in field names ('{}').".format(name)
-            )
+            raise WriteError(f"VTK doesn't support spaces in field names ('{name}').")
 
         f.write(
             (

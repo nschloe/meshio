@@ -139,7 +139,7 @@ def read_write(plot=False):
     print(mesh)
     mem_size = mesh.points.nbytes + mesh.cells[0].data.nbytes
     mem_size /= 1024.0 ** 2
-    print("mem_size: {:.2f} MB".format(mem_size))
+    print(f"mem_size: {mem_size:.2f} MB")
 
     formats = {
         "Abaqus": (meshio.abaqus.write, meshio.abaqus.read, ["out.inp"]),

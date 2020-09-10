@@ -190,7 +190,7 @@ def _write_buffer(f, file_type, mesh):
             ugrid_counts[key] = data.shape[0]
             ugrid_meshio_id[key] = i
         else:
-            msg = "UGRID mesh format doesn't know {} cells. Skipping.".format(key)
+            msg = f"UGRID mesh format doesn't know {key} cells. Skipping."
             logging.warning(msg)
             continue
 

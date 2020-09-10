@@ -54,7 +54,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
 
     # fast forward to $End{tag}
     line = f.readline().decode("utf-8")
-    while line.strip() != "$End{}".format(tag):
+    while line.strip() != f"$End{tag}":
         line = f.readline().decode("utf-8")
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
@@ -213,7 +213,7 @@ def _write_physical_names(fh, field_data):
 
 
 def _write_data(fh, tag, name, data, binary):
-    fh.write("${}\n".format(tag).encode("utf-8"))
+    fh.write(f"${tag}\n".encode("utf-8"))
     # <http://gmsh.info/doc/texinfo/gmsh.html>:
     # > Number of string tags.
     # > gives the number of string tags that follow. By default the first
@@ -221,7 +221,7 @@ def _write_data(fh, tag, name, data, binary):
     # > the second as the name of the interpolation scheme. The interpolation
     # > scheme is provided in the $InterpolationScheme section (see below).
     fh.write("{}\n".format(1).encode("utf-8"))
-    fh.write('"{}"\n'.format(name).encode("utf-8"))
+    fh.write(f'"{name}"\n'.encode("utf-8"))
     fh.write("{}\n".format(1).encode("utf-8"))
     fh.write("{}\n".format(0.0).encode("utf-8"))
     # three integer tags:
@@ -238,7 +238,7 @@ def _write_data(fh, tag, name, data, binary):
     if len(data.shape) > 1 and data.shape[1] == 1:
         data = data[:, 0]
 
-    fh.write("{}\n".format(num_components).encode("utf-8"))
+    fh.write(f"{num_components}\n".encode("utf-8"))
     # num data items
     fh.write("{}\n".format(data.shape[0]).encode("utf-8"))
     # actually write the data
@@ -262,4 +262,4 @@ def _write_data(fh, tag, name, data, binary):
             for k, x in enumerate(data):
                 fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
-    fh.write("$End{}\n".format(tag).encode("utf-8"))
+    fh.write(f"$End{tag}\n".encode("utf-8"))

@@ -164,7 +164,7 @@ def read_buffer(f):
                     elif set_name in cell_sets_element.keys():
                         cell_sets[name].append(cell_sets_element[set_name])
                     else:
-                        raise ReadError("Unknown cell set '{}'".format(set_name))
+                        raise ReadError(f"Unknown cell set '{set_name}'")
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
@@ -217,7 +217,7 @@ def _read_nodes(f):
 def _read_cells(f, params_map, point_ids):
     etype = params_map["TYPE"]
     if etype not in abaqus_to_meshio_type.keys():
-        raise ReadError("Element type not available: {}".format(etype))
+        raise ReadError(f"Element type not available: {etype}")
 
     cell_type = abaqus_to_meshio_type[etype]
 
@@ -281,7 +281,7 @@ def get_param_map(word, required_keys=None):
     msg = ""
     for key in required_keys:
         if key not in param_map:
-            msg += "{} not found in {}\n".format(key, word)
+            msg += f"{key} not found in {word}\n"
     if msg:
         raise RuntimeError(msg)
     return param_map
@@ -315,7 +315,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
     with open_file(filename, "wt") as f:
         f.write("*HEADING\n")
         f.write("Abaqus DataFile Version 6.14\n")
-        f.write("written by meshio v{}\n".format(__version__))
+        f.write(f"written by meshio v{__version__}\n")
         f.write("*NODE\n")
         fmt = ", ".join(["{}"] + ["{:" + float_fmt + "}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):
@@ -325,7 +325,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
             name = (
                 meshio_to_abaqus_type[cell_type] if translate_cell_names else cell_type
             )
-            f.write("*ELEMENT, TYPE={}\n".format(name))
+            f.write(f"*ELEMENT, TYPE={name}\n")
             for row in node_idcs:
                 eid += 1
                 nids_strs = (str(nid + 1) for nid in row.tolist())
@@ -337,7 +337,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
             for k, v in mesh.cell_sets.items():
                 if len(v[ic]) > 0:
                     els = [str(i + 1 + offset) for i in v[ic]]
-                    f.write("*ELSET, ELSET={}\n".format(k))
+                    f.write(f"*ELSET, ELSET={k}\n")
                     f.write(
                         ",\n".join(
                             ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
@@ -348,7 +348,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
 
         for k, v in mesh.point_sets.items():
             nds = [str(i + 1) for i in v]
-            f.write("*NSET, NSET={}\n".format(k))
+            f.write(f"*NSET, NSET={k}\n")
             f.write(
                 ",\n".join(",".join(nds[i : i + nnl]) for i in range(0, len(nds), nnl))
                 + "\n"

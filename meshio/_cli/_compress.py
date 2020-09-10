@@ -60,7 +60,7 @@ def compress(argv=None):
             compression_opts=9 if args.max else 4,
         )
     else:
-        print("Don't know how to compress {}.".format(args.infile))
+        print(f"Don't know how to compress {args.infile}.")
         exit(1)
 
     size = os.stat(args.infile).st_size
