@@ -97,7 +97,7 @@ def write(filename, mesh, float_fmt=".16e"):
         node_filename = filename.parent / (filename.stem + ".node")
         ele_filename = filename
     else:
-        raise WriteError("Must specify .node or .ele file. Got {}.".format(filename))
+        raise WriteError(f"Must specify .node or .ele file. Got {filename}.")
 
     if mesh.points.shape[1] != 3:
         raise WriteError("Can only write 3D points")
@@ -117,7 +117,7 @@ def write(filename, mesh, float_fmt=".16e"):
                 attr_keys = attr_keys[1:]
 
         nattr, nref = len(attr_keys), len(ref_keys)
-        fh.write("# This file was created by meshio v{}\n".format(__version__))
+        fh.write(f"# This file was created by meshio v{__version__}\n")
         if (nattr + nref) > 0:
             fh.write(
                 "# attribute and marker names: {}\n".format(
@@ -160,7 +160,7 @@ def write(filename, mesh, float_fmt=".16e"):
                 attr_keys = ref_keys[:1] + attr_keys
 
         nattr = len(attr_keys)
-        fh.write("# This file was created by meshio v{}\n".format(__version__))
+        fh.write(f"# This file was created by meshio v{__version__}\n")
         if nattr > 0:
             fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))
         for id, (cell_type, data) in enumerate(

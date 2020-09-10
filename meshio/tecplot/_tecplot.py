@@ -384,11 +384,11 @@ def write(filename, mesh):
                 varrange[0] += 1
             elif v.ndim == 2:
                 for i, vv in enumerate(v.T):
-                    variables += ["{}_{}".format(k, i)]
+                    variables += [f"{k}_{i}"]
                     data += [vv]
                     varrange[0] += 1
         else:
-            logging.warning("Skipping point data '{}'.".format(k))
+            logging.warning(f"Skipping point data '{k}'.")
 
     if mesh.cell_data:
         varrange[1] = varrange[0] - 1
@@ -401,25 +401,25 @@ def write(filename, mesh):
                     varrange[1] += 1
                 elif v.ndim == 2:
                     for i, vv in enumerate(v.T):
-                        variables += ["{}_{}".format(k, i)]
+                        variables += [f"{k}_{i}"]
                         data += [vv]
                         varrange[1] += 1
             else:
-                logging.warning("Skipping cell data '{}'.".format(k))
+                logging.warning(f"Skipping cell data '{k}'.")
 
     with open_file(filename, "w") as f:
         # Title
-        f.write('TITLE = "Written by meshio v{}"\n'.format(version))
+        f.write(f'TITLE = "Written by meshio v{version}"\n')
 
         # Variables
-        variables_str = ", ".join('"{}"'.format(var) for var in variables)
-        f.write("VARIABLES = {}\n".format(variables_str))
+        variables_str = ", ".join(f'"{var}"' for var in variables)
+        f.write(f"VARIABLES = {variables_str}\n")
 
         # Zone record
         num_nodes = len(mesh.points)
         num_cells = sum(len(mesh.cells[ic].data) for ic in cell_blocks)
-        f.write("ZONE NODES = {}, ELEMENTS = {},\n".format(num_nodes, num_cells))
-        f.write("DATAPACKING = BLOCK, ZONETYPE = {}".format(zone_type))
+        f.write(f"ZONE NODES = {num_nodes}, ELEMENTS = {num_cells},\n")
+        f.write(f"DATAPACKING = BLOCK, ZONETYPE = {zone_type}")
         if varrange[0] <= varrange[1]:
             f.write(",\n")
             varlocation_str = (
@@ -427,7 +427,7 @@ def write(filename, mesh):
                 if varrange[0] == varrange[1]
                 else "{}-{}".format(varrange[0], varrange[1])
             )
-            f.write("VARLOCATION = ([{}] = CELLCENTERED)\n".format(varlocation_str))
+            f.write(f"VARLOCATION = ([{varlocation_str}] = CELLCENTERED)\n")
         else:
             f.write("\n")
 

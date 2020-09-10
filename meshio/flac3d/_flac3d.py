@@ -226,7 +226,7 @@ def _read_cell(buf_or_line, point_ids, binary):
     """Read cell connectivity."""
     if binary:
         cid, num_verts = struct.unpack("<2I", buf_or_line.read(8))
-        cell = struct.unpack("<{}I".format(num_verts), buf_or_line.read(4 * num_verts))
+        cell = struct.unpack(f"<{num_verts}I", buf_or_line.read(4 * num_verts))
         is_b7 = num_verts == 7
     else:
         cid = int(buf_or_line[2])
@@ -245,17 +245,17 @@ def _read_group(buf_or_line, binary, line=None):
     if binary:
         # Group name
         (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
-        (name,) = struct.unpack("<{}s".format(num_chars), buf_or_line.read(num_chars))
+        (name,) = struct.unpack(f"<{num_chars}s", buf_or_line.read(num_chars))
         name = name.decode("utf-8")
 
         # Slot name
         (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
-        (slot,) = struct.unpack("<{}s".format(num_chars), buf_or_line.read(num_chars))
+        (slot,) = struct.unpack(f"<{num_chars}s", buf_or_line.read(num_chars))
         slot = slot.decode("utf-8")
 
         # Zones
         (num_zones,) = struct.unpack("<I", buf_or_line.read(4))
-        data = struct.unpack("<{}I".format(num_zones), buf_or_line.read(4 * num_zones))
+        data = struct.unpack(f"<{num_zones}I", buf_or_line.read(4 * num_zones))
     else:
         name = line[1].replace('"', "")
         data = []
@@ -317,9 +317,10 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
         if key:
             material = numpy.concatenate(mesh.cell_data[key])
             if other:
+                other_str = ", ".join(other)
                 logging.warning(
                     "FLAC3D can only write one cell data array. "
-                    "Picking {}, skipping {}.".format(key, ", ".join(other))
+                    f"Picking {key}, skipping {other_str}."
                 )
 
     mode = "wb" if binary else "w"
@@ -329,8 +330,8 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
                 struct.pack("<2I", 1375135718, 3)
             )  # Don't know what these values represent
         else:
-            f.write("* FLAC3D grid produced by meshio v{}\n".format(version))
-            f.write("* {}\n".format(time.ctime()))
+            f.write(f"* FLAC3D grid produced by meshio v{version}\n")
+            f.write(f"* {time.ctime()}\n")
 
         _write_points(f, mesh.points, binary, float_fmt)
         for flag in ["zone", "face"]:
@@ -380,18 +381,14 @@ def _write_cells(f, points, cells, flag, binary):
             )
             count += num_cells
     else:
-        flag_to_text = {
+        entity, abbrev = {
             "zone": ("ZONES", "Z"),
             "face": ("FACES", "F"),
-        }
+        }[flag]
 
-        f.write("* {}\n".format(flag_to_text[flag][0]))
+        f.write(f"* {entity}\n")
         for ctype, cdata in cells:
-            fmt = (
-                "{} {{}} {{}} ".format(flag_to_text[flag][1])
-                + " ".join(["{}"] * cdata.shape[1])
-                + "\n"
-            )
+            fmt = f"{abbrev} {{}} {{}} " + " ".join(["{}"] * cdata.shape[1]) + "\n"
             for entry in cdata + 1:
                 count += 1
                 f.write(fmt.format(meshio_to_flac3d_type[ctype], count, *entry))
@@ -403,12 +400,12 @@ def _write_groups(f, cells, cell_data, field_data, flag, binary):
         groups, labels = _translate_groups(cells, cell_data, field_data, flag)
 
         if binary:
-            slot = "Default".encode("utf-8")
+            slot = b"Default"
 
             f.write(struct.pack("<I", len(groups)))
             for k in sorted(groups.keys()):
                 num_chars, num_zones = len(labels[k]), len(groups[k])
-                fmt = "<H{}sH7sI{}I".format(num_chars, num_zones)
+                fmt = f"<H{num_chars}sH7sI{num_zones}I"
                 tmp = [
                     num_chars,
                     labels[k].encode("utf-8"),
@@ -424,7 +421,7 @@ def _write_groups(f, cells, cell_data, field_data, flag, binary):
                 "face": "FGROUP",
             }
 
-            f.write("* {} GROUPS\n".format(flag.upper()))
+            f.write(f"* {flag.upper()} GROUPS\n")
             for k in sorted(groups.keys()):
                 f.write('{} "{}"\n'.format(flag_to_text[flag], labels[k]))
                 _write_table(f, groups[k])

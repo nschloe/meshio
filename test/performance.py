@@ -1,4 +1,5 @@
 import os
+import pathlib
 import tempfile
 import time
 import tracemalloc
@@ -11,7 +12,7 @@ import meshio
 
 
 def generate_triangular_mesh():
-    if os.path.isfile("sphere.xdmf"):
+    if pathlib.Path.is_file("sphere.xdmf"):
         mesh = meshio.read("sphere.xdmf")
     else:
         points, cells = meshzoo.icosa_sphere(300)
@@ -22,7 +23,7 @@ def generate_triangular_mesh():
 
 def generate_tetrahedral_mesh():
     """Generates a fairly large mesh."""
-    if os.path.isfile("cache.xdmf"):
+    if pathlib.Path.is_file("cache.xdmf"):
         mesh = meshio.read("cache.xdmf")
     else:
         import pygalmesh
@@ -139,7 +140,7 @@ def read_write(plot=False):
     print(mesh)
     mem_size = mesh.points.nbytes + mesh.cells[0].data.nbytes
     mem_size /= 1024.0 ** 2
-    print("mem_size: {:.2f} MB".format(mem_size))
+    print(f"mem_size: {mem_size:.2f} MB")
 
     formats = {
         "Abaqus": (meshio.abaqus.write, meshio.abaqus.read, ["out.inp"]),
@@ -280,8 +281,9 @@ def read_write(plot=False):
     )
     print()
     with tempfile.TemporaryDirectory() as directory:
+        directory = pathlib.Path(directory)
         for name, (writer, reader, filenames) in formats.items():
-            filename = os.path.join(directory, filenames[0])
+            filename = directory / filenames[0]
 
             tracemalloc.start()
             t = time.time()
@@ -291,9 +293,7 @@ def read_write(plot=False):
             peak_memory_write.append(tracemalloc.get_traced_memory()[1])
             tracemalloc.stop()
 
-            file_sizes.append(
-                sum(os.stat(os.path.join(directory, f)).st_size for f in filenames)
-            )
+            file_sizes.append(sum(os.stat(directory / f).st_size for f in filenames))
 
             tracemalloc.start()
             t = time.time()

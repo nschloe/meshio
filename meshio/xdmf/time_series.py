@@ -33,7 +33,7 @@ class TimeSeriesReader:
 
         version = root.get("Version")
         if version.split(".")[0] != "3":
-            raise ReadError("Unknown XDMF version {}.".format(version))
+            raise ReadError(f"Unknown XDMF version {version}.")
 
         domains = list(root)
         if len(domains) != 1:
@@ -334,7 +334,7 @@ class TimeSeriesWriter:
 
         if self.data_format != "HDF":
             raise WriteError()
-        name = "data{}".format(self.data_counter)
+        name = f"data{self.data_counter}"
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
         return os.path.basename(self.h5_filename) + ":/" + name

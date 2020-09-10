@@ -43,32 +43,34 @@ class Mesh:
 
         for key, data in self.cell_data.items():
             assert len(data) == len(cells), (
-                "Incompatible cell data. {} cell blocks, but '{}' has {} blocks."
-            ).format(len(cells), key, len(data))
+                "Incompatible cell data. "
+                f"{len(cells)} cell blocks, but '{key}' has {len(data)} blocks."
+            )
 
     def __repr__(self):
-        lines = [
-            "<meshio mesh object>",
-            "  Number of points: {}".format(len(self.points)),
-        ]
+        lines = ["<meshio mesh object>", f"  Number of points: {len(self.points)}"]
         if len(self.cells) > 0:
             lines.append("  Number of cells:")
             for tpe, elems in self.cells:
-                lines.append("    {}: {}".format(tpe, len(elems)))
+                lines.append(f"    {tpe}: {len(elems)}")
         else:
             lines.append("  No cells.")
 
         if self.point_sets:
-            lines.append("  Point sets: {}".format(", ".join(self.point_sets.keys())))
+            names = ", ".join(self.point_sets.keys())
+            lines.append(f"  Point sets: {names}")
 
         if self.cell_sets:
-            lines.append("  Cell sets: {}".format(", ".join(self.cell_sets.keys())))
+            names = ", ".join(self.cell_sets.keys())
+            lines.append(f"  Cell sets: {names}")
 
         if self.point_data:
-            lines.append("  Point data: {}".format(", ".join(self.point_data.keys())))
+            names = ", ".join(self.point_data.keys())
+            lines.append(f"  Point data: {names}")
 
         if self.cell_data:
-            lines.append("  Cell data: {}".format(", ".join(self.cell_data.keys())))
+            names = ", ".join(self.cell_data.keys())
+            lines.append(f"  Cell data: {names}")
 
         return "\n".join(lines)
 
@@ -90,7 +92,8 @@ class Mesh:
         self.cells = new_cells
         self.cell_data = new_cell_data
 
-        print("Pruned cell types: {}".format(", ".join(prune_list)))
+        pruned = ", ".join(prune_list)
+        print(f"Pruned cell types: {pruned}")
 
         # remove_orphaned_nodes.
         # find which nodes are not mentioned in the cells and remove them
@@ -229,7 +232,7 @@ class Mesh:
             names = sorted(list(set(key.split("-"))))
             if len(names) != len(tags):
                 # alternative names
-                names = ["set{}".format(tag) for tag in tags]
+                names = [f"set{tag}" for tag in tags]
 
             for name, tag in zip(names, tags):
                 self.cell_sets[name] = []

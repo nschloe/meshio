@@ -377,9 +377,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
         fh.write(b"ply\n")
 
         if binary:
-            fh.write(
-                "format binary_{}_endian 1.0\n".format(sys.byteorder).encode("utf-8")
-            )
+            fh.write(f"format binary_{sys.byteorder}_endian 1.0\n".encode("utf-8"))
         else:
             fh.write(b"format ascii 1.0\n")
 
@@ -425,14 +423,14 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 )
                 continue
             type_name = type_name_table[value.dtype]
-            fh.write("property {} {}\n".format(type_name, key).encode("utf-8"))
+            fh.write(f"property {type_name} {key}\n".encode("utf-8"))
             pd.append(value)
 
         num_cells = 0
         for cell_type, c in mesh.cells:
             if cell_type_to_count(cell_type):
                 num_cells += c.data.shape[0]
-        fh.write("element face {:d}\n".format(num_cells).encode("utf-8"))
+        fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
 
         # possibly cast down to int32
         cells = mesh.cells

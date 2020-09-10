@@ -125,7 +125,7 @@ def get_grid(root):
             grid = c
         else:
             if c.tag != "AppendedData":
-                raise ReadError("Unknown main tag '{}'.".format(c.tag))
+                raise ReadError(f"Unknown main tag '{c.tag}'.")
             if appended_data is not None:
                 raise ReadError("More than one AppendedData section found.")
             if c.attrib["encoding"] != "base64":
@@ -279,7 +279,7 @@ class VtuReader:
         try:
             self.byte_order = root.attrib["byte_order"]
             if self.byte_order not in ["LittleEndian", "BigEndian"]:
-                raise ReadError("Unknown byte order '{}'.".format(self.byte_order))
+                raise ReadError(f"Unknown byte order '{self.byte_order}'.")
         except KeyError:
             self.byte_order = None
 
@@ -295,7 +295,7 @@ class VtuReader:
                 for data_array in c:
                     field_data[data_array.attrib["Name"]] = self.read_data(data_array)
             else:
-                raise ReadError("Unknown grid subtag '{}'.".format(c.tag))
+                raise ReadError(f"Unknown grid subtag '{c.tag}'.")
 
         if not pieces:
             raise ReadError("No Piece found.")
@@ -359,7 +359,7 @@ class VtuReader:
 
                     cell_data_raw.append(piece_cell_data_raw)
                 else:
-                    raise ReadError("Unknown tag '{}'.".format(child.tag))
+                    raise ReadError(f"Unknown tag '{child.tag}'.")
 
         if not cell_data_raw:
             cell_data_raw = [{}] * len(cells)
@@ -474,7 +474,7 @@ class VtuReader:
         try:
             dtype = vtu_to_numpy_type[data_type]
         except KeyError:
-            raise ReadError("Illegal data type '{}'.".format(data_type))
+            raise ReadError(f"Illegal data type '{data_type}'.")
 
         if fmt == "ascii":
             # ascii
@@ -495,7 +495,7 @@ class VtuReader:
             )
             data = reader(self.appended_data[offset:], dtype)
         else:
-            raise ReadError("Unknown data format '{}'.".format(fmt))
+            raise ReadError(f"Unknown data format '{fmt}'.")
 
         if "NumberOfComponents" in c.attrib:
             data = data.reshape(-1, int(c.attrib["NumberOfComponents"]))
@@ -641,7 +641,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         da.text_writer = text_writer
         return
 
-    comment = ET.Comment("This file was created by meshio v{}".format(__version__))
+    comment = ET.Comment(f"This file was created by meshio v{__version__}")
     vtk_file.insert(1, comment)
 
     grid = ET.SubElement(vtk_file, "UnstructuredGrid")
@@ -651,7 +651,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         grid,
         "Piece",
         NumberOfPoints="{}".format(len(points)),
-        NumberOfCells="{}".format(total_num_cells),
+        NumberOfCells=f"{total_num_cells}",
     )
 
     # points
