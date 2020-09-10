@@ -3,6 +3,7 @@ I/O for XDMF.
 http://www.xdmf.org/index.php/XDMF_Model_and_Format
 """
 import os
+import pathlib
 from io import BytesIO
 from xml.etree import ElementTree as ET
 
@@ -102,7 +103,8 @@ class XdmfReader:
         filename, h5path = info.split(":")
 
         # The HDF5 file path is given with respect to the XDMF (XML) file.
-        full_hdf5_path = os.path.join(os.path.dirname(self.filename), filename)
+        dirname = pathlib.Path(self.filename).resolve().parent
+        full_hdf5_path = dirname / filename
 
         f = h5py.File(full_hdf5_path, "r")
 

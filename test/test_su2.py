@@ -1,4 +1,4 @@
-import os
+import pathlib
 
 import helpers
 import numpy
@@ -11,6 +11,7 @@ test_set = [
     helpers.tet_mesh,
     helpers.hex_mesh,
 ]
+this_dir = pathlib.Path(__file__).resolve().parent
 
 
 @pytest.mark.parametrize("mesh", test_set)
@@ -28,8 +29,7 @@ def test(mesh):
 def test_structured(
     filename, ref_num_cells, ref_num_points, ref_num_unique_tags, sum_tags
 ):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "su2", filename)
+    filename = this_dir / "meshes" / "su2" / filename
 
     mesh = meshio.read(filename)
 

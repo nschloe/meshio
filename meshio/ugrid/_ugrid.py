@@ -40,7 +40,7 @@ file_types = {
 
 def determine_file_type(filename):
     file_type = file_types["ascii"]
-    filename_parts = filename.split(".")
+    filename_parts = str(filename).split(".")
     if len(filename_parts) > 1:
         type_suffix = filename_parts[-2]
         if type_suffix in file_types.keys():
