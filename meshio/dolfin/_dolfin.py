@@ -143,16 +143,13 @@ def _write_mesh(filename, points, cell_type, cells):
 
     with open(filename, "w") as f:
         f.write("<dolfin nsmap=\"{'dolfin': 'https://fenicsproject.org/'}\">\n")
-        f.write(
-            '  <mesh celltype="{}" dim="{}">\n'.format(
-                meshio_to_dolfin_type[cell_type], dim
-            )
-        )
+        ct = meshio_to_dolfin_type[cell_type]
+        f.write(f'  <mesh celltype="{ct}" dim="{dim}">\n')
 
-        f.write('    <vertices size="{}">\n'.format(len(points)))
-        xyz = "xyz"
+        num_points = len(points)
+        f.write(f'    <vertices size="{num_points}">\n')
         for idx, point in enumerate(points):
-            s = " ".join('{}="{}"'.format(xyz[k], p) for k, p in enumerate(point))
+            s = " ".join(f'{xyz}="{p}"' for xyz, p in zip("xyz", point))
             f.write(f'      <vertex index="{idx}" {s} />\n')
         f.write("    </vertices>\n")
 
@@ -222,7 +219,8 @@ def write(filename, mesh):
 
     for name, lst in mesh.cell_data.items():
         for data in lst:
-            cell_data_filename = "{}_{}.xml".format(os.path.splitext(filename)[0], name)
+            fname = os.path.splitext(filename)[0]
+            cell_data_filename = f"{fname}_{name}.xml"
             dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
             _write_cell_data(cell_data_filename, dim, numpy.array(data))
 
