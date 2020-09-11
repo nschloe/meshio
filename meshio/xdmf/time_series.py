@@ -264,6 +264,7 @@ class TimeSeriesWriter:
         return self
 
     def __exit__(self, *args):
+        write_xml(self.filename, self.xdmf_file)
         if self.data_format == "HDF":
             self.h5_file.close()
 
@@ -284,7 +285,6 @@ class TimeSeriesWriter:
         self.cells(cells, grid)
         self.has_mesh = True
 
-        write_xml(self.filename, self.xdmf_file)
 
     def write_data(self, t, point_data=None, cell_data=None):
         cell_data = {} if cell_data is None else cell_data
@@ -314,7 +314,6 @@ class TimeSeriesWriter:
         if cell_data:
             self.cell_data(cell_data, grid)
 
-        write_xml(self.filename, self.xdmf_file)
 
     def numpy_to_xml_string(self, data):
         if self.data_format == "XML":
