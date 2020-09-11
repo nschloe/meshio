@@ -285,7 +285,6 @@ class TimeSeriesWriter:
         self.cells(cells, grid)
         self.has_mesh = True
 
-
     def write_data(self, t, point_data=None, cell_data=None):
         cell_data = {} if cell_data is None else cell_data
         # <Grid>
@@ -313,7 +312,6 @@ class TimeSeriesWriter:
                 cell_data[name] = numpy.array(list(entry.values()))
         if cell_data:
             self.cell_data(cell_data, grid)
-
 
     def numpy_to_xml_string(self, data):
         if self.data_format == "XML":
