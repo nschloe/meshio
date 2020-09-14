@@ -256,6 +256,42 @@ polyhedron_mesh = meshio.Mesh(
             numpy.array([[0, 1, 2, 3, 7], [0, 1, 6, 5, 7]]),
         ),  # two pyramids
     ],
+    cell_data={
+        "polyhedron:faces_of_cells": {
+            "polyhedron4": [
+                [
+                    numpy.array([1, 2, 5]),
+                    numpy.array([1, 2, 7]),
+                    numpy.array([1, 5, 7]),
+                    numpy.array([2, 5, 7]),
+                ],
+                [
+                    numpy.array([2, 5, 6]),
+                    numpy.array([2, 6, 7]),
+                    numpy.array([2, 5, 7]),
+                    numpy.array([5, 6, 7]),
+                ],
+            ],
+            "hexahedron": None,
+            "polyhedron5": [
+                [
+                    numpy.array([0, 1, 2, 3]),  # pyramid base is a rectangle
+                    numpy.array([0, 1, 7]),
+                    numpy.array([1, 2, 7]),
+                    numpy.array([2, 3, 7]),
+                    numpy.array([3, 0, 7]),
+                ],
+                [
+                    numpy.array([0, 1, 6]),  # pyramid base split in two triangles
+                    numpy.array([0, 6, 7]),
+                    numpy.array([0, 1, 5]),
+                    numpy.array([0, 5, 7]),
+                    numpy.array([5, 6, 7]),
+                    numpy.array([1, 5, 6]),
+                ],
+            ],
+        }
+    },
 )
 
 
@@ -280,6 +316,10 @@ def add_cell_data(mesh, specs):
         ]
         for name, shape, dtype in specs
     }
+    # Keep cell-data from the original mesh. This is needed to preserve
+    # face-cell relations for polyhedral meshes.
+    for key, val in mesh.cell_data.items():
+        mesh2.cell_data[key] = val
     return mesh2
 
 
@@ -339,6 +379,31 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
             input_mesh.point_data[key], mesh.point_data[key], atol=atol, rtol=0.0
         )
 
+    # The cell-face relations for polyhedral cells do not fit with the standard
+    # format for cell-data. Do a special test for this part.
+    polyhedron = False
+    if "polyhedron:faces_of_cells" in input_mesh.cell_data.keys():
+        polyhedron = True
+        # Pop the information so that it is not checked with standard testing
+        # of cell-data below (it will fail). The relations for input_mesh will
+        # be restored at the end of this function.
+        in_foc = input_mesh.cell_data.pop("polyhedron:faces_of_cells")
+        out_foc = mesh.cell_data.pop("polyhedron:faces_of_cells")
+        # Loop over polyhedra with different number of faces
+        for key, in_val in in_foc.items():
+            out_val = out_foc.pop(key)
+            if len(key) < 10 or key[:10] != "polyhedron":
+                continue
+            # Checks
+            assert len(in_val) == len(out_val)
+            for in_cell, out_cell in zip(in_val, out_val):
+                assert len(in_cell) == len(out_cell)
+                for in_face, out_face in zip(in_cell, out_cell):
+                    assert numpy.allclose(in_face, out_face)
+
+        # There should be no keys in out_foc that were not in in_foc
+        assert len(out_foc) == 0
+
     for name, cell_type_data in input_mesh.cell_data.items():
         for d0, d1 in zip(cell_type_data, mesh.cell_data[name]):
             # assert d0.dtype == d1.dtype, (d0.dtype, d1.dtype)
@@ -346,6 +411,11 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     for name, data in input_mesh.field_data.items():
         assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
+
+    # Restore polyhedral cell-face relations so that this is available for the
+    # next test.
+    if polyhedron:
+        input_mesh.cell_data["polyhedron:faces_of_cells"] = in_foc
 
 
 def generic_io(filename):
