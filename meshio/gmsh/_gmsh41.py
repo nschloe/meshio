@@ -48,6 +48,7 @@ def read_buffer(f, is_ascii, data_size):
     physical_tags = None
     cell_sets = {}
     periodic = None
+    cells = None
     while True:
         line = f.readline().decode("utf-8")
         if not line:
@@ -92,6 +93,8 @@ def read_buffer(f, is_ascii, data_size):
                 except UnicodeDecodeError:
                     pass
 
+    if cells is None:
+        raise ReadError("$Element section not found.")
     cell_data = cell_data_from_raw(cells, cell_data_raw)
     cell_data.update(cell_tags)
 
