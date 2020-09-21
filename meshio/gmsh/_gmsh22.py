@@ -137,7 +137,7 @@ def _read_cells(f, cells, point_tags, is_ascii):
         cells[ic] = (ct, remap[cd])
 
     for line in f:
-        if line.decode("utf-8") == "$EndElements":
+        if line.decode("utf-8") == "$EndElements\n":
             break
     else:
         logging.warning("$Elements not closed by $EndElements.")
