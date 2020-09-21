@@ -136,10 +136,11 @@ def _read_cells(f, cells, point_tags, is_ascii):
     for ic, (ct, cd) in enumerate(cells):
         cells[ic] = (ct, remap[cd])
 
-    # Fast forward to $EndElements
-    line = f.readline().decode("utf-8")
-    while line.strip() != "$EndElements":
-        line = f.readline().decode("utf-8")
+    for line in f:
+        if line.decode("utf-8") == "$EndElements\n":
+            break
+    else:
+        logging.warning("$Elements not closed by $EndElements.")
 
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {}
