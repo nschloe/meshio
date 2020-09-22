@@ -10,6 +10,7 @@ from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _read_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_order,
@@ -60,9 +61,7 @@ def read_buffer(f, is_ascii, data_size):
         elif environ == "ElementData":
             _read_data(f, "ElementData", cell_data_raw, data_size, is_ascii)
         else:
-            # skip environment
-            while line != "$End" + environ:
-                line = f.readline().decode("utf-8").strip()
+            _read_end_block(f, environ)
 
     if has_additional_tag_data:
         logging.warning("The file contains tag data that couldn't be processed.")
@@ -110,10 +109,7 @@ def _read_nodes(f, is_ascii, data_size):
         points = numpy.ascontiguousarray(data["x"])
         point_tags = data["index"]
 
-    # Fast forward to $EndNodes
-    line = f.readline().decode("utf-8")
-    while line.strip() != "$EndNodes":
-        line = f.readline().decode("utf-8")
+    _read_end_block(f, "Nodes")
     return points, point_tags
 
 
@@ -136,11 +132,7 @@ def _read_cells(f, cells, point_tags, is_ascii):
     for ic, (ct, cd) in enumerate(cells):
         cells[ic] = (ct, remap[cd])
 
-    for line in f:
-        if line.decode("utf-8") == "$EndElements\n":
-            break
-    else:
-        logging.warning("$Elements not closed by $EndElements.")
+    _read_end_block(f, "Elements")
 
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {}
@@ -258,9 +250,7 @@ def _read_periodic(f):
         slave_master = numpy.array(slave_master, dtype=c_int).reshape(-1, 2)
         slave_master -= 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndPeriodic":
-        raise ReadError()
+    _read_end_block(f, "Periodic")
     return periodic
 
 
