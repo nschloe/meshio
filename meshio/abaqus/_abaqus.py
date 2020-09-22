@@ -92,8 +92,35 @@ abaqus_to_meshio_type = {
 meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
 
+def bulk_w_includes(inp_path, bulk_str):
+    import re
+    import os
+    re_in = re.compile(r'\*Include,\s*input=(.*?)$', re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    bulk_repl = dict()
+
+    for m in re_in.finditer(bulk_str):
+        search_key = m.group(0)
+        with open(os.path.join(os.path.dirname(inp_path), m.group(1)), 'r') as d:
+            bulk_repl[search_key] = d.read()
+
+    for key, val in bulk_repl.items():
+        bulk_str = bulk_str.replace(key, val)
+    return bulk_str
+
+
 def read(filename):
     """Reads a Abaqus inp file."""
+
+    out = None
+    with open_file(filename, "r") as f:
+        bulk_str = f.read()
+        if '*include' in bulk_str.lower():
+            import io
+            out = read_buffer(io.StringIO(bulk_w_includes(filename, bulk_str)))
+
+    if out is not None:
+        return out
+
     with open_file(filename, "r") as f:
         out = read_buffer(f)
     return out
@@ -340,7 +367,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
                     f.write(f"*ELSET, ELSET={k}\n")
                     f.write(
                         ",\n".join(
-                            ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
+                            ",".join(els[i: i + nnl]) for i in range(0, len(els), nnl)
                         )
                         + "\n"
                     )
@@ -350,7 +377,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
             nds = [str(i + 1) for i in v]
             f.write(f"*NSET, NSET={k}\n")
             f.write(
-                ",\n".join(",".join(nds[i : i + nnl]) for i in range(0, len(nds), nnl))
+                ",\n".join(",".join(nds[i: i + nnl]) for i in range(0, len(nds), nnl))
                 + "\n"
             )
 
