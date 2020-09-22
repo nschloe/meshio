@@ -10,12 +10,12 @@ from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_order,
     _meshio_to_gmsh_type,
     _read_data,
-    _read_end_block,
     _read_physical_names,
     _write_data,
     _write_physical_names,
@@ -61,7 +61,7 @@ def read_buffer(f, is_ascii, data_size):
         elif environ == "ElementData":
             _read_data(f, "ElementData", cell_data_raw, data_size, is_ascii)
         else:
-            _read_end_block(f, environ)
+            _fast_forward_to_end_block(f, environ)
 
     if has_additional_tag_data:
         logging.warning("The file contains tag data that couldn't be processed.")
@@ -109,7 +109,7 @@ def _read_nodes(f, is_ascii, data_size):
         points = numpy.ascontiguousarray(data["x"])
         point_tags = data["index"]
 
-    _read_end_block(f, "Nodes")
+    _fast_forward_to_end_block(f, "Nodes")
     return points, point_tags
 
 
@@ -132,7 +132,7 @@ def _read_cells(f, cells, point_tags, is_ascii):
     for ic, (ct, cd) in enumerate(cells):
         cells[ic] = (ct, remap[cd])
 
-    _read_end_block(f, "Elements")
+    _fast_forward_to_end_block(f, "Elements")
 
     # restrict to the standard two data items (physical, geometrical)
     output_cell_tags = {}
@@ -250,7 +250,7 @@ def _read_periodic(f):
         slave_master = numpy.array(slave_master, dtype=c_int).reshape(-1, 2)
         slave_master -= 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
-    _read_end_block(f, "Periodic")
+    _fast_forward_to_end_block(f, "Periodic")
     return periodic
 
 

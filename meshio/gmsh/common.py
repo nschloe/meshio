@@ -9,7 +9,7 @@ c_int = numpy.dtype("i")
 c_double = numpy.dtype("d")
 
 
-def _read_end_block(f, block):
+def _fast_forward_to_end_block(f, block):
     """fast-forward to end of block"""
     # See also https://github.com/nschloe/pygalmesh/issues/34
 
@@ -32,7 +32,7 @@ def _read_physical_names(f, field_data):
         key = line[2]
         value = numpy.array(line[1::-1], dtype=int)
         field_data[key] = value
-    _read_end_block(f, "PhysicalNames")
+    _fast_forward_to_end_block(f, "PhysicalNames")
 
 
 def _read_data(f, tag, data_dict, data_size, is_ascii):
@@ -65,7 +65,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
             raise ReadError()
         data = numpy.ascontiguousarray(data["values"])
 
-    _read_end_block(f, tag)
+    _fast_forward_to_end_block(f, tag)
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.

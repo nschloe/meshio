@@ -16,12 +16,12 @@ from .._common import (
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_order,
     _meshio_to_gmsh_type,
     _read_data,
-    _read_end_block,
     _read_physical_names,
     _write_data,
     _write_physical_names,
@@ -84,7 +84,7 @@ def read_buffer(f, is_ascii, data_size):
             # $Comments/$EndComments section.
             # ```
             # skip environment
-            _read_end_block(f, environ)
+            _fast_forward_to_end_block(f, environ)
 
     if cells is None:
         raise ReadError("$Element section not found.")
@@ -118,7 +118,7 @@ def _read_entities(f, is_ascii, data_size):
                 (num_BREP_,) = fromfile(f, c_size_t, 1)
                 fromfile(f, c_int, num_BREP_)
 
-    _read_end_block(f, "Entities")
+    _fast_forward_to_end_block(f, "Entities")
     return physical_tags
 
 
@@ -157,7 +157,7 @@ def _read_nodes(f, is_ascii, data_size):
         points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
         idx += num_nodes
 
-    _read_end_block(f, "Nodes")
+    _fast_forward_to_end_block(f, "Nodes")
     return points, tags
 
 
@@ -200,7 +200,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size, field_data
         else:
             data.append((physical_tags[dim_entity][tag_entity], tag_entity, tpe, d))
 
-    _read_end_block(f, "Elements")
+    _fast_forward_to_end_block(f, "Elements")
 
     # Inverse point tags
     inv_tags = numpy.full(numpy.max(point_tags) + 1, -1, dtype=int)
@@ -248,7 +248,7 @@ def _read_periodic(f, is_ascii, data_size):
         slave_master = slave_master - 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
 
-    _read_end_block(f, "Periodic")
+    _fast_forward_to_end_block(f, "Periodic")
     return periodic
 
 

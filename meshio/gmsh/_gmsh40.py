@@ -16,12 +16,12 @@ from .._common import (
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_order,
     _meshio_to_gmsh_type,
     _read_data,
-    _read_end_block,
     _read_physical_names,
     _write_data,
     _write_physical_names,
@@ -76,7 +76,7 @@ def read_buffer(f, is_ascii, data_size):
             # $Comments/$EndComments section.
             # ```
             # skip environment
-            _read_end_block(f, environ)
+            _fast_forward_to_end_block(f, environ)
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
     cell_data.update(cell_tags)
@@ -105,7 +105,7 @@ def _read_entities(f, is_ascii, data_size):
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
                 num_BREP = int(fromfile(f, c_ulong, 1)[0])
                 fromfile(f, c_int, num_BREP)
-    _read_end_block(f, "Entities")
+    _fast_forward_to_end_block(f, "Entities")
     return physical_tags
 
 
@@ -153,7 +153,7 @@ def _read_nodes(f, is_ascii, data_size):
         if line != "\n":
             raise ReadError()
 
-    _read_end_block(f, "Nodes")
+    _fast_forward_to_end_block(f, "Nodes")
     return points, tags
 
 
@@ -179,7 +179,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         else:
             data.append((physical_tags[dim_entity][tag_entity], tag_entity, tpe, d))
 
-    _read_end_block(f, "Elements")
+    _fast_forward_to_end_block(f, "Elements")
 
     # The msh4 elements array refers to the nodes by their tag, not the index. All other
     # mesh formats use the index, which is far more efficient, too. Hence,
@@ -238,7 +238,7 @@ def _read_periodic(f, is_ascii):
         slave_master = slave_master - 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
 
-    _read_end_block(f, "Periodic")
+    _fast_forward_to_end_block(f, "Periodic")
     return periodic
 
 
