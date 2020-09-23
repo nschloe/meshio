@@ -1,7 +1,12 @@
 """
 I/O for Abaqus inp files.
 """
+import os
+import re
+import io
+
 import numpy
+
 
 from ..__about__ import __version__
 from .._exceptions import ReadError
@@ -93,9 +98,6 @@ meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
 
 def bulk_w_includes(inp_path, bulk_str):
-    import os
-    import re
-
     re_in = re.compile(
         r"\*Include,\s*input=(.*?)$", re.IGNORECASE | re.MULTILINE | re.DOTALL
     )
@@ -118,8 +120,6 @@ def read(filename):
     with open_file(filename, "r") as f:
         bulk_str = f.read()
         if "*include" in bulk_str.lower():
-            import io
-
             out = read_buffer(io.StringIO(bulk_w_includes(filename, bulk_str)))
 
     if out is not None:
