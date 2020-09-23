@@ -1,6 +1,10 @@
 """
 I/O for Abaqus inp files.
 """
+import io
+import os
+import re
+
 import numpy
 
 from ..__about__ import __version__
@@ -92,6 +96,23 @@ abaqus_to_meshio_type = {
 meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
 
+def read_w_includes(inp_path):
+    re_in = re.compile(r'\*Include,\s*input=(.*?)$', re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    bulk_repl = dict()
+    with open_file(inp_path, "r") as f:
+        bulk_str = f.read()
+
+    for m in re_in.finditer(bulk_str):
+        search_key = m.group(0)
+        with open(os.path.join(os.path.dirname(inp_path), m.group(1)), 'r') as d:
+            bulk_repl[search_key] = d.read()
+
+    for key, val in bulk_repl.items():
+        bulk_str = bulk_str.replace(key, val)
+
+    return read_buffer(io.StringIO(bulk_str))
+
+
 def read(filename):
     """Reads a Abaqus inp file."""
     with open_file(filename, "r") as f:
@@ -165,6 +186,8 @@ def read_buffer(f):
                         cell_sets[name].append(cell_sets_element[set_name])
                     else:
                         raise ReadError(f"Unknown cell set '{set_name}'")
+        elif keyword == 'INCLUDE':
+            return read_w_includes(f.name)
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
