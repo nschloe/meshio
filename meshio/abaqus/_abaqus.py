@@ -1,12 +1,9 @@
 """
 I/O for Abaqus inp files.
 """
-import os
-import re
-import io
+from pathlib import Path
 
 import numpy
-
 
 from ..__about__ import __version__
 from .._exceptions import ReadError
@@ -97,33 +94,8 @@ abaqus_to_meshio_type = {
 meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
 
-def bulk_w_includes(inp_path, bulk_str):
-    re_in = re.compile(
-        r"\*Include,\s*input=(.*?)$", re.IGNORECASE | re.MULTILINE | re.DOTALL
-    )
-    bulk_repl = dict()
-
-    for m in re_in.finditer(bulk_str):
-        search_key = m.group(0)
-        with open(os.path.join(os.path.dirname(inp_path), m.group(1)), "r") as d:
-            bulk_repl[search_key] = d.read()
-
-    for key, val in bulk_repl.items():
-        bulk_str = bulk_str.replace(key, val)
-    return bulk_str
-
-
 def read(filename):
     """Reads a Abaqus inp file."""
-
-    out = None
-    with open_file(filename, "r") as f:
-        bulk_str = f.read()
-        if "*include" in bulk_str.lower():
-            out = read_buffer(io.StringIO(bulk_w_includes(filename, bulk_str)))
-
-    if out is not None:
-        return out
 
     with open_file(filename, "r") as f:
         out = read_buffer(f)
@@ -132,6 +104,7 @@ def read(filename):
 
 def read_buffer(f):
     # Initialize the optional data fields
+    points = numpy.empty([0, 3], dtype=numpy.float64)
     cells = []
     cell_ids = []
     point_sets = {}
@@ -154,7 +127,15 @@ def read_buffer(f):
 
         keyword = line.partition(",")[0].strip().replace("*", "").upper()
         if keyword == "NODE":
-            points, point_ids, line = _read_nodes(f)
+            points_in, point_ids_in, line = _read_nodes(f)
+            if len(points) > 0:
+                point_ids = {
+                    nid: ind + len(points) for nid, ind in point_ids_in.items()
+                }
+            else:
+                point_ids = point_ids_in
+            points = numpy.concatenate([points, points_in])
+
         elif keyword == "ELEMENT":
             params_map = get_param_map(line, required_keys=["TYPE"])
             cell_type, cells_data, ids, sets, line = _read_cells(
@@ -196,6 +177,23 @@ def read_buffer(f):
                         cell_sets[name].append(cell_sets_element[set_name])
                     else:
                         raise ReadError(f"Unknown cell set '{set_name}'")
+        elif keyword == "INCLUDE":
+            incl_ref = line.lower().split("input=")[-1].rstrip().replace("\\", "/")
+            if Path(incl_ref).exists() is False:
+                cd = Path(f.name).parents[0]
+                incl_ref = Path(cd, incl_ref).absolute()
+            with open(incl_ref, "r") as d:
+                submsh = read_buffer(d)
+
+            points = numpy.concatenate((points, submsh.points))
+            cells += submsh.cells
+            point_data.update(submsh.point_data)
+            cell_data.update(submsh.cell_data)
+            field_data.update(submsh.field_data)
+            point_sets.update(submsh.point_sets)
+            cell_sets.update(submsh.cell_sets)
+
+            line = f.readline()
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
