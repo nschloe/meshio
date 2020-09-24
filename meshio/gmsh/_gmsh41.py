@@ -47,6 +47,7 @@ def read_buffer(f, is_ascii, data_size):
     cell_tags = {}
     point_data = {}
     physical_tags = None
+    bounding_entities = None
     cell_sets = {}
     periodic = None
     cells = None
@@ -62,12 +63,20 @@ def read_buffer(f, is_ascii, data_size):
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Entities":
-            physical_tags = _read_entities(f, is_ascii, data_size)
+            # Read physical tags and information on bounding entities.
+            # The information is passed to the processing of elements.
+            physical_tags, bounding_entities = _read_entities(f, is_ascii, data_size)
         elif environ == "Nodes":
-            points, point_tags = _read_nodes(f, is_ascii, data_size)
+            points, point_tags, point_entities = _read_nodes(f, is_ascii, data_size)
         elif environ == "Elements":
             cells, cell_tags, cell_sets = _read_elements(
-                f, point_tags, physical_tags, is_ascii, data_size, field_data
+                f,
+                point_tags,
+                physical_tags,
+                bounding_entities,
+                is_ascii,
+                data_size,
+                field_data,
             )
         elif environ == "Periodic":
             periodic = _read_periodic(f, is_ascii, data_size)
@@ -91,6 +100,9 @@ def read_buffer(f, is_ascii, data_size):
     cell_data = cell_data_from_raw(cells, cell_data_raw)
     cell_data.update(cell_tags)
 
+    # Add node entity information to the point data
+    point_data.update(point_entities)
+
     return Mesh(
         points,
         cells,
@@ -103,9 +115,17 @@ def read_buffer(f, is_ascii, data_size):
 
 
 def _read_entities(f, is_ascii, data_size):
+    # Read the entity section. Return physical tags of the entities, and (for
+    # entities of dimension > 0) the bounding entities (so points that form
+    # the boundary of a line etc).
+    # Note that the bounding box of the entities is disregarded. Adding this
+    # is not difficult, but for the moment, the entropy of adding more data
+    # does not seem warranted.
+
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
     physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
+    bounding_entities = tuple({} for _ in range(4))
     number = fromfile(f, c_size_t, 4)  # dims 0, 1, 2, 3
 
     for d, n in enumerate(number):
@@ -114,15 +134,22 @@ def _read_entities(f, is_ascii, data_size):
             fromfile(f, c_double, 3 if d == 0 else 6)  # discard bounding-box
             (num_physicals,) = fromfile(f, c_size_t, 1)
             physical_tags[d][tag] = list(fromfile(f, c_int, num_physicals))
-            if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
-                (num_BREP_,) = fromfile(f, c_size_t, 1)
-                fromfile(f, c_int, num_BREP_)
+            if d > 0:
+                # Number of bounding entities
+                num_BREP_ = fromfile(f, c_size_t, 1)[0]
+                # Store bounding entities
+                bounding_entities[d][tag] = fromfile(f, c_int, num_BREP_)
 
     _fast_forward_to_end_block(f, "Entities")
-    return physical_tags
+    return physical_tags, bounding_entities
 
 
 def _read_nodes(f, is_ascii, data_size):
+    # Read node data: Node coordinates and tags.
+    # Also find the entities of the nodes, and store this as point_data.
+    # Note that entity tags are 1-offset within each dimension, thus it is
+    # necessary to keep track of both tag and dimension of the entity
+
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
 
@@ -133,11 +160,15 @@ def _read_nodes(f, is_ascii, data_size):
 
     points = numpy.empty((total_num_nodes, 3), dtype=float)
     tags = numpy.empty(total_num_nodes, dtype=int)
+    entity_of_nodes = numpy.empty_like(tags)
+    entity_dimension = numpy.empty_like(tags)
+    # To save the entity block id for each node, initialize an array here,
+    # populate it with num_nodes
 
     idx = 0
     for k in range(num_entity_blocks):
         # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
-        _, __, parametric = fromfile(f, c_int, 3)
+        dim, entity_tag, parametric = fromfile(f, c_int, 3)
         if parametric != 0:
             raise ReadError("parametric nodes not implemented")
         num_nodes = int(fromfile(f, c_size_t, 1)[0])
@@ -155,13 +186,27 @@ def _read_nodes(f, is_ascii, data_size):
         # Store the point densely and in the order in which they appear in the file.
         # x(double) y(double) z(double) (* numNodes)
         points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
+
+        # Entity tag and entity dimension of the nodes. Stored as point-data.
+        entity_of_nodes[ixx] = entity_tag
+        entity_dimension[ixx] = dim
         idx += num_nodes
 
     _fast_forward_to_end_block(f, "Nodes")
-    return points, tags
+
+    # Entity information for nodes is stored as point data, with clearly named
+    # items.
+    point_data = {
+        "gmsh:node_entity": entity_of_nodes,
+        "gmsh:node_entity_dimension": entity_dimension,
+    }
+
+    return points, tags, point_data
 
 
-def _read_elements(f, point_tags, physical_tags, is_ascii, data_size, field_data):
+def _read_elements(
+    f, point_tags, physical_tags, bounding_entities, is_ascii, data_size, field_data
+):
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
 
@@ -195,10 +240,15 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size, field_data
         d = fromfile(f, c_size_t, int(num_ele * (1 + num_nodes_per_ele))).reshape(
             (num_ele, -1)
         )
-        if physical_tags is None:
-            data.append((None, tag_entity, tpe, d))
+
+        # Find physical tag, if defined; else it is None.
+        pt = None if not physical_tags else physical_tags[dim_entity][tag_entity]
+        # Bounding entities (of lower dimension) if defined. Else it is None.
+        if dim_entity > 0 and bounding_entities:  # Points have no boundaries
+            be = bounding_entities[dim_entity][tag_entity]
         else:
-            data.append((physical_tags[dim_entity][tag_entity], tag_entity, tpe, d))
+            be = None
+        data.append((pt, be, tag_entity, tpe, d))
 
     _fast_forward_to_end_block(f, "Elements")
 
@@ -208,12 +258,12 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size, field_data
 
     # Note that the first column in the data array is the element tag; discard it.
     data = [
-        (physical_tag, geom_tag, tpe, inv_tags[d[:, 1:] - 1])
-        for physical_tag, geom_tag, tpe, d in data
+        (physical_tag, bound_entity, geom_tag, tpe, inv_tags[d[:, 1:] - 1])
+        for physical_tag, bound_entity, geom_tag, tpe, d in data
     ]
 
     cells = []
-    for physical_tag, geom_tag, key, values in data:
+    for physical_tag, bound_entity, geom_tag, key, values in data:
         cells.append((key, values))
         if physical_tag:
             if "gmsh:physical" not in cell_data:
@@ -224,6 +274,13 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size, field_data
         if "gmsh:geometrical" not in cell_data:
             cell_data["gmsh:geometrical"] = []
         cell_data["gmsh:geometrical"].append(numpy.full(len(values), geom_tag, int))
+
+        # The bounding entities is stored in the cell_sets.
+        if bounding_entities:
+            if "gmsh:bounding_entities" not in cell_sets:
+                cell_sets["gmsh:bounding_entities"] = []
+            cell_sets["gmsh:bounding_entities"].append(bound_entity)
+
     cells[:] = _gmsh_to_meshio_order(cells)
 
     return cells, cell_data, cell_sets
@@ -292,9 +349,11 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        _write_entities(fh, cells, binary)
-        _write_nodes(fh, mesh.points, mesh.cells, float_fmt, binary)
-        _write_elements(fh, cells, binary)
+        _write_entities(
+            fh, cells, mesh.cell_data, mesh.cell_sets, mesh.point_data, binary
+        )
+        _write_nodes(fh, mesh.points, mesh.cells, mesh.point_data, float_fmt, binary)
+        _write_elements(fh, cells, mesh.cell_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt, binary)
         for name, dat in mesh.point_data.items():
@@ -305,7 +364,7 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
             _write_data(fh, "ElementData", name, dat, binary)
 
 
-def _write_entities(fh, cells, binary):
+def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
     """write the $Entities block
 
     specified as
@@ -332,24 +391,157 @@ def _write_entities(fh, cells, binary):
     ...
 
     """
-    # fh.write("$Entities\n".encode("utf-8"))
+
+    # Both nodes and cells have enities, but the cell entities are a subset of
+    # the nodes. The reason is (if the inner workings of Gmsh has been correctly
+    # understood) that node entities are assigned to all
+    # objects necessary to specify the geometry whereas only cells of Physical
+    # objcets (gmsh jargon) are present among the cell entities.
+    # The entities section must therefore be built on the node-entities, if
+    # these are available. If this is not the case, we leave this section blank.
+    # TODO: Should this give a warning?
+    if not (
+        "gmsh:node_entity_dimension" in point_data.keys()
+        and "gmsh:node_entity" in point_data.keys()
+    ):
+        return
+
+    fh.write(b"$Entities\n")
+
+    # Array of entity tag (first row) and dimension (second row) per node.
+    # We need to combine the two, since entity tags are reset for each dimension.
+    node_dim_entity = numpy.unique(
+        numpy.vstack(
+            (point_data["gmsh:node_entity_dimension"], point_data["gmsh:node_entity"])
+        ),
+        axis=1,
+    )
+
+    # Write number of entities per dimension
+    num_occ = numpy.bincount(node_dim_entity[0], minlength=4)
+    if binary:
+        num_occ.astype(c_size_t).tofile(fh)
+    else:
+        fh.write(
+            f"{num_occ[0]} {num_occ[1]} {num_occ[2]} {num_occ[3]}\n".encode("utf-8")
+        )
+
+    # Array of dimension and entity tag per cell. Will be compared with the
+    # similar not array.
+    cell_dim_entity = numpy.empty((2, len(cells)), dtype=int)
+    for ci in range(len(cells)):
+        cell_dim_entity[0, ci] = _geometric_dimension[cells[ci][0]]
+        cell_dim_entity[1, ci] = cell_data["gmsh:geometrical"][ci][0]
+
+    # We will only deal with bounding entities if this information is available
+    has_bounding_elements = "gmsh:bounding_entities" in cell_sets.keys()
+
+    # The node entities form a superset of cell entities. Write entity information
+    # based on nodes, supplement with cell information when there is a matcihng
+    # cell block.
+    for entity in range(node_dim_entity.shape[1]):
+        dim, tag = node_dim_entity[:, entity]
+
+        # Find the matching cell block, if it exists
+        matching_cell_block = numpy.where(
+            numpy.logical_and(
+                cell_dim_entity[0] == node_dim_entity[0, entity],
+                cell_dim_entity[1] == node_dim_entity[1, entity],
+            )
+        )[0]
+
+        # The information to be written varies according to entity dimension,
+        # whether entity has a physical tag, and between ascii and binary.
+        # The resulting code is a bit ugly, but no simpler and clean option
+        # seems possible.
+
+        # Entity tag
+        if binary:
+            numpy.array([tag], dtype=c_int).tofile(fh)
+        else:
+            fh.write(f"{tag} ".encode("utf-8"))
+
+        # Min-max coordinates for the entity. For now, simply put zeros here,
+        # and hope that gmsh does not complain. To expand this, the point
+        # coordinates must be made available to this function; the bounding
+        # box can then be found by a min-max over the points of the matching
+        # cell.
+        if dim == 0:
+            # Bounding box is a point
+            if binary:
+                numpy.zeros(3, dtype=c_double).tofile(fh)
+            else:
+                fh.write("0 0 0 ".encode("utf-8"))
+        else:
+            # Bounding box has six coordinates
+            if binary:
+                numpy.zeros(6, dtype=c_double).tofile(fh)
+            else:
+                fh.write("0 0 0 0 0 0 ".encode("utf-8"))
+
+        # If there is a corresponding cell block, write physical tags (if any)
+        # and bounding entities (if any)
+        if matching_cell_block.size > 0:
+            # entity has a physical tag, write this
+            # ASSUMPTION: There is a single physical tag for this
+            physical_tag = cell_data["gmsh:physical"][matching_cell_block[0]][0]
+            if binary:
+                numpy.array([1], dtype=c_size_t).tofile(fh)
+                numpy.array([physical_tag], dtype=c_int).tofile(fh)
+            else:
+                fh.write(f"1 {physical_tag} ".encode("utf-8"))
+
+            if dim > 0:
+                # Entities not of the lowest dimension can have their
+                # bounding elements (of dimension one less) specified
+                if has_bounding_elements:
+                    # The bounding element should be a numpy array
+                    bounds = cell_sets["gmsh:bounding_entities"][matching_cell_block[0]]
+                    num_bounds = len(bounds)
+                    if num_bounds > 0:
+                        if binary:
+                            numpy.array(num_bounds, dtype=c_size_t).tofile(fh)
+                            numpy.array(bounds, dtype=c_int).tofile(fh)
+                        else:
+                            fh.write(f"{num_bounds} ".encode("utf-8"))
+                            for bi in bounds:
+                                fh.write(f"{bi} ".encode("utf-8"))
+                            fh.write("\n".encode("utf-8"))
+                    else:
+                        # Register that there are no bounding elements
+                        if binary:
+                            numpy.array([0], dtype=c_size_t).tofile(fh)
+                        else:
+                            fh.write("0\n".encode("utf-8"))
+
+                else:
+                    # Register that there are no bounding elements
+                    if binary:
+                        numpy.array([0], dtype=c_size_t).tofile(fh)
+                    else:
+                        fh.write("0\n".encode("utf-8"))
+            else:
+                # If ascii, enforce line change
+                if not binary:
+                    fh.write("\n".encode("utf-8"))
+        else:
+            # The number of physical tags is zero
+            if binary:
+                numpy.array([0], dtype=c_size_t).tofile(fh)
+            else:
+                fh.write("0\n".encode("utf-8"))
+
+    if binary:
+        fh.write(b"\n")
     # raise NotImplementedError
-    # fh.write("$EndEntities\n".encode("utf-8"))
+    fh.write(b"$EndEntities\n")
     return
 
 
-def _write_nodes(fh, points, cells, float_fmt, binary):
+def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     fh.write(b"$Nodes\n")
 
-    # The entity_dim and entity_tag in the $Elements section must correspond to an
-    # entity_dim and entity_tag array in the $Nodes section.
-    # TODO Not sure what to do if there are multiple element types present.
-    if len(cells) != 1:
-        raise WriteError("Can only deal with one cell type for now")
-    dim_entity = _geometric_dimension[cells[0][0]]
-    entity_tag = 0
-
-    # write all points as one big block
+    # The format for the nodes section is
     #
     # $Nodes
     #   numEntityBlocks(size_t) numNodes(size_t) minNodeTag(size_t) maxNodeTag(size_t)
@@ -366,10 +558,46 @@ def _write_nodes(fh, points, cells, float_fmt, binary):
     # $EndNodes
     #
     n = points.shape[0]
-    num_blocks = 1
     min_tag = 1
     max_tag = n
     is_parametric = 0
+
+
+    # If node entity and dimension is available, we make a list of unique
+    # combinations thereof, and a map from the full node set to the unique
+    # set.
+    if (
+        "gmsh:node_entity_dimension" in point_data.keys()
+        and "gmsh:node_entity" in point_data.keys()
+    ):
+        dim_entity_combinations, reverse_index_map = numpy.unique(
+            numpy.vstack(
+                (
+                    point_data["gmsh:node_entity_dimension"],
+                    point_data["gmsh:node_entity"],
+                )
+            ),
+            axis=1,
+            return_inverse=True,
+        )
+    else:
+        # If entity information is not provided, we will assign the same entity
+        # for all nodes. This only makes sense if the cells are of a single
+        # type
+        if len(cells) != 1:
+            raise WriteError(
+                "Specify entity information to deal with more than one cell type"
+            )
+
+        dim_entity = _geometric_dimension[cells[0][0]]
+        entity_tag = 0
+        dim_entity_combinations = numpy.array([[dim_entity], [entity_tag]])
+        # All nodes map to the (single) dimension-entity object
+        reverse_index_map = numpy.full(n, 0, dtype=int)
+
+    num_blocks = dim_entity_combinations.shape[1]
+
+    # First write preamble
     if binary:
         if points.dtype != c_double:
             logging.warning(
@@ -377,23 +605,40 @@ def _write_nodes(fh, points, cells, float_fmt, binary):
             )
             points = points.astype(c_double)
         numpy.array([num_blocks, n, min_tag, max_tag], dtype=c_size_t).tofile(fh)
-        numpy.array([dim_entity, entity_tag, is_parametric], dtype=c_int).tofile(fh)
-        numpy.array([n], dtype=c_size_t).tofile(fh)
-        numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh)
-        points.tofile(fh)
-        fh.write(b"\n")
     else:
         fh.write(f"{num_blocks} {n} {min_tag} {max_tag}\n".encode("utf-8"))
-        fh.write(f"{dim_entity} {entity_tag} {is_parametric} {n}\n".encode("utf-8"))
-        numpy.arange(1, 1 + n, dtype=c_size_t).tofile(fh, "\n", "%d")
+
+    for entity in range(num_blocks):
+        dim_entity = dim_entity_combinations[0, entity]
+        # Entity tags are assumed 1-offset, to comply with gmsh
+        entity_tag = dim_entity_combinations[1, entity]
+
+        node_tags = numpy.where(reverse_index_map == entity)[0]
+        num_points_this_entity = node_tags.size
+
+        if binary:
+            numpy.array([dim_entity, entity_tag, is_parametric], dtype=c_int).tofile(fh)
+            numpy.array([num_points_this_entity], dtype=c_size_t).tofile(fh)
+            (node_tags + 1).astype(c_size_t).tofile(fh)
+            points[node_tags].tofile(fh)
+        else:
+            fh.write(
+                f"{dim_entity} {entity_tag} {is_parametric} {num_points_this_entity}\n".encode(
+                    "utf-8"
+                )
+            )
+            (node_tags + 1).astype(c_size_t).tofile(fh, "\n", "%d")
+            fh.write(b"\n")
+            numpy.savetxt(fh, points[node_tags], delimiter=" ", fmt="%" + float_fmt)
+
+    if binary:
         fh.write(b"\n")
-        numpy.savetxt(fh, points, delimiter=" ", fmt="%" + float_fmt)
 
     fh.write(b"$EndNodes\n")
     return
 
 
-def _write_elements(fh, cells, binary):
+def _write_elements(fh, cells, cell_data, binary):
     """write the $Elements block
 
     $Elements
@@ -418,11 +663,15 @@ def _write_elements(fh, cells, binary):
         ).tofile(fh)
 
         tag0 = 1
-        for cell_type, node_idcs in cells:
+        for ci, (cell_type, node_idcs) in enumerate(cells):
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
             dim = _geometric_dimension[cell_type]
-            entity_tag = 0
+            # The entity tag should be equal within a CellBlock
+            if "gmsh:geometrical" in cell_data:
+                entity_tag = cell_data["gmsh:geometrical"][ci][0]
+            else:
+                entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             numpy.array([dim, entity_tag, cell_type], dtype=c_int).tofile(fh)
             n = node_idcs.shape[0]
@@ -453,14 +702,17 @@ def _write_elements(fh, cells, binary):
         )
 
         tag0 = 1
-        for cell_type, node_idcs in cells:
+        for ci, (cell_type, node_idcs) in enumerate(cells):
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
             dim = _geometric_dimension[cell_type]
-            entity_tag = 0
+            # The entity tag should be equal within a CellBlock
+            if "gmsh:geometrical" in cell_data.keys():
+                entity_tag = cell_data["gmsh:geometrical"][ci][0]
+            else:
+                entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]
             fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode("utf-8"))
-
             numpy.savetxt(
                 fh,
                 # Gmsh indexes from 1 not 0
