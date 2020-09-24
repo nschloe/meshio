@@ -179,7 +179,7 @@ def read_buffer(f):
                         raise ReadError(f"Unknown cell set '{set_name}'")
         elif keyword == "INCLUDE":
             # Get absolute path to referred input file
-            incl_ref = line.lower().split("input=")[-1].rstrip().replace("\\", "/")
+            incl_ref = line.split("=")[-1].rstrip().replace("\\", "/")
             if pathlib.Path(incl_ref).exists() is False:
                 cd = pathlib.Path(f.name).parents[0]
                 incl_ref = cd / incl_ref
