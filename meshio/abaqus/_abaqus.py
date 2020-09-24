@@ -2,8 +2,8 @@
 I/O for Abaqus inp files.
 """
 import io
-import re
 import pathlib
+import re
 
 import numpy
 
@@ -97,19 +97,21 @@ meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
 
 def read_w_includes(inp_path):
-    re_in = re.compile(r'\*Include,\s*input=(.*?)$', re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    re_in = re.compile(
+        r"\*Include,\s*input=(.*?)$", re.IGNORECASE | re.MULTILINE | re.DOTALL
+    )
     bulk_repl = dict()
     with open_file(inp_path, "r") as f:
         bulk_str = f.read()
 
     for m in re_in.finditer(bulk_str):
         search_key = m.group(0)
-        incl_ref = m.group(1).replace('\\', '/')
+        incl_ref = m.group(1).replace("\\", "/")
         # The include ref can be absolute or relative to .inp file. Will check for both
         if pathlib.Path(incl_ref).exists() is False:
             cd = pathlib.Path(inp_path).parents[0]
             incl_ref = cd / incl_ref
-        with open(pathlib.Path(incl_ref).absolute(), 'r') as d:
+        with open(pathlib.Path(incl_ref).absolute(), "r") as d:
             bulk_repl[search_key] = d.read()
 
     for key, val in bulk_repl.items():
@@ -191,7 +193,7 @@ def read_buffer(f):
                         cell_sets[name].append(cell_sets_element[set_name])
                     else:
                         raise ReadError(f"Unknown cell set '{set_name}'")
-        elif keyword == 'INCLUDE':
+        elif keyword == "INCLUDE":
             return read_w_includes(f.name)
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
