@@ -562,7 +562,6 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     max_tag = n
     is_parametric = 0
 
-
     # If node entity and dimension is available, we make a list of unique
     # combinations thereof, and a map from the full node set to the unique
     # set.
