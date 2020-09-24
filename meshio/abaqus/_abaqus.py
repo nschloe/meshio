@@ -2,8 +2,8 @@
 I/O for Abaqus inp files.
 """
 import io
-import os
 import re
+import pathlib
 
 import numpy
 
@@ -104,7 +104,12 @@ def read_w_includes(inp_path):
 
     for m in re_in.finditer(bulk_str):
         search_key = m.group(0)
-        with open(os.path.join(os.path.dirname(inp_path), m.group(1)), 'r') as d:
+        incl_ref = m.group(1).replace('\\', '/')
+        # The include ref can be absolute or relative to .inp file. Will check for both
+        if pathlib.Path(incl_ref).exists() is False:
+            cd = pathlib.Path(inp_path).parents[0]
+            incl_ref = cd / incl_ref
+        with open(pathlib.Path(incl_ref).absolute(), 'r') as d:
             bulk_repl[search_key] = d.read()
 
     for key, val in bulk_repl.items():
