@@ -127,7 +127,6 @@ def _read_entities(f, is_ascii, data_size):
     physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
     bounding_entities = tuple({} for _ in range(4))
     number = fromfile(f, c_size_t, 4)  # dims 0, 1, 2, 3
-
     for d, n in enumerate(number):
         for _ in range(n):
             (tag,) = fromfile(f, c_int, 1)
@@ -164,7 +163,6 @@ def _read_nodes(f, is_ascii, data_size):
     entity_dimension = numpy.empty_like(tags)
     # To save the entity block id for each node, initialize an array here,
     # populate it with num_nodes
-
     idx = 0
     for k in range(num_entity_blocks):
         # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
@@ -490,46 +488,46 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
                 numpy.array([physical_tag], dtype=c_int).tofile(fh)
             else:
                 fh.write(f"1 {physical_tag} ".encode("utf-8"))
+        else:
+            # The number of physical tags is zero
+            if binary:
+                numpy.array([0], dtype=c_size_t).tofile(fh)
+            else:
+                fh.write("0 ".encode("utf-8"))
 
-            if dim > 0:
-                # Entities not of the lowest dimension can have their
-                # bounding elements (of dimension one less) specified
-                if has_bounding_elements:
-                    # The bounding element should be a numpy array
-                    bounds = cell_sets["gmsh:bounding_entities"][matching_cell_block[0]]
-                    num_bounds = len(bounds)
-                    if num_bounds > 0:
-                        if binary:
-                            numpy.array(num_bounds, dtype=c_size_t).tofile(fh)
-                            numpy.array(bounds, dtype=c_int).tofile(fh)
-                        else:
-                            fh.write(f"{num_bounds} ".encode("utf-8"))
-                            for bi in bounds:
-                                fh.write(f"{bi} ".encode("utf-8"))
-                            fh.write("\n".encode("utf-8"))
+        if dim > 0:
+            # Entities not of the lowest dimension can have their
+            # bounding elements (of dimension one less) specified
+            if has_bounding_elements and matching_cell_block.size > 0:
+                # The bounding element should be a numpy array
+                bounds = cell_sets["gmsh:bounding_entities"][matching_cell_block[0]]
+                num_bounds = len(bounds)
+                if num_bounds > 0:
+                    if binary:
+                        numpy.array(num_bounds, dtype=c_size_t).tofile(fh)
+                        numpy.array(bounds, dtype=c_int).tofile(fh)
                     else:
-                        # Register that there are no bounding elements
-                        if binary:
-                            numpy.array([0], dtype=c_size_t).tofile(fh)
-                        else:
-                            fh.write("0\n".encode("utf-8"))
-
+                        fh.write(f"{num_bounds} ".encode("utf-8"))
+                        for bi in bounds:
+                            fh.write(f"{bi} ".encode("utf-8"))
+                        fh.write("\n".encode("utf-8"))
                 else:
                     # Register that there are no bounding elements
                     if binary:
                         numpy.array([0], dtype=c_size_t).tofile(fh)
                     else:
                         fh.write("0\n".encode("utf-8"))
+
             else:
-                # If ascii, enforce line change
-                if not binary:
-                    fh.write("\n".encode("utf-8"))
+                # Register that there are no bounding elements
+                if binary:
+                    numpy.array([0], dtype=c_size_t).tofile(fh)
+                else:
+                    fh.write("0\n".encode("utf-8"))
         else:
-            # The number of physical tags is zero
-            if binary:
-                numpy.array([0], dtype=c_size_t).tofile(fh)
-            else:
-                fh.write("0\n".encode("utf-8"))
+            # If ascii, enforce line change
+            if not binary:
+                fh.write("\n".encode("utf-8"))
 
     if binary:
         fh.write(b"\n")
