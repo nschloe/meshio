@@ -329,8 +329,15 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     n = in_mesh.points.shape[1]
     assert numpy.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
 
+    # To avoid errors from sorted (below), specify the key as first cell type
+    # then index of the first point of the first cell. This may still lead to
+    # comparison of what should be different blocks, but chances seem low.
+    cell_sorter = lambda cell: (cell.type, cell.data[0, 0])
+
     # to make sure we are testing same type of cells we sort the list
-    for cells0, cells1 in zip(sorted(input_mesh.cells), sorted(mesh.cells)):
+    for cells0, cells1 in zip(
+        sorted(input_mesh.cells, key=cell_sorter), sorted(mesh.cells, key=cell_sorter)
+    ):
         assert cells0.type == cells1.type, f"{cells0.type} != {cells1.type}"
         assert numpy.array_equal(cells0.data, cells1.data)
 
