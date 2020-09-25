@@ -332,7 +332,8 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     # To avoid errors from sorted (below), specify the key as first cell type
     # then index of the first point of the first cell. This may still lead to
     # comparison of what should be different blocks, but chances seem low.
-    cell_sorter = lambda cell: (cell.type, cell.data[0, 0])
+    def cell_sorter(cell):
+        return (cell.type, cell.data[0, 0])
 
     # to make sure we are testing same type of cells we sort the list
     for cells0, cells1 in zip(
