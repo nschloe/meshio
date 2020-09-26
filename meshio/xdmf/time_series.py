@@ -33,7 +33,7 @@ class TimeSeriesReader:
 
         version = root.get("Version")
         if version.split(".")[0] != "3":
-            raise ReadError("Unknown XDMF version {}.".format(version))
+            raise ReadError(f"Unknown XDMF version {version}.")
 
         domains = list(root)
         if len(domains) != 1:
@@ -264,6 +264,7 @@ class TimeSeriesWriter:
         return self
 
     def __exit__(self, *args):
+        write_xml(self.filename, self.xdmf_file)
         if self.data_format == "HDF":
             self.h5_file.close()
 
@@ -283,8 +284,6 @@ class TimeSeriesWriter:
         self.points(grid, points)
         self.cells(cells, grid)
         self.has_mesh = True
-
-        write_xml(self.filename, self.xdmf_file)
 
     def write_data(self, t, point_data=None, cell_data=None):
         cell_data = {} if cell_data is None else cell_data
@@ -314,8 +313,6 @@ class TimeSeriesWriter:
         if cell_data:
             self.cell_data(cell_data, grid)
 
-        write_xml(self.filename, self.xdmf_file)
-
     def numpy_to_xml_string(self, data):
         if self.data_format == "XML":
             s = BytesIO()
@@ -334,7 +331,7 @@ class TimeSeriesWriter:
 
         if self.data_format != "HDF":
             raise WriteError()
-        name = "data{}".format(self.data_counter)
+        name = f"data{self.data_counter}"
         self.data_counter += 1
         self.h5_file.create_dataset(name, data=data)
         return os.path.basename(self.h5_filename) + ":/" + name

@@ -76,15 +76,13 @@ def read_buffer(f):
         try:
             name, rest_of_line = line.split("=")
         except ValueError:
-            logging.warning(
-                "meshio could not parse line\n {}\n skipping.....".format(line)
-            )
+            logging.warning(f"meshio could not parse line\n {line}\n skipping.....")
             continue
 
         if name == "NDIME":
             dim = int(rest_of_line)
             if dim != 2 and dim != 3:
-                raise ReadError("Invalid dimension value {}".format(line))
+                raise ReadError(f"Invalid dimension value {line}")
 
         elif name == "NPOIN":
             # according to documentation rest_of_line should just be a int,
@@ -131,7 +129,7 @@ def read_buffer(f):
             elif nnodes + 2 == len(first_line):
                 has_extra_column = True
             else:
-                raise ReadError("Invalid number of columns for {} field".format(name))
+                raise ReadError(f"Invalid number of columns for {name} field")
 
             # reset generator
             gen = chain([first_line_str], gen)
@@ -255,11 +253,11 @@ def write(filename, mesh):
 
     with open_file(filename, "wb") as f:
         dim = mesh.points.shape[1]
-        f.write("NDIME= {}\n".format(dim).encode("utf-8"))
+        f.write(f"NDIME= {dim}\n".encode("utf-8"))
 
         # Write points
         num_points = mesh.points.shape[0]
-        f.write("NPOIN= {}\n".format(num_points).encode("utf-8"))
+        f.write(f"NPOIN= {num_points}\n".encode("utf-8"))
         numpy.savetxt(f, mesh.points)
 
         # Through warnings about unsupported types
@@ -281,13 +279,15 @@ def write(filename, mesh):
 
         cells = [c for c in mesh.cells if c.type in types]
         total_num_volume_cells = sum(len(c.data) for c in cells)
-        f.write("NELEM= {}\n".format(total_num_volume_cells).encode("utf-8"))
+        f.write(f"NELEM= {total_num_volume_cells}\n".encode("utf-8"))
 
         for cell_block in cells:
             cell_type = meshio_to_su2_type[cell_block.type]
             # create a column with the value cell_type
             type_column = numpy.full(
-                cell_block.data.shape[0], cell_type, dtype=cell_block.data.dtype,
+                cell_block.data.shape[0],
+                cell_type,
+                dtype=cell_block.data.dtype,
             )
 
             # prepend a column with the value cell_type
@@ -338,8 +338,8 @@ def write(filename, mesh):
         # write the blocks you found in previous step
         for tag, count in tags_per_cell_block.items():
 
-            f.write("MARKER_TAG= {}\n".format(tag).encode("utf-8"))
-            f.write("MARKER_ELEMS= {}\n".format(count).encode("utf-8"))
+            f.write(f"MARKER_TAG= {tag}\n".encode("utf-8"))
+            f.write(f"MARKER_ELEMS= {count}\n".encode("utf-8"))
 
             for index, (cell_type, data) in enumerate(mesh.cells):
 
@@ -361,7 +361,9 @@ def write(filename, mesh):
 
                 # create a column with the value cell_type
                 type_column = numpy.full(
-                    cells_to_write.shape[0], cell_type, dtype=cells_to_write.dtype,
+                    cells_to_write.shape[0],
+                    cell_type,
+                    dtype=cells_to_write.dtype,
                 )
 
                 # prepend a column with the value cell_type

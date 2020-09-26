@@ -44,7 +44,7 @@ def _produce_dtype(string_type, dim, itype, ftype):
             c += 1
             continue
         else:
-            ReadError("Invalid string type")
+            raise ReadError("Invalid string type")
         c += 1
         if c != len(string_type):
             res += ","
@@ -271,7 +271,7 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
 
         # vertices
         fh.write(b"\nVertices\n")
-        fh.write("{}\n".format(n).encode("utf-8"))
+        fh.write(f"{n}\n".encode("utf-8"))
 
         # pick out point data
         labels_key, other = _pick_first_int_data(mesh.point_data)
@@ -314,7 +314,7 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
                 logging.warning(msg)
                 continue
             fh.write(b"\n")
-            fh.write("{}\n".format(medit_name).encode("utf-8"))
+            fh.write(f"{medit_name}\n".encode("utf-8"))
             fh.write("{}\n".format(len(data)).encode("utf-8"))
 
             # pick out cell data

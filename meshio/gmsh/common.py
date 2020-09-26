@@ -3,11 +3,25 @@ import shlex
 
 import numpy
 
-from .._common import num_nodes_per_cell  # noqa F401
 from .._exceptions import ReadError, WriteError
 
 c_int = numpy.dtype("i")
 c_double = numpy.dtype("d")
+
+
+def _fast_forward_to_end_block(f, block):
+    """fast-forward to end of block"""
+    # See also https://github.com/nschloe/pygalmesh/issues/34
+
+    for line in f:
+        try:
+            line = line.decode("utf-8")
+        except UnicodeDecodeError:
+            pass
+        if line == f"$End{block}\n":
+            break
+    else:
+        logging.warning(f"${block} not closed by $End{block}.")
 
 
 def _read_physical_names(f, field_data):
@@ -18,9 +32,7 @@ def _read_physical_names(f, field_data):
         key = line[2]
         value = numpy.array(line[1::-1], dtype=int)
         field_data[key] = value
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndPhysicalNames":
-        raise ReadError()
+    _fast_forward_to_end_block(f, "PhysicalNames")
 
 
 def _read_data(f, tag, data_dict, data_size, is_ascii):
@@ -53,10 +65,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
             raise ReadError()
         data = numpy.ascontiguousarray(data["values"])
 
-    # fast forward to $End{tag}
-    line = f.readline().decode("utf-8")
-    while line.strip() != "$End{}".format(tag):
-        line = f.readline().decode("utf-8")
+    _fast_forward_to_end_block(f, tag)
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.
@@ -214,7 +223,7 @@ def _write_physical_names(fh, field_data):
 
 
 def _write_data(fh, tag, name, data, binary):
-    fh.write("${}\n".format(tag).encode("utf-8"))
+    fh.write(f"${tag}\n".encode("utf-8"))
     # <http://gmsh.info/doc/texinfo/gmsh.html>:
     # > Number of string tags.
     # > gives the number of string tags that follow. By default the first
@@ -222,7 +231,7 @@ def _write_data(fh, tag, name, data, binary):
     # > the second as the name of the interpolation scheme. The interpolation
     # > scheme is provided in the $InterpolationScheme section (see below).
     fh.write("{}\n".format(1).encode("utf-8"))
-    fh.write('"{}"\n'.format(name).encode("utf-8"))
+    fh.write(f'"{name}"\n'.encode("utf-8"))
     fh.write("{}\n".format(1).encode("utf-8"))
     fh.write("{}\n".format(0.0).encode("utf-8"))
     # three integer tags:
@@ -239,7 +248,7 @@ def _write_data(fh, tag, name, data, binary):
     if len(data.shape) > 1 and data.shape[1] == 1:
         data = data[:, 0]
 
-    fh.write("{}\n".format(num_components).encode("utf-8"))
+    fh.write(f"{num_components}\n".encode("utf-8"))
     # num data items
     fh.write("{}\n".format(data.shape[0]).encode("utf-8"))
     # actually write the data
@@ -263,4 +272,4 @@ def _write_data(fh, tag, name, data, binary):
             for k, x in enumerate(data):
                 fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
-    fh.write("$End{}\n".format(tag).encode("utf-8"))
+    fh.write(f"$End{tag}\n".encode("utf-8"))

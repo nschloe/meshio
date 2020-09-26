@@ -125,7 +125,7 @@ def get_grid(root):
             grid = c
         else:
             if c.tag != "AppendedData":
-                raise ReadError("Unknown main tag '{}'.".format(c.tag))
+                raise ReadError(f"Unknown main tag '{c.tag}'.")
             if appended_data is not None:
                 raise ReadError("More than one AppendedData section found.")
             if c.attrib["encoding"] != "base64":
@@ -279,7 +279,7 @@ class VtuReader:
         try:
             self.byte_order = root.attrib["byte_order"]
             if self.byte_order not in ["LittleEndian", "BigEndian"]:
-                raise ReadError("Unknown byte order '{}'.".format(self.byte_order))
+                raise ReadError(f"Unknown byte order '{self.byte_order}'.")
         except KeyError:
             self.byte_order = None
 
@@ -295,7 +295,7 @@ class VtuReader:
                 for data_array in c:
                     field_data[data_array.attrib["Name"]] = self.read_data(data_array)
             else:
-                raise ReadError("Unknown grid subtag '{}'.".format(c.tag))
+                raise ReadError(f"Unknown grid subtag '{c.tag}'.")
 
         if not pieces:
             raise ReadError("No Piece found.")
@@ -359,7 +359,7 @@ class VtuReader:
 
                     cell_data_raw.append(piece_cell_data_raw)
                 else:
-                    raise ReadError("Unknown tag '{}'.".format(child.tag))
+                    raise ReadError(f"Unknown tag '{child.tag}'.")
 
         if not cell_data_raw:
             cell_data_raw = [{}] * len(cells)
@@ -387,17 +387,17 @@ class VtuReader:
         )
         self.field_data = field_data
 
-    def read_uncompressed_binary(self, data, data_type):
+    def read_uncompressed_binary(self, data, dtype):
         byte_string = base64.b64decode(data)
 
-        dtype = vtu_to_numpy_type[self.header_type]
+        header_dtype = vtu_to_numpy_type[self.header_type]
         if self.byte_order is not None:
-            dtype = dtype.newbyteorder(
+            header_dtype = header_dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
-        num_bytes_per_item = numpy.dtype(dtype).itemsize
+        num_bytes_per_item = numpy.dtype(header_dtype).itemsize
         total_num_bytes = int(
-            numpy.frombuffer(byte_string[:num_bytes_per_item], dtype)[0]
+            numpy.frombuffer(byte_string[:num_bytes_per_item], header_dtype)[0]
         )
 
         # Check if block size was decoded separately
@@ -409,31 +409,30 @@ class VtuReader:
             byte_string = byte_string[num_bytes_per_item:]
 
         # Read the block data; multiple blocks possible here?
-        dtype = vtu_to_numpy_type[data_type]
         if self.byte_order is not None:
             dtype = dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
         return numpy.frombuffer(byte_string[:total_num_bytes], dtype=dtype)
 
-    def read_compressed_binary(self, data, data_type):
+    def read_compressed_binary(self, data, dtype):
         # first read the block size; it determines the size of the header
-        dtype = vtu_to_numpy_type[self.header_type]
+        header_dtype = vtu_to_numpy_type[self.header_type]
         if self.byte_order is not None:
-            dtype = dtype.newbyteorder(
+            header_dtype = header_dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
-        num_bytes_per_item = numpy.dtype(dtype).itemsize
+        num_bytes_per_item = numpy.dtype(header_dtype).itemsize
         num_chars = num_bytes_to_num_base64_chars(num_bytes_per_item)
         byte_string = base64.b64decode(data[:num_chars])[:num_bytes_per_item]
-        num_blocks = numpy.frombuffer(byte_string, dtype)[0]
+        num_blocks = numpy.frombuffer(byte_string, header_dtype)[0]
 
         # read the entire header
         num_header_items = 3 + int(num_blocks)
         num_header_bytes = num_bytes_per_item * num_header_items
         num_header_chars = num_bytes_to_num_base64_chars(num_header_bytes)
         byte_string = base64.b64decode(data[:num_header_chars])
-        header = numpy.frombuffer(byte_string, dtype)
+        header = numpy.frombuffer(byte_string, header_dtype)
 
         # num_blocks = header[0]
         # max_uncompressed_block_size = header[1]
@@ -442,12 +441,10 @@ class VtuReader:
 
         # Read the block data
         byte_array = base64.b64decode(data[num_header_chars:])
-        dtype = vtu_to_numpy_type[data_type]
         if self.byte_order is not None:
             dtype = dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
-        num_bytes_per_item = numpy.dtype(dtype).itemsize
 
         byte_offsets = numpy.empty(block_sizes.shape[0] + 1, dtype=block_sizes.dtype)
         byte_offsets[0] = 0
@@ -473,18 +470,22 @@ class VtuReader:
     def read_data(self, c):
         fmt = c.attrib["format"] if "format" in c.attrib else "ascii"
 
+        data_type = c.attrib["type"]
+        try:
+            dtype = vtu_to_numpy_type[data_type]
+        except KeyError:
+            raise ReadError(f"Illegal data type '{data_type}'.")
+
         if fmt == "ascii":
             # ascii
-            data = numpy.fromstring(
-                c.text, dtype=vtu_to_numpy_type[c.attrib["type"]], sep=" "
-            )
+            data = numpy.fromstring(c.text, dtype=dtype, sep=" ")
         elif fmt == "binary":
             reader = (
                 self.read_uncompressed_binary
                 if self.compression is None
                 else self.read_compressed_binary
             )
-            data = reader(c.text.strip(), c.attrib["type"])
+            data = reader(c.text.strip(), dtype)
         elif fmt == "appended":
             offset = int(c.attrib["offset"])
             reader = (
@@ -492,9 +493,9 @@ class VtuReader:
                 if self.compression is None
                 else self.read_compressed_binary
             )
-            data = reader(self.appended_data[offset:], c.attrib["type"])
+            data = reader(self.appended_data[offset:], dtype)
         else:
-            raise ReadError("Unknown data format '{}'.".format(fmt))
+            raise ReadError(f"Unknown data format '{fmt}'.")
 
         if "NumberOfComponents" in c.attrib:
             data = data.reshape(-1, int(c.attrib["NumberOfComponents"]))
@@ -640,7 +641,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         da.text_writer = text_writer
         return
 
-    comment = ET.Comment("This file was created by meshio v{}".format(__version__))
+    comment = ET.Comment(f"This file was created by meshio v{__version__}")
     vtk_file.insert(1, comment)
 
     grid = ET.SubElement(vtk_file, "UnstructuredGrid")
@@ -650,7 +651,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         grid,
         "Piece",
         NumberOfPoints="{}".format(len(points)),
-        NumberOfCells="{}".format(total_num_cells),
+        NumberOfCells=f"{total_num_cells}",
     )
 
     # points

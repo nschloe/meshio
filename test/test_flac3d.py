@@ -23,7 +23,7 @@ import meshio
 def test(mesh, binary, data):
     if data:
         mesh = copy.deepcopy(mesh)
-        mesh.cell_data["flac3d:zone"] = [numpy.array(data)]
+        mesh.cell_data["flac3d:group"] = [numpy.array(data)]
     helpers.write_read(
         lambda f, m: meshio.flac3d.write(f, m, binary=binary),
         meshio.flac3d.read,
@@ -35,7 +35,8 @@ def test(mesh, binary, data):
 # the failure perhaps has to do with dictionary ordering
 @pytest.mark.skipif(sys.version_info < (3, 6), reason="Fails with 3.5")
 @pytest.mark.parametrize(
-    "filename", ["flac3d_mesh_ex.f3grid", "flac3d_mesh_ex_bin.f3grid"],
+    "filename",
+    ["flac3d_mesh_ex.f3grid", "flac3d_mesh_ex_bin.f3grid"],
 )
 def test_reference_file(filename):
     this_dir = pathlib.Path(__file__).resolve().parent
@@ -58,8 +59,10 @@ def test_reference_file(filename):
         ("wedge", 3),
         ("pyramid", 6),
         ("tetra", 3),
+        ("quad", 15),
+        ("triangle", 3),
     ]
     assert [(k, len(v)) for k, v in mesh.cells] == ref_num_cells
     # Cell data
-    ref_sum_cell_data = [45, 9, 18, 9, 6, 3, 6, 3, 6, 3]
-    assert [len(arr) for arr in mesh.cell_data["flac3d:zone"]] == ref_sum_cell_data
+    ref_sum_cell_data = [num_cell[1] for num_cell in ref_num_cells]
+    assert [len(arr) for arr in mesh.cell_data["flac3d:group"]] == ref_sum_cell_data

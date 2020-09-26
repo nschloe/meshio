@@ -9,8 +9,7 @@ def read(filetype, filename):
     from vtk.util import numpy_support
 
     def _read_data(data):
-        """Extract numpy arrays from a VTK data set.
-        """
+        """Extract numpy arrays from a VTK data set."""
         # Go through all arrays, fetch data.
         out = {}
         for k in range(data.GetNumberOfArrays()):
@@ -100,7 +99,7 @@ def read(filetype, filename):
         reader.Update()
         vtk_mesh = reader.GetOutputDataObject(0)
     else:
-        assert filetype == "exodus", "Unknown file type '{}'.".format(filename)
+        assert filetype == "exodus", f"Unknown file type '{filename}'."
         reader = vtk.vtkExodusIIReader()
         reader.SetFileName(filename)
         vtk_mesh = _read_exodusii_mesh(reader)
@@ -130,8 +129,7 @@ def read(filetype, filename):
 
 
 def _read_exodusii_mesh(reader, timestep=None):
-    """Uses a vtkExodusIIReader to return a vtkUnstructuredGrid.
-    """
+    """Uses a vtkExodusIIReader to return a vtkUnstructuredGrid."""
     # Fetch metadata.
     reader.UpdateInformation()
 

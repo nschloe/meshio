@@ -129,7 +129,7 @@ def _read_data(fields, profiles, cell_types, point_data, cell_data, field_data):
             names = [None] * len(time_step)
             for i, key in enumerate(time_step):
                 t = data[key].attrs["PDT"]  # current time
-                names[i] = name + "[{:d}] - {:g}".format(i, t)
+                names[i] = name + f"[{i:d}] - {t:g}"
 
         # MED field can contain multiple types of data
         for i, key in enumerate(time_step):
@@ -263,7 +263,7 @@ def write(filename, mesh, add_global_ids=True):
 
     # Cells (mailles in French)
     if len(mesh.cells) != len(numpy.unique([c.type for c in mesh.cells])):
-        WriteError("MED files cannot have two sections of the same cell type.")
+        raise WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
     for k, (cell_type, cells) in enumerate(mesh.cells):

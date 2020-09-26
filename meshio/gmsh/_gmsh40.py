@@ -7,10 +7,16 @@ from functools import partial
 
 import numpy
 
-from .._common import _geometric_dimension, cell_data_from_raw, raw_from_cell_data
+from .._common import (
+    _geometric_dimension,
+    cell_data_from_raw,
+    num_nodes_per_cell,
+    raw_from_cell_data,
+)
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_order,
@@ -19,7 +25,6 @@ from .common import (
     _read_physical_names,
     _write_data,
     _write_physical_names,
-    num_nodes_per_cell,
 )
 
 c_int = numpy.dtype("i")
@@ -71,15 +76,7 @@ def read_buffer(f, is_ascii, data_size):
             # $Comments/$EndComments section.
             # ```
             # skip environment
-            while line != "$End" + environ:
-                line = f.readline()
-                # Skip binary strings, but try to recognize text strings
-                # to catch the end of the environment
-                # See also https://github.com/nschloe/pygalmesh/issues/34
-                try:
-                    line = line.decode("utf-8").strip()
-                except UnicodeDecodeError:
-                    pass
+            _fast_forward_to_end_block(f, environ)
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
     cell_data.update(cell_tags)
@@ -108,13 +105,7 @@ def _read_entities(f, is_ascii, data_size):
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
                 num_BREP = int(fromfile(f, c_ulong, 1)[0])
                 fromfile(f, c_int, num_BREP)
-    if not is_ascii:
-        line = f.readline().decode("utf-8")
-        if line != "\n":
-            raise ReadError()
-    line = f.readline().decode("utf-8").strip()
-    if line != "$EndEntities":
-        raise ReadError()
+    _fast_forward_to_end_block(f, "Entities")
     return physical_tags
 
 
@@ -162,10 +153,7 @@ def _read_nodes(f, is_ascii, data_size):
         if line != "\n":
             raise ReadError()
 
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndNodes":
-        raise ReadError()
-
+    _fast_forward_to_end_block(f, "Nodes")
     return points, tags
 
 
@@ -187,17 +175,11 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
             (num_ele, -1)
         )
         if physical_tags is None:
-            data.append((None, tpe, d))
+            data.append((None, tag_entity, tpe, d))
         else:
-            data.append((physical_tags[dim_entity][tag_entity], tpe, d))
+            data.append((physical_tags[dim_entity][tag_entity], tag_entity, tpe, d))
 
-    if not is_ascii:
-        line = f.readline().decode("utf-8")
-        if line != "\n":
-            raise ReadError()
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndElements":
-        raise ReadError()
+    _fast_forward_to_end_block(f, "Elements")
 
     # The msh4 elements array refers to the nodes by their tag, not the index. All other
     # mesh formats use the index, which is far more efficient, too. Hence,
@@ -207,18 +189,24 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     itags[point_tags] = numpy.arange(len(point_tags))
 
     # Note that the first column in the data array is the element tag; discard it.
-    data = [(physical_tag, tpe, itags[d[:, 1:]]) for physical_tag, tpe, d in data]
+    data = [
+        (physical_tag, geom_tag, tpe, itags[d[:, 1:]])
+        for physical_tag, geom_tag, tpe, d in data
+    ]
 
     cells = []
     cell_data = {}
-    for physical_tag, key, values in data:
+    for physical_tag, geom_tag, key, values in data:
         cells.append((key, values))
         if physical_tag:
             if "gmsh:physical" not in cell_data:
                 cell_data["gmsh:physical"] = []
             cell_data["gmsh:physical"].append(
-                physical_tag[0] * numpy.ones(len(values), int)
+                numpy.full(len(values), physical_tag[0], int)
             )
+        if "gmsh:geometrical" not in cell_data:
+            cell_data["gmsh:geometrical"] = []
+        cell_data["gmsh:geometrical"].append(numpy.full(len(values), geom_tag, int))
     cells[:] = _gmsh_to_meshio_order(cells)
 
     return cells, cell_data
@@ -249,13 +237,8 @@ def _read_periodic(f, is_ascii):
         slave_master = fromfile(f, c_int, num_nodes * 2).reshape(-1, 2)
         slave_master = slave_master - 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
-    if not is_ascii:
-        line = f.readline().decode("utf-8")
-        if line != "\n":
-            raise ReadError()
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndPeriodic":
-        raise ReadError()
+
+    _fast_forward_to_end_block(f, "Periodic")
     return periodic
 
 
@@ -287,9 +270,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
-        fh.write(
-            "$MeshFormat\n4.0 {} {}\n".format(mode_idx, size_of_double).encode("utf-8")
-        )
+        fh.write(f"$MeshFormat\n4.0 {mode_idx} {size_of_double}\n".encode("utf-8"))
         if binary:
             numpy.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")

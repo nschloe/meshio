@@ -1,4 +1,4 @@
-import sys
+from sys import version_info
 
 from ..__about__ import __version__
 
@@ -6,12 +6,8 @@ from ..__about__ import __version__
 def _get_version_text():
     return "\n".join(
         [
-            "meshio {} [Python {}.{}.{}]".format(
-                __version__,
-                sys.version_info.major,
-                sys.version_info.minor,
-                sys.version_info.micro,
-            ),
+            f"meshio {__version__} "
+            f"[Python {version_info.major}.{version_info.minor}.{version_info.micro}]",
             "Copyright (c) 2015-2020 Nico Schlömer et al.",
         ]
     )
