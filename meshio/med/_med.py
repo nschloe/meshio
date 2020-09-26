@@ -145,7 +145,7 @@ def _read_data(fields, profiles, cell_types, point_data, cell_data, field_data):
                     if name not in cell_data:
                         cell_data[name] = [None] * len(cell_types)
                     cell_data[name][cell_index] = _read_cell_data(
-                        cell_data, name, supp, med_data[supp], profiles, cell_types
+                        med_data[supp], profiles
                     )
 
 
