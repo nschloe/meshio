@@ -156,7 +156,7 @@ def cell_data_from_raw(cells, cell_data_raw):
 
 
 def raw_from_cell_data(cell_data):
-    return {name: numpy.concatenate(value) for name, value in cell_data.items()}
+    return {name: value if len(value.shape) == 1 else numpy.concatenate(value) for name, value in cell_data.items()}
 
 
 def write_xml(filename, root):
