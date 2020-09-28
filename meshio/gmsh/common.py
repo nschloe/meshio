@@ -18,7 +18,7 @@ def _fast_forward_to_end_block(f, block):
             line = line.decode("utf-8")
         except UnicodeDecodeError:
             pass
-        if line == f"$End{block}\n":
+        if line.rstrip() == f"$End{block}":
             break
     else:
         logging.warning(f"${block} not closed by $End{block}.")
