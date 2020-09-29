@@ -43,6 +43,9 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
         [[0], numpy.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
     )
 
+    # boolean needed for polyhedron cells
+    found_polyhedron_faces_before = False
+
     cells = []
     cell_data = {}
     polyhedron_faces = {}
@@ -51,7 +54,7 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
             meshio_type = vtk_to_meshio_type[types[start]]
         except KeyError:
             raise ReadError("File contains cells that meshio cannot handle.")
-        if meshio_type == "polygon" or meshio_type == "polyhedron":
+        if meshio_type in ["polygon", "polyhedron"]:
             # Polygons and polyhedra have unknown and varying number of nodes per cell.
 
             if meshio_type == "polyhedron":
@@ -77,26 +80,15 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
                 # here.
                 # Whether such a file is permissible under the .vtu standard has not
                 # been checked, we will take our chances.
-                try:
+                if not found_polyhedron_faces_before:
                     # pop removes the fields that were added to the raw cell data
                     # in _organize_cells()
                     faces = cell_data_raw.pop("faces")
                     faceoffsets = cell_data_raw.pop("faceoffsets")
                     # Switch faceoffsets to give start points, not end points
-                    faceoffsets = numpy.append(0, faceoffsets[:-1])
+                    faceoffsets = numpy.append([0], faceoffsets[:-1])
                     # Take note that we have found the faces
-                    found_faces_before = True
-                except KeyError:
-                    # We will end up here in the second iteration of the loop of types.
-                    # We could have moved the processing of faces, etc. towards the
-                    # top of this function, and thereby avoided this try-except. However,
-                    # the current structure confines complications caused by polyhedra
-                    # to a single part of the function, and is preferred for readability.
-                    if not found_faces_before:
-                        # This is a problem
-                        raise ValueError(
-                            "A vtu polyhedron should have a faces specification"
-                        )
+                    found_polyhedron_faces_before = True
 
                 # In general the number of faces will vary between cells, and the
                 # number of nodes vary between faces for each cell. The information
@@ -776,7 +768,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
         # The returned data corresponds to the faces and faceoffsets fields in the
         # vtu polyhedron data format
-        return numpy.array(data, dtype=numpy.int), data_size_per_cell
+        return data, data_size_per_cell.tolist()
 
     comment = ET.Comment(f"This file was created by meshio v{__version__}")
     vtk_file.insert(1, comment)
@@ -818,8 +810,8 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         offsets = numpy.concatenate(offsets)
 
         # Data structures for polyhedral cells
-        faces = numpy.array([], dtype=numpy.int)
-        faceoffsets = numpy.array([], dtype=numpy.int)
+        faces = []
+        faceoffsets = []
 
         # types
         types_array = []
@@ -836,10 +828,11 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                     mesh.polyhedron_faces[k]
                 )
                 # Adjust offsets to global numbering
-                if faceoffsets.size > 0:
-                    faceoffsets_loc += faceoffsets[-1]
-                faces = numpy.append(faces, faces_loc)
-                faceoffsets = numpy.append(faceoffsets, faceoffsets_loc)
+                if len(faceoffsets) > 0:
+                    faceoffsets_loc = [fi + faceoffsets[-1] for fi in faceoffsets_loc]
+
+                faces += faces_loc
+                faceoffsets += faceoffsets_loc
             else:
                 # No special treatment
                 key_ = k
@@ -854,10 +847,12 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         numpy_to_xml_array(cls, "offsets", offsets)
         numpy_to_xml_array(cls, "types", types)
 
-        if faces.size > 0:
+        if len(faces) > 0:
             # This will only kick in for polyhedron cells
-            numpy_to_xml_array(cls, "faces", faces)
-            numpy_to_xml_array(cls, "faceoffsets", faceoffsets)
+            numpy_to_xml_array(cls, "faces", numpy.array(faces, dtype=numpy.int))
+            numpy_to_xml_array(
+                cls, "faceoffsets", numpy.array(faceoffsets, dtype=numpy.int)
+            )
 
     if mesh.point_data:
         pd = ET.SubElement(piece, "PointData")
