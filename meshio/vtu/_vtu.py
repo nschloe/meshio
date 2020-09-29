@@ -43,10 +43,6 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
         [[0], numpy.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
     )
 
-    # Check if polyhedron cells are discovered. If so, we need to pad the non-polyhedral
-    # cell data below.
-    has_polyhedron = False
-
     cells = []
     cell_data = {}
     polyhedron_faces = {}
@@ -59,8 +55,6 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
             # Polygons and polyhedra have unknown and varying number of nodes per cell.
 
             if meshio_type == "polyhedron":
-                has_polyhedron = True
-
                 # The data format for face-cells is:
                 # num_faces_cell_0,
                 #   num_nodes_face_0, node_ind_0, node_ind_1, ..
