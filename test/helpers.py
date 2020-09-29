@@ -355,9 +355,12 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     for name, data in input_mesh.field_data.items():
         assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
 
-    # Test of cell sets (assumed to be a list of numpy arrays)
-    for name1, data in input_mesh.cell_sets.items():
-        data2 = mesh.cell_sets[name1]
+    # Test of cell sets (assumed to be a list of numpy arrays),
+    for name, data in input_mesh.cell_sets.items():
+        # Skip the test if the key is not in the read cell set
+        if name not in mesh.cell_sets.keys():
+            continue
+        data2 = mesh.cell_sets[name]
         for var1, var2 in zip(data, data2):
             assert numpy.allclose(var1, var2, atol=atol, rtol=0.0)
 
