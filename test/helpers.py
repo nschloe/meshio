@@ -355,6 +355,12 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     for name, data in input_mesh.field_data.items():
         assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
 
+    # Test of cell sets (assumed to be a list of numpy arrays)
+    for name1, data in input_mesh.cell_sets.items():
+        data2 = mesh.cell_sets[name1]
+        for var1, var2 in zip(data, data2):
+            assert numpy.allclose(var1, var2, atol=atol, rtol=0.0)
+
 
 def generic_io(filename):
     with tempfile.TemporaryDirectory() as temp_dir:
