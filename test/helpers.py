@@ -406,10 +406,13 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     for name, data in input_mesh.field_data.items():
         assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
 
-    # Restore polyhedral cell-face relations so that this is available for the
-    # next test.
-    if polyhedron:
-        input_mesh.cell_data["polyhedron:faces_of_cells"] = in_foc
+    if len(input_mesh.polyhedron_faces) > 0:
+        for poly_shape, data_in in input_mesh.polyhedron_faces.items():
+            data_out = mesh.polyhedron_faces[poly_shape]
+            # Data is a list (per cell) of numpy arrays
+            for c_in, c_out in zip(data_in, data_out):
+                for face_in, face_out in zip(c_in, c_out):
+                    assert numpy.allclose(face_in, face_out, atol=atol, rtol=0.0)
 
 
 def generic_io(filename):

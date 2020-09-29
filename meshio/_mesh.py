@@ -15,6 +15,7 @@ class Mesh:
         field_data=None,
         point_sets=None,
         cell_sets=None,
+        polyhedron_faces=None,
         gmsh_periodic=None,
         info=None,
     ):
@@ -38,6 +39,7 @@ class Mesh:
         self.field_data = {} if field_data is None else field_data
         self.point_sets = {} if point_sets is None else point_sets
         self.cell_sets = {} if cell_sets is None else cell_sets
+        self.polyhedron_faces = {} if polyhedron_faces is None else polyhedron_faces
         self.gmsh_periodic = gmsh_periodic
         self.info = info
 
