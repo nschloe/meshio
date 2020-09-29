@@ -295,10 +295,10 @@ def merge(
 
     if len(points) > 0:
         new_point_id = points.shape[0]
-        new_cell_id = len(cells) + 1
+        # new_cell_id = len(cells) + 1
         points = numpy.concatenate([points, ext_points])
     else:
-        new_cell_id = 0
+        # new_cell_id = 0
         new_point_id = 0
         points = ext_points
 
