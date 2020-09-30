@@ -124,8 +124,8 @@ def _read_entities(f, is_ascii, data_size):
 
     fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
-    physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
-    bounding_entities = tuple({} for _ in range(4))
+    physical_tags = ({}, {}, {}, {})
+    bounding_entities = ({}, {}, {}, {})
     number = fromfile(f, c_size_t, 4)  # dims 0, 1, 2, 3
     for d, n in enumerate(number):
         for _ in range(n):
