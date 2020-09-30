@@ -470,16 +470,17 @@ def _read_scalar_field(f, num_data, split, is_ascii):
         raise ReadError()
 
     if is_ascii:
-        data = numpy.fromfile(f, count=num_data, sep=" ", dtype=dtype)
+        data = numpy.fromfile(f, count=num_data * num_comp, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
-        data = numpy.fromfile(f, count=num_data, dtype=dtype)
+        data = numpy.fromfile(f, count=num_data * num_comp, dtype=dtype)
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
 
+    data = data.reshape(-1, num_comp)
     return {data_name: data}
 
 
@@ -488,6 +489,7 @@ def _read_field(f, num_data, split, shape, is_ascii):
     data_type = split[2].lower()
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+    # prod()
     # <https://stackoverflow.com/q/2104782/353337>
     k = reduce((lambda x, y: x * y), shape)
 
