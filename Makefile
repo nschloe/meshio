@@ -1,5 +1,7 @@
 VERSION=$(shell python3 -c "from configparser import ConfigParser; p = ConfigParser(); p.read('setup.cfg'); print(p['metadata']['version'])")
 
+.PHONY: default tag upload publish clean format lint
+
 default:
 	@echo "\"make publish\"?"
 
