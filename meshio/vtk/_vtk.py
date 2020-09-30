@@ -480,6 +480,7 @@ def _read_scalar_field(f, num_data, split, is_ascii):
         if line != "\n":
             raise ReadError()
 
+    data = data.reshape(-1, num_comp)
     return {data_name: data}
 
 
@@ -488,6 +489,7 @@ def _read_field(f, num_data, split, shape, is_ascii):
     data_type = split[2].lower()
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+    # prod()
     # <https://stackoverflow.com/q/2104782/353337>
     k = reduce((lambda x, y: x * y), shape)
 
