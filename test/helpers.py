@@ -233,7 +233,7 @@ polygon_mesh = meshio.Mesh(
 
 polyhedron_mesh = meshio.Mesh(
     numpy.array(
-        [  # Three layers of a unit square
+        [  # Two layers of a unit square
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
             [1.0, 1.0, 0.0],
@@ -244,7 +244,7 @@ polyhedron_mesh = meshio.Mesh(
             [0.0, 1.0, 1.0],
         ]
     ),
-    [  # Split the lower cube into tets and pyramids. The upper cube is hexahedron
+    [  # Split the cube into tets and pyramids.
         ("polyhedron4", numpy.array([[1, 2, 5, 7], [2, 5, 6, 7]])),  # two tets
         (
             "polyhedron5",

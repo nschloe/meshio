@@ -65,11 +65,6 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
                 #   ...
                 # num_faces_cell_1,
                 #   ...
-                #
-                # The faceoffsets describes the end of the face description for each
-                # cell, but this is 1-offset, so it is effectively the start of the
-                # next cell.
-                #
                 # See https://vtk.org/Wiki/VTK/Polyhedron_Support for more.
 
                 # There is a tacit assumption here that the cell-data keys 'faces'
@@ -85,6 +80,8 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
                     # in _organize_cells()
                     faces = cell_data_raw.pop("faces")
                     faceoffsets = cell_data_raw.pop("faceoffsets")
+                    # The faceoffsets describes the end of the face description for each
+                    # cell.
                     # Switch faceoffsets to give start points, not end points
                     faceoffsets = numpy.append([0], faceoffsets[:-1])
                     # Take note that we have found the faces
