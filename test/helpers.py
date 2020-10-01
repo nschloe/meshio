@@ -245,45 +245,44 @@ polyhedron_mesh = meshio.Mesh(
         ]
     ),
     [  # Split the cube into tets and pyramids.
-        ("polyhedron4", numpy.array([[1, 2, 5, 7], [2, 5, 6, 7]])),  # two tets
+        (
+            "polyhedron4",
+            [
+                [
+                    numpy.array([1, 2, 5]),
+                    numpy.array([1, 2, 7]),
+                    numpy.array([1, 5, 7]),
+                    numpy.array([2, 5, 7]),
+                ],
+                [
+                    numpy.array([2, 5, 6]),
+                    numpy.array([2, 6, 7]),
+                    numpy.array([2, 5, 7]),
+                    numpy.array([5, 6, 7]),
+                ],
+            ],
+        ),
         (
             "polyhedron5",
-            numpy.array([[0, 1, 2, 3, 7], [0, 1, 6, 5, 7]]),
-        ),  # two pyramids
+            [
+                [
+                    numpy.array([0, 1, 2, 3]),  # pyramid base is a rectangle
+                    numpy.array([0, 1, 7]),
+                    numpy.array([1, 2, 7]),
+                    numpy.array([2, 3, 7]),
+                    numpy.array([3, 0, 7]),
+                ],
+                [
+                    numpy.array([0, 1, 6]),  # pyramid base split in two triangles
+                    numpy.array([0, 6, 7]),
+                    numpy.array([0, 1, 5]),
+                    numpy.array([0, 5, 7]),
+                    numpy.array([5, 6, 7]),
+                    numpy.array([1, 5, 6]),
+                ],
+            ],
+        ),
     ],
-    polyhedron_faces={
-        "polyhedron4": [
-            [
-                numpy.array([1, 2, 5]),
-                numpy.array([1, 2, 7]),
-                numpy.array([1, 5, 7]),
-                numpy.array([2, 5, 7]),
-            ],
-            [
-                numpy.array([2, 5, 6]),
-                numpy.array([2, 6, 7]),
-                numpy.array([2, 5, 7]),
-                numpy.array([5, 6, 7]),
-            ],
-        ],
-        "polyhedron5": [
-            [
-                numpy.array([0, 1, 2, 3]),  # pyramid base is a rectangle
-                numpy.array([0, 1, 7]),
-                numpy.array([1, 2, 7]),
-                numpy.array([2, 3, 7]),
-                numpy.array([3, 0, 7]),
-            ],
-            [
-                numpy.array([0, 1, 6]),  # pyramid base split in two triangles
-                numpy.array([0, 6, 7]),
-                numpy.array([0, 1, 5]),
-                numpy.array([0, 5, 7]),
-                numpy.array([5, 6, 7]),
-                numpy.array([1, 5, 6]),
-            ],
-        ],
-    },
 )
 
 
@@ -350,7 +349,13 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     # Make sure the output is writeable
     assert mesh.points.flags["WRITEABLE"]
     for cells in input_mesh.cells:
-        assert cells.data.flags["WRITEABLE"]
+        if isinstance(cells.data, numpy.ndarray):
+            assert cells.data.flags["WRITEABLE"]
+        else:
+            # This is assumed to be a polyhedron
+            for cell in cells.data:
+                for face in cell:
+                    assert face.flags["WRITEABLE"]
 
     # assert that the input mesh hasn't changed at all
     assert numpy.allclose(in_mesh.points, input_mesh.points, atol=atol, rtol=0.0)
@@ -364,7 +369,15 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     # to make sure we are testing same type of cells we sort the list
     for cells0, cells1 in zip(sorted(input_mesh.cells), sorted(mesh.cells)):
         assert cells0.type == cells1.type, f"{cells0.type} != {cells1.type}"
-        assert numpy.array_equal(cells0.data, cells1.data)
+
+        if cells0.type[:10] == "polyhedron":
+            # Special treatment of polyhedron cells
+            # Data is a list (one item per cell) of numpy arrays
+            for c_in, c_out in zip(cells0.data, cells1.data):
+                for face_in, face_out in zip(c_in, c_out):
+                    assert numpy.allclose(face_in, face_out, atol=atol, rtol=0.0)
+        else:
+            assert numpy.array_equal(cells0.data, cells1.data)
 
     for key in input_mesh.point_data.keys():
         assert numpy.allclose(
@@ -378,14 +391,6 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     for name, data in input_mesh.field_data.items():
         assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
-
-    if len(input_mesh.polyhedron_faces) > 0:
-        for poly_shape, data_in in input_mesh.polyhedron_faces.items():
-            data_out = mesh.polyhedron_faces[poly_shape]
-            # Data is a list (per cell) of numpy arrays
-            for c_in, c_out in zip(data_in, data_out):
-                for face_in, face_out in zip(c_in, c_out):
-                    assert numpy.allclose(face_in, face_out, atol=atol, rtol=0.0)
 
 
 def generic_io(filename):
