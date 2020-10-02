@@ -16,6 +16,7 @@ from .._common import (
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _fast_forward_over_blank_lines,
     _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
@@ -51,12 +52,14 @@ def read_buffer(f, is_ascii, data_size):
     periodic = None
     cells = None
     while True:
-        line = f.readline().decode("utf-8")
-        if not line:
-            # EOF
+        # fast-forward over blank lines
+        line, is_eof = _fast_forward_over_blank_lines(f)
+        if is_eof:
             break
+
         if line[0] != "$":
-            raise ReadError()
+            raise ReadError(f"Unexpected line {repr(line)}")
+
         environ = line[1:].strip()
 
         if environ == "PhysicalNames":
