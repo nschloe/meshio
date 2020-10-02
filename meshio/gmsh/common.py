@@ -24,6 +24,18 @@ def _fast_forward_to_end_block(f, block):
         logging.warning(f"${block} not closed by $End{block}.")
 
 
+def _fast_forward_over_blank_lines(f):
+    is_eof = False
+    while True:
+        line = f.readline().decode("utf-8")
+        if not line:
+            is_eof = True
+            break
+        elif len(line.strip()) > 0:
+            break
+    return line, is_eof
+
+
 def _read_physical_names(f, field_data):
     line = f.readline().decode("utf-8")
     num_phys_names = int(line)
