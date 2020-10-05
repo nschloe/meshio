@@ -273,12 +273,12 @@ polyhedron_mesh = meshio.Mesh(
                     numpy.array([3, 0, 7]),
                 ],
                 [
-                    numpy.array([0, 1, 6]),  # pyramid base split in two triangles
-                    numpy.array([0, 6, 7]),
-                    numpy.array([0, 1, 5]),
-                    numpy.array([0, 5, 7]),
-                    numpy.array([5, 6, 7]),
-                    numpy.array([1, 5, 6]),
+                    numpy.array([0, 1, 5]),  # pyramid base split in two triangles
+                    numpy.array([0, 4, 5]),
+                    numpy.array([0, 1, 7]),
+                    numpy.array([1, 5, 7]),
+                    numpy.array([5, 4, 7]),
+                    numpy.array([0, 4, 7]),
                 ],
             ],
         ),
