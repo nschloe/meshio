@@ -1,0 +1,414 @@
+\documentclass[convert=pdf2svg]{standalone}
+% \documentclass{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+\usetikzlibrary{external}
+\tikzset{external/force remake}
+\tikzset{external/disable dependency files}
+\tikzset{external/aux in dpth={false}}
+% uncomment this to generate a figure for each cell type (and change documentclass to article)
+% \tikzexternalize
+
+\tikzstyle{vertex} = [circle,draw=black,fill=black,scale = 0.5]
+\tdplotsetmaincoords{70}{110}
+
+% cnode(tag,x,y,z,label,label_pos)
+\def\cnode(#1,#2,#3,#4,#5,#6){
+\node (#1) at (#2,#3,#4) [vertex,label=#6:$\mathsf{#5}$] {};
+}
+
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{tabular}{ccc}
+vertex &
+line &
+line3
+\\
+\tikzsetnextfilename{vertex}
+\begin{tikzpicture}[scale = 2]
+% \useasboundingbox (-2.5,-2.5) (2.5,2.5);
+\cnode(n0,0,0,0,0,below right);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{line}
+\begin{tikzpicture}[scale = 2]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\draw (n0) -- (n1);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{line3}
+\begin{tikzpicture}[scale = 2]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,1,0,0,2,below right);
+\draw (n0) -- (n2) -- (n1);
+\end{tikzpicture}
+\\[1 em]
+triangle &
+triangle6 &
+triangle7
+\\
+\tikzsetnextfilename{triangle}
+\begin{tikzpicture}[scale = 2]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,0,2,0,2,right);
+\draw (n0) -- (n1) -- (n2) -- (n0);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{triangle6}
+\begin{tikzpicture}[scale = 2]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,0,2,0,2,right);
+\cnode(n3,1,0,0,3,below right);
+\cnode(n4,1,1,0,4,right);
+\cnode(n5,0,1,0,5,below right);
+\draw (n0) -- (n3) -- (n1) -- (n4) -- (n2) -- (n5) -- (n0);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{triangle7}
+\begin{tikzpicture}[scale = 2]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,0,2,0,2,right);
+\cnode(n3,1,0,0,3,below right);
+\cnode(n4,1,1,0,4,right);
+\cnode(n5,0,1,0,5,below right);
+\cnode(n6,0.5,0.5,0,6,below right);
+\draw (n0) -- (n3) -- (n1) -- (n4) -- (n2) -- (n5) -- (n0);
+\end{tikzpicture}
+\\[1 em]
+quad &
+quad8 &
+quad9
+\\
+\tikzsetnextfilename{quad}
+\begin{tikzpicture}[scale = 2]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\draw (n0) -- (n1) -- (n2) -- (n3) -- (n0);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{quad8}
+\begin{tikzpicture}[scale = 2]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\cnode(n4,1,0,0,4,below right);
+\cnode(n5,2,1,0,5,below right);
+\cnode(n6,1,2,0,6,below right);
+\cnode(n7,0,1,0,7,below right);
+\draw (n0) -- (n4) -- (n1) -- (n5) -- (n2) -- (n6) -- (n3) -- (n7) -- (n0);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{quad9}
+\begin{tikzpicture}[scale = 2]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\cnode(n4,1,0,0,4,below right);
+\cnode(n5,2,1,0,5,below right);
+\cnode(n6,1,2,0,6,below right);
+\cnode(n7,0,1,0,7,below right);
+\cnode(n8,1,1,0,8,below right);
+\draw (n0) -- (n4) -- (n1) -- (n5) -- (n2) -- (n6) -- (n3) -- (n7) -- (n0);
+\end{tikzpicture}
+\\[1 em]
+tetra &
+tetra10 &
+hexahedron
+\\
+\tikzsetnextfilename{tetra}
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,0,2,0,2,below right);
+\cnode(n3,0,0,2,3,right);
+\draw (n0) -- (n1) -- (n2) -- (n0);
+\draw (n0) -- (n3);
+\draw (n1) -- (n3);
+\draw (n2) -- (n3);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{tetra10} % VTK
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,0,2,0,2,below right);
+\cnode(n3,0,0,2,3,right);
+\cnode(n4,1,0,0,4,below right);
+\cnode(n5,1,1,0,5,below right);
+\cnode(n6,0,1,0,6,below right);
+\cnode(n7,0,0,1,7,below right);
+\cnode(n8,1,0,1,8,below right);
+\cnode(n9,0,1,1,9,right);
+\draw (n0) -- (n4) -- (n1) -- (n5) -- (n2) -- (n6) -- (n0);
+\draw (n0) -- (n7) -- (n3);
+\draw (n1) -- (n8) -- (n3);
+\draw (n2) -- (n9) -- (n3);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{hexahedron}
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\cnode(n4,0,0,2,4,below right);
+\cnode(n5,2,0,2,5,below right);
+\cnode(n6,2,2,2,6,below right);
+\cnode(n7,0,2,2,7,below right);
+\draw (n0) -- (n1) -- (n2) -- (n3) -- (n0);
+\draw (n4) -- (n5) -- (n6) -- (n7) -- (n4);
+\draw (n0) -- (n4);
+\draw (n1) -- (n5);
+\draw (n2) -- (n6);
+\draw (n3) -- (n7);
+\end{tikzpicture}
+\\[1 em]
+hexahedron20 &
+hexahedron24 &
+hexahedron27
+\\
+\tikzsetnextfilename{hexahedron20} % VTK != gmsh
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\cnode(n4,0,0,2,4,below right);
+\cnode(n5,2,0,2,5,below right);
+\cnode(n6,2,2,2,6,below right);
+\cnode(n7,0,2,2,7,below right);
+\cnode(n8,1,0,0,8,below right);
+\cnode(n9,2,1,0,9,below right);
+\cnode(n10,1,2,0,10,below right);
+\cnode(n11,0,1,0,11,below right);
+\cnode(n12,1,0,2,12,below right);
+\cnode(n13,2,1,2,13,below right);
+\cnode(n14,1,2,2,14,below right);
+\cnode(n15,0,1,2,15,below right);
+\cnode(n16,0,0,1,16,below right);
+\cnode(n17,2,0,1,17,below right);
+\cnode(n18,2,2,1,18,below right);
+\cnode(n19,0,2,1,19,below right);
+\draw (n0) -- (n8) -- (n1) -- (n9) -- (n2) -- (n10) -- (n3) -- (n11) -- (n0);
+\draw (n4) -- (n12) -- (n5) -- (n13) -- (n6) -- (n14) -- (n7) -- (n15) -- (n4);
+\draw (n0) -- (n16) -- (n4);
+\draw (n1) -- (n17) -- (n5);
+\draw (n2) -- (n18) -- (n6);
+\draw (n3) -- (n19) -- (n7);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{hexahedron24} % VTK
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\cnode(n4,0,0,2,4,below right);
+\cnode(n5,2,0,2,5,below right);
+\cnode(n6,2,2,2,6,below right);
+\cnode(n7,0,2,2,7,below right);
+\cnode(n8,1,0,0,8,below right);
+\cnode(n9,2,1,0,9,below right);
+\cnode(n10,1,2,0,10,below right);
+\cnode(n11,0,1,0,11,below right);
+\cnode(n12,1,0,2,12,below right);
+\cnode(n13,2,1,2,13,below right);
+\cnode(n14,1,2,2,14,below right);
+\cnode(n15,0,1,2,15,below right);
+\cnode(n16,0,0,1,16,below right);
+\cnode(n17,2,0,1,17,below right);
+\cnode(n18,2,2,1,18,below right);
+\cnode(n19,0,2,1,19,below right);
+\cnode(n20,0,1,1,20,below right);
+\cnode(n21,2,1,1,21,below right);
+\cnode(n22,1,0,1,22,below right);
+\cnode(n23,1,2,1,23,below right);
+\draw (n0) -- (n8) -- (n1) -- (n9) -- (n2) -- (n10) -- (n3) -- (n11) -- (n0);
+\draw (n4) -- (n12) -- (n5) -- (n13) -- (n6) -- (n14) -- (n7) -- (n15) -- (n4);
+\draw (n0) -- (n16) -- (n4);
+\draw (n1) -- (n17) -- (n5);
+\draw (n2) -- (n18) -- (n6);
+\draw (n3) -- (n19) -- (n7);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{hexahedron27} % VTK != gmsh
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\cnode(n4,0,0,2,4,below right);
+\cnode(n5,2,0,2,5,below right);
+\cnode(n6,2,2,2,6,below right);
+\cnode(n7,0,2,2,7,below right);
+\cnode(n8,1,0,0,8,below right);
+\cnode(n9,2,1,0,9,below right);
+\cnode(n10,1,2,0,10,below right);
+\cnode(n11,0,1,0,11,below right);
+\cnode(n12,1,0,2,12,below right);
+\cnode(n13,2,1,2,13,below right);
+\cnode(n14,1,2,2,14,below right);
+\cnode(n15,0,1,2,15,below right);
+\cnode(n16,0,0,1,16,below right);
+\cnode(n17,2,0,1,17,below right);
+\cnode(n18,2,2,1,18,below right);
+\cnode(n19,0,2,1,19,below right);
+\cnode(n20,0,1,1,20,below right);
+\cnode(n21,2,1,1,21,below right);
+\cnode(n22,1,0,1,22,below right);
+\cnode(n23,1,2,1,23,below right);
+\cnode(n24,1,1,0,24,below right);
+\cnode(n25,1,1,2,25,below right);
+\cnode(n26,1,1,1,26,below right);
+\draw (n0) -- (n8) -- (n1) -- (n9) -- (n2) -- (n10) -- (n3) -- (n11) -- (n0);
+\draw (n4) -- (n12) -- (n5) -- (n13) -- (n6) -- (n14) -- (n7) -- (n15) -- (n4);
+\draw (n0) -- (n16) -- (n4);
+\draw (n1) -- (n17) -- (n5);
+\draw (n2) -- (n18) -- (n6);
+\draw (n3) -- (n19) -- (n7);
+\end{tikzpicture}
+\\[1 em]
+wedge &
+wedge12 &
+wedge15
+\\
+\tikzsetnextfilename{wedge} % gmsh != VTK
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,0,2,0,2,below right);
+\cnode(n3,0,0,2,3,below right);
+\cnode(n4,2,0,2,4,below right);
+\cnode(n5,0,2,2,5,below right);
+\draw (n0) -- (n1) -- (n2) -- (n0);
+\draw (n3) -- (n4) -- (n5) -- (n3);
+\draw (n0) -- (n3);
+\draw (n1) -- (n4);
+\draw (n2) -- (n5);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{wedge12} % VTK
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,0,2,0,2,below right);
+\cnode(n3,0,0,2,3,below right);
+\cnode(n4,2,0,2,4,below right);
+\cnode(n5,0,2,2,5,below right);
+\cnode(n6,1,0,0,6,below right);
+\cnode(n7,1,1,0,7,below right);
+\cnode(n8,0,1,0,8,below right);
+\cnode(n9,1,0,2,9,below right);
+\cnode(n10,1,1,2,10,below right);
+\cnode(n11,0,1,2,11,below right);
+\draw (n0) -- (n6) -- (n1) -- (n7) -- (n2) -- (n8) -- (n0);
+\draw (n3) -- (n9) -- (n4) -- (n10) -- (n5) -- (n11) -- (n3);
+\draw (n0) -- (n3);
+\draw (n1) -- (n4);
+\draw (n2) -- (n5);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{wedge15} % VTK != gmsh
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,0,2,0,2,below right);
+\cnode(n3,0,0,2,3,below right);
+\cnode(n4,2,0,2,4,below right);
+\cnode(n5,0,2,2,5,below right);
+\cnode(n6,1,0,0,6,below right);
+\cnode(n7,1,1,0,7,below right);
+\cnode(n8,0,1,0,8,below right);
+\cnode(n9,1,0,2,9,below right);
+\cnode(n10,1,1,2,10,below right);
+\cnode(n11,0,1,2,11,below right);
+\cnode(n12,0,0,1,12,below right);
+\cnode(n13,2,0,1,13,below right);
+\cnode(n14,0,2,1,14,below right);
+\draw (n0) -- (n6) -- (n1) -- (n7) -- (n2) -- (n8) -- (n0);
+\draw (n3) -- (n9) -- (n4) -- (n10) -- (n5) -- (n11) -- (n3);
+\draw (n0) -- (n12) -- (n3);
+\draw (n1) -- (n13) -- (n4);
+\draw (n2) -- (n14) -- (n5);
+\end{tikzpicture}
+\\[1 em]
+pyramid &
+pyramid13 &
+pyramid14
+\\
+\tikzsetnextfilename{pyramid}
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\cnode(n4,1,1,2,4,right);
+\draw (n0) -- (n1) -- (n2) -- (n3) -- (n0);
+\draw (n0) -- (n4);
+\draw (n1) -- (n4);
+\draw (n2) -- (n4);
+\draw (n3) -- (n4);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{pyramid13} % VTK != gmsh
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\cnode(n4,1,1,2,4,right);
+\cnode(n5,1,0,0,5,below right);
+\cnode(n6,2,1,0,6,below right);
+\cnode(n7,1,2,0,7,below right);
+\cnode(n8,0,1,0,8,below right);
+\cnode(n9,0.5,0.5,1,9,below right);
+\cnode(n10,1.5,0.5,1,10,below right);
+\cnode(n11,1.5,1.5,1,11,below right);
+\cnode(n12,0.5,1.5,1,12,right);
+\draw (n0) -- (n5) -- (n1) -- (n6) -- (n2) -- (n7) -- (n3) -- (n8) -- (n0);
+\draw (n0) -- (n9) -- (n4);
+\draw (n1) -- (n10) -- (n4);
+\draw (n2) -- (n11) -- (n4);
+\draw (n3) -- (n12) -- (n4);
+\end{tikzpicture}
+&
+\tikzsetnextfilename{pyramid14} % gmsh
+\begin{tikzpicture}[scale = 2, tdplot_main_coords]
+\cnode(n0,0,0,0,0,below right);
+\cnode(n1,2,0,0,1,below right);
+\cnode(n2,2,2,0,2,below right);
+\cnode(n3,0,2,0,3,below right);
+\cnode(n4,1,1,2,4,right);
+\cnode(n5,1,0,0,5,below right);
+\cnode(n6,2,1,0,8,below right);
+\cnode(n7,1,2,0,10,below right);
+\cnode(n8,0,1,0,6,below right);
+\cnode(n9,0.5,0.5,1,7,below right);
+\cnode(n10,1.5,0.5,1,9,below right);
+\cnode(n11,1.5,1.5,1,11,below right);
+\cnode(n12,0.5,1.5,1,12,right);
+\cnode(n13,1,1,0,13,below right);
+\draw (n0) -- (n5) -- (n1) -- (n6) -- (n2) -- (n7) -- (n3) -- (n8) -- (n0);
+\draw (n0) -- (n9) -- (n4);
+\draw (n1) -- (n10) -- (n4);
+\draw (n2) -- (n11) -- (n4);
+\draw (n3) -- (n12) -- (n4);
+\end{tikzpicture}
+\end{tabular}
+
+\end{document}
