@@ -152,17 +152,12 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
                     start_cn[items + 1],
                     _vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
                 )
-                if meshio_type == "polyhedron":
-                    # Polyhedra CellBlocks have special data
-                    cells.append(
-                        CellBlock(
-                            meshio_type + str(sz), polyhedron_faces[f"polyhedron{sz}"]
-                        )
-                    )
-                else:
-                    cells.append(
-                        CellBlock(meshio_type + str(sz), connectivity[indices])
-                    )
+                data = (
+                    polyhedron_faces[f"polyhedron{sz}"]
+                    if meshio_type == "polyhedron"
+                    else connectivity[indices]
+                )
+                cells.append(CellBlock(meshio_type + str(sz), data))
 
                 # Store cell data for this set of cells
                 for name, d in cell_data_raw.items():
@@ -640,6 +635,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     for c in mesh.cells:
         if c.type[:10] == "polyhedron":
             is_polyhedron_grid = True
+            break
 
     if not binary:
         logging.warning("VTU ASCII files are only meant for debugging.")
