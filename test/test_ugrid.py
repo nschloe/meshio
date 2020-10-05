@@ -1,4 +1,4 @@
-import os
+import pathlib
 import sys
 
 import helpers
@@ -6,6 +6,8 @@ import numpy
 import pytest
 
 import meshio
+
+this_dir = pathlib.Path(__file__).resolve().parent
 
 
 @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires Python 3.6 or higher")
@@ -74,8 +76,7 @@ def test_reference_file(
     ref_num_hex,
     ref_tag_counts,
 ):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "ugrid", filename)
+    filename = this_dir / "meshes" / "ugrid" / filename
 
     mesh = meshio.read(filename)
     assert mesh.points.shape[0] == ref_num_points
@@ -179,8 +180,7 @@ def _pyramid_volume(cell):
 @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires Python 3.6 or higher")
 @pytest.mark.parametrize("filename, volume,accuracy", [("pyra_cube.ugrid", 1.0, 1e-15)])
 def test_volume(filename, volume, accuracy):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "ugrid", filename)
+    filename = this_dir / "meshes" / "ugrid" / filename
 
     mesh = meshio.read(filename)
 
@@ -218,8 +218,7 @@ def _quad_area(cell):
     [("hch_strct.4.lb8.ugrid", 9587.10463, 74294.529256, 1e-5)],
 )
 def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "ugrid", filename)
+    filename = this_dir / "meshes" / "ugrid" / filename
 
     mesh = meshio.read(filename)
     ugrid_meshio_id = {

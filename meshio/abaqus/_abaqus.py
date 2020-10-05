@@ -1,6 +1,8 @@
 """
 I/O for Abaqus inp files.
 """
+import pathlib
+
 import numpy
 
 from ..__about__ import __version__
@@ -93,8 +95,7 @@ meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
 
 def read(filename):
-    """Reads a Abaqus inp file.
-    """
+    """Reads a Abaqus inp file."""
     with open_file(filename, "r") as f:
         out = read_buffer(f)
     return out
@@ -102,6 +103,7 @@ def read(filename):
 
 def read_buffer(f):
     # Initialize the optional data fields
+    points = []
     cells = []
     cell_ids = []
     point_sets = {}
@@ -165,7 +167,31 @@ def read_buffer(f):
                     elif set_name in cell_sets_element.keys():
                         cell_sets[name].append(cell_sets_element[set_name])
                     else:
-                        raise ReadError("Unknown cell set '{}'".format(set_name))
+                        raise ReadError(f"Unknown cell set '{set_name}'")
+        elif keyword == "INCLUDE":
+            # Splitting line to get external input file path (example: *INCLUDE,INPUT=wInclude_bulk.inp)
+            ext_input_file = pathlib.Path(line.split("=")[-1].strip())
+            if ext_input_file.exists() is False:
+                cd = pathlib.Path(f.name).parent
+                ext_input_file = cd / ext_input_file
+
+            # Read contents from external input file into mesh object
+            out = read(ext_input_file)
+
+            # Merge contents of external file only if it is containing mesh data
+            if len(out.points) > 0:
+                points, cells = merge(
+                    out,
+                    points,
+                    cells,
+                    point_data,
+                    cell_data,
+                    field_data,
+                    point_sets,
+                    cell_sets,
+                )
+
+            line = f.readline()
         else:
             # There are just too many Abaqus keywords to explicitly skip them.
             line = f.readline()
@@ -218,7 +244,7 @@ def _read_nodes(f):
 def _read_cells(f, params_map, point_ids):
     etype = params_map["TYPE"]
     if etype not in abaqus_to_meshio_type.keys():
-        raise ReadError("Element type not available: {}".format(etype))
+        raise ReadError(f"Element type not available: {etype}")
 
     cell_type = abaqus_to_meshio_type[etype]
 
@@ -247,6 +273,56 @@ def _read_cells(f, params_map, point_ids):
     )
 
     return cell_type, numpy.array(cells), cell_ids, cell_sets, line
+
+
+def merge(
+    mesh, points, cells, point_data, cell_data, field_data, point_sets, cell_sets
+):
+    """
+    Merge Mesh object into existing containers for points, cells, sets, etc..
+
+    :param mesh:
+    :param points:
+    :param cells:
+    :param point_data:
+    :param cell_data:
+    :param field_data:
+    :param point_sets:
+    :param cell_sets:
+    :type mesh: Mesh
+    """
+    ext_points = numpy.array([p for p in mesh.points])
+
+    if len(points) > 0:
+        new_point_id = points.shape[0]
+        # new_cell_id = len(cells) + 1
+        points = numpy.concatenate([points, ext_points])
+    else:
+        # new_cell_id = 0
+        new_point_id = 0
+        points = ext_points
+
+    cnt = 0
+    for c in mesh.cells:
+        new_data = numpy.array([d + new_point_id for d in c.data])
+        cells.append(CellBlock(c.type, new_data))
+        cnt += 1
+
+    # The following aren't currently included in the abaqus parser, and are therefore excluded?
+    # point_data.update(mesh.point_data)
+    # cell_data.update(mesh.cell_data)
+    # field_data.update(mesh.field_data)
+
+    # Update point and cell sets to account for change in cell and point ids
+    for key, val in mesh.point_sets.items():
+        point_sets[key] = [x + new_point_id for x in val]
+
+    # Todo: Add support for merging cell sets
+    # cellblockref = [[] for i in range(cnt-new_cell_id)]
+    # for key, val in mesh.cell_sets.items():
+    #     cell_sets[key] = cellblockref + [numpy.array([x for x in val[0]])]
+
+    return points, cells
 
 
 def get_param_map(word, required_keys=None):
@@ -282,7 +358,7 @@ def get_param_map(word, required_keys=None):
     msg = ""
     for key in required_keys:
         if key not in param_map:
-            msg += "{} not found in {}\n".format(key, word)
+            msg += f"{key} not found in {word}\n"
     if msg:
         raise RuntimeError(msg)
     return param_map
@@ -316,7 +392,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
     with open_file(filename, "wt") as f:
         f.write("*HEADING\n")
         f.write("Abaqus DataFile Version 6.14\n")
-        f.write("written by meshio v{}\n".format(__version__))
+        f.write(f"written by meshio v{__version__}\n")
         f.write("*NODE\n")
         fmt = ", ".join(["{}"] + ["{:" + float_fmt + "}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):
@@ -326,7 +402,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
             name = (
                 meshio_to_abaqus_type[cell_type] if translate_cell_names else cell_type
             )
-            f.write("*ELEMENT, TYPE={}\n".format(name))
+            f.write(f"*ELEMENT, TYPE={name}\n")
             for row in node_idcs:
                 eid += 1
                 nids_strs = (str(nid + 1) for nid in row.tolist())
@@ -338,7 +414,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
             for k, v in mesh.cell_sets.items():
                 if len(v[ic]) > 0:
                     els = [str(i + 1 + offset) for i in v[ic]]
-                    f.write("*ELSET, ELSET={}\n".format(k))
+                    f.write(f"*ELSET, ELSET={k}\n")
                     f.write(
                         ",\n".join(
                             ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
@@ -349,7 +425,7 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
 
         for k, v in mesh.point_sets.items():
             nds = [str(i + 1) for i in v]
-            f.write("*NSET, NSET={}\n".format(k))
+            f.write(f"*NSET, NSET={k}\n")
             f.write(
                 ",\n".join(",".join(nds[i : i + nnl]) for i in range(0, len(nds), nnl))
                 + "\n"

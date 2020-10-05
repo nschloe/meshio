@@ -90,8 +90,7 @@ local_dimension_types = {
 
 
 def read(filename):
-    """Reads a KratosMultiphysics mdpa file.
-    """
+    """Reads a KratosMultiphysics mdpa file."""
     # if (have_kratos is True): # TODO: Implement natively
     # pass
     # else:
@@ -241,8 +240,6 @@ def _prepare_cells(cells, cell_tags):
             ],
         ]
 
-    cell_tags = output_cell_tags
-
     return has_additional_tag_data
 
 
@@ -273,7 +270,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
     data = data[:, 1:]
 
     line = f.readline().decode("utf-8")
-    if line.strip() != "End {}".format(tag):
+    if line.strip() != f"End {tag}":
         raise ReadError()
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).

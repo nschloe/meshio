@@ -4,12 +4,14 @@ I/O for the PLY format, cf.
 <https://web.archive.org/web/20161221115231/http://www.cs.virginia.edu/~gfx/Courses/2001/Advanced.spring.01/plylib/Ply.txt>.
 """
 import collections
+import datetime
 import re
 import sys
 import warnings
 
 import numpy
 
+from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
@@ -17,6 +19,11 @@ from .._mesh import CellBlock, Mesh
 
 # Reference dtypes
 ply_to_numpy_dtype = {
+    # [u]char is often used as [u]int, e.g., from Wikipedia:
+    # > The word 'list' indicates that the data is a list of values, the first of which
+    # > is the number of entries in the list (represented as a 'uchar' in this case).
+    "char": numpy.int,
+    "uchar": numpy.uint,
     "short": numpy.int16,
     "ushort": numpy.uint16,
     "int": numpy.int32,
@@ -368,14 +375,17 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
     with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")
-        fh.write(b"comment Created by meshio\n")
 
         if binary:
-            fh.write(
-                "format binary_{}_endian 1.0\n".format(sys.byteorder).encode("utf-8")
-            )
+            fh.write(f"format binary_{sys.byteorder}_endian 1.0\n".encode("utf-8"))
         else:
             fh.write(b"format ascii 1.0\n")
+
+        fh.write(
+            "comment Created by meshio v{}, {}\n".format(
+                __version__, datetime.datetime.now().isoformat()
+            ).encode("utf-8")
+        )
 
         # counts
         fh.write("element vertex {:d}\n".format(mesh.points.shape[0]).encode("utf-8"))
@@ -413,14 +423,14 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 )
                 continue
             type_name = type_name_table[value.dtype]
-            fh.write("property {} {}\n".format(type_name, key).encode("utf-8"))
+            fh.write(f"property {type_name} {key}\n".encode("utf-8"))
             pd.append(value)
 
         num_cells = 0
         for cell_type, c in mesh.cells:
             if cell_type_to_count(cell_type):
                 num_cells += c.data.shape[0]
-        fh.write("element face {:d}\n".format(num_cells).encode("utf-8"))
+        fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
 
         # possibly cast down to int32
         cells = mesh.cells

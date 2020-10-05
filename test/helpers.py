@@ -307,8 +307,7 @@ def add_cell_sets(mesh):
 
 
 def write_read(writer, reader, input_mesh, atol, extension=".dat"):
-    """Write and read a file, and make sure the data is the same as before.
-    """
+    """Write and read a file, and make sure the data is the same as before."""
     in_mesh = copy.deepcopy(input_mesh)
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -332,7 +331,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     # to make sure we are testing same type of cells we sort the list
     for cells0, cells1 in zip(sorted(input_mesh.cells), sorted(mesh.cells)):
-        assert cells0.type == cells1.type, "{} != {}".format(cells0.type, cells1.type)
+        assert cells0.type == cells1.type, f"{cells0.type} != {cells1.type}"
         assert numpy.array_equal(cells0.data, cells1.data)
 
     for key in input_mesh.point_data.keys():

@@ -60,14 +60,8 @@ def read(filename):
             )
         mesh = mesh[list(time_step)[0]]
 
-    # Read nodal and cell data if they exist
-    try:
-        fields = f["CHA"]  # champs (fields) in French
-    except KeyError:
-        point_data, cell_data, field_data = {}, {}, {}
-    else:
-        profiles = f["PROFILS"] if "PROFILS" in f else None
-        point_data, cell_data, field_data = _read_data(fields, profiles)
+    # Initialize data
+    point_data, cell_data, field_data = {}, {}, {}
 
     # Points
     pts_dataset = mesh["NOE"]["COO"]
@@ -87,9 +81,11 @@ def read(filename):
 
     # CellBlock
     cells = []
+    cell_types = []
     med_cells = mesh["MAI"]
     for med_cell_type, med_cell_type_group in med_cells.items():
         cell_type = med_to_meshio_type[med_cell_type]
+        cell_types.append(cell_type)
         nod = med_cell_type_group["NOD"]
         n_cells = nod.attrs["NBR"]
         cells += [(cell_type, nod[()].reshape(n_cells, -1, order="F") - 1)]
@@ -106,6 +102,15 @@ def read(filename):
     if "ELEME" in fas:
         cell_tags = _read_families(fas["ELEME"])
 
+    # Read nodal and cell data if they exist
+    try:
+        fields = f["CHA"]  # champs (fields) in French
+    except KeyError:
+        pass
+    else:
+        profiles = f["PROFILS"] if "PROFILS" in f else None
+        _read_data(fields, profiles, cell_types, point_data, cell_data, field_data)
+
     # Construct the mesh object
     mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
@@ -115,10 +120,7 @@ def read(filename):
     return mesh
 
 
-def _read_data(fields, profiles):
-    point_data = {}
-    cell_data = {}
-    field_data = {}
+def _read_data(fields, profiles, cell_types, point_data, cell_data, field_data):
     for name, data in fields.items():
         time_step = sorted(data.keys())  # associated time-steps
         if len(time_step) == 1:  # single time-step
@@ -127,7 +129,7 @@ def _read_data(fields, profiles):
             names = [None] * len(time_step)
             for i, key in enumerate(time_step):
                 t = data[key].attrs["PDT"]  # current time
-                names[i] = name + "[{:d}] - {:g}".format(i, t)
+                names[i] = name + f"[{i:d}] - {t:g}"
 
         # MED field can contain multiple types of data
         for i, key in enumerate(time_step):
@@ -137,11 +139,14 @@ def _read_data(fields, profiles):
                 if supp == "NOE":  # continuous nodal (NOEU) data
                     point_data[name] = _read_nodal_data(med_data, profiles)
                 else:  # Gauss points (ELGA) or DG (ELNO) data
-                    cell_data = _read_cell_data(
-                        cell_data, name, supp, med_data, profiles
+                    cell_type = med_to_meshio_type[supp.partition(".")[2]]
+                    assert cell_type in cell_types
+                    cell_index = cell_types.index(cell_type)
+                    if name not in cell_data:
+                        cell_data[name] = [None] * len(cell_types)
+                    cell_data[name][cell_index] = _read_cell_data(
+                        med_data[supp], profiles
                     )
-
-    return point_data, cell_data, field_data
 
 
 def _read_nodal_data(med_data, profiles):
@@ -161,10 +166,9 @@ def _read_nodal_data(med_data, profiles):
     return values
 
 
-def _read_cell_data(cell_data, name, supp, med_data, profiles):
-    # med_type = supp.partition(".")[2]
-    profile = med_data[supp].attrs["PFL"]
-    data_profile = med_data[supp][profile]
+def _read_cell_data(med_data, profiles):
+    profile = med_data.attrs["PFL"]
+    data_profile = med_data[profile]
     n_cells = data_profile.attrs["NBR"]
     n_gauss_points = data_profile.attrs["NGA"]
     if profile.decode() == "MED_NO_PROFILE_INTERNAL":  # default profile with everything
@@ -185,12 +189,7 @@ def _read_cell_data(cell_data, name, supp, med_data, profiles):
         values = values[:, 0, :]
         if values.shape[-1] == 1:  # cut off for scalars
             values = values[:, 0]
-
-    if name not in cell_data:
-        cell_data[name] = []
-    cell_data[name].append(values)
-
-    return cell_data
+    return values
 
 
 def _read_families(fas_data):
@@ -264,7 +263,7 @@ def write(filename, mesh, add_global_ids=True):
 
     # Cells (mailles in French)
     if len(mesh.cells) != len(numpy.unique([c.type for c in mesh.cells])):
-        WriteError("MED files cannot have two sections of the same cell type.")
+        raise WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
     for k, (cell_type, cells) in enumerate(mesh.cells):
@@ -330,17 +329,29 @@ def write(filename, mesh, add_global_ids=True):
             med_type = meshio_to_med_type[cell.type]
             if data.ndim <= 2:
                 supp = "ELEM"
-            elif data.shape[1] == num_nodes_per_cell[cell_type]:
+            elif data.shape[1] == num_nodes_per_cell[cell.type]:
                 supp = "ELNO"
             else:  # general ELGA data defined at unknown Gauss points
                 supp = "ELGA"
             _write_data(
-                fields, mesh_name, profile, name, supp, data, med_type,
+                fields,
+                mesh_name,
+                profile,
+                name,
+                supp,
+                data,
+                med_type,
             )
 
 
 def _write_data(
-    fields, mesh_name, profile, name, supp, data, med_type=None,
+    fields,
+    mesh_name,
+    profile,
+    name,
+    supp,
+    data,
+    med_type=None,
 ):
     # Skip for general ELGA fields defined at unknown Gauss points
     if supp == "ELGA":

@@ -389,13 +389,13 @@ def read(filename):  # noqa: C901
 def write(filename, mesh, binary=True):
     with open_file(filename, "wb") as fh:
         # header
-        fh.write('(1 "meshio {}")\n'.format(__version__).encode("utf8"))
+        fh.write(f'(1 "meshio {__version__}")\n'.encode("utf8"))
 
         # dimension
         dim = mesh.points.shape[1]
         if dim not in [2, 3]:
-            raise WriteError("Can only write dimension 2, 3, got {}.".format(dim))
-        fh.write(("(2 {})\n".format(dim)).encode("utf8"))
+            raise WriteError(f"Can only write dimension 2, 3, got {dim}.")
+        fh.write((f"(2 {dim})\n").encode("utf8"))
 
         # total number of nodes
         first_node_index = 1
@@ -407,7 +407,7 @@ def write(filename, mesh, binary=True):
 
         # total number of cells
         total_num_cells = sum([len(c) for c in mesh.cells])
-        fh.write(("(12 (0 1 {:x} 0))\n".format(total_num_cells)).encode("utf8"))
+        fh.write((f"(12 (0 1 {total_num_cells:x} 0))\n").encode("utf8"))
 
         # Write nodes
         key = "3010" if binary else "10"
@@ -428,12 +428,14 @@ def write(filename, mesh, binary=True):
 
         # Write cells
         meshio_to_ansys_type = {
+            # "mixed": 0,
             "triangle": 1,
             "tetra": 2,
             "quad": 3,
             "hexahedron": 4,
             "pyra": 5,
             "wedge": 6,
+            # "polyhedral": 7,
         }
         first_index = 0
         binary_dtypes = {
@@ -444,17 +446,26 @@ def write(filename, mesh, binary=True):
         for cell_type, values in mesh.cells:
             key = binary_dtypes[values.dtype] if binary else "12"
             last_index = first_index + len(values) - 1
+            try:
+                ansys_cell_type = meshio_to_ansys_type[cell_type]
+            except KeyError:
+                legal_keys = ", ".join(meshio_to_ansys_type.keys())
+                raise KeyError(
+                    "Illegal ANSYS cell type '{}'. (legal: {})".format(
+                        cell_type, legal_keys
+                    )
+                )
             fh.write(
                 (
                     "({} (1 {:x} {:x} 1 {})(\n".format(
-                        key, first_index, last_index, meshio_to_ansys_type[cell_type]
+                        key, first_index, last_index, ansys_cell_type
                     )
                 ).encode("utf8")
             )
             if binary:
                 (values + first_node_index).tofile(fh)
                 fh.write(b"\n)")
-                fh.write(("End of Binary Section {})\n".format(key)).encode("utf8"))
+                fh.write((f"End of Binary Section {key})\n").encode("utf8"))
             else:
                 numpy.savetxt(fh, values + first_node_index, fmt="%x")
                 fh.write(b"))\n")

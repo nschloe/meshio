@@ -6,12 +6,20 @@ from .._exceptions import WriteError
 from .._helpers import register
 
 
-def write(filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None):
+def write(
+    filename,
+    mesh,
+    float_fmt=".3f",
+    stroke_width="1",
+    force_width=None,
+    fill="none",
+    stroke="black",
+):
     if mesh.points.shape[1] == 3 and not numpy.allclose(
         mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
     ):
         raise WriteError(
-            "SVG can only handle flat 2D meshes (shape: {})".format(mesh.points.shape)
+            f"SVG can only handle flat 2D meshes (shape: {mesh.points.shape})"
         )
 
     pts = mesh.points[:, :2].copy()
@@ -30,7 +38,7 @@ def write(filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None):
         height *= scaling_factor
         pts *= scaling_factor
 
-    fmt = " ".join(4 * ["{{:{}}}".format(float_fmt)])
+    fmt = " ".join(4 * [f"{{:{float_fmt}}}"])
     svg = ET.Element(
         "svg",
         xmlns="http://www.w3.org/2000/svg",
@@ -40,9 +48,9 @@ def write(filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None):
 
     style = ET.SubElement(svg, "style")
     opts = [
-        "fill: none",
-        "stroke: black",
-        "stroke-width: {}".format(stroke_width),
+        f"fill: {fill}",
+        f"stroke: {stroke}",
+        f"stroke-width: {stroke_width}",
         "stroke-linejoin:bevel",
     ]
     # Use path, not polygon, because svgo converts polygons to paths and doesn't convert
@@ -53,27 +61,30 @@ def write(filename, mesh, float_fmt=".3f", stroke_width="1", force_width=None):
         if cell_block.type not in ["line", "triangle", "quad"]:
             continue
         if cell_block.type == "line":
-            fmt = "M {{:{}}} {{:{}}}".format(
-                float_fmt, float_fmt
-            ) + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
-        elif cell_block.type == "triangle":
             fmt = (
                 "M {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
-                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
-                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                + f"L {{:{float_fmt}}} {{:{float_fmt}}}"
+            )
+        elif cell_block.type == "triangle":
+            fmt = (
+                f"M {{:{float_fmt}}} {{:{float_fmt}}}"
+                + f"L {{:{float_fmt}}} {{:{float_fmt}}}"
+                + f"L {{:{float_fmt}}} {{:{float_fmt}}}"
                 + "Z"
             )
         elif cell_block.type == "quad":
             fmt = (
-                "M {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
-                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
-                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
-                + "L {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                f"M {{:{float_fmt}}} {{:{float_fmt}}}"
+                + f"L {{:{float_fmt}}} {{:{float_fmt}}}"
+                + f"L {{:{float_fmt}}} {{:{float_fmt}}}"
+                + f"L {{:{float_fmt}}} {{:{float_fmt}}}"
                 + "Z"
             )
         for cell in cell_block.data:
             ET.SubElement(
-                svg, "path", d=fmt.format(*pts[cell].flatten()),
+                svg,
+                "path",
+                d=fmt.format(*pts[cell].flatten()),
             )
 
     tree = ET.ElementTree(svg)

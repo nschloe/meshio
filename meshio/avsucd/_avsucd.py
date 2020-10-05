@@ -156,7 +156,7 @@ def write(filename, mesh):
 
     with open_file(filename, "w") as f:
         # Write meshio version
-        f.write("# Written by meshio v{}\n".format(version))
+        f.write(f"# Written by meshio v{version}\n")
 
         # Write first line
         num_nodes = len(mesh.points)
@@ -236,7 +236,7 @@ def _write_data(f, labels, data_array, num_entities, num_data, num_data_sum):
     f.write("{} {}\n".format(len(num_data), num_data_str))
 
     for label in labels:
-        f.write("{}, real\n".format(label))
+        f.write(f"{label}, real\n")
 
     data_array = numpy.column_stack((numpy.arange(1, num_entities + 1), data_array))
     numpy.savetxt(f, data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_data_sum)

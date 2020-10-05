@@ -40,7 +40,7 @@ file_types = {
 
 def determine_file_type(filename):
     file_type = file_types["ascii"]
-    filename_parts = filename.split(".")
+    filename_parts = str(filename).split(".")
     if len(filename_parts) > 1:
         type_suffix = filename_parts[-2]
         if type_suffix in file_types.keys():
@@ -190,7 +190,7 @@ def _write_buffer(f, file_type, mesh):
             ugrid_counts[key] = data.shape[0]
             ugrid_meshio_id[key] = i
         else:
-            msg = "UGRID mesh format doesn't know {} cells. Skipping.".format(key)
+            msg = f"UGRID mesh format doesn't know {key} cells. Skipping."
             logging.warning(msg)
             continue
 
@@ -237,10 +237,10 @@ def _write_buffer(f, file_type, mesh):
             continue
 
         # pick out cell data
-        for data in mesh.cell_data.values():
-            if data.dtype in [numpy.int8, numpy.int16, numpy.int32, numpy.int64]:
-                labels = data
-                break
+        # for data in mesh.cell_data.values():
+        #     if data.dtype in [numpy.int8, numpy.int16, numpy.int32, numpy.int64]:
+        #         labels = data
+        #         break
 
         # pick out cell_data
         labels_key, other = _pick_first_int_data(mesh.cell_data)

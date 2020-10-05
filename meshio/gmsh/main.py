@@ -4,6 +4,7 @@ import struct
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from . import _gmsh22, _gmsh40, _gmsh41
+from .common import _fast_forward_to_end_block
 
 # Some mesh files out there have the version specified as version "2" when it really is
 # "2.2". Same with "4" vs "4.1".
@@ -12,8 +13,7 @@ _writers = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
 
 
 def read(filename):
-    """Reads a Gmsh msh file.
-    """
+    """Reads a Gmsh msh file."""
     filename = pathlib.Path(filename)
     with open(filename.as_posix(), "rb") as f:
         mesh = read_buffer(f)
@@ -27,8 +27,7 @@ def read_buffer(f):
 
     # skip any $Comments/$EndComments sections
     while line == "$Comments":
-        while line != "$EndComments":
-            line = f.readline().decode("utf-8").strip()
+        _fast_forward_to_end_block(f, "Comments")
         line = f.readline().decode("utf-8").strip()
 
     if line != "$MeshFormat":
@@ -80,18 +79,14 @@ def _read_header(f):
         one = f.read(struct.calcsize("i"))
         if struct.unpack("i", one)[0] != 1:
             raise ReadError()
-    # Fast forward to $EndMeshFormat
-    line = f.readline().decode("utf-8")
-    while line.strip() != "$EndMeshFormat":
-        line = f.readline().decode("utf-8")
+    _fast_forward_to_end_block(f, "MeshFormat")
     return fmt_version, data_size, is_ascii
 
 
 # Gmsh ASCII output uses `%.16g` for floating point values,
 # meshio uses same precision but exponential notation `%.16e`.
 def write(filename, mesh, fmt_version="4.1", binary=True, float_fmt=".16e"):
-    """Writes a Gmsh msh file.
-    """
+    """Writes a Gmsh msh file."""
     try:
         writer = _writers[fmt_version]
     except KeyError:

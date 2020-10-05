@@ -60,8 +60,8 @@ vtk_type_to_numnodes = numpy.array(
 )
 
 
-# These are all VTK data types. One sometimes finds 'vtktypeint64', but
-# this is ill-formed.
+# These are all VTK data types.
+# One sometimes finds 'vtktypeint64', but this is ill-formed.
 vtk_to_numpy_dtype_name = {
     "bit": "bool",
     "unsigned_char": "uint8",
@@ -70,13 +70,18 @@ vtk_to_numpy_dtype_name = {
     "short": "int16",
     "unsigned_int": "uint32",
     "int": "int32",
-    "unsigned_long": "int64",
+    "unsigned_long": "uint64",
     "long": "int64",
     "float": "float32",
     "double": "float64",
+    "vtktypeint32": "int32",  # vtk DataFile Version 5.1
+    "vtktypeint64": "int64",  # vtk DataFile Version 5.1
+    "vtkidtype": "int32",  # may be either 32-bit or 64-bit (VTK_USE_64BIT_IDS)
 }
 
-numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype_name.items()}
+numpy_to_vtk_dtype = {
+    v: k for k, v in vtk_to_numpy_dtype_name.items() if "vtk" not in k
+}
 
 # supported vtk dataset types
 vtk_dataset_types = [
@@ -113,6 +118,7 @@ vtk_sections = [
     "POINT_DATA",
     "CELL_DATA",
     "LOOKUP_TABLE",
+    "COLOR_SCALARS",
 ]
 
 
@@ -140,8 +146,7 @@ class Info:
 
 
 def read(filename):
-    """Reads a VTK vtk file.
-    """
+    """Reads a VTK vtk file."""
     with open_file(filename, "rb") as f:
         out = read_buffer(f)
     return out
@@ -157,7 +162,7 @@ def read_buffer(f):
 
     data_type = f.readline().decode("utf-8").strip().upper()
     if data_type not in ["ASCII", "BINARY"]:
-        raise ReadError("Unknown VTK data type '{}'.".format(data_type))
+        raise ReadError(f"Unknown VTK data type '{data_type}'.")
     info.is_ascii = data_type == "ASCII"
 
     while True:
@@ -212,8 +217,29 @@ def _read_section(f, info):
 
     elif info.section == "CELLS":
         info.active = "CELLS"
-        info.num_items = int(info.split[2])
-        info.c = _read_cells(f, info.is_ascii, info.num_items)
+        last_pos = f.tell()
+        try:
+            line = f.readline().decode("utf-8")
+        except UnicodeDecodeError:
+            line = ""
+        if "OFFSETS" in line:
+            # vtk DataFile Version 5.1 - appearing in Paraview 5.8.1 outputs
+            # No specification found for this file format.
+            # See the question on ParaView Discourse Forum:
+            # <https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127>.
+            info.num_offsets = int(info.split[1])
+            info.num_items = int(info.split[2])
+            dtype = numpy.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
+            offsets = _read_cells(f, info.is_ascii, info.num_offsets, dtype)
+            line = f.readline().decode("utf-8")
+            assert "CONNECTIVITY" in line
+            dtype = numpy.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
+            connectivity = _read_cells(f, info.is_ascii, info.num_items, dtype)
+            info.c = (offsets, connectivity)
+        else:
+            f.seek(last_pos)
+            info.num_items = int(info.split[2])
+            info.c = _read_cells(f, info.is_ascii, info.num_items)
 
     elif info.section == "CELL_TYPES":
         info.active = "CELL_TYPES"
@@ -230,8 +256,17 @@ def _read_section(f, info):
 
     elif info.section == "LOOKUP_TABLE":
         info.num_items = int(info.split[2])
-        data = numpy.fromfile(f, count=info.num_items * 4, sep=" ", dtype=float)
-        rgba = data.reshape((info.num_items, 4))  # noqa F841
+        numpy.fromfile(f, count=info.num_items * 4, sep=" ", dtype=float)
+        # rgba = data.reshape((info.num_items, 4))
+
+    elif info.section == "COLOR_SCALARS":
+        nValues = int(info.split[2])
+        # re-use num_items from active POINT/CELL_DATA
+        num_items = info.num_items
+        dtype = numpy.ubyte
+        if info.is_ascii:
+            dtype = float
+        numpy.fromfile(f, count=num_items * nValues, dtype=dtype)
 
 
 def _read_subsection(f, info):
@@ -269,7 +304,7 @@ def _read_subsection(f, info):
     elif info.section == "FIELD":
         d.update(_read_fields(f, int(info.split[2]), info.is_ascii))
     else:
-        raise ReadError("Unknown section '{}'.".format(info.section))
+        raise ReadError(f"Unknown section '{info.section}'.")
 
 
 def _check_mesh(info):
@@ -391,11 +426,12 @@ def _read_points(f, data_type, is_ascii, num_points):
     return points.reshape((num_points, 3))
 
 
-def _read_cells(f, is_ascii, num_items):
+def _read_cells(f, is_ascii, num_items, dtype=numpy.dtype("int32")):
     if is_ascii:
-        c = numpy.fromfile(f, count=num_items, sep=" ", dtype=int)
+        c = numpy.fromfile(f, count=num_items, sep=" ", dtype=dtype)
     else:
-        c = numpy.fromfile(f, count=num_items, dtype=">i4")
+        dtype = dtype.newbyteorder(">")
+        c = numpy.fromfile(f, count=num_items, dtype=dtype)
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
@@ -434,16 +470,17 @@ def _read_scalar_field(f, num_data, split, is_ascii):
         raise ReadError()
 
     if is_ascii:
-        data = numpy.fromfile(f, count=num_data, sep=" ", dtype=dtype)
+        data = numpy.fromfile(f, count=num_data * num_comp, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
-        data = numpy.fromfile(f, count=num_data, dtype=dtype)
+        data = numpy.fromfile(f, count=num_data * num_comp, dtype=dtype)
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
 
+    data = data.reshape(-1, num_comp)
     return {data_name: data}
 
 
@@ -452,6 +489,7 @@ def _read_field(f, num_data, split, shape, is_ascii):
     data_type = split[2].lower()
 
     dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+    # prod()
     # <https://stackoverflow.com/q/2104782/353337>
     k = reduce((lambda x, y: x * y), shape)
 
@@ -518,6 +556,7 @@ def translate_cells(data, types, cell_data_raw):
     # Translate it into the cells array.
     # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
+    # or a tuple with (offsets, connectivity)
     has_polygon = numpy.any(types == meshio_to_vtk_type["polygon"])
 
     cells = []
@@ -564,20 +603,28 @@ def translate_cells(data, types, cell_data_raw):
         numnodes = vtk_type_to_numnodes[types]
         if not numpy.all(numnodes > 0):
             raise ReadError("File contains cells that meshio cannot handle.")
-        offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
+        if isinstance(data, tuple):
+            offsets, conn = data
+            if not numpy.all(numnodes == numpy.diff(offsets)):
+                raise ReadError()
+            idx0 = 0
+        else:
+            offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
 
-        if not numpy.all(numnodes == data[offsets]):
-            raise ReadError()
+            if not numpy.all(numnodes == data[offsets]):
+                raise ReadError()
+            idx0 = 1
+            conn = data
 
         b = numpy.concatenate(
             [[0], numpy.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
         )
         for start, end in zip(b[:-1], b[1:]):
             meshio_type = vtk_to_meshio_type[types[start]]
-            n = data[offsets[start]]
-            cell_idx = 1 + _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)
+            n = numnodes[start]
+            cell_idx = idx0 + _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)
             indices = numpy.add.outer(offsets[start:end], cell_idx)
-            cells.append(CellBlock(meshio_type, data[indices]))
+            cells.append(CellBlock(meshio_type, conn[indices]))
             for name, d in cell_data_raw.items():
                 if name not in cell_data:
                     cell_data[name] = []
@@ -622,7 +669,7 @@ def write(filename, mesh, binary=True):
 
     with open_file(filename, "wb") as f:
         f.write(b"# vtk DataFile Version 4.2\n")
-        f.write("written by meshio v{}\n".format(__version__).encode("utf-8"))
+        f.write(f"written by meshio v{__version__}\n".encode("utf-8"))
         f.write(("BINARY\n" if binary else "ASCII\n").encode("utf-8"))
         f.write(b"DATASET UNSTRUCTURED_GRID\n")
 
@@ -633,13 +680,13 @@ def write(filename, mesh, binary=True):
         # write point data
         if mesh.point_data:
             num_points = mesh.points.shape[0]
-            f.write("POINT_DATA {}\n".format(num_points).encode("utf-8"))
+            f.write(f"POINT_DATA {num_points}\n".encode("utf-8"))
             _write_field_data(f, mesh.point_data, binary)
 
         # write cell data
         if mesh.cell_data:
             total_num_cells = sum(len(c.data) for c in mesh.cells)
-            f.write("CELL_DATA {}\n".format(total_num_cells).encode("utf-8"))
+            f.write(f"CELL_DATA {total_num_cells}\n".encode("utf-8"))
             _write_field_data(f, mesh.cell_data, binary)
 
 
@@ -669,7 +716,7 @@ def _write_cells(f, cells, binary):
     total_num_idx = sum([c.data.size for c in cells])
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
-    f.write("CELLS {} {}\n".format(total_num_cells, total_num_idx).encode("utf-8"))
+    f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode("utf-8"))
     if binary:
         for c in cells:
             n = c.data.shape[1]
@@ -699,7 +746,7 @@ def _write_cells(f, cells, binary):
             f.write(b"\n")
 
     # write cell types
-    f.write("CELL_TYPES {}\n".format(total_num_cells).encode("utf-8"))
+    f.write(f"CELL_TYPES {total_num_cells}\n".encode("utf-8"))
     if binary:
         for c in cells:
             key_ = c.type[:7] if c.type[:7] == "polygon" else c.type
@@ -729,9 +776,7 @@ def _write_field_data(f, data, binary):
             num_components = values.shape[1]
 
         if " " in name:
-            raise WriteError(
-                "VTK doesn't support spaces in field names ('{}').".format(name)
-            )
+            raise WriteError(f"VTK doesn't support spaces in field names ('{name}').")
 
         f.write(
             (

@@ -54,14 +54,11 @@ def read(filename):
 
 def read_buffer(f):
     # Skip until BEGIN BULK
-    begin_bulk = False
-    while not begin_bulk:
+    while True:
         line = f.readline()
         if not line:
             raise RuntimeError('"BEGIN BULK" statement not found')
-            break
         if line.strip().startswith("BEGIN BULK"):
-            begin_bulk = True
             break
 
     # Reading data
@@ -164,8 +161,7 @@ def read_buffer(f):
             keyword_prev = keyword
 
         # CellBlock card continuation for 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
-        elif keyword[0] == "+":
-            assert cell is not None
+        elif keyword[0] == "+" and cell is not None:
             cell.extend(chunks[1:])
 
     # Add the last cell
@@ -207,7 +203,7 @@ def write(filename, mesh):
         points = mesh.points
 
     with open_file(filename, "w") as f:
-        f.write("$ Nastran file written by meshio v{}\n".format(__version__))
+        f.write(f"$ Nastran file written by meshio v{__version__}\n")
         f.write("BEGIN BULK\n")
 
         # Points
@@ -240,7 +236,7 @@ def write(filename, mesh):
                 if cell_refs is not None:
                     cell_ref = " " + str(int(cell_refs_t[ic]))
                 cell_id += 1
-                cell_info = "{}, {:d},{}, ".format(nastran_type, cell_id, cell_ref)
+                cell_info = f"{nastran_type}, {cell_id:d},{cell_ref}, "
                 cell1 = cell + 1
                 cell1 = _convert_to_nastran_ordering(cell1, nastran_type)
                 conn = ", ".join(str(nid) for nid in cell1[:6])
