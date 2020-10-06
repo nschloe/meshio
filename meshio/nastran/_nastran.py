@@ -209,7 +209,7 @@ def print_scientific(value, length=16):
     svalue, sexponent = python_value.strip().split("e")
     exponent = int(sexponent)  # removes 0s
 
-    sign = "-" if abs(value) < 1. else "+"
+    sign = "-" if abs(value) < 1.0 else "+"
 
     # the exponent will be added later...
     sexp2 = str(exponent).strip("-+")
@@ -235,6 +235,7 @@ def print_scientific(value, length=16):
 #         Large field format, in which a single line of input is expanded into two lines The first and last fields on each line are eight columns wide, while the intermediate fields are sixteen columns wide. The large field format is useful when you need greater numerical accuracy.
 #
 # See: https://docs.plm.automation.siemens.com/data_services/resources/nxnastran/10/help/en_US/tdocExt/pdf/User.pdf
+
 
 def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small"):
     if point_format == "free":
