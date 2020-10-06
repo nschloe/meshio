@@ -227,6 +227,15 @@ def print_scientific(value, length=16):
     return field
 
 
+# There are two basic categories of input data formats in NX Nastran:
+#
+#     "Free" format data, in which the data fields are simply separated by commas. This type of data is known as free field data.
+#     "Fixed" format data, in which your data must be aligned in columns of specific width. There are two subcategories of fixed format data that differ based on the size of the fixed column width:
+#         Small field format, in which a single line of data is divided into 10 fields that can contain eight characters each.
+#         Large field format, in which a single line of input is expanded into two lines The first and last fields on each line are eight columns wide, while the intermediate fields are sixteen columns wide. The large field format is useful when you need greater numerical accuracy.
+#
+# See: https://docs.plm.automation.siemens.com/data_services/resources/nxnastran/10/help/en_US/tdocExt/pdf/User.pdf
+
 def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small"):
     if point_format == "free":
         grid_fmt = "GRID,{:d},{:s},{:s},{:s},{:s}\n"
