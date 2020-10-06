@@ -23,7 +23,7 @@ import meshio
     ],
 )
 def test(mesh):
-    helpers.write_read(meshio.nastran.write, meshio.nastran.read, mesh, 1.0e-15)
+    helpers.write_read(meshio.nastran.write, meshio.nastran.read, mesh, 1.0e-13)
 
 
 @pytest.mark.parametrize("filename", ["cylinder.fem", "cylinder_cells_first.fem"])
