@@ -2,7 +2,10 @@ import collections
 
 import numpy
 
-CellBlock = collections.namedtuple("CellBlock", ["type", "data"])
+
+class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
+    def __repr__(self):
+        return f"<meshio CellBlock, type: {self.type}, num cells: {len(self.data)}>"
 
 
 class Mesh:
