@@ -4,6 +4,7 @@ import struct
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
 from . import _gmsh22, _gmsh40, _gmsh41
+from .common import _fast_forward_to_end_block
 
 # Some mesh files out there have the version specified as version "2" when it really is
 # "2.2". Same with "4" vs "4.1".
@@ -26,8 +27,7 @@ def read_buffer(f):
 
     # skip any $Comments/$EndComments sections
     while line == "$Comments":
-        while line != "$EndComments":
-            line = f.readline().decode("utf-8").strip()
+        _fast_forward_to_end_block(f, "Comments")
         line = f.readline().decode("utf-8").strip()
 
     if line != "$MeshFormat":
@@ -79,10 +79,7 @@ def _read_header(f):
         one = f.read(struct.calcsize("i"))
         if struct.unpack("i", one)[0] != 1:
             raise ReadError()
-    # Fast forward to $EndMeshFormat
-    line = f.readline().decode("utf-8")
-    while line.strip() != "$EndMeshFormat":
-        line = f.readline().decode("utf-8")
+    _fast_forward_to_end_block(f, "MeshFormat")
     return fmt_version, data_size, is_ascii
 
 

@@ -8,7 +8,7 @@ from functools import partial
 import numpy
 
 from .._common import (
-    _geometric_dimension,
+    _topological_dimension,
     cell_data_from_raw,
     num_nodes_per_cell,
     raw_from_cell_data,
@@ -16,6 +16,7 @@ from .._common import (
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_order,
@@ -75,15 +76,7 @@ def read_buffer(f, is_ascii, data_size):
             # $Comments/$EndComments section.
             # ```
             # skip environment
-            while line != "$End" + environ:
-                line = f.readline()
-                # Skip binary strings, but try to recognize text strings
-                # to catch the end of the environment
-                # See also https://github.com/nschloe/pygalmesh/issues/34
-                try:
-                    line = line.decode("utf-8").strip()
-                except UnicodeDecodeError:
-                    pass
+            _fast_forward_to_end_block(f, environ)
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
     cell_data.update(cell_tags)
@@ -112,13 +105,7 @@ def _read_entities(f, is_ascii, data_size):
             if d > 0:  # discard tagBREP{Vert,Curve,Surfaces}
                 num_BREP = int(fromfile(f, c_ulong, 1)[0])
                 fromfile(f, c_int, num_BREP)
-    if not is_ascii:
-        line = f.readline().decode("utf-8")
-        if line != "\n":
-            raise ReadError()
-    line = f.readline().decode("utf-8").strip()
-    if line != "$EndEntities":
-        raise ReadError()
+    _fast_forward_to_end_block(f, "Entities")
     return physical_tags
 
 
@@ -166,10 +153,7 @@ def _read_nodes(f, is_ascii, data_size):
         if line != "\n":
             raise ReadError()
 
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndNodes":
-        raise ReadError()
-
+    _fast_forward_to_end_block(f, "Nodes")
     return points, tags
 
 
@@ -195,13 +179,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         else:
             data.append((physical_tags[dim_entity][tag_entity], tag_entity, tpe, d))
 
-    if not is_ascii:
-        line = f.readline().decode("utf-8")
-        if line != "\n":
-            raise ReadError()
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndElements":
-        raise ReadError()
+    _fast_forward_to_end_block(f, "Elements")
 
     # The msh4 elements array refers to the nodes by their tag, not the index. All other
     # mesh formats use the index, which is far more efficient, too. Hence,
@@ -259,13 +237,8 @@ def _read_periodic(f, is_ascii):
         slave_master = fromfile(f, c_int, num_nodes * 2).reshape(-1, 2)
         slave_master = slave_master - 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
-    if not is_ascii:
-        line = f.readline().decode("utf-8")
-        if line != "\n":
-            raise ReadError()
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndPeriodic":
-        raise ReadError()
+
+    _fast_forward_to_end_block(f, "Periodic")
     return periodic
 
 
@@ -371,7 +344,7 @@ def _write_elements(fh, cells, binary):
         for cell_type, node_idcs in cells:
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             numpy.array(
-                [1, _geometric_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
+                [1, _topological_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
                 dtype=c_int,
             ).tofile(fh)
             numpy.array([node_idcs.shape[0]], dtype=c_ulong).tofile(fh)
@@ -404,7 +377,7 @@ def _write_elements(fh, cells, binary):
             fh.write(
                 "{} {} {} {}\n".format(
                     1,  # tag
-                    _geometric_dimension[cell_type],
+                    _topological_dimension[cell_type],
                     _meshio_to_gmsh_type[cell_type],
                     node_idcs.shape[0],
                 ).encode("utf-8")

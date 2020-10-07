@@ -8,7 +8,7 @@ from functools import partial
 import numpy
 
 from .._common import (
-    _geometric_dimension,
+    _topological_dimension,
     cell_data_from_raw,
     num_nodes_per_cell,
     raw_from_cell_data,
@@ -16,6 +16,8 @@ from .._common import (
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _fast_forward_over_blank_lines,
+    _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
     _meshio_to_gmsh_order,
@@ -48,13 +50,16 @@ def read_buffer(f, is_ascii, data_size):
     physical_tags = None
     cell_sets = {}
     periodic = None
+    cells = None
     while True:
-        line = f.readline().decode("utf-8")
-        if not line:
-            # EOF
+        # fast-forward over blank lines
+        line, is_eof = _fast_forward_over_blank_lines(f)
+        if is_eof:
             break
+
         if line[0] != "$":
-            raise ReadError()
+            raise ReadError(f"Unexpected line {repr(line)}")
+
         environ = line[1:].strip()
 
         if environ == "PhysicalNames":
@@ -82,16 +87,10 @@ def read_buffer(f, is_ascii, data_size):
             # $Comments/$EndComments section.
             # ```
             # skip environment
-            while line != "$End" + environ:
-                line = f.readline()
-                # Skip binary strings, but try to recognize text strings
-                # to catch the end of the environment
-                # See also https://github.com/nschloe/pygalmesh/issues/34
-                try:
-                    line = line.decode("utf-8").strip()
-                except UnicodeDecodeError:
-                    pass
+            _fast_forward_to_end_block(f, environ)
 
+    if cells is None:
+        raise ReadError("$Element section not found.")
     cell_data = cell_data_from_raw(cells, cell_data_raw)
     cell_data.update(cell_tags)
 
@@ -122,13 +121,7 @@ def _read_entities(f, is_ascii, data_size):
                 (num_BREP_,) = fromfile(f, c_size_t, 1)
                 fromfile(f, c_int, num_BREP_)
 
-    if not is_ascii:
-        line = f.readline().decode("utf-8").strip()
-        if line != "":
-            raise ReadError()
-    line = f.readline().decode("utf-8").strip()
-    if line != "$EndEntities":
-        raise ReadError()
+    _fast_forward_to_end_block(f, "Entities")
     return physical_tags
 
 
@@ -167,15 +160,7 @@ def _read_nodes(f, is_ascii, data_size):
         points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
         idx += num_nodes
 
-    if not is_ascii:
-        line = f.readline().decode("utf-8")
-        if line != "\n":
-            raise ReadError()
-
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndNodes":
-        raise ReadError()
-
+    _fast_forward_to_end_block(f, "Nodes")
     return points, tags
 
 
@@ -218,13 +203,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size, field_data
         else:
             data.append((physical_tags[dim_entity][tag_entity], tag_entity, tpe, d))
 
-    if not is_ascii:
-        line = f.readline().decode("utf-8")
-        if line != "\n":
-            raise ReadError()
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndElements":
-        raise ReadError()
+    _fast_forward_to_end_block(f, "Elements")
 
     # Inverse point tags
     inv_tags = numpy.full(numpy.max(point_tags) + 1, -1, dtype=int)
@@ -271,13 +250,8 @@ def _read_periodic(f, is_ascii, data_size):
         slave_master = fromfile(f, c_size_t, num_nodes * 2).reshape(-1, 2)
         slave_master = slave_master - 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
-    if not is_ascii:
-        line = f.readline().decode("utf-8")
-        if line != "\n":
-            raise ReadError()
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndPeriodic":
-        raise ReadError()
+
+    _fast_forward_to_end_block(f, "Periodic")
     return periodic
 
 
@@ -375,7 +349,7 @@ def _write_nodes(fh, points, cells, float_fmt, binary):
     # TODO Not sure what to do if there are multiple element types present.
     if len(cells) != 1:
         raise WriteError("Can only deal with one cell type for now")
-    dim_entity = _geometric_dimension[cells[0][0]]
+    dim_entity = _topological_dimension[cells[0][0]]
     entity_tag = 0
 
     # write all points as one big block
@@ -450,7 +424,7 @@ def _write_elements(fh, cells, binary):
         for cell_type, node_idcs in cells:
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
-            dim = _geometric_dimension[cell_type]
+            dim = _topological_dimension[cell_type]
             entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             numpy.array([dim, entity_tag, cell_type], dtype=c_int).tofile(fh)
@@ -484,7 +458,7 @@ def _write_elements(fh, cells, binary):
         tag0 = 1
         for cell_type, node_idcs in cells:
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
-            dim = _geometric_dimension[cell_type]
+            dim = _topological_dimension[cell_type]
             entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]

@@ -9,6 +9,33 @@ c_int = numpy.dtype("i")
 c_double = numpy.dtype("d")
 
 
+def _fast_forward_to_end_block(f, block):
+    """fast-forward to end of block"""
+    # See also https://github.com/nschloe/pygalmesh/issues/34
+
+    for line in f:
+        try:
+            line = line.decode("utf-8")
+        except UnicodeDecodeError:
+            pass
+        if line.strip() == f"$End{block}":
+            break
+    else:
+        logging.warning(f"${block} not closed by $End{block}.")
+
+
+def _fast_forward_over_blank_lines(f):
+    is_eof = False
+    while True:
+        line = f.readline().decode("utf-8")
+        if not line:
+            is_eof = True
+            break
+        elif len(line.strip()) > 0:
+            break
+    return line, is_eof
+
+
 def _read_physical_names(f, field_data):
     line = f.readline().decode("utf-8")
     num_phys_names = int(line)
@@ -17,9 +44,7 @@ def _read_physical_names(f, field_data):
         key = line[2]
         value = numpy.array(line[1::-1], dtype=int)
         field_data[key] = value
-    line = f.readline().decode("utf-8")
-    if line.strip() != "$EndPhysicalNames":
-        raise ReadError()
+    _fast_forward_to_end_block(f, "PhysicalNames")
 
 
 def _read_data(f, tag, data_dict, data_size, is_ascii):
@@ -52,10 +77,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
             raise ReadError()
         data = numpy.ascontiguousarray(data["values"])
 
-    # fast forward to $End{tag}
-    line = f.readline().decode("utf-8")
-    while line.strip() != f"$End{tag}":
-        line = f.readline().decode("utf-8")
+    _fast_forward_to_end_block(f, tag)
 
     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.
