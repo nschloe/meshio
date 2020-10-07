@@ -16,7 +16,9 @@ def test_public_attributes():
 def test_print_prune():
     mesh = copy.deepcopy(helpers.tri_mesh)
     print(mesh)
-    mesh.prune()
+    mesh.remove_lower_dimensional_cells()
+    mesh.remove_orphaned_nodes()
+    mesh.prune_z_0()
 
 
 def test_cells_dict():

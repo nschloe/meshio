@@ -76,6 +76,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
         ("04_rectilinear.vtk", "quad", 27, 40),
         ("05_rectilinear.vtk", "quad", 27, 40),
         ("06_unstructured.vtk", "hexahedron", 12, 42),
+        ("gh-935.vtk", "triangle", 2, 6),
     ],
 )
 def test_structured(filename, ref_cells, ref_num_cells, ref_num_pnt):
