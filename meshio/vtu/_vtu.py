@@ -43,92 +43,22 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
         [[0], numpy.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
     )
 
-    # boolean needed for polyhedron cells
-    found_polyhedron_faces_before = False
-
     cells = []
     cell_data = {}
-    polyhedron_faces = {}
+
     for start, end in zip(b[:-1], b[1:]):
         try:
             meshio_type = vtk_to_meshio_type[types[start]]
         except KeyError:
             raise ReadError("File contains cells that meshio cannot handle.")
-        if meshio_type in ["polygon", "polyhedron"]:
-            # Polygons and polyhedra have unknown and varying number of nodes per cell.
-
-            if meshio_type == "polyhedron":
-                # The data format for face-cells is:
-                # num_faces_cell_0,
-                #   num_nodes_face_0, node_ind_0, node_ind_1, ..
-                #   num_nodes_face_1, node_ind_0, node_ind_1, ..
-                #   ...
-                # num_faces_cell_1,
-                #   ...
-                # See https://vtk.org/Wiki/VTK/Polyhedron_Support for more.
-
-                # There is a tacit assumption here that the cell-data keys 'faces'
-                # and 'faceoffsets' are reserved for this purpose.
-                # A .vtu file which uses 'faces' to specify the face-cell relation
-                # of a polyhedron, and also to give other type of information for
-                # other cells may lead to random behavior, at best a strange error,
-                # here.
-                # Whether such a file is permissible under the .vtu standard has not
-                # been checked, we will take our chances.
-                if not found_polyhedron_faces_before:
-                    # pop removes the fields that were added to the raw cell data
-                    # in _organize_cells()
-                    faces = cell_data_raw.pop("faces")
-                    faceoffsets = cell_data_raw.pop("faceoffsets")
-                    # The faceoffsets describes the end of the face description for each
-                    # cell.
-                    # Switch faceoffsets to give start points, not end points
-                    faceoffsets = numpy.append([0], faceoffsets[:-1])
-                    # Take note that we have found the faces
-                    found_polyhedron_faces_before = True
-
-                # In general the number of faces will vary between cells, and the
-                # number of nodes vary between faces for each cell. The information
-                # will be stored as a List (one item per cell) of lists (one item
-                # per face of the cell) of np-arrays of node indices.
-                faces_of_cells = {}
-
-                # Double loop over cells then faces.
-                # This will be slow, but seems necessary to cover all cases
-                for cell_start in faceoffsets:
-                    num_faces_this_cell = faces[cell_start]
-                    faces_this_cell = []
-                    next_face = cell_start + 1
-                    for fi in range(num_faces_this_cell):
-                        num_nodes_this_face = faces[next_face]
-                        faces_this_cell.append(
-                            numpy.array(
-                                faces[
-                                    next_face
-                                    + 1 : (next_face + num_nodes_this_face + 1)
-                                ],
-                                dtype=numpy.int,
-                            )
-                        )
-                        # Increase by number of nodes just read, plus the item giving
-                        # number of nodes per face
-                        next_face += num_nodes_this_face + 1
-
-                    # Done with this cell
-                    # Find number of nodes for this cell
-                    num_nodes_this_cell = numpy.unique(
-                        numpy.hstack(([v for v in faces_this_cell]))
-                    ).size
-
-                    if num_nodes_this_cell not in faces_of_cells.keys():
-                        faces_of_cells[num_nodes_this_cell] = []
-                    faces_of_cells[num_nodes_this_cell].append(faces_this_cell)
-
-                # Store face-cell relation as cell data
-                for key, val in faces_of_cells.items():
-                    k = f"polyhedron{key}"
-                    # The key is set from the number of nodes per cell
-                    polyhedron_faces[k] = val
+        if meshio_type == "polygon":
+            # Polygons have unknown and varying number of nodes per cell.
+            # IMPLEMENTATION NOTE: While polygons are different from other cells
+            # they are much less different than polyhedral cells (for polygons,
+            # it is still possible to define the faces implicitly by assuming that
+            # the cell-nodes have a cyclic ordering). Polygons are therefore
+            # handled here, while the polyhedra have a dedicated function for
+            # processing.
 
             # Index where the previous block of cells stopped. Needed to know the number
             # of nodes for the first cell in the block.
@@ -152,12 +82,7 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
                     start_cn[items + 1],
                     _vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
                 )
-                data = (
-                    polyhedron_faces[f"polyhedron{sz}"]
-                    if meshio_type == "polyhedron"
-                    else connectivity[indices]
-                )
-                cells.append(CellBlock(meshio_type + str(sz), data))
+                cells.append(CellBlock(meshio_type + str(sz), connectivity[indices]))
 
                 # Store cell data for this set of cells
                 for name, d in cell_data_raw.items():
@@ -165,7 +90,7 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
                         cell_data[name] = []
                     cell_data[name].append(d[start + items])
         else:
-            # Non-polyhedron cell. Same number of nodes per cell makes everything easier.
+            # Non-polygonal cell. Same number of nodes per cell makes everything easier.
             n = num_nodes_per_cell[meshio_type]
             indices = numpy.add.outer(
                 offsets[start:end],
@@ -180,40 +105,133 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
     return cells, cell_data
 
 
+def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
+    # In general the number of faces will vary between cells, and the
+    # number of nodes vary between faces for each cell. The information
+    # will be stored as a List (one item per cell) of lists (one item
+    # per face of the cell) of np-arrays of node indices.
+
+    cells = {}
+    cell_data = {}
+
+    # The data format for face-cells is:
+    # num_faces_cell_0,
+    #   num_nodes_face_0, node_ind_0, node_ind_1, ..
+    #   num_nodes_face_1, node_ind_0, node_ind_1, ..
+    #   ...
+    # num_faces_cell_1,
+    #   ...
+    # See https://vtk.org/Wiki/VTK/Polyhedron_Support for more.
+
+    # The faceoffsets describes the end of the face description for each
+    # cell. Switch faceoffsets to give start points, not end points
+    faceoffsets = numpy.append([0], faceoffsets[:-1])
+
+    # Double loop over cells then faces.
+    # This will be slow, but seems necessary to cover all cases
+    for cell_start in faceoffsets:
+        num_faces_this_cell = faces[cell_start]
+        faces_this_cell = []
+        next_face = cell_start + 1
+        for fi in range(num_faces_this_cell):
+            num_nodes_this_face = faces[next_face]
+            faces_this_cell.append(
+                numpy.array(
+                    faces[next_face + 1 : (next_face + num_nodes_this_face + 1)],
+                    dtype=numpy.int,
+                )
+            )
+            # Increase by number of nodes just read, plus the item giving
+            # number of nodes per face
+            next_face += num_nodes_this_face + 1
+
+        # Done with this cell
+        # Find number of nodes for this cell
+        num_nodes_this_cell = numpy.unique(
+            numpy.hstack(([v for v in faces_this_cell]))
+        ).size
+
+        key = f"polyhedron{num_nodes_this_cell}"
+        if key not in cells.keys():
+            cells[key] = []
+        cells[key].append(faces_this_cell)
+
+    # The cells will be assigned to blocks according to their number of nodes.
+    # This is potentially a reordering, compared to the ordering in faces.
+    # Cell data must be reorganized accordingly.
+
+    # Start of the cell-node relations
+    start_cn = numpy.hstack((0, offsets))
+    size = numpy.diff(start_cn)
+
+    # Loop over all cell sizes, find all cells with this size, and store
+    # cell data.
+    for sz in numpy.unique(size):
+        # Cells with this number of nodes.
+        items = numpy.where(size == sz)[0]
+
+        # Store cell data for this set of cells
+        for name, d in cell_data_raw.items():
+            if name not in cell_data:
+                cell_data[name] = []
+            cell_data[name].append(d[items])
+
+    return cells, cell_data
+
+
 def _organize_cells(point_offsets, cells, cell_data_raw):
     if len(point_offsets) != len(cells):
         raise ReadError()
 
     out_cells = []
-    for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
 
-        # Special treatment of information on polyhedron cells: Add
-        # additional information on the grid to the cdr (this avoids polluting
-        # the signature of _cells_from_data()). The additional items will be
-        # removed when processing the cell data.
-        if "faces" in cls.keys() and "faceoffsets" in cls.keys():
-            cdr["faces"] = cls["faces"]
-            cdr["faceoffsets"] = cls["faceoffsets"]
-        cls, cell_data = _cells_from_data(
-            cls["connectivity"].ravel(),
-            cls["offsets"].ravel(),
-            cls["types"].ravel(),
-            cdr,
+    # IMPLEMENTATION NOTE: The treatment of polyhedral cells is quite
+    # a bit different from the other cells; moreover, there are some
+    # strong (?) assumptions on such cells. The processing of such cells
+    # is therefore moved to a dedicated function for the time being,
+    # while all other cell types are treated by the same function.
+    # There are still similarities between processing of polyhedral and
+    # the rest, so it may be possible to unify the implementations at a
+    # later stage.
+
+    # Check if polyhedral cells are present.
+    polyhedral_mesh = False
+    for c in cells:
+        if numpy.any(c["types"] == 42):  # vtk type 42 is polyhedral
+            polyhedral_mesh = True
+            break
+
+    if polyhedral_mesh:
+        # The current implementation assumes a single set of cells, and cannot mix
+        # polyhedral cells with other cell types. It may be possible to do away with
+        # these limitations, but for the moment, this is what is available.
+        if len(cells) > 1:
+            raise ValueError("Implementation assumes single set of cells")
+        if numpy.any(cells[0]["types"] != 42):
+            raise ValueError("Cannot handle combinations of polyhedra with other cells")
+
+        # Polyhedra are specified by their faces and faceoffsets; see the function
+        # _polyhedron_cells_from_data for more information.
+        faces = cells[0]["faces"]
+        faceoffsets = cells[0]["faceoffsets"]
+        cls, cell_data = _polyhedron_cells_from_data(
+            cells[0]["offsets"], faces, faceoffsets, cell_data_raw[0]
         )
+        # Organize polyhedra in cell blocks according to the number of nodes per cell.
+        for tp, c in cls.items():
+            out_cells.append(CellBlock(tp, c))
+
+    else:
+        for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
+            cls, cell_data = _cells_from_data(
+                cls["connectivity"].ravel(),
+                cls["offsets"].ravel(),
+                cls["types"].ravel(),
+                cdr,
+            )
 
         for c in cls:
-            if c.type[:10] == "polyhedron":
-                # Adding offsets is cumbersome for polyhedra due to its convoluted
-                # data types. Moreover, it is assumed that polyhedra are not combined
-                # with other cell types (if so, these should also be represented as
-                # polyhedra)
-                if offset != 0:
-                    raise ValueError(
-                        "Polyhedron cells should not be combined with other cell types"
-                    )
-                out_cells.append(CellBlock(c.type, c.data))
-            else:
-                out_cells.append(CellBlock(c.type, c.data + offset))
+            out_cells.append(CellBlock(c.type, c.data + offset))
 
     return out_cells, cell_data
 
@@ -636,6 +654,14 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         if c.type[:10] == "polyhedron":
             is_polyhedron_grid = True
             break
+    # The current implementation cannot mix polyhedral cells with other cell types.
+    # To write such meshes, represent all cells as polyhedra.
+    if is_polyhedron_grid:
+        for c in mesh.cells:
+            if c.type[:10] != "polyhedron":
+                raise ValueError(
+                    "VTU export cannot mix polyhedral cells with other cell types"
+                )
 
     if not binary:
         logging.warning("VTU ASCII files are only meant for debugging.")
