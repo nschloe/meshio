@@ -351,9 +351,10 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
         # dim_tag information to two arrays (n x 1). The data in gmsh:dim_tag is then
         # temporarily removed from point_data, and restored to Mesh when writing
         # is done.
-        dim_tags = mesh.point_data.pop("gmsh:dim_tags", None)
-        if dim_tags is not None:
+
+        if "gmsh:dim_tags" in mesh.point_data:
             # Temporarily store the data as 1d arrays
+            dim_tags = mesh.point_data.pop("gmsh:dim_tags", None)
             mesh.point_data["node_entity_dimension"] = dim_tags[:, 0]
             mesh.point_data["point_entity"] = dim_tags[:, 1]
 
@@ -368,7 +369,7 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
             _write_data(fh, "ElementData", name, dat, binary)
 
         # Restore dim_tag information if available
-        if dim_tags is not None:
+        if "point_entity" in mesh.point_data:
             mesh.point_data["gmsh:dim_tags"] = dim_tags
             # Also remove the temporary 1d arrays
             mesh.point_data.pop("node_entity_dimension")
@@ -425,7 +426,7 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
     # The entities section must therefore be built on the node-entities, if
     # these are available. If this is not the case, we leave this section blank.
     # TODO: Should this give a warning?
-    if "gmsh:dim_tags" not in point_data.keys():
+    if "gmsh:dim_tags" not in point_data:
         return
 
     fh.write(b"$Entities\n")
@@ -454,20 +455,16 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
         ]
 
     # We will only deal with bounding entities if this information is available
-    has_bounding_elements = "gmsh:bounding_entities" in cell_sets.keys()
+    has_bounding_elements = "gmsh:bounding_entities" in cell_sets
 
     # The node entities form a superset of cell entities. Write entity information
     # based on nodes, supplement with cell information when there is a matcihng
     # cell block.
-    for j in range(node_dim_tags.shape[0]):
-        dim, tag = node_dim_tags[j]
+    for dim, tag in node_dim_tags:
 
         # Find the matching cell block, if it exists
         matching_cell_block = numpy.where(
-            numpy.logical_and(
-                cell_dim_tags[:, 0] == node_dim_tags[j, 0],
-                cell_dim_tags[:, 1] == node_dim_tags[j, 1],
-            )
+            numpy.logical_and(cell_dim_tags[:, 0] == dim, cell_dim_tags[:, 1] == tag)
         )[0]
 
         # The information to be written varies according to entity dimension,
@@ -598,7 +595,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     # If node (entity) tag and dimension is available, we make a list of unique
     # combinations thereof, and a map from the full node set to the unique
     # set.
-    if "gmsh:dim_tags" in point_data.keys():
+    if "gmsh:dim_tags" in point_data:
         # reverse_index_map maps from all nodes to their respective representation
         # in (the uniquified) node_dim_tags. This approach works for general
         # orderings of the nodes
@@ -727,7 +724,7 @@ def _write_elements(fh, cells, cell_data, binary):
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
             dim = _geometric_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
-            if "gmsh:geometrical" in cell_data.keys():
+            if "gmsh:geometrical" in cell_data:
                 entity_tag = cell_data["gmsh:geometrical"][ci][0]
             else:
                 entity_tag = 0
