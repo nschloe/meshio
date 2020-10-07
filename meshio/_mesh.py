@@ -110,8 +110,7 @@ class Mesh:
         return prune_set
 
     def remove_orphaned_nodes(self):
-        """Remove nodes which don't belong to any cell.
-        """
+        """Remove nodes which don't belong to any cell."""
         all_cells_flat = numpy.concatenate([c.data.flat for c in self.cells])
         orphaned_nodes = numpy.setdiff1d(numpy.arange(len(self.points)), all_cells_flat)
         self.points = numpy.delete(self.points, orphaned_nodes, axis=0)
