@@ -379,32 +379,46 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
 
 
 def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
-    """write the $Entities block
+    """Write entity section in a .msh file.
 
-    specified as
+    The entity section links up to three kinds of information:
+        1) The geometric objects represented in the mesh.
+        2) Physical tags of geometric objects. This data will be a subset
+           of that represented in 1)
+        3) Which geometric objects form the boundary of this object.
+           The boundary is formed of objects with dimension 1 less than
+           the current one. A boundary can only be specified for objects of
+           dimension at least 1.
 
-    numPoints(size_t) numCurves(size_t)
-      numSurfaces(size_t) numVolumes(size_t)
-    pointTag(int) X(double) Y(double) Z(double)
-      numPhysicalTags(size_t) physicalTag(int) ...
-    ...
-    curveTag(int) minX(double) minY(double) minZ(double)
-      maxX(double) maxY(double) maxZ(double)
-      numPhysicalTags(size_t) physicalTag(int) ...
-      numBoundingPoints(size_t) pointTag(int) ...
-    ...
-    surfaceTag(int) minX(double) minY(double) minZ(double)
-      maxX(double) maxY(double) maxZ(double)
-      numPhysicalTags(size_t) physicalTag(int) ...
-      numBoundingCurves(size_t) curveTag(int) ...
-    ...
-    volumeTag(int) minX(double) minY(double) minZ(double)
-      maxX(double) maxY(double) maxZ(double)
-      numPhysicalTags(size_t) physicalTag(int) ...
-      numBoundngSurfaces(size_t) surfaceTag(int) ...
-    ...
+    The entities of all geometric objects is pulled from
+    point_data['gmsh:dim_tags']. For details, see the function _write_nodes().
+
+    Physical tags are specified as cell_data, while the boundary of a geometric
+    object is specified in cell_sets.
 
     """
+
+    # The data format for the entities section is
+    #
+    #    numPoints(size_t) numCurves(size_t)
+    #      numSurfaces(size_t) numVolumes(size_t)
+    #    pointTag(int) X(double) Y(double) Z(double)
+    #      numPhysicalTags(size_t) physicalTag(int) ...
+    #    ...
+    #    curveTag(int) minX(double) minY(double) minZ(double)
+    #      maxX(double) maxY(double) maxZ(double)
+    #      numPhysicalTags(size_t) physicalTag(int) ...
+    #      numBoundingPoints(size_t) pointTag(int) ...
+    #    ...
+    #    surfaceTag(int) minX(double) minY(double) minZ(double)
+    #      maxX(double) maxY(double) maxZ(double)
+    #      numPhysicalTags(size_t) physicalTag(int) ...
+    #      numBoundingCurves(size_t) curveTag(int) ...
+    #    ...
+    #    volumeTag(int) minX(double) minY(double) minZ(double)
+    #      maxX(double) maxY(double) maxZ(double)
+    #      numPhysicalTags(size_t) physicalTag(int) ...
+    #      numBoundngSurfaces(size_t) surfaceTag(int) ...
 
     # Both nodes and cells have enities, but the cell entities are a subset of
     # the nodes. The reason is (if the inner workings of Gmsh has been correctly
@@ -510,7 +524,7 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
             # Entities not of the lowest dimension can have their
             # bounding elements (of dimension one less) specified
             if has_bounding_elements and matching_cell_block.size > 0:
-                # The bounding element should be a numpy array
+                # The bounding element should be a list
                 bounds = cell_sets["gmsh:bounding_entities"][matching_cell_block[0]]
                 num_bounds = len(bounds)
                 if num_bounds > 0:
@@ -548,6 +562,19 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
 
 
 def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
+    """Write node information.
+
+    If data on dimension and tags of the geometric entities which the nodes belong to
+    is available available, the nodes will be grouped accordingly. This data is
+    specified as point_data, using the key 'gmsh:dim_tags' and data as an
+    num_points x 2 numpy array (first column is the dimension of the geometric entity
+    of this node, second is the tag).
+
+    If dim_tags are not available, all nodes will be assigned the same tag of 0. This
+    only makes sense if a single cell block is present in the mesh; an error will be
+    raised if len(cells) > 1.
+
+    """
     fh.write(b"$Nodes\n")
 
     # The format for the nodes section is
@@ -571,7 +598,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     max_tag = n
     is_parametric = 0
 
-    # If node entity and dimension is available, we make a list of unique
+    # If node (entity) tag and dimension is available, we make a list of unique
     # combinations thereof, and a map from the full node set to the unique
     # set.
     if "gmsh:dim_tags" in point_data.keys():
