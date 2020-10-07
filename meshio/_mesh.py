@@ -222,17 +222,23 @@ class Mesh:
         # If possible, convert cell sets to integer cell data. This is possible if all
         # cells appear exactly in one group.
         intfun = []
-        print(self)
-        print(self.cell_sets)
-        for c in zip(*self.cell_sets.values()):
-            print(c)
+        for k, c in enumerate(zip(*self.cell_sets.values())):
+            # `c` contains the values of all cell sets for a particular cell block
+            c = [([] if cc is None else cc) for cc in c]
             # check if all numbers appear exactly once in the groups
             d = numpy.sort(numpy.concatenate(c))
-            is_convertible = numpy.all(d[1:] == d[:-1] + 1) and len(d) == d[-1] + 1
-            if is_convertible:
-                intfun.append(numpy.zeros(len(d), dtype=int))
+            if numpy.all(d == numpy.arange(len(d))):
+                arr = numpy.empty(len(d), dtype=int)
+                arr[:] = numpy.nan
                 for k, cc in enumerate(c):
-                    intfun[-1][cc] = k
+                    arr[cc] = k
+            else:
+                # We could just append None, but some mesh formats expect _something_
+                # here. Go for an array of NaNs.
+                arr = numpy.empty(len(self.cells[k]), dtype=int)
+                arr[:] = numpy.nan
+
+            intfun.append(arr)
 
         data_name = "-".join(self.cell_sets.keys())
         self.cell_data = {data_name: intfun}
