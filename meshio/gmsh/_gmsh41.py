@@ -159,8 +159,8 @@ def _read_nodes(f, is_ascii, data_size):
 
     points = numpy.empty((total_num_nodes, 3), dtype=float)
     tags = numpy.empty(total_num_nodes, dtype=int)
-    entity_of_nodes = numpy.empty_like(tags)
-    entity_dimension = numpy.empty_like(tags)
+    dim_tags = numpy.empty((total_num_nodes, 2), dtype=int)
+
     # To save the entity block id for each node, initialize an array here,
     # populate it with num_nodes
     idx = 0
@@ -186,14 +186,11 @@ def _read_nodes(f, is_ascii, data_size):
         points[ixx] = fromfile(f, c_double, num_nodes * 3).reshape((num_nodes, 3))
 
         # Entity tag and entity dimension of the nodes. Stored as point-data.
-        entity_of_nodes[ixx] = entity_tag
-        entity_dimension[ixx] = dim
+        dim_tags[ixx, 0] = dim
+        dim_tags[ixx, 1] = entity_tag
         idx += num_nodes
 
     _fast_forward_to_end_block(f, "Nodes")
-
-    # Entity information for nodes is stored as point data, as an nx2 array
-    dim_tags = numpy.vstack((entity_dimension, entity_of_nodes)).T
 
     return points, tags, dim_tags
 
