@@ -8,7 +8,7 @@ from functools import partial
 import numpy
 
 from .._common import (
-    _geometric_dimension,
+    _topological_dimension,
     cell_data_from_raw,
     num_nodes_per_cell,
     raw_from_cell_data,
@@ -349,7 +349,7 @@ def _write_nodes(fh, points, cells, float_fmt, binary):
     # TODO Not sure what to do if there are multiple element types present.
     if len(cells) != 1:
         raise WriteError("Can only deal with one cell type for now")
-    dim_entity = _geometric_dimension[cells[0][0]]
+    dim_entity = _topological_dimension[cells[0][0]]
     entity_tag = 0
 
     # write all points as one big block
@@ -424,7 +424,7 @@ def _write_elements(fh, cells, binary):
         for cell_type, node_idcs in cells:
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
-            dim = _geometric_dimension[cell_type]
+            dim = _topological_dimension[cell_type]
             entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             numpy.array([dim, entity_tag, cell_type], dtype=c_int).tofile(fh)
@@ -458,7 +458,7 @@ def _write_elements(fh, cells, binary):
         tag0 = 1
         for cell_type, node_idcs in cells:
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
-            dim = _geometric_dimension[cell_type]
+            dim = _topological_dimension[cell_type]
             entity_tag = 0
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]
