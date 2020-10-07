@@ -101,7 +101,7 @@ def read_buffer(f, is_ascii, data_size):
     cell_data.update(cell_tags)
 
     # Add node entity information to the point data
-    point_data.update(point_entities)
+    point_data.update({"gmsh:dim_tags": point_entities})
 
     return Mesh(
         points,
@@ -192,14 +192,10 @@ def _read_nodes(f, is_ascii, data_size):
 
     _fast_forward_to_end_block(f, "Nodes")
 
-    # Entity information for nodes is stored as point data, with clearly named
-    # items.
-    point_data = {
-        "gmsh:node_entity": entity_of_nodes,
-        "gmsh:node_entity_dimension": entity_dimension,
-    }
+    # Entity information for nodes is stored as point data, as an nx2 array
+    dim_tags = numpy.vstack((entity_dimension, entity_of_nodes)).T
 
-    return points, tags, point_data
+    return points, tags, dim_tags
 
 
 def _read_elements(
@@ -219,16 +215,15 @@ def _read_elements(
 
     for k in range(num_entity_blocks):
         # entityDim(int) entityTag(int) elementType(int) numElements(size_t)
-        dim_entity, tag_entity, type_ele = fromfile(f, c_int, 3)
+        dim, tag, type_ele = fromfile(f, c_int, 3)
         (num_ele,) = fromfile(f, c_size_t, 1)
         for physical_name, cell_set in cell_sets.items():
             cell_set[k] = numpy.arange(
                 num_ele
                 if (
                     physical_tags
-                    and field_data[physical_name][1] == dim_entity
-                    and field_data[physical_name][0]
-                    in physical_tags[dim_entity][tag_entity]
+                    and field_data[physical_name][1] == dim
+                    and field_data[physical_name][0] in physical_tags[dim][tag]
                 )
                 else 0,
                 dtype=type(num_ele),
@@ -240,13 +235,13 @@ def _read_elements(
         )
 
         # Find physical tag, if defined; else it is None.
-        pt = None if not physical_tags else physical_tags[dim_entity][tag_entity]
+        pt = None if not physical_tags else physical_tags[dim][tag]
         # Bounding entities (of lower dimension) if defined. Else it is None.
-        if dim_entity > 0 and bounding_entities:  # Points have no boundaries
-            be = bounding_entities[dim_entity][tag_entity]
+        if dim > 0 and bounding_entities:  # Points have no boundaries
+            be = bounding_entities[dim][tag]
         else:
             be = None
-        data.append((pt, be, tag_entity, tpe, d))
+        data.append((pt, be, tag, tpe, d))
 
     _fast_forward_to_end_block(f, "Elements")
 
@@ -351,6 +346,20 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
             fh, cells, mesh.cell_data, mesh.cell_sets, mesh.point_data, binary
         )
         _write_nodes(fh, mesh.points, mesh.cells, mesh.point_data, float_fmt, binary)
+
+        # IMPLEMENTATION NOTE: If dimtag information is available (key gmsh:dim_tags)
+        # this is stored in meshio as an n x 2 array. Gmsh accepts only arrays of size
+        # 1, 3 or 9, and _write_data() will raise an error if point_data with the
+        # wrong size is encountered. As a workaround, _write_nodes() converts the
+        # dim_tag information to two arrays (n x 1). The data in gmsh:dim_tag is then
+        # temporarily removed from point_data, and restored to Mesh when writing
+        # is done.
+        dim_tags = mesh.point_data.pop("gmsh:dim_tags", None)
+        if dim_tags is not None:
+            # Temporarily store the data as 1d arrays
+            mesh.point_data["node_entity_dimension"] = dim_tags[:, 0]
+            mesh.point_data["point_entity"] = dim_tags[:, 1]
+
         _write_elements(fh, cells, mesh.cell_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt, binary)
@@ -360,6 +369,13 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
         cell_data_raw = raw_from_cell_data(mesh.cell_data)
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, binary)
+
+        # Restore dim_tag information if available
+        if dim_tags is not None:
+            mesh.point_data["gmsh:dim_tags"] = dim_tags
+            # Also remove the temporary 1d arrays
+            mesh.point_data.pop("node_entity_dimension")
+            mesh.point_data.pop("point_entity")
 
 
 def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
@@ -398,25 +414,18 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
     # The entities section must therefore be built on the node-entities, if
     # these are available. If this is not the case, we leave this section blank.
     # TODO: Should this give a warning?
-    if not (
-        "gmsh:node_entity_dimension" in point_data.keys()
-        and "gmsh:node_entity" in point_data.keys()
-    ):
+    if "gmsh:dim_tags" not in point_data.keys():
         return
 
     fh.write(b"$Entities\n")
 
     # Array of entity tag (first row) and dimension (second row) per node.
     # We need to combine the two, since entity tags are reset for each dimension.
-    node_dim_entity = numpy.unique(
-        numpy.vstack(
-            (point_data["gmsh:node_entity_dimension"], point_data["gmsh:node_entity"])
-        ),
-        axis=1,
-    )
+    # Uniquify, so that each row in node_dim_tags represent a unique entity
+    node_dim_tags = numpy.unique(point_data["gmsh:dim_tags"], axis=0)
 
     # Write number of entities per dimension
-    num_occ = numpy.bincount(node_dim_entity[0], minlength=4)
+    num_occ = numpy.bincount(node_dim_tags[:, 0], minlength=4)
     if binary:
         num_occ.astype(c_size_t).tofile(fh)
     else:
@@ -426,10 +435,12 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
 
     # Array of dimension and entity tag per cell. Will be compared with the
     # similar not array.
-    cell_dim_entity = numpy.empty((2, len(cells)), dtype=int)
+    cell_dim_tags = numpy.empty((len(cells), 2), dtype=int)
     for ci in range(len(cells)):
-        cell_dim_entity[0, ci] = _geometric_dimension[cells[ci][0]]
-        cell_dim_entity[1, ci] = cell_data["gmsh:geometrical"][ci][0]
+        cell_dim_tags[ci] = [
+            _geometric_dimension[cells[ci][0]],
+            cell_data["gmsh:geometrical"][ci][0],
+        ]
 
     # We will only deal with bounding entities if this information is available
     has_bounding_elements = "gmsh:bounding_entities" in cell_sets.keys()
@@ -437,14 +448,14 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
     # The node entities form a superset of cell entities. Write entity information
     # based on nodes, supplement with cell information when there is a matcihng
     # cell block.
-    for entity in range(node_dim_entity.shape[1]):
-        dim, tag = node_dim_entity[:, entity]
+    for j in range(node_dim_tags.shape[0]):
+        dim, tag = node_dim_tags[j]
 
         # Find the matching cell block, if it exists
         matching_cell_block = numpy.where(
             numpy.logical_and(
-                cell_dim_entity[0] == node_dim_entity[0, entity],
-                cell_dim_entity[1] == node_dim_entity[1, entity],
+                cell_dim_tags[:, 0] == node_dim_tags[j, 0],
+                cell_dim_tags[:, 1] == node_dim_tags[j, 1],
             )
         )[0]
 
@@ -563,18 +574,13 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     # If node entity and dimension is available, we make a list of unique
     # combinations thereof, and a map from the full node set to the unique
     # set.
-    if (
-        "gmsh:node_entity_dimension" in point_data.keys()
-        and "gmsh:node_entity" in point_data.keys()
-    ):
-        dim_entity_combinations, reverse_index_map = numpy.unique(
-            numpy.vstack(
-                (
-                    point_data["gmsh:node_entity_dimension"],
-                    point_data["gmsh:node_entity"],
-                )
-            ),
-            axis=1,
+    if "gmsh:dim_tags" in point_data.keys():
+        # reverse_index_map maps from all nodes to their respective representation
+        # in (the uniquified) node_dim_tags. This approach works for general
+        # orderings of the nodes
+        node_dim_tags, reverse_index_map = numpy.unique(
+            point_data["gmsh:dim_tags"],
+            axis=0,
             return_inverse=True,
         )
     else:
@@ -586,13 +592,13 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
                 "Specify entity information to deal with more than one cell type"
             )
 
-        dim_entity = _geometric_dimension[cells[0][0]]
-        entity_tag = 0
-        dim_entity_combinations = numpy.array([[dim_entity], [entity_tag]])
+        dim = _geometric_dimension[cells[0][0]]
+        tag = 0
+        node_dim_tags = numpy.array([[dim, tag]])
         # All nodes map to the (single) dimension-entity object
         reverse_index_map = numpy.full(n, 0, dtype=int)
 
-    num_blocks = dim_entity_combinations.shape[1]
+    num_blocks = node_dim_tags.shape[0]
 
     # First write preamble
     if binary:
@@ -605,25 +611,19 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     else:
         fh.write(f"{num_blocks} {n} {min_tag} {max_tag}\n".encode("utf-8"))
 
-    for entity in range(num_blocks):
-        dim_entity = dim_entity_combinations[0, entity]
-        # Entity tags are assumed 1-offset, to comply with gmsh
-        entity_tag = dim_entity_combinations[1, entity]
+    for j in range(num_blocks):
+        dim, tag = node_dim_tags[j]
 
-        node_tags = numpy.where(reverse_index_map == entity)[0]
-        num_points_this_entity = node_tags.size
+        node_tags = numpy.where(reverse_index_map == j)[0]
+        num_points_this = node_tags.size
 
         if binary:
-            numpy.array([dim_entity, entity_tag, is_parametric], dtype=c_int).tofile(fh)
-            numpy.array([num_points_this_entity], dtype=c_size_t).tofile(fh)
+            numpy.array([dim, tag, is_parametric], dtype=c_int).tofile(fh)
+            numpy.array([num_points_this], dtype=c_size_t).tofile(fh)
             (node_tags + 1).astype(c_size_t).tofile(fh)
             points[node_tags].tofile(fh)
         else:
-            fh.write(
-                f"{dim_entity} {entity_tag} {is_parametric} {num_points_this_entity}\n".encode(
-                    "utf-8"
-                )
-            )
+            fh.write(f"{dim} {tag} {is_parametric} {num_points_this}\n".encode("utf-8"))
             (node_tags + 1).astype(c_size_t).tofile(fh, "\n", "%d")
             fh.write(b"\n")
             numpy.savetxt(fh, points[node_tags], delimiter=" ", fmt="%" + float_fmt)
