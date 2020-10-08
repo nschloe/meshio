@@ -207,7 +207,7 @@ def write(filename, mesh):
 
         # Write cell data
         if num_cell_data_sum:
-            labels = list(mesh.cell_data.keys())
+            labels = [k for k in mesh.cell_data.keys() if k != key]
             data_array = numpy.column_stack(
                 [numpy.concatenate(v) for k, v in mesh.cell_data.items() if k != key]
             )
