@@ -370,7 +370,11 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     # then index of the first point of the first cell. This may still lead to
     # comparison of what should be different blocks, but chances seem low.
     def cell_sorter(cell):
-        return (cell.type, cell.data[0, 0])
+        if cell.type[:10] == "polyhedron":
+            # Polyhedra blocks should be well enough distinguished by their type
+            return cell.type
+        else:
+            return (cell.type, cell.data[0, 0])
 
     # to make sure we are testing same type of cells we sort the list
     for cells0, cells1 in zip(
