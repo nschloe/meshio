@@ -170,7 +170,9 @@ def write(filename, mesh):
                 "Picking {}, skipping {}.".format(key, ", ".join(other))
             )
         material = (
-            numpy.concatenate(mesh.cell_data[key]) if key else numpy.zeros(num_cells, dtype=int)
+            numpy.concatenate(mesh.cell_data[key])
+            if key
+            else numpy.zeros(num_cells, dtype=int)
         )
 
         num_node_data = [
@@ -178,7 +180,8 @@ def write(filename, mesh):
         ]
         num_cell_data = [
             1 if numpy.concatenate(v).ndim == 1 else numpy.concatenate(v).shape[1]
-            for k, v in mesh.cell_data.items() if k != key
+            for k, v in mesh.cell_data.items()
+            if k != key
         ]
         num_node_data_sum = sum(num_node_data)
         num_cell_data_sum = sum(num_cell_data)
