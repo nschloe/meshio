@@ -124,7 +124,7 @@ def read_buffer(f):
             if len(pref) > 0:
                 point_refs.append(int(pref))
             points_id.append(point_id)
-            points.append([_nastran_float(i) for i in chunks[3:6]])
+            points.append([_nastran_string_to_float(i) for i in chunks[3:6]])
         elif keyword == "GRID*":  # large field format: 8 + 16*4 + 8
             point_id = int(chunks[1] + chunks[2])
             pref = (chunks[3] + chunks[4]).strip()
@@ -135,7 +135,7 @@ def read_buffer(f):
             chunks2 = _chunk_string(line)
             points.append(
                 [
-                    _nastran_float(i + j)
+                    _nastran_string_to_float(i + j)
                     for i, j in [chunks[5:7], chunks[7:9], chunks2[1:3]]
                 ]
             )
@@ -192,45 +192,6 @@ def read_buffer(f):
     return mesh
 
 
-def print_scientific(value, length=16):
-    """
-    Prints a value in 16-character scientific notation.
-    This is a sub-method and shouldnt typically be called
-    """
-    aux = length - 2
-    # sfmt = "{" + f":{length}s" + "}"
-    sfmt = "{" + ":s" + "}"
-    pv_fmt = "{" + f":{length}.{aux}e" + "}"
-
-    if value == 0.0:
-        return sfmt.format("0.")
-
-    python_value = pv_fmt.format(value)  # -1.e-2
-    svalue, sexponent = python_value.strip().split("e")
-    exponent = int(sexponent)  # removes 0s
-
-    sign = "-" if abs(value) < 1.0 else "+"
-
-    # the exponent will be added later...
-    sexp2 = str(exponent).strip("-+")
-    value2 = float(svalue)
-
-    # the plus 1 is for the sign
-    len_sexp = len(sexp2) + 1
-    leftover = length - len_sexp
-    leftover = leftover - 3 if value < 0 else leftover - 2
-    fmt = "{" + f":1.{leftover:d}f" + "}"
-
-    svalue3 = fmt.format(value2)
-    svalue4 = svalue3.strip("0")
-    field = "{:s}".format(svalue4 + sign + sexp2)
-    return field
-
-
-def _float_rstrip(x, n=8):
-    return f"{x:f}".rstrip("0")[:n]
-
-
 # There are two basic categories of input data formats in NX Nastran:
 #
 #     "Free" format data, in which the data fields are simply separated by commas. This type of data is known as free field data.
@@ -244,13 +205,13 @@ def _float_rstrip(x, n=8):
 def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small"):
     if point_format == "free":
         grid_fmt = "GRID,{:d},{:s},{:s},{:s},{:s}\n"
-        float_fmt = print_scientific
+        float_fmt = _float_to_nastran_string
     elif point_format == "fixed-small":
         grid_fmt = "GRID    {:<8d}{:<8s}{:>8s}{:>8s}{:>8s}\n"
         float_fmt = _float_rstrip
     elif point_format == "fixed-large":
         grid_fmt = "GRID*   {:<16d}{:<16s}{:>16s}{:>16s}\n*       {:>16s}\n"
-        float_fmt = print_scientific
+        float_fmt = _float_to_nastran_string
     else:
         raise RuntimeError(f'unknown "{format}" format')
 
@@ -328,7 +289,49 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
         f.write("ENDDATA\n")
 
 
-def _nastran_float(string):
+def _float_rstrip(x, n=8):
+    return f"{x:f}".rstrip("0")[:n]
+
+
+def _float_to_nastran_string(value, length=16):
+    """
+    Return a value in NASTRAN scientific notation.
+    Examples:
+        1234.56789 --> "1.23456789+3"
+        -0.1234 --> "-1.234-1"
+        3.1415926535897932 --> "3.14159265359+0"
+    """
+    aux = length - 2
+    # sfmt = "{" + f":{length}s" + "}"
+    sfmt = "{" + ":s" + "}"
+    pv_fmt = "{" + f":{length}.{aux}e" + "}"
+
+    if value == 0.0:
+        return sfmt.format("0.")
+
+    python_value = pv_fmt.format(value)  # -1.e-2
+    svalue, sexponent = python_value.strip().split("e")
+    exponent = int(sexponent)  # removes 0s
+
+    sign = "-" if abs(value) < 1.0 else "+"
+
+    # the exponent will be added later...
+    sexp2 = str(exponent).strip("-+")
+    value2 = float(svalue)
+
+    # the plus 1 is for the sign
+    len_sexp = len(sexp2) + 1
+    leftover = length - len_sexp
+    leftover = leftover - 3 if value < 0 else leftover - 2
+    fmt = "{" + f":1.{leftover:d}f" + "}"
+
+    svalue3 = fmt.format(value2)
+    svalue4 = svalue3.strip("0")
+    field = sfmt.format(svalue4 + sign + sexp2)
+    return field
+
+
+def _nastran_string_to_float(string):
     try:
         return float(string)
     except ValueError:
