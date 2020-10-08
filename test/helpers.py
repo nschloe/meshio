@@ -233,7 +233,7 @@ polygon_mesh = meshio.Mesh(
 
 polyhedron_mesh = meshio.Mesh(
     numpy.array(
-        [  # Three layers of a unit square
+        [  # Two layers of a unit square
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
             [1.0, 1.0, 0.0],
@@ -242,19 +242,46 @@ polyhedron_mesh = meshio.Mesh(
             [1.0, 0.0, 1.0],
             [1.0, 1.0, 1.0],
             [0.0, 1.0, 1.0],
-            [0.0, 0.0, 2.0],
-            [1.0, 0.0, 2.0],
-            [1.0, 1.0, 2.0],
-            [0.0, 1.0, 2.0],
         ]
     ),
-    [  # Split the lower cube into tets and pyramids. The upper cube is hexahedron
-        ("polyhedron4", numpy.array([[1, 2, 5, 7], [2, 5, 6, 7]])),  # two tets
-        ("hexahedron", numpy.array([[4, 5, 6, 7, 8, 9, 10, 11]])),  # unit cube
+    [  # Split the cube into tets and pyramids.
+        (
+            "polyhedron4",
+            [
+                [
+                    numpy.array([1, 2, 5]),
+                    numpy.array([1, 2, 7]),
+                    numpy.array([1, 5, 7]),
+                    numpy.array([2, 5, 7]),
+                ],
+                [
+                    numpy.array([2, 5, 6]),
+                    numpy.array([2, 6, 7]),
+                    numpy.array([2, 5, 7]),
+                    numpy.array([5, 6, 7]),
+                ],
+            ],
+        ),
         (
             "polyhedron5",
-            numpy.array([[0, 1, 2, 3, 7], [0, 1, 6, 5, 7]]),
-        ),  # two pyramids
+            [
+                [
+                    numpy.array([0, 1, 2, 3]),  # pyramid base is a rectangle
+                    numpy.array([0, 1, 7]),
+                    numpy.array([1, 2, 7]),
+                    numpy.array([2, 3, 7]),
+                    numpy.array([3, 0, 7]),
+                ],
+                [
+                    numpy.array([0, 1, 5]),  # pyramid base split in two triangles
+                    numpy.array([0, 4, 5]),
+                    numpy.array([0, 1, 7]),
+                    numpy.array([1, 5, 7]),
+                    numpy.array([5, 4, 7]),
+                    numpy.array([0, 4, 7]),
+                ],
+            ],
+        ),
     ],
 )
 
@@ -280,6 +307,10 @@ def add_cell_data(mesh, specs):
         ]
         for name, shape, dtype in specs
     }
+    # Keep cell-data from the original mesh. This is needed to preserve
+    # face-cell relations for polyhedral meshes.
+    for key, val in mesh.cell_data.items():
+        mesh2.cell_data[key] = val
     return mesh2
 
 
@@ -318,7 +349,13 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     # Make sure the output is writeable
     assert mesh.points.flags["WRITEABLE"]
     for cells in input_mesh.cells:
-        assert cells.data.flags["WRITEABLE"]
+        if isinstance(cells.data, numpy.ndarray):
+            assert cells.data.flags["WRITEABLE"]
+        else:
+            # This is assumed to be a polyhedron
+            for cell in cells.data:
+                for face in cell:
+                    assert face.flags["WRITEABLE"]
 
     # assert that the input mesh hasn't changed at all
     assert numpy.allclose(in_mesh.points, input_mesh.points, atol=atol, rtol=0.0)
@@ -340,7 +377,15 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
         sorted(input_mesh.cells, key=cell_sorter), sorted(mesh.cells, key=cell_sorter)
     ):
         assert cells0.type == cells1.type, f"{cells0.type} != {cells1.type}"
-        assert numpy.array_equal(cells0.data, cells1.data)
+
+        if cells0.type[:10] == "polyhedron":
+            # Special treatment of polyhedron cells
+            # Data is a list (one item per cell) of numpy arrays
+            for c_in, c_out in zip(cells0.data, cells1.data):
+                for face_in, face_out in zip(c_in, c_out):
+                    assert numpy.allclose(face_in, face_out, atol=atol, rtol=0.0)
+        else:
+            assert numpy.array_equal(cells0.data, cells1.data)
 
     for key in input_mesh.point_data.keys():
         assert numpy.allclose(

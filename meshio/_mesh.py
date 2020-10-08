@@ -2,7 +2,12 @@ import collections
 
 import numpy
 
-CellBlock = collections.namedtuple("CellBlock", ["type", "data"])
+from ._common import _topological_dimension
+
+
+class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
+    def __repr__(self):
+        return f"<meshio CellBlock, type: {self.type}, num cells: {len(self.data)}>"
 
 
 class Mesh:
@@ -74,30 +79,39 @@ class Mesh:
 
         return "\n".join(lines)
 
-    def prune(self):
-        prune_list = ["vertex", "line", "line3"]
-        if any([c.type in ["tetra", "tetra10"] for c in self.cells]):
-            prune_list += ["triangle", "triangle6"]
-
+    def remove_lower_dimensional_cells(self):
+        """Remove all cells of topological dimension lower than the max dimension in the
+        mesh, i.e., in a mesh that contains tetrahedra, remove triangles, lines, etc.
+        """
+        max_topological_dim = max(_topological_dimension[c.type] for c in self.cells)
         new_cells = []
         new_cell_data = {}
-        for block_counter, c in enumerate(self.cells):
-            if c.type not in prune_list:
+        new_cell_sets = {}
+        prune_set = set()
+        for idx, c in enumerate(self.cells):
+            if _topological_dimension[c.type] == max_topological_dim:
                 new_cells.append(c)
+
                 for name, data in self.cell_data.items():
                     if name not in new_cell_data:
                         new_cell_data[name] = []
-                    new_cell_data[name] += [data[block_counter]]
+                    new_cell_data[name] += [data[idx]]
+
+                for name, data in self.cell_sets.items():
+                    if name not in new_cell_sets:
+                        new_cell_sets[name] = []
+                    new_cell_sets[name] += [data[idx]]
+            else:
+                prune_set.add(c.type)
 
         self.cells = new_cells
         self.cell_data = new_cell_data
+        self.cell_sets = new_cell_sets
+        return prune_set
 
-        pruned = ", ".join(prune_list)
-        print(f"Pruned cell types: {pruned}")
-
-        # remove_orphaned_nodes.
-        # find which nodes are not mentioned in the cells and remove them
-        all_cells_flat = numpy.concatenate([c.data for c in self.cells]).flatten()
+    def remove_orphaned_nodes(self):
+        """Remove nodes which don't belong to any cell."""
+        all_cells_flat = numpy.concatenate([c.data.flat for c in self.cells])
         orphaned_nodes = numpy.setdiff1d(numpy.arange(len(self.points)), all_cells_flat)
         self.points = numpy.delete(self.points, orphaned_nodes, axis=0)
         # also adapt the point data
@@ -121,6 +135,13 @@ class Mesh:
             n = numpy.prod(s)
             self.cells[k] = CellBlock(c.type, all_cells_flat[k : k + n].reshape(s))
             k += n
+
+    def prune_z_0(self, tol=1.0e-13):
+        """Remove third (z) component of points if it is 0 everywhere (up to a
+        tolerance).
+        """
+        if self.points.shape[1] == 3 and numpy.all(numpy.abs(self.points[:, 2]) < tol):
+            self.points = self.points[:, :2]
 
     def write(self, path_or_buf, file_format=None, **kwargs):
         # avoid circular import
@@ -201,14 +222,23 @@ class Mesh:
         # If possible, convert cell sets to integer cell data. This is possible if all
         # cells appear exactly in one group.
         intfun = []
-        for c in zip(*self.cell_sets.values()):
+        for k, c in enumerate(zip(*self.cell_sets.values())):
+            # `c` contains the values of all cell sets for a particular cell block
+            c = [([] if cc is None else cc) for cc in c]
             # check if all numbers appear exactly once in the groups
             d = numpy.sort(numpy.concatenate(c))
-            is_convertible = numpy.all(d[1:] == d[:-1] + 1) and len(d) == d[-1] + 1
-            if is_convertible:
-                intfun.append(numpy.zeros(len(d), dtype=int))
+            if numpy.all(d == numpy.arange(len(d))):
+                arr = numpy.empty(len(d), dtype=int)
+                arr[:] = numpy.nan
                 for k, cc in enumerate(c):
-                    intfun[-1][cc] = k
+                    arr[cc] = k
+            else:
+                # We could just append None, but some mesh formats expect _something_
+                # here. Go for an array of NaNs.
+                arr = numpy.empty(len(self.cells[k]), dtype=int)
+                arr[:] = numpy.nan
+
+            intfun.append(arr)
 
         data_name = "-".join(self.cell_sets.keys())
         self.cell_data = {data_name: intfun}

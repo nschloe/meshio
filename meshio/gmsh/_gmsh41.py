@@ -8,7 +8,7 @@ from functools import partial
 import numpy
 
 from .._common import (
-    _geometric_dimension,
+    _topological_dimension,
     cell_data_from_raw,
     num_nodes_per_cell,
     raw_from_cell_data,
@@ -16,6 +16,7 @@ from .._common import (
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _fast_forward_over_blank_lines,
     _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
@@ -52,12 +53,14 @@ def read_buffer(f, is_ascii, data_size):
     periodic = None
     cells = None
     while True:
-        line = f.readline().decode("utf-8")
-        if not line:
-            # EOF
+        # fast-forward over blank lines
+        line, is_eof = _fast_forward_over_blank_lines(f)
+        if is_eof:
             break
+
         if line[0] != "$":
-            raise ReadError()
+            raise ReadError(f"Unexpected line {repr(line)}")
+
         environ = line[1:].strip()
 
         if environ == "PhysicalNames":
@@ -450,7 +453,7 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
     cell_dim_tags = numpy.empty((len(cells), 2), dtype=int)
     for ci in range(len(cells)):
         cell_dim_tags[ci] = [
-            _geometric_dimension[cells[ci][0]],
+            _topological_dimension[cells[ci][0]],
             cell_data["gmsh:geometrical"][ci][0],
         ]
 
@@ -600,9 +603,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
         # in (the uniquified) node_dim_tags. This approach works for general
         # orderings of the nodes
         node_dim_tags, reverse_index_map = numpy.unique(
-            point_data["gmsh:dim_tags"],
-            axis=0,
-            return_inverse=True,
+            point_data["gmsh:dim_tags"], axis=0, return_inverse=True,
         )
     else:
         # If entity information is not provided, we will assign the same entity
@@ -613,7 +614,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
                 "Specify entity information to deal with more than one cell type"
             )
 
-        dim = _geometric_dimension[cells[0][0]]
+        dim = _topological_dimension[cells[0][0]]
         tag = 0
         node_dim_tags = numpy.array([[dim, tag]])
         # All nodes map to the (single) dimension-entity object
@@ -684,12 +685,14 @@ def _write_elements(fh, cells, cell_data, binary):
         for ci, (cell_type, node_idcs) in enumerate(cells):
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
-            dim = _geometric_dimension[cell_type]
+
+            dim = _topological_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
             if "gmsh:geometrical" in cell_data:
                 entity_tag = cell_data["gmsh:geometrical"][ci][0]
             else:
                 entity_tag = 0
+
             cell_type = _meshio_to_gmsh_type[cell_type]
             numpy.array([dim, entity_tag, cell_type], dtype=c_int).tofile(fh)
             n = node_idcs.shape[0]
@@ -722,12 +725,14 @@ def _write_elements(fh, cells, cell_data, binary):
         tag0 = 1
         for ci, (cell_type, node_idcs) in enumerate(cells):
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
-            dim = _geometric_dimension[cell_type]
+
+            dim = _topological_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
             if "gmsh:geometrical" in cell_data:
                 entity_tag = cell_data["gmsh:geometrical"][ci][0]
             else:
                 entity_tag = 0
+
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]
             fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode("utf-8"))
