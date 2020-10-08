@@ -610,7 +610,9 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
         # in (the uniquified) node_dim_tags. This approach works for general
         # orderings of the nodes
         node_dim_tags, reverse_index_map = numpy.unique(
-            point_data["gmsh:dim_tags"], axis=0, return_inverse=True,
+            point_data["gmsh:dim_tags"],
+            axis=0,
+            return_inverse=True,
         )
     else:
         # If entity information is not provided, we will assign the same entity
