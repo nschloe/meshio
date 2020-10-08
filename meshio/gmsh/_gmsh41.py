@@ -441,6 +441,9 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
 
     # Write number of entities per dimension
     num_occ = numpy.bincount(node_dim_tags[:, 0], minlength=4)
+    if num_occ.size > 4:
+        raise ValueError("Encountered entity with dimension > 3")
+
     if binary:
         num_occ.astype(c_size_t).tofile(fh)
     else:
@@ -469,6 +472,10 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
         matching_cell_block = numpy.where(
             numpy.logical_and(cell_dim_tags[:, 0] == dim, cell_dim_tags[:, 1] == tag)
         )[0]
+        if matching_cell_block.size > 1:
+            # It is not 100% clear if this is not permissible, but the current
+            # implementation for sure does not allow it.
+            raise ValueError("Encountered non-unique CellBlock dim_tag")
 
         # The information to be written varies according to entity dimension,
         # whether entity has a physical tag, and between ascii and binary.
