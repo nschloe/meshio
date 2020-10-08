@@ -227,6 +227,10 @@ def print_scientific(value, length=16):
     return field
 
 
+def _float_rstrip(x, n=8):
+    return f"{x:f}".rstrip("0")[:n]
+
+
 # There are two basic categories of input data formats in NX Nastran:
 #
 #     "Free" format data, in which the data fields are simply separated by commas. This type of data is known as free field data.
@@ -243,7 +247,7 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
         float_fmt = print_scientific
     elif point_format == "fixed-small":
         grid_fmt = "GRID    {:<8d}{:<8s}{:>8s}{:>8s}{:>8s}\n"
-        float_fmt = lambda x: f"{x:f}".rstrip("0")[:8]
+        float_fmt = _float_rstrip
     elif point_format == "fixed-large":
         grid_fmt = "GRID*   {:<16d}{:<16s}{:>16s}{:>16s}\n*       {:>16s}\n"
         float_fmt = print_scientific
