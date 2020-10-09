@@ -366,8 +366,20 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     n = in_mesh.points.shape[1]
     assert numpy.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
 
+    # To avoid errors from sorted (below), specify the key as first cell type
+    # then index of the first point of the first cell. This may still lead to
+    # comparison of what should be different blocks, but chances seem low.
+    def cell_sorter(cell):
+        if cell.type[:10] == "polyhedron":
+            # Polyhedra blocks should be well enough distinguished by their type
+            return cell.type
+        else:
+            return (cell.type, cell.data[0, 0])
+
     # to make sure we are testing same type of cells we sort the list
-    for cells0, cells1 in zip(sorted(input_mesh.cells), sorted(mesh.cells)):
+    for cells0, cells1 in zip(
+        sorted(input_mesh.cells, key=cell_sorter), sorted(mesh.cells, key=cell_sorter)
+    ):
         assert cells0.type == cells1.type, f"{cells0.type} != {cells1.type}"
 
         if cells0.type[:10] == "polyhedron":
@@ -391,6 +403,15 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     for name, data in input_mesh.field_data.items():
         assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
+
+    # Test of cell sets (assumed to be a list of numpy arrays),
+    for name, data in input_mesh.cell_sets.items():
+        # Skip the test if the key is not in the read cell set
+        if name not in mesh.cell_sets.keys():
+            continue
+        data2 = mesh.cell_sets[name]
+        for var1, var2 in zip(data, data2):
+            assert numpy.allclose(var1, var2, atol=atol, rtol=0.0)
 
 
 def generic_io(filename):
