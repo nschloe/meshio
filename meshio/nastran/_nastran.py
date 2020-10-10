@@ -124,7 +124,7 @@ def read_buffer(f):
             if len(pref) > 0:
                 point_refs.append(int(pref))
             points_id.append(point_id)
-            points.append([_nastran_float(i) for i in chunks[3:6]])
+            points.append([_nastran_string_to_float(i) for i in chunks[3:6]])
         elif keyword == "GRID*":  # large field format: 8 + 16*4 + 8
             point_id = int(chunks[1] + chunks[2])
             pref = (chunks[3] + chunks[4]).strip()
@@ -135,7 +135,7 @@ def read_buffer(f):
             chunks2 = _chunk_string(line)
             points.append(
                 [
-                    _nastran_float(i + j)
+                    _nastran_string_to_float(i + j)
                     for i, j in [chunks[5:7], chunks[7:9], chunks2[1:3]]
                 ]
             )
@@ -192,7 +192,43 @@ def read_buffer(f):
     return mesh
 
 
-def write(filename, mesh):
+# There are two basic categories of input data formats in NX Nastran:
+#
+#     "Free" format data, in which the data fields are simply separated by commas. This type of data is known as free field data.
+#     "Fixed" format data, in which your data must be aligned in columns of specific width. There are two subcategories of fixed format data that differ based on the size of the fixed column width:
+#         Small field format, in which a single line of data is divided into 10 fields that can contain eight characters each.
+#         Large field format, in which a single line of input is expanded into two lines The first and last fields on each line are eight columns wide, while the intermediate fields are sixteen columns wide. The large field format is useful when you need greater numerical accuracy.
+#
+# See: https://docs.plm.automation.siemens.com/data_services/resources/nxnastran/10/help/en_US/tdocExt/pdf/User.pdf
+
+
+def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small"):
+    if point_format == "free":
+        grid_fmt = "GRID,{:d},{:s},{:s},{:s},{:s}\n"
+        float_fmt = _float_to_nastran_string
+    elif point_format == "fixed-small":
+        grid_fmt = "GRID    {:<8d}{:<8s}{:>8s}{:>8s}{:>8s}\n"
+        float_fmt = _float_rstrip
+    elif point_format == "fixed-large":
+        grid_fmt = "GRID*   {:<16d}{:<16s}{:>16s}{:>16s}\n*       {:>16s}\n"
+        float_fmt = _float_to_nastran_string
+    else:
+        raise RuntimeError(f'unknown "{format}" format')
+
+    if cell_format == "free":
+        int_fmt, cell_info_fmt = "{:d}", "{:s},{:d},{:s},"
+        sjoin = ","
+    elif cell_format == "fixed-small":
+        int_fmt, cell_info_fmt = "{:<8d}", "{:<8s}{:<8d}{:<8s}"
+        sjoin, cchar = "", "+"
+        nipl1, nipl2 = 6, 14
+    elif cell_format == "fixed-large":
+        int_fmt, cell_info_fmt = "{:<16d}", "{:<8s}{:<16d}{:<16s}"
+        sjoin, cchar = "", "*"
+        nipl1, nipl2 = 2, 6
+    else:
+        raise RuntimeError(f'unknown "{format}" format')
+
     if mesh.points.shape[1] == 2:
         logging.warning(
             "Nastran requires 3D points, but 2D points given. "
@@ -208,50 +244,94 @@ def write(filename, mesh):
 
         # Points
         point_refs = mesh.point_data.get("nastran:ref", None)
-        if point_refs is not None:
-            for point_id, x in enumerate(points):
-                f.write(
-                    "GRID, {:d}, {:d}, {:.16e}, {:.16e}, {:.16e}\n".format(
-                        point_id + 1, point_refs[point_id], x[0], x[1], x[2]
-                    )
-                )
-        else:
-            for point_id, x in enumerate(points):
-                f.write(
-                    "GRID, {:d},, {:.16e}, {:.16e}, {:.16e}\n".format(
-                        point_id + 1, x[0], x[1], x[2]
-                    )
-                )
+        for point_id, x in enumerate(points):
+            fx = [float_fmt(k) for k in x]
+            pref = str(point_refs[point_id]) if point_refs is not None else ""
+            f.write(grid_fmt.format(point_id + 1, pref, fx[0], fx[1], fx[2]))
 
         # CellBlock
         cell_id = 0
         cell_refs = mesh.cell_data.get("nastran:ref", None)
         for ict, (cell_type, cells) in enumerate(mesh.cells):
             nastran_type = meshio_to_nastran_type[cell_type].replace("_", "")
+            if cell_format.endswith("-large"):
+                nastran_type += "*"
             if cell_refs is not None:
                 cell_refs_t = cell_refs[ict]
             else:
                 cell_ref = ""
             for ic, cell in enumerate(cells):
                 if cell_refs is not None:
-                    cell_ref = " " + str(int(cell_refs_t[ic]))
+                    cell_ref = str(int(cell_refs_t[ic]))
                 cell_id += 1
-                cell_info = f"{nastran_type}, {cell_id:d},{cell_ref}, "
+                cell_info = cell_info_fmt.format(nastran_type, cell_id, cell_ref)
                 cell1 = cell + 1
                 cell1 = _convert_to_nastran_ordering(cell1, nastran_type)
-                conn = ", ".join(str(nid) for nid in cell1[:6])
-                f.write(cell_info + conn + "\n")
-                if len(cell1) > 6:
-                    conn = ", ".join(str(nid) for nid in cell1[6:14])
-                    f.write("+, " + conn + "\n")
-                    if len(cell1) > 14:
-                        conn = ", ".join(str(nid) for nid in cell1[14:])
-                        f.write("+, " + conn + "\n")
+                conn = sjoin.join(int_fmt.format(nid) for nid in cell1[:nipl1])
+                if len(cell1) > nipl1:
+                    if cell_format == "free":
+                        cflag1 = cflag3 = ""
+                        cflag2 = cflag4 = "+,"
+                    else:
+                        cflag1 = cflag2 = f"{cchar}1{cell_id:<6x}"
+                        cflag3 = cflag4 = f"{cchar}2{cell_id:<6x}"
+                    f.write(cell_info + conn + cflag1 + "\n")
+                    conn = sjoin.join(int_fmt.format(nid) for nid in cell1[nipl1:nipl2])
+                    if len(cell1) > nipl2:
+                        f.write(cflag2 + conn + cflag3 + "\n")
+                        conn = sjoin.join(int_fmt.format(nid) for nid in cell1[nipl2:])
+                        f.write(cflag4 + conn + "\n")
+                    else:
+                        f.write(cflag2 + conn + "\n")
+                else:
+                    f.write(cell_info + conn + "\n")
 
         f.write("ENDDATA\n")
 
 
-def _nastran_float(string):
+def _float_rstrip(x, n=8):
+    return f"{x:f}".rstrip("0")[:n]
+
+
+def _float_to_nastran_string(value, length=16):
+    """
+    Return a value in NASTRAN scientific notation.
+    Examples:
+        1234.56789 --> "1.23456789+3"
+        -0.1234 --> "-1.234-1"
+        3.1415926535897932 --> "3.14159265359+0"
+    """
+    aux = length - 2
+    # sfmt = "{" + f":{length}s" + "}"
+    sfmt = "{" + ":s" + "}"
+    pv_fmt = "{" + f":{length}.{aux}e" + "}"
+
+    if value == 0.0:
+        return sfmt.format("0.")
+
+    python_value = pv_fmt.format(value)  # -1.e-2
+    svalue, sexponent = python_value.strip().split("e")
+    exponent = int(sexponent)  # removes 0s
+
+    sign = "-" if abs(value) < 1.0 else "+"
+
+    # the exponent will be added later...
+    sexp2 = str(exponent).strip("-+")
+    value2 = float(svalue)
+
+    # the plus 1 is for the sign
+    len_sexp = len(sexp2) + 1
+    leftover = length - len_sexp
+    leftover = leftover - 3 if value < 0 else leftover - 2
+    fmt = "{" + f":1.{leftover:d}f" + "}"
+
+    svalue3 = fmt.format(value2)
+    svalue4 = svalue3.strip("0")
+    field = sfmt.format(svalue4 + sign + sexp2)
+    return field
+
+
+def _nastran_string_to_float(string):
     try:
         return float(string)
     except ValueError:
