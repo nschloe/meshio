@@ -47,4 +47,4 @@ jobs:
           pip install tox
           tox
     - uses: codecov/codecov-action@v1
-      if: ${{ matrix.python-version == '3.8' }}
+      if: ${{ matrix.python-version == '3.9' }}
