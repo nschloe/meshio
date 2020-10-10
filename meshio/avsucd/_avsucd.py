@@ -161,12 +161,27 @@ def write(filename, mesh):
         # Write first line
         num_nodes = len(mesh.points)
         num_cells = sum(len(c.data) for c in mesh.cells)
+
+        # Try to find an appropriate materials array
+        key, other = _pick_first_int_data(mesh.cell_data)
+        if key and other:
+            logging.warning(
+                "AVS-UCD can only write one cell data array. "
+                "Picking {}, skipping {}.".format(key, ", ".join(other))
+            )
+        material = (
+            numpy.concatenate(mesh.cell_data[key])
+            if key
+            else numpy.zeros(num_cells, dtype=int)
+        )
+
         num_node_data = [
             1 if v.ndim == 1 else v.shape[1] for v in mesh.point_data.values()
         ]
         num_cell_data = [
             1 if numpy.concatenate(v).ndim == 1 else numpy.concatenate(v).shape[1]
             for k, v in mesh.cell_data.items()
+            if k != key
         ]
         num_node_data_sum = sum(num_node_data)
         num_cell_data_sum = sum(num_cell_data)
@@ -180,7 +195,7 @@ def write(filename, mesh):
         _write_nodes(f, mesh.points)
 
         # Write cells
-        _write_cells(f, mesh.cells, mesh.cell_data, num_cells)
+        _write_cells(f, mesh.cells, material)
 
         # Write node data
         if num_node_data_sum:
@@ -192,9 +207,9 @@ def write(filename, mesh):
 
         # Write cell data
         if num_cell_data_sum:
-            labels = list(mesh.cell_data.keys())
+            labels = [k for k in mesh.cell_data.keys() if k != key]
             data_array = numpy.column_stack(
-                [numpy.concatenate(v) for v in mesh.cell_data.values()]
+                [numpy.concatenate(v) for k, v in mesh.cell_data.items() if k != key]
             )
             _write_data(
                 f, labels, data_array, num_cells, num_cell_data, num_cell_data_sum
@@ -206,19 +221,7 @@ def _write_nodes(f, points):
         f.write("{} {} {} {}\n".format(i + 1, x, y, z))
 
 
-def _write_cells(f, cells, cell_data, num_cells):
-    # try to find an appropriate materials array
-    key, other = _pick_first_int_data(cell_data)
-    if key and other:
-        logging.warning(
-            "AVS-UCD can only write one cell data array. "
-            "Picking {}, skipping {}.".format(key, ", ".join(other))
-        )
-    material = (
-        numpy.concatenate(cell_data[key]) if key else numpy.zeros(num_cells, dtype=int)
-    )
-
-    # Loop over cells
+def _write_cells(f, cells, material):
     i = 0
     for cell_type, v in cells:
         for cell in v[:, meshio_to_avsucd_order[cell_type]]:

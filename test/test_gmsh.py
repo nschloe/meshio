@@ -139,10 +139,23 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
 
 
 @pytest.mark.parametrize(
-    "filename, ref_sum, ref_num_cells",
-    [("insulated-4.1.msh", 2.001762136876221, {"line": 21, "triangle": 111})],
+    "filename, ref_sum, ref_num_cells, ref_num_cells_in_cell_sets",
+    [
+        (
+            "insulated-4.1.msh",
+            2.001762136876221,
+            {"line": 21, "triangle": 111},
+            {"line": 27, "triangle": 120},
+        )
+    ],
+    # Note that testing on number of cells in
+    # cell_sets_dict will count both cells associated with physical tags, and
+    # bounding entities.
 )
-def test_reference_file_readonly(filename, ref_sum, ref_num_cells):
+@pytest.mark.parametrize("binary", [False, True])
+def test_reference_file_with_entities(
+    filename, ref_sum, ref_num_cells, ref_num_cells_in_cell_sets, binary
+):
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "msh" / filename
 
@@ -155,8 +168,12 @@ def test_reference_file_readonly(filename, ref_sum, ref_num_cells):
         k: len(v) for k, v in mesh.cell_data_dict["gmsh:physical"].items()
     } == ref_num_cells
 
-    num_cells = {k: 0 for k in ref_num_cells}
+    writer = partial(meshio.gmsh.write, fmt_version="4.1", binary=binary)
+
+    num_cells = {k: 0 for k in ref_num_cells_in_cell_sets}
     for vv in mesh.cell_sets_dict.values():
         for k, v in vv.items():
             num_cells[k] += len(v)
-    assert num_cells == ref_num_cells
+    assert num_cells == ref_num_cells_in_cell_sets
+
+    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
