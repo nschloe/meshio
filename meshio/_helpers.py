@@ -134,7 +134,9 @@ def write(filename, mesh, file_format=None, **kwargs):
                 raise WriteError()
         elif key in num_nodes_per_cell:
             if value.shape[1] != num_nodes_per_cell[key]:
-                raise WriteError()
+                raise WriteError(
+                    f"Unexpected cells array shape {value.shape} for {key} cells."
+                )
         else:
             # we allow custom keys <https://github.com/nschloe/meshio/issues/501> and
             # cannot check those

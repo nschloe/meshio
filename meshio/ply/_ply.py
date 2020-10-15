@@ -83,7 +83,7 @@ def read_buffer(f):
     # assert that the first line reads `ply`
     line = f.readline().decode("utf-8").strip()
     if line != "ply":
-        raise ReadError()
+        raise ReadError("Expected ply")
 
     line = _fast_forward(f)
     if line == "format ascii 1.0":
@@ -97,42 +97,44 @@ def read_buffer(f):
         is_binary = True
         endianness = "<"
 
+    # read header
     line = _fast_forward(f)
-    m = re.match("element vertex (\\d+)", line)
-    num_verts = int(m.groups()[0])
-
-    # read point data
+    num_verts = 0
+    num_cells = 0
     point_data_formats = []
     point_data_names = []
-    line = _fast_forward(f)
-    while line[:8] == "property":
-        m = re.match("property (.+) (.+)", line)
-        point_data_formats.append(m.groups()[0])
-        point_data_names.append(m.groups()[1])
-        line = _fast_forward(f)
-
-    m = re.match("element face (\\d+)", line)
-    num_cells = int(m.groups()[0])
-
-    assert num_cells >= 0
-
-    # read property lists
-    line = _fast_forward(f)
     cell_data_names = []
     cell_data_dtypes = []
-    # read cell data
-    while line[:8] == "property":
-        if line[:13] == "property list":
-            m = re.match("property list (.+) (.+) (.+)", line)
-            cell_data_dtypes.append(tuple(m.groups()[:-1]))
-        else:
-            m = re.match("property (.+) (.+)", line)
-            cell_data_dtypes.append(m.groups()[0])
-        cell_data_names.append(m.groups()[-1])
-        line = _fast_forward(f)
+    while line != "end_header":
+        m_vert = re.match("element vertex (\\d+)", line)
+        m_face = re.match("element face (\\d+)", line)
+        if m_vert is not None:
+            num_verts = int(m_vert.groups()[0])
 
-    if line != "end_header":
-        raise ReadError()
+            # read point data
+            line = _fast_forward(f)
+            while line[:8] == "property":
+                m = re.match("property (.+) (.+)", line)
+                point_data_formats.append(m.groups()[0])
+                point_data_names.append(m.groups()[1])
+                line = _fast_forward(f)
+        elif m_face is not None:
+            num_cells = int(m_face.groups()[0])
+
+            assert num_cells >= 0
+
+            # read property lists
+            line = _fast_forward(f)
+            # read cell data
+            while line[:8] == "property":
+                if line[:13] == "property list":
+                    m = re.match("property list (.+) (.+) (.+)", line)
+                    cell_data_dtypes.append(tuple(m.groups()[:-1]))
+                else:
+                    m = re.match("property (.+) (.+)", line)
+                    cell_data_dtypes.append(m.groups()[0])
+                cell_data_names.append(m.groups()[-1])
+                line = _fast_forward(f)
 
     if is_binary:
         mesh = _read_binary(
@@ -430,36 +432,36 @@ def write(filename, mesh, binary=True):  # noqa: C901
         for cell_type, c in mesh.cells:
             if cell_type_to_count(cell_type):
                 num_cells += c.data.shape[0]
-        fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
+        if num_cells > 0:
+            fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
 
-        # possibly cast down to int32
-        cells = mesh.cells
-        has_cast = False
-        for k, (cell_type, data) in enumerate(mesh.cells):
-            if data.dtype == numpy.int64:
-                has_cast = True
-                mesh.cells[k] = CellBlock(cell_type, data.astype(numpy.int32))
+            # possibly cast down to int32
+            has_cast = False
+            for k, (cell_type, data) in enumerate(mesh.cells):
+                if data.dtype == numpy.int64:
+                    has_cast = True
+                    mesh.cells[k] = CellBlock(cell_type, data.astype(numpy.int32))
 
-        if has_cast:
-            warnings.warn(
-                "PLY doesn't support 64-bit integers. Casting down to 32-bit."
-            )
-
-        # assert that all cell dtypes are equal
-        cell_dtype = None
-        for _, cell in cells:
-            if cell_dtype is None:
-                cell_dtype = cell.dtype
-            if cell.dtype != cell_dtype:
-                raise WriteError()
-
-        if cell_dtype is not None:
-            ply_type = numpy_to_ply_dtype[cell_dtype]
-            fh.write(
-                "property list {} {} vertex_indices\n".format("uint8", ply_type).encode(
-                    "utf-8"
+            if has_cast:
+                warnings.warn(
+                    "PLY doesn't support 64-bit integers. Casting down to 32-bit."
                 )
-            )
+
+            # assert that all cell dtypes are equal
+            cell_dtype = None
+            for _, cell in mesh.cells:
+                if cell_dtype is None:
+                    cell_dtype = cell.dtype
+                if cell.dtype != cell_dtype:
+                    raise WriteError()
+
+            if cell_dtype is not None:
+                ply_type = numpy_to_ply_dtype[cell_dtype]
+                fh.write(
+                    "property list {} {} vertex_indices\n".format(
+                        "uint8", ply_type
+                    ).encode("utf-8")
+                )
 
         # TODO other cell data
         fh.write(b"end_header\n")
@@ -470,7 +472,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write(out.tobytes())
 
             # cells
-            for cell_type, data in cells:
+            for cell_type, data in mesh.cells:
                 if cell_type_to_count(cell_type) is None:
                     warnings.warn(
                         'cell_type "{}" is not supported by ply format - skipping'
@@ -494,7 +496,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write(out.encode("utf-8"))
 
             # cells
-            for cell_type, data in cells:
+            for cell_type, data in mesh.cells:
                 #                if cell_type not in cell_type_to_count.keys():
                 #                    continue
                 out = numpy.column_stack(
