@@ -430,36 +430,36 @@ def write(filename, mesh, binary=True):  # noqa: C901
         for cell_type, c in mesh.cells:
             if cell_type_to_count(cell_type):
                 num_cells += c.data.shape[0]
-        fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
+        if num_cells > 0:
+            fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
 
-        # possibly cast down to int32
-        cells = mesh.cells
-        has_cast = False
-        for k, (cell_type, data) in enumerate(mesh.cells):
-            if data.dtype == numpy.int64:
-                has_cast = True
-                mesh.cells[k] = CellBlock(cell_type, data.astype(numpy.int32))
+            # possibly cast down to int32
+            has_cast = False
+            for k, (cell_type, data) in enumerate(mesh.cells):
+                if data.dtype == numpy.int64:
+                    has_cast = True
+                    mesh.cells[k] = CellBlock(cell_type, data.astype(numpy.int32))
 
-        if has_cast:
-            warnings.warn(
-                "PLY doesn't support 64-bit integers. Casting down to 32-bit."
-            )
-
-        # assert that all cell dtypes are equal
-        cell_dtype = None
-        for _, cell in cells:
-            if cell_dtype is None:
-                cell_dtype = cell.dtype
-            if cell.dtype != cell_dtype:
-                raise WriteError()
-
-        if cell_dtype is not None:
-            ply_type = numpy_to_ply_dtype[cell_dtype]
-            fh.write(
-                "property list {} {} vertex_indices\n".format("uint8", ply_type).encode(
-                    "utf-8"
+            if has_cast:
+                warnings.warn(
+                    "PLY doesn't support 64-bit integers. Casting down to 32-bit."
                 )
-            )
+
+            # assert that all cell dtypes are equal
+            cell_dtype = None
+            for _, cell in mesh.cells:
+                if cell_dtype is None:
+                    cell_dtype = cell.dtype
+                if cell.dtype != cell_dtype:
+                    raise WriteError()
+
+            if cell_dtype is not None:
+                ply_type = numpy_to_ply_dtype[cell_dtype]
+                fh.write(
+                    "property list {} {} vertex_indices\n".format(
+                        "uint8", ply_type
+                    ).encode("utf-8")
+                )
 
         # TODO other cell data
         fh.write(b"end_header\n")
@@ -470,7 +470,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write(out.tobytes())
 
             # cells
-            for cell_type, data in cells:
+            for cell_type, data in mesh.cells:
                 if cell_type_to_count(cell_type) is None:
                     warnings.warn(
                         'cell_type "{}" is not supported by ply format - skipping'
@@ -494,7 +494,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write(out.encode("utf-8"))
 
             # cells
-            for cell_type, data in cells:
+            for cell_type, data in mesh.cells:
                 #                if cell_type not in cell_type_to_count.keys():
                 #                    continue
                 out = numpy.column_stack(
