@@ -106,8 +106,10 @@ def read_buffer(f):
     cell_data_names = []
     cell_data_dtypes = []
     while line != "end_header":
-        if m := re.match("element vertex (\\d+)", line):
-            num_verts = int(m.groups()[0])
+        m_vert = re.match("element vertex (\\d+)", line)
+        m_face = re.match("element face (\\d+)", line)
+        if m_vert is not None:
+            num_verts = int(m_vert.groups()[0])
 
             # read point data
             line = _fast_forward(f)
@@ -116,8 +118,8 @@ def read_buffer(f):
                 point_data_formats.append(m.groups()[0])
                 point_data_names.append(m.groups()[1])
                 line = _fast_forward(f)
-        elif m := re.match("element face (\\d+)", line):
-            num_cells = int(m.groups()[0])
+        elif m_face is not None:
+            num_cells = int(m_face.groups()[0])
 
             assert num_cells >= 0
 
