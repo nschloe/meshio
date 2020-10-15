@@ -83,7 +83,7 @@ def read_buffer(f):
     # assert that the first line reads `ply`
     line = f.readline().decode("utf-8").strip()
     if line != "ply":
-        raise ReadError()
+        raise ReadError("Expected ply")
 
     line = _fast_forward(f)
     if line == "format ascii 1.0":
@@ -97,42 +97,42 @@ def read_buffer(f):
         is_binary = True
         endianness = "<"
 
+    # read header
     line = _fast_forward(f)
-    m = re.match("element vertex (\\d+)", line)
-    num_verts = int(m.groups()[0])
-
-    # read point data
+    num_verts = 0
+    num_cells = 0
     point_data_formats = []
     point_data_names = []
-    line = _fast_forward(f)
-    while line[:8] == "property":
-        m = re.match("property (.+) (.+)", line)
-        point_data_formats.append(m.groups()[0])
-        point_data_names.append(m.groups()[1])
-        line = _fast_forward(f)
-
-    m = re.match("element face (\\d+)", line)
-    num_cells = int(m.groups()[0])
-
-    assert num_cells >= 0
-
-    # read property lists
-    line = _fast_forward(f)
     cell_data_names = []
     cell_data_dtypes = []
-    # read cell data
-    while line[:8] == "property":
-        if line[:13] == "property list":
-            m = re.match("property list (.+) (.+) (.+)", line)
-            cell_data_dtypes.append(tuple(m.groups()[:-1]))
-        else:
-            m = re.match("property (.+) (.+)", line)
-            cell_data_dtypes.append(m.groups()[0])
-        cell_data_names.append(m.groups()[-1])
-        line = _fast_forward(f)
+    while line != "end_header":
+        if m := re.match("element vertex (\\d+)", line):
+            num_verts = int(m.groups()[0])
 
-    if line != "end_header":
-        raise ReadError()
+            # read point data
+            line = _fast_forward(f)
+            while line[:8] == "property":
+                m = re.match("property (.+) (.+)", line)
+                point_data_formats.append(m.groups()[0])
+                point_data_names.append(m.groups()[1])
+                line = _fast_forward(f)
+        elif m := re.match("element face (\\d+)", line):
+            num_cells = int(m.groups()[0])
+
+            assert num_cells >= 0
+
+            # read property lists
+            line = _fast_forward(f)
+            # read cell data
+            while line[:8] == "property":
+                if line[:13] == "property list":
+                    m = re.match("property list (.+) (.+) (.+)", line)
+                    cell_data_dtypes.append(tuple(m.groups()[:-1]))
+                else:
+                    m = re.match("property (.+) (.+)", line)
+                    cell_data_dtypes.append(m.groups()[0])
+                cell_data_names.append(m.groups()[-1])
+                line = _fast_forward(f)
 
     if is_binary:
         mesh = _read_binary(
