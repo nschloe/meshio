@@ -4,8 +4,12 @@ from .._exceptions import ReadError
 from .._mesh import CellBlock
 
 numpy_to_xdmf_dtype = {
+    "int8": ("Int", "1"),
+    "int16": ("Int", "2"),
     "int32": ("Int", "4"),
     "int64": ("Int", "8"),
+    "uint8": ("UInt", "1"),
+    "uint16": ("UInt", "2"),
     "uint32": ("UInt", "4"),
     "uint64": ("UInt", "8"),
     "float32": ("Float", "4"),
