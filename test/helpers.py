@@ -343,8 +343,9 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
     with tempfile.TemporaryDirectory() as temp_dir:
         filepath = os.path.join(temp_dir, "test" + extension)
-        writer(filepath, input_mesh)
-        mesh = reader(filepath)
+        p = Path(filepath)
+        writer(p, input_mesh)
+        mesh = reader(p)
 
     # Make sure the output is writeable
     assert mesh.points.flags["WRITEABLE"]

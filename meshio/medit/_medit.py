@@ -18,9 +18,8 @@ from ._medit_internal import medit_codes
 
 
 def read(filename):
-
     with open_file(filename) as f:
-        if filename[-1] == "b":
+        if str(filename)[-1] == "b":
             mesh = read_binary_buffer(f)
         else:
             mesh = read_ascii_buffer(f)
@@ -253,7 +252,7 @@ def read_ascii_buffer(f):
 
 
 def write(filename, mesh, float_fmt=".16e"):
-    if filename[-1] == "b":
+    if str(filename)[-1] == "b":
         write_binary_file(filename, mesh)
     else:
         write_ascii_file(filename, mesh, float_fmt)
