@@ -321,7 +321,7 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
 
     if binary:
         for k, (key, value) in enumerate(mesh.cells):
-            if value.dtype != c_int:
+            if value.dtype != c_size_t:
                 logging.warning(
                     "Binary Gmsh needs c_size_t (got %s). Converting.", value.dtype
                 )
