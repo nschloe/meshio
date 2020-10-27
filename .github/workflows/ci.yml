@@ -12,9 +12,6 @@ jobs:
     - uses: actions/checkout@v2
     - name: Lint with isort
       run: |
-        # For isort, must install all "system" dependencies
-        pip install .[all]
-        pip install pytest
         pip install isort
         isort --check .
     - name: Lint with flake8
