@@ -4,6 +4,7 @@ import tempfile
 import time
 import tracemalloc
 
+import dufte
 import matplotlib.pyplot as plt
 import numpy
 import meshzoo
@@ -12,12 +13,13 @@ import meshio
 
 
 def generate_triangular_mesh():
-    if pathlib.Path.is_file("sphere.xdmf"):
-        mesh = meshio.read("sphere.xdmf")
+    p = pathlib.Path("sphere.xdmf")
+    if pathlib.Path.is_file(p):
+        mesh = meshio.read(p)
     else:
         points, cells = meshzoo.icosa_sphere(300)
         mesh = meshio.Mesh(points, {"triangle": cells})
-        mesh.write("sphere.xdmf")
+        mesh.write(p)
     return mesh
 
 
@@ -39,11 +41,13 @@ def generate_tetrahedral_mesh():
 
 
 def plot_speed(names, elapsed_write, elapsed_read):
+    plt.style.use(dufte.style)
+
     names = numpy.asarray(names)
     elapsed_write = numpy.asarray(elapsed_write)
     elapsed_read = numpy.asarray(elapsed_read)
 
-    fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
     idx = numpy.argsort(elapsed_write)[::-1]
     ax[0].barh(range(len(names)), elapsed_write[idx], align="center")
@@ -72,6 +76,7 @@ def plot_file_sizes(names, file_sizes, mem_size):
     file_sizes = [file_sizes[i] for i in idx]
     names = [names[i] for i in idx]
 
+    plt.figure(figsize=(8, 8))
     ax = plt.gca()
     y_pos = numpy.arange(len(file_sizes))
     ax.barh(y_pos, file_sizes, align="center")
@@ -98,7 +103,7 @@ def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
     peak_memory_write = numpy.asarray(peak_memory_write)
     peak_memory_read = numpy.asarray(peak_memory_read)
 
-    fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
     idx = numpy.argsort(peak_memory_write)[::-1]
     ax[0].barh(range(len(names)), peak_memory_write[idx], align="center")
@@ -175,7 +180,7 @@ def read_write(plot=False):
         "MOAB": (meshio.h5m.write, meshio.h5m.read, ["out.h5m"]),
         "Nastran": (meshio.nastran.write, meshio.nastran.read, ["out.bdf"]),
         "OBJ": (meshio.obj.write, meshio.obj.read, ["out.obj"]),
-        "OFF": (meshio.off.write, meshio.off.read, ["out.off"]),  # TODO add
+        "OFF": (meshio.off.write, meshio.off.read, ["out.off"]),
         "Permas": (meshio.permas.write, meshio.permas.read, ["out.dato"]),
         "PLY (binary)": (
             lambda f, m: meshio.ply.write(f, m, binary=True),
