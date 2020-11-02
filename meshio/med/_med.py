@@ -406,17 +406,16 @@ def _write_data(
 
 def _component_names(n_components):
     """
-    To be correctly read in a MED viewer, each component must be a
-    string of width 16. Since we do not know the physical nature of
-    the data, we just use V1, V2, ...
+    To be correctly read in a MED viewer, each component must be a string of width 16.
+    Since we do not know the physical nature of the data, we just use V1, V2, ...
     """
     return "".join(["V%-15d" % (i + 1) for i in range(n_components)])
 
 
 def _family_name(set_id, name):
     """
-    Return the FAM object name corresponding to
-    the unique set id and a list of subset names
+    Return the FAM object name corresponding to the unique set id and a list of subset
+    names
     """
     return "FAM" + "_" + str(set_id) + "_" + "_".join(name)
 
@@ -432,8 +431,10 @@ def _write_families(fm_group, tags):
         group.attrs.create("NBR", len(name))  # number of subsets
         dataset = group.create_dataset("NOM", (len(name),), dtype="80int8")
         for i in range(len(name)):
-            name_80 = name[i] + "\x00" * (80 - len(name[i]))  # make name 80 characters
-            dataset[i] = [ord(x) for x in name_80]
+            # make name 80 characters
+            name_80 = name[i] + "\x00" * (80 - len(name[i]))
+            # Needs numpy array, see <https://github.com/h5py/h5py/issues/1735>
+            dataset[i] = numpy.array([ord(x) for x in name_80])
 
 
 register("med", [".med"], read, {"med": write})
