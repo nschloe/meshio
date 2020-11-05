@@ -70,7 +70,7 @@ def read(filename):
     return mesh
 
 
-def _fast_forward(f):
+def _next_line(f):
     # fast forward to the next significant line
     while True:
         line = f.readline().decode("utf-8").strip()
@@ -85,7 +85,7 @@ def read_buffer(f):
     if line != "ply":
         raise ReadError("Expected ply")
 
-    line = _fast_forward(f)
+    line = _next_line(f)
     if line == "format ascii 1.0":
         is_binary = False
     elif line == "format binary_big_endian 1.0":
@@ -98,7 +98,7 @@ def read_buffer(f):
         endianness = "<"
 
     # read header
-    line = _fast_forward(f)
+    line = _next_line(f)
     num_verts = 0
     num_cells = 0
     point_data_formats = []
@@ -108,23 +108,26 @@ def read_buffer(f):
     while line != "end_header":
         m_vert = re.match("element vertex (\\d+)", line)
         m_face = re.match("element face (\\d+)", line)
-        if m_vert is not None:
+        if line[:8] == "obj_info":
+            line = _next_line(f)
+        elif m_vert is not None:
             num_verts = int(m_vert.groups()[0])
 
             # read point data
-            line = _fast_forward(f)
+            line = _next_line(f)
             while line[:8] == "property":
                 m = re.match("property (.+) (.+)", line)
                 point_data_formats.append(m.groups()[0])
                 point_data_names.append(m.groups()[1])
-                line = _fast_forward(f)
+                line = _next_line(f)
         elif m_face is not None:
             num_cells = int(m_face.groups()[0])
 
-            assert num_cells >= 0
+            if num_cells < 0:
+                raise ReadError(f"Expected positive num_cells (got `{num_cells}`.")
 
             # read property lists
-            line = _fast_forward(f)
+            line = _next_line(f)
             # read cell data
             while line[:8] == "property":
                 if line[:13] == "property list":
@@ -134,8 +137,14 @@ def read_buffer(f):
                     m = re.match("property (.+) (.+)", line)
                     cell_data_dtypes.append(m.groups()[0])
                 cell_data_names.append(m.groups()[-1])
-                line = _fast_forward(f)
+                line = _next_line(f)
+        else:
+            raise ReadError(
+                "Expected `element vertex` or `element face` or `obj_info`, "
+                f"got `{line}`"
+            )
 
+    # read header
     if is_binary:
         mesh = _read_binary(
             f,
