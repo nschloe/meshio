@@ -347,36 +347,18 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
         )
         _write_nodes(fh, mesh.points, mesh.cells, mesh.point_data, float_fmt, binary)
 
-        # IMPLEMENTATION NOTE: If dimtag information is available (key gmsh:dim_tags)
-        # this is stored in meshio as an n x 2 array. Gmsh accepts only arrays of size
-        # 1, 3 or 9, and _write_data() will raise an error if point_data with the
-        # wrong size is encountered. As a workaround, _write_nodes() converts the
-        # dim_tag information to two arrays (n x 1). The data in gmsh:dim_tag is then
-        # temporarily removed from point_data, and restored to Mesh when writing
-        # is done.
-
-        if "gmsh:dim_tags" in mesh.point_data:
-            # Temporarily store the data as 1d arrays
-            dim_tags = mesh.point_data.pop("gmsh:dim_tags", None)
-            mesh.point_data["node_entity_dimension"] = dim_tags[:, 0]
-            mesh.point_data["point_entity"] = dim_tags[:, 1]
-
         _write_elements(fh, cells, mesh.cell_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt, binary)
         for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodeData", name, dat, binary)
+            # Skip dim_tags; the information here is found elsewhere.
+            if name not in ["gmsh:dim_tags"]:
+                _write_data(fh, "NodeData", name, dat, binary)
 
         cell_data_raw = raw_from_cell_data(mesh.cell_data)
         for name, dat in cell_data_raw.items():
-            _write_data(fh, "ElementData", name, dat, binary)
-
-        # Restore dim_tag information if available
-        if "point_entity" in mesh.point_data:
-            mesh.point_data["gmsh:dim_tags"] = dim_tags
-            # Also remove the temporary 1d arrays
-            mesh.point_data.pop("node_entity_dimension")
-            mesh.point_data.pop("point_entity")
+            if name not in ["gmsh:physical", "gmsh:geometrical"]:
+                _write_data(fh, "ElementData", name, dat, binary)
 
 
 def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
