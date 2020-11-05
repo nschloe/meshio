@@ -43,6 +43,7 @@ def read_buffer(f, is_ascii, data_size):
 
     # Initialize the optional data fields
     points = []
+    cells = None
     field_data = {}
     cell_data_raw = {}
     cell_tags = {}
@@ -51,7 +52,6 @@ def read_buffer(f, is_ascii, data_size):
     bounding_entities = None
     cell_sets = {}
     periodic = None
-    cells = None
     while True:
         # fast-forward over blank lines
         line, is_eof = _fast_forward_over_blank_lines(f)
@@ -303,10 +303,6 @@ def _read_periodic(f, is_ascii, data_size):
 
 
 def write(filename, mesh, float_fmt=".16e", binary=True):
-    write4_1(filename, mesh, float_fmt=float_fmt, binary=binary)
-
-
-def write4_1(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
     """
@@ -329,6 +325,22 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
 
     cells = _meshio_to_gmsh_order(mesh.cells)
 
+    # Filter the point data: gmsh:dim_tags are tags, the rest is actual point data.
+    point_data = {}
+    for key, d in mesh.point_data.items():
+        if key not in ["gmsh:dim_tags"]:
+            point_data[key] = d
+
+    # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the rest is
+    # actual cell data.
+    tag_data = {}
+    cell_data = {}
+    for key, d in mesh.cell_data.items():
+        if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
+            tag_data[key] = d
+        else:
+            cell_data[key] = d
+
     with open(filename, "wb") as fh:
         file_type = 1 if binary else 0
         data_size = c_size_t.itemsize
@@ -342,44 +354,20 @@ def write4_1(filename, mesh, float_fmt=".16e", binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        _write_entities(
-            fh, cells, mesh.cell_data, mesh.cell_sets, mesh.point_data, binary
-        )
+        _write_entities(fh, cells, tag_data, mesh.cell_sets, mesh.point_data, binary)
         _write_nodes(fh, mesh.points, mesh.cells, mesh.point_data, float_fmt, binary)
-
-        # IMPLEMENTATION NOTE: If dimtag information is available (key gmsh:dim_tags)
-        # this is stored in meshio as an n x 2 array. Gmsh accepts only arrays of size
-        # 1, 3 or 9, and _write_data() will raise an error if point_data with the
-        # wrong size is encountered. As a workaround, _write_nodes() converts the
-        # dim_tag information to two arrays (n x 1). The data in gmsh:dim_tag is then
-        # temporarily removed from point_data, and restored to Mesh when writing
-        # is done.
-
-        if "gmsh:dim_tags" in mesh.point_data:
-            # Temporarily store the data as 1d arrays
-            dim_tags = mesh.point_data.pop("gmsh:dim_tags", None)
-            mesh.point_data["node_entity_dimension"] = dim_tags[:, 0]
-            mesh.point_data["point_entity"] = dim_tags[:, 1]
-
-        _write_elements(fh, cells, mesh.cell_data, binary)
+        _write_elements(fh, cells, tag_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt, binary)
-        for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodeData", name, dat, binary)
 
-        cell_data_raw = raw_from_cell_data(mesh.cell_data)
+        for name, dat in point_data.items():
+            _write_data(fh, "NodeData", name, dat, binary)
+        cell_data_raw = raw_from_cell_data(cell_data)
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, binary)
 
-        # Restore dim_tag information if available
-        if "point_entity" in mesh.point_data:
-            mesh.point_data["gmsh:dim_tags"] = dim_tags
-            # Also remove the temporary 1d arrays
-            mesh.point_data.pop("node_entity_dimension")
-            mesh.point_data.pop("point_entity")
 
-
-def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
+def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     """Write entity section in a .msh file.
 
     The entity section links up to three kinds of information:
@@ -394,7 +382,7 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
     The entities of all geometric objects is pulled from
     point_data['gmsh:dim_tags']. For details, see the function _write_nodes().
 
-    Physical tags are specified as cell_data, while the boundary of a geometric
+    Physical tags are specified as tag_data, while the boundary of a geometric
     object is specified in cell_sets.
 
     """
@@ -457,7 +445,7 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
     for ci in range(len(cells)):
         cell_dim_tags[ci] = [
             _topological_dimension[cells[ci][0]],
-            cell_data["gmsh:geometrical"][ci][0],
+            tag_data["gmsh:geometrical"][ci][0],
         ]
 
     # We will only deal with bounding entities if this information is available
@@ -511,7 +499,7 @@ def _write_entities(fh, cells, cell_data, cell_sets, point_data, binary):
         if matching_cell_block.size > 0:
             # entity has a physical tag, write this
             # ASSUMPTION: There is a single physical tag for this
-            physical_tag = cell_data["gmsh:physical"][matching_cell_block[0]][0]
+            physical_tag = tag_data["gmsh:physical"][matching_cell_block[0]][0]
             if binary:
                 numpy.array([1], dtype=c_size_t).tofile(fh)
                 numpy.array([physical_tag], dtype=c_int).tofile(fh)
@@ -666,7 +654,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     return
 
 
-def _write_elements(fh, cells, cell_data, binary):
+def _write_elements(fh, cells, tag_data, binary):
     """write the $Elements block
 
     $Elements
@@ -697,8 +685,8 @@ def _write_elements(fh, cells, cell_data, binary):
 
             dim = _topological_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
-            if "gmsh:geometrical" in cell_data:
-                entity_tag = cell_data["gmsh:geometrical"][ci][0]
+            if "gmsh:geometrical" in tag_data:
+                entity_tag = tag_data["gmsh:geometrical"][ci][0]
             else:
                 entity_tag = 0
 
@@ -737,8 +725,8 @@ def _write_elements(fh, cells, cell_data, binary):
 
             dim = _topological_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
-            if "gmsh:geometrical" in cell_data:
-                entity_tag = cell_data["gmsh:geometrical"][ci][0]
+            if "gmsh:geometrical" in tag_data:
+                entity_tag = tag_data["gmsh:geometrical"][ci][0]
             else:
                 entity_tag = 0
 

@@ -10,6 +10,7 @@ from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
+    _fast_forward_over_blank_lines,
     _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
     _gmsh_to_meshio_type,
@@ -38,12 +39,14 @@ def read_buffer(f, is_ascii, data_size):
     point_data = {}
     periodic = None
     while True:
-        line = f.readline().decode("utf-8")
-        if not line:
-            # EOF
+        # fast-forward over blank lines
+        line, is_eof = _fast_forward_over_blank_lines(f)
+        if is_eof:
             break
+
         if line[0] != "$":
-            raise ReadError()
+            raise ReadError(f"Unexpected line {repr(line)}")
+
         environ = line[1:].strip()
 
         if environ == "PhysicalNames":
@@ -267,25 +270,6 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
         )
 
-    # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the rest is
-    # actual cell data.
-    tag_data = {}
-    other_data = {}
-    for key, d in mesh.cell_data.items():
-        if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
-            tag_data[key] = d
-        else:
-            other_data[key] = d
-
-    # Always include the physical and geometrical tags. See also the quoted excerpt from
-    # the gmsh documentation in the _read_cells_ascii function above.
-    for tag in ["gmsh:physical", "gmsh:geometrical"]:
-        if tag not in tag_data:
-            logging.warning(
-                "Appending zeros to replace the missing {} tag data.".format(tag[5:])
-            )
-            tag_data[tag] = [numpy.zeros(len(x.data), dtype=c_int) for x in mesh.cells]
-
     if binary:
         for k, (key, value) in enumerate(mesh.cells):
             if value.dtype != c_int:
@@ -296,6 +280,31 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
                 mesh.cells[k] = CellBlock(key, numpy.array(value, dtype=c_int))
 
     cells = _meshio_to_gmsh_order(mesh.cells)
+
+    # Filter the point data: gmsh:dim_tags are tags, the rest is actual point data.
+    point_data = {}
+    for key, d in mesh.point_data.items():
+        if key not in ["gmsh:dim_tags"]:
+            point_data[key] = d
+
+    # Split the cell data: gmsh:physical and gmsh:geometrical are tags, the rest is
+    # actual cell data.
+    tag_data = {}
+    cell_data = {}
+    for key, d in mesh.cell_data.items():
+        if key in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
+            tag_data[key] = d
+        else:
+            cell_data[key] = d
+
+    # Always include the physical and geometrical tags. See also the quoted excerpt from
+    # the gmsh documentation in the _read_cells_ascii function above.
+    for tag in ["gmsh:physical", "gmsh:geometrical"]:
+        if tag not in tag_data:
+            logging.warning(
+                "Appending zeros to replace the missing {} tag data.".format(tag[5:])
+            )
+            tag_data[tag] = [numpy.zeros(len(x.data), dtype=c_int) for x in mesh.cells]
 
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
@@ -313,10 +322,10 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
         _write_elements(fh, cells, tag_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt)
-        for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodeData", name, dat, binary)
 
-        cell_data_raw = raw_from_cell_data(other_data)
+        for name, dat in point_data.items():
+            _write_data(fh, "NodeData", name, dat, binary)
+        cell_data_raw = raw_from_cell_data(cell_data)
         for name, dat in cell_data_raw.items():
             _write_data(fh, "ElementData", name, dat, binary)
 
