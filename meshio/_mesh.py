@@ -81,6 +81,7 @@ class Mesh:
         return "\n".join(lines)
 
     def prune(self):
+        # nschloe, 2020-11:
         warnings.warn(
             "prune() will soon be deprecated. "
             "Use remove_lower_dimensional_cells(), remove_orphaned_nodes() instead."
