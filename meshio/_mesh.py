@@ -1,4 +1,5 @@
 import collections
+import warnings
 
 import numpy
 
@@ -78,6 +79,14 @@ class Mesh:
             lines.append(f"  Cell data: {names}")
 
         return "\n".join(lines)
+
+    def prune(self):
+        warnings.warn(
+            "prune() will soon be deprecated. "
+            "Use remove_lower_dimensional_cells(), remove_orphaned_nodes() instead."
+        )
+        self.remove_lower_dimensional_cells()
+        self.remove_orphaned_nodes()
 
     def remove_lower_dimensional_cells(self):
         """Remove all cells of topological dimension lower than the max dimension in the
