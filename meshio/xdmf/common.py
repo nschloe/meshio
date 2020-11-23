@@ -20,7 +20,7 @@ xdmf_to_numpy_type = {v: k for k, v in numpy_to_xdmf_dtype.items()}
 dtype_to_format_string = {
     "int32": "%d",
     "int64": "%d",
-    "unit32": "%d",
+    "uint32": "%d",
     "uint64": "%d",
     "float32": "%.7e",
     "float64": "%.16e",
