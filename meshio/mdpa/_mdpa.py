@@ -527,16 +527,13 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
         # rest is actual cell data.
         tag_data = {}
         other_data = {}
-        for cell_type, a in mesh.cell_data.items():
-            tag_data[cell_type] = {}
-            other_data[cell_type] = {}
-            for key, data in a.items():
-                if key in ["gmsh:physical", "gmsh:geometrical"]:
-                    tag_data[cell_type][key] = data.astype(numpy.int32)
-                else:
-                    other_data[cell_type][key] = data
+        for key, data in mesh.cell_data.items():
+            if key in ["gmsh:physical", "gmsh:geometrical"]:
+                tag_data[key] = [entry.astype(numpy.int32) for entry in data]
+            else:
+                other_data[key] = data
 
-        # We identity which dimension are we
+        # identity dimension
         dimension = 2
         for c in cells:
             name_elem = _meshio_to_mdpa_type[c.type]
@@ -544,18 +541,14 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
                 dimension = 3
                 break
 
-        # We identify the entities
+        # identify entities
         _write_nodes(fh, mesh.points, float_fmt, binary)
         _write_elements_and_conditions(fh, cells, tag_data, binary, dimension)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodalData", name, dat, binary)
         cell_data_raw = raw_from_cell_data(other_data)
-        for (
-            name,
-            dat,
-        ) in (
-            cell_data_raw.items()
-        ):  # NOTE: We will assume always when writing that the components are elements (for now)
+        for name, dat in cell_data_raw.items():
+            # assume always that the components are elements (for now)
             _write_data(fh, "ElementalData", name, dat, binary)
 
 
