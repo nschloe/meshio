@@ -1,5 +1,6 @@
 import collections
 import warnings
+from typing import Optional
 
 import numpy
 
@@ -146,25 +147,25 @@ class Mesh:
             self.cells[k] = CellBlock(c.type, all_cells_flat[k : k + n].reshape(s))
             k += n
 
-    def prune_z_0(self, tol=1.0e-13):
+    def prune_z_0(self, tol: float = 1.0e-13):
         """Remove third (z) component of points if it is 0 everywhere (up to a
         tolerance).
         """
         if self.points.shape[1] == 3 and numpy.all(numpy.abs(self.points[:, 2]) < tol):
             self.points = self.points[:, :2]
 
-    def write(self, path_or_buf, file_format=None, **kwargs):
+    def write(self, path_or_buf, file_format: Optional[str] = None, **kwargs):
         # avoid circular import
         from ._helpers import write
 
         write(path_or_buf, self, file_format, **kwargs)
 
-    def get_cells_type(self, cell_type):
+    def get_cells_type(self, cell_type: str):
         if not any(c.type == cell_type for c in self.cells):
             return numpy.array([], dtype=int)
         return numpy.concatenate([c.data for c in self.cells if c.type == cell_type])
 
-    def get_cell_data(self, name, cell_type):
+    def get_cell_data(self, name: str, cell_type: str):
         return numpy.concatenate(
             [d for c, d in zip(self.cells, self.cell_data[name]) if c.type == cell_type]
         )
