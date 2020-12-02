@@ -289,10 +289,9 @@ def _parse_raw_binary(filename):
     appended_data_tag = root.find("AppendedData")
     appended_data_tag.set("encoding", "base64")
 
-    if "compressor" in root.attrib:
-        c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[
-            root.get("compressor")
-        ]
+    compressor = root.get("compressor")
+    if compressor is not None:
+        c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[compressor]
         root.attrib.pop("compressor")
 
         # raise ReadError("Compressed raw binary VTU files not supported.")
@@ -571,6 +570,7 @@ class VtuReader:
         byte_offsets[0] = 0
         numpy.cumsum(block_sizes, out=byte_offsets[1:])
 
+        assert self.compression is not None
         c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[
             self.compression
         ]
@@ -789,13 +789,12 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                     f.write((fmt + "\n").format(item))
 
         da.text_writer = text_writer
-        return
 
     def _polyhedron_face_cells(face_cells):
         # Define the faces of each cell on the format specfied for VTU Polyhedron cells.
-        # These are defined in Mesh.polyhedron_faces, as block data. The block consists of a
-        # nested list (outer list represents cell, inner is faces for this cells), where the
-        # items of the inner list are the nodes of specific faces.
+        # These are defined in Mesh.polyhedron_faces, as block data. The block consists
+        # of a nested list (outer list represents cell, inner is faces for this cells),
+        # where the items of the inner list are the nodes of specific faces.
         #
         # The output format is specified at https://vtk.org/Wiki/VTK/Polyhedron_Support
 
@@ -841,11 +840,11 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         cls = ET.SubElement(piece, "Cells")
 
         if is_polyhedron_grid:
-            # The VTK polyhedron format requires both Cell-node connectivity,
-            # and a definition of faces. The cell-node relation must be recoved
-            # from the cell-face-nodes currently in CellBlocks.
-            # NOTE: If polyhedral cells are implemented for more mesh types,
-            # this code block may be useful for those as well.
+            # The VTK polyhedron format requires both Cell-node connectivity, and a
+            # definition of faces. The cell-node relation must be recoved from the
+            # cell-face-nodes currently in CellBlocks.
+            # NOTE: If polyhedral cells are implemented for more mesh types, this code
+            # block may be useful for those as well.
             con = []
             num_nodes_per_cell = []
             for block in mesh.cells:

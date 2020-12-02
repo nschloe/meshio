@@ -122,7 +122,12 @@ class XdmfReader:
         root = ET.fromstring(c_data)
         for child in root:
             str_tag = child.get("key")
-            dim = int(child.get("dim"))
+            dim = child.get("dim")
+            if dim is None:
+                raise ReadError()
+            dim = int(dim)
+            if child.text is None:
+                raise ReadError()
             num_tag = int(child.text)
             field_data[str_tag] = numpy.array([num_tag, dim])
         return field_data
