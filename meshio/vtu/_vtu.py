@@ -858,7 +858,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                     num_nodes_per_cell.append(len(unique_nodes))
 
             connectivity = numpy.array(con)
-            offsets = numpy.hstack(([0], numpy.cumsum(num_nodes_per_cell)[:-1]))
+            # offsets = numpy.hstack(([0], numpy.cumsum(num_nodes_per_cell)[:-1]))
             offsets = numpy.cumsum(num_nodes_per_cell)
 
             # Initialize data structures for polyhedral cells

@@ -166,11 +166,10 @@ def read_buffer(f):
                 )
             markers_found += 1
 
-    if markers_found != markers_found == expected_nmarkers:
+    if markers_found != expected_nmarkers:
         logging.warning(
-            "expected {} markes according to NMARK value but found only {}".format(
-                expected_nmarkers, markers_found
-            )
+            f"expected {expected_nmarkers} markes according to NMARK value "
+            f"but found only {markers_found}"
         )
 
     # merge boundary elements in a single cellblock per cell type

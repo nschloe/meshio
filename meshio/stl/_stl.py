@@ -46,7 +46,11 @@ def read(filename):
 def iter_loadtxt(infile, skiprows=0, comments=["#"], dtype=float, usecols=None):
     def iter_func():
         for _ in range(skiprows):
-            next(infile)
+            try:
+                next(infile)
+            except StopIteration:
+                raise ReadError("EOF Skipped too many rows")
+
         for line in infile:
             line = line.decode("utf-8").strip()
             if line.startswith(comments):
