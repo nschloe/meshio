@@ -236,18 +236,16 @@ class Mesh:
         for k, c in enumerate(zip(*self.cell_sets.values())):
             # `c` contains the values of all cell sets for a particular cell block
             c = [([] if cc is None else cc) for cc in c]
-            # check if all numbers appear exactly once in the groups
-            d = numpy.sort(numpy.concatenate(c))
+            conc_c = numpy.concatenate(c)
+            argsort_c = numpy.argsort(conc_c)
+            d = conc_c[argsort_c]
             if numpy.all(d == numpy.arange(len(d))):
-                arr = numpy.empty(len(d), dtype=int)
-                arr[:] = numpy.nan
-                for k, cc in enumerate(c):
-                    arr[cc] = k
+                # A typical case: All numbers appear exactly once in the groups.
+                arr = argsort_c
             else:
                 # We could just append None, but some mesh formats expect _something_
-                # here. Go for an array of NaNs.
-                arr = numpy.empty(len(self.cells[k]), dtype=int)
-                arr[:] = numpy.nan
+                # here. Go for an array of -1s. (NaN is not a legal int.)
+                arr = numpy.full(len(self.cells[k]), -1, dtype=int)
 
             intfun.append(arr)
 
