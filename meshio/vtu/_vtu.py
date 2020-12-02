@@ -133,12 +133,12 @@ def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
         num_faces_this_cell = faces[cell_start]
         faces_this_cell = []
         next_face = cell_start + 1
-        for fi in range(num_faces_this_cell):
+        for _ in range(num_faces_this_cell):
             num_nodes_this_face = faces[next_face]
             faces_this_cell.append(
                 numpy.array(
                     faces[next_face + 1 : (next_face + num_nodes_this_face + 1)],
-                    dtype=numpy.int,
+                    dtype=int,
                 )
             )
             # Increase by number of nodes just read, plus the item giving
@@ -289,10 +289,9 @@ def _parse_raw_binary(filename):
     appended_data_tag = root.find("AppendedData")
     appended_data_tag.set("encoding", "base64")
 
-    if "compressor" in root.attrib:
-        c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[
-            root.get("compressor")
-        ]
+    compressor = root.get("compressor")
+    if compressor is not None:
+        c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[compressor]
         root.attrib.pop("compressor")
 
         # raise ReadError("Compressed raw binary VTU files not supported.")
@@ -571,6 +570,7 @@ class VtuReader:
         byte_offsets[0] = 0
         numpy.cumsum(block_sizes, out=byte_offsets[1:])
 
+        assert self.compression is not None
         c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[
             self.compression
         ]
@@ -789,18 +789,17 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                     f.write((fmt + "\n").format(item))
 
         da.text_writer = text_writer
-        return
 
     def _polyhedron_face_cells(face_cells):
         # Define the faces of each cell on the format specfied for VTU Polyhedron cells.
-        # These are defined in Mesh.polyhedron_faces, as block data. The block consists of a
-        # nested list (outer list represents cell, inner is faces for this cells), where the
-        # items of the inner list are the nodes of specific faces.
+        # These are defined in Mesh.polyhedron_faces, as block data. The block consists
+        # of a nested list (outer list represents cell, inner is faces for this cells),
+        # where the items of the inner list are the nodes of specific faces.
         #
         # The output format is specified at https://vtk.org/Wiki/VTK/Polyhedron_Support
 
         # Initialize array for size of data per cell.
-        data_size_per_cell = numpy.zeros(len(face_cells), dtype=numpy.int)
+        data_size_per_cell = numpy.zeros(len(face_cells), dtype=int)
 
         # The data itself is of unknown size, and cannot be initialized
         data = []
@@ -841,11 +840,11 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         cls = ET.SubElement(piece, "Cells")
 
         if is_polyhedron_grid:
-            # The VTK polyhedron format requires both Cell-node connectivity,
-            # and a definition of faces. The cell-node relation must be recoved
-            # from the cell-face-nodes currently in CellBlocks.
-            # NOTE: If polyhedral cells are implemented for more mesh types,
-            # this code block may be useful for those as well.
+            # The VTK polyhedron format requires both Cell-node connectivity, and a
+            # definition of faces. The cell-node relation must be recoved from the
+            # cell-face-nodes currently in CellBlocks.
+            # NOTE: If polyhedral cells are implemented for more mesh types, this code
+            # block may be useful for those as well.
             con = []
             num_nodes_per_cell = []
             for block in mesh.cells:
@@ -919,10 +918,8 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
         if is_polyhedron_grid:
             # Also store face-node relation
-            numpy_to_xml_array(cls, "faces", numpy.array(faces, dtype=numpy.int))
-            numpy_to_xml_array(
-                cls, "faceoffsets", numpy.array(faceoffsets, dtype=numpy.int)
-            )
+            numpy_to_xml_array(cls, "faces", numpy.array(faces, dtype=int))
+            numpy_to_xml_array(cls, "faceoffsets", numpy.array(faceoffsets, dtype=int))
 
     if mesh.point_data:
         pd = ET.SubElement(piece, "PointData")

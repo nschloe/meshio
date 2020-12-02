@@ -1,4 +1,5 @@
 import pathlib
+from typing import List, Optional, Type
 
 import numpy
 
@@ -12,7 +13,7 @@ reader_map = {}
 _writer_map = {}
 
 
-def register(name, extensions, reader, writer_map):
+def register(name: str, extensions: List[str], reader, writer_map):
     for ext in extensions:
         extension_to_filetype[ext] = name
 
@@ -21,7 +22,7 @@ def register(name, extensions, reader, writer_map):
     _writer_map.update(writer_map)
 
 
-def _filetype_from_path(path):
+def _filetype_from_path(path: Type[pathlib.Path]):
     ext = ""
     out = None
     for suffix in reversed(path.suffixes):
@@ -34,7 +35,7 @@ def _filetype_from_path(path):
     return out
 
 
-def read(filename, file_format=None):
+def read(filename, file_format: Optional[str] = None):
     """Reads an unstructured mesh with added data.
 
     :param filenames: The files/PathLikes to read from.
@@ -96,7 +97,7 @@ def write_points_cells(
     return write(filename, mesh, file_format=file_format, **kwargs)
 
 
-def write(filename, mesh, file_format=None, **kwargs):
+def write(filename, mesh: Type[Mesh], file_format: Optional[str] = None, **kwargs):
     """Writes mesh together with data to a file.
 
     :params filename: File to write to.

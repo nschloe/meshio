@@ -22,8 +22,8 @@ ply_to_numpy_dtype = {
     # [u]char is often used as [u]int, e.g., from Wikipedia:
     # > The word 'list' indicates that the data is a list of values, the first of which
     # > is the number of entries in the list (represented as a 'uchar' in this case).
-    "char": numpy.int,
-    "uchar": numpy.uint,
+    "char": numpy.int8,
+    "uchar": numpy.uint8,
     "short": numpy.int16,
     "ushort": numpy.uint16,
     "int": numpy.int32,
@@ -88,6 +88,7 @@ def read_buffer(f):
     line = _next_line(f)
     if line == "format ascii 1.0":
         is_binary = False
+        endianness = None
     elif line == "format binary_big_endian 1.0":
         is_binary = True
         endianness = ">"
@@ -338,7 +339,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
     def parse_ragged(start, num_cells):
         at = start
         yield at
-        for i in range(num_cells):
+        for _ in range(num_cells):
             count = int.from_bytes(buffer[at : at + count_itemsize], byteorder)
             at += count * data_itemsize + count_itemsize
             yield at

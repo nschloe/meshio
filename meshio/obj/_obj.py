@@ -41,11 +41,11 @@ def read_buffer(f):
 
         if split[0] == "v":
             # vertex
-            points.append([numpy.float(item) for item in split[1:]])
+            points.append([float(item) for item in split[1:]])
         elif split[0] == "vn":
-            vertex_normals.append([numpy.float(item) for item in split[1:]])
+            vertex_normals.append([float(item) for item in split[1:]])
         elif split[0] == "vt":
-            texture_coords.append([numpy.float(item) for item in split[1:]])
+            texture_coords.append([float(item) for item in split[1:]])
         elif split[0] == "s":
             # "s 1" or "s off" controls smooth shading
             pass
@@ -122,7 +122,7 @@ def write(filename, mesh):
             for vt in dat:
                 f.write(fmt.format(*vt))
 
-        for cell_type, cell_array in mesh.cells:
+        for _, cell_array in mesh.cells:
             fmt = "f " + " ".join(["{}"] * cell_array.shape[1]) + "\n"
             for c in cell_array:
                 f.write(fmt.format(*(c + 1)))

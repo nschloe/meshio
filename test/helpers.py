@@ -286,7 +286,7 @@ polyhedron_mesh = meshio.Mesh(
 )
 
 
-def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=numpy.float):
+def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=float):
     numpy.random.seed(seed)
     mesh2 = copy.deepcopy(mesh)
 

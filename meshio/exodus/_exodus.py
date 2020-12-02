@@ -161,7 +161,7 @@ def read(filename):  # noqa: C901
 
         cell_data = {}
         k = 0
-        for cell_type, cell in cells:
+        for _, cell in cells:
             n = len(cell)
             for name, data in zip(cell_data_names, cd.values()):
                 if name not in cell_data:
@@ -205,6 +205,7 @@ def categorize(names):
                 pass
             else:
                 found_y = True
+            found_z = False
             try:
                 iz = names.index(name[:-1] + "Z")
             except ValueError:
