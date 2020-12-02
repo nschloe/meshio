@@ -133,12 +133,12 @@ def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
         num_faces_this_cell = faces[cell_start]
         faces_this_cell = []
         next_face = cell_start + 1
-        for fi in range(num_faces_this_cell):
+        for _ in range(num_faces_this_cell):
             num_nodes_this_face = faces[next_face]
             faces_this_cell.append(
                 numpy.array(
                     faces[next_face + 1 : (next_face + num_nodes_this_face + 1)],
-                    dtype=numpy.int,
+                    dtype=int,
                 )
             )
             # Increase by number of nodes just read, plus the item giving
@@ -800,7 +800,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         # The output format is specified at https://vtk.org/Wiki/VTK/Polyhedron_Support
 
         # Initialize array for size of data per cell.
-        data_size_per_cell = numpy.zeros(len(face_cells), dtype=numpy.int)
+        data_size_per_cell = numpy.zeros(len(face_cells), dtype=int)
 
         # The data itself is of unknown size, and cannot be initialized
         data = []
@@ -919,10 +919,8 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
         if is_polyhedron_grid:
             # Also store face-node relation
-            numpy_to_xml_array(cls, "faces", numpy.array(faces, dtype=numpy.int))
-            numpy_to_xml_array(
-                cls, "faceoffsets", numpy.array(faceoffsets, dtype=numpy.int)
-            )
+            numpy_to_xml_array(cls, "faces", numpy.array(faces, dtype=int))
+            numpy_to_xml_array(cls, "faceoffsets", numpy.array(faceoffsets, dtype=int))
 
     if mesh.point_data:
         pd = ET.SubElement(piece, "PointData")
