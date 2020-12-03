@@ -185,6 +185,8 @@ def read_ascii_buffer(f):
         "Hexahedra": ("hexahedron", 8),  # Frey
         "Hexaedra": ("hexahedron", 8),  # Dobrzynski
     }
+    points = None
+    dtype = None
 
     while True:
         line = f.readline()
@@ -214,6 +216,8 @@ def read_ascii_buffer(f):
         elif items[0] == "Vertices":
             if dim <= 0:
                 raise ReadError()
+            if dtype is None:
+                raise ReadError("Expected `MeshVersionFormatted` before `Vertices`")
             num_verts = int(f.readline())
             out = numpy.fromfile(
                 f, count=num_verts * (dim + 1), dtype=dtype, sep=" "
@@ -248,6 +252,8 @@ def read_ascii_buffer(f):
             if items[0] != "End":
                 raise ReadError("Unknown keyword '{}'.".format(items[0]))
 
+    if points is None:
+        raise ReadError("Expected `Vertices`")
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 

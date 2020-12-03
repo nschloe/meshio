@@ -45,6 +45,7 @@ def read(filename):
 # Code adapted from <https://stackoverflow.com/a/8964779/353337>.
 def iter_loadtxt(infile, skiprows=0, comments=["#"], dtype=float, usecols=None):
     def iter_func():
+        items = None
         for _ in range(skiprows):
             try:
                 next(infile)
@@ -60,6 +61,9 @@ def iter_loadtxt(infile, skiprows=0, comments=["#"], dtype=float, usecols=None):
             usecols_ = range(len(items)) if usecols is None else usecols
             for idx in usecols_:
                 yield dtype(items[idx])
+
+        if items is None:
+            raise ReadError()
         iter_loadtxt.rowlength = len(items) if usecols is None else len(usecols)
 
     data = numpy.fromiter(iter_func(), dtype=dtype)

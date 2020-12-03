@@ -21,6 +21,11 @@ def _read_mesh(filename):
     # Use iterparse() to avoid loading the entire file via parse(). iterparse()
     # allows to discard elements (via clear()) after they have been processed.
     # See <https://stackoverflow.com/a/326541/353337>.
+    dim = None
+    points = None
+    keys = None
+    cell_type = None
+    num_nodes_per_cell = None
     for event, elem in ET.iterparse(filename, events=("start", "end")):
         if event == "end":
             continue
@@ -38,14 +43,20 @@ def _read_mesh(filename):
             ]
             cell_tags = [f"v{i}" for i in range(num_nodes_per_cell)]
         elif elem.tag == "vertices":
+            if dim is None:
+                raise ReadError("Expected `mesh` before `vertices`")
             points = numpy.empty((int(elem.attrib["size"]), dim))
             keys = ["x", "y"]
             if dim == 3:
                 keys += ["z"]
         elif elem.tag == "vertex":
+            if points is None or keys is None:
+                raise ReadError("Expected `vertices` before `vertex`")
             k = int(elem.attrib["index"])
             points[k] = [elem.attrib[key] for key in keys]
         elif elem.tag == "cells":
+            if cell_type is None or num_nodes_per_cell is None:
+                raise ReadError("Expected `mesh` before `cells`")
             cells = [
                 (
                     cell_type,

@@ -1,5 +1,5 @@
 import pathlib
-from typing import List, Optional, Type
+from typing import List, Optional
 
 import numpy
 
@@ -22,7 +22,7 @@ def register(name: str, extensions: List[str], reader, writer_map):
     _writer_map.update(writer_map)
 
 
-def _filetype_from_path(path: Type[pathlib.Path]):
+def _filetype_from_path(path: pathlib.Path):
     ext = ""
     out = None
     for suffix in reversed(path.suffixes):
@@ -97,7 +97,7 @@ def write_points_cells(
     return write(filename, mesh, file_format=file_format, **kwargs)
 
 
-def write(filename, mesh: Type[Mesh], file_format: Optional[str] = None, **kwargs):
+def write(filename, mesh: Mesh, file_format: Optional[str] = None, **kwargs):
     """Writes mesh together with data to a file.
 
     :params filename: File to write to.

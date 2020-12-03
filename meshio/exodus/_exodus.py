@@ -198,21 +198,15 @@ def categorize(names):
         name = names[k]
         if name[-1] == "X":
             ix = k
-            found_y = False
             try:
                 iy = names.index(name[:-1] + "Y")
             except ValueError:
-                pass
-            else:
-                found_y = True
-            found_z = False
+                iy = None
             try:
                 iz = names.index(name[:-1] + "Z")
             except ValueError:
-                pass
-            else:
-                found_z = True
-            if found_y and found_z:
+                iz = None
+            if iy and iz:
                 triple.append((name[:-1], ix, iy, iz))
                 is_accounted_for[ix] = True
                 is_accounted_for[iy] = True
@@ -222,14 +216,11 @@ def categorize(names):
                 is_accounted_for[ix] = True
         elif name[-2:] == "_R":
             ir = k
-            found_z = False
             try:
                 iz = names.index(name[:-2] + "_Z")
             except ValueError:
-                pass
-            else:
-                found_z = True
-            if found_z:
+                iz = None
+            if iz:
                 double.append((name[:-2], ir, iz))
                 is_accounted_for[ir] = True
                 is_accounted_for[iz] = True

@@ -205,7 +205,7 @@ def _read_families(fas_data):
     return families
 
 
-def write(filename, mesh, add_global_ids=True):
+def write(filename, mesh):
     import h5py
 
     # MED doesn't support compression,

@@ -75,7 +75,8 @@ def read(filename):
         cells = numpy.fromfile(
             f, dtype=int, count=(5 + num_attrs) * num_tets, sep=" "
         ).reshape(num_tets, 5 + num_attrs)
-        # read cell (region) attributes, the first is "ref", the others are "ref2", "ref3", ...
+        # read cell (region) attributes, the first is "ref", the others are "ref2",
+        # "ref3", ...
         for k in range(num_attrs):
             flag = "" if k == 0 else str(k + 1)
             cell_data["tetgen:ref" + flag] = [cells[:, 5 + k]]
@@ -163,9 +164,7 @@ def write(filename, mesh, float_fmt=".16e"):
         fh.write(f"# This file was created by meshio v{__version__}\n")
         if nattr > 0:
             fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))
-        for id, (cell_type, data) in enumerate(
-            filter(lambda c: c.type == "tetra", mesh.cells)
-        ):
+        for id, (_, data) in enumerate(filter(lambda c: c.type == "tetra", mesh.cells)):
             fh.write("{} {} {}\n".format(data.shape[0], 4, nattr))
             fmt = " ".join((5 + nattr) * ["{}"]) + "\n"
             for k, tet in enumerate(data):
