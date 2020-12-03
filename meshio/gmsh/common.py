@@ -5,8 +5,8 @@ import numpy
 
 from .._exceptions import ReadError, WriteError
 
-c_int = numpy.dtype("i")
-c_double = numpy.dtype("d")
+c_int = numpy.dtype("int32")
+c_double = numpy.dtype("float64")
 
 
 def _fast_forward_to_end_block(f, block):

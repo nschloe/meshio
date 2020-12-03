@@ -113,6 +113,7 @@ def read_buffer(f):
     field_data = {}
     cell_data = {}
     point_data = {}
+    point_ids = None
 
     line = f.readline()
     while True:
@@ -128,6 +129,8 @@ def read_buffer(f):
         if keyword == "NODE":
             points, point_ids, line = _read_nodes(f)
         elif keyword == "ELEMENT":
+            if point_ids is None:
+                raise ReadError("Expected NODE before ELEMENT")
             params_map = get_param_map(line, required_keys=["TYPE"])
             cell_type, cells_data, ids, sets, line = _read_cells(
                 f, params_map, point_ids
@@ -308,7 +311,8 @@ def merge(
         cells.append(CellBlock(c.type, new_data))
         cnt += 1
 
-    # The following aren't currently included in the abaqus parser, and are therefore excluded?
+    # The following aren't currently included in the abaqus parser, and are therefore
+    # excluded?
     # point_data.update(mesh.point_data)
     # cell_data.update(mesh.cell_data)
     # field_data.update(mesh.field_data)

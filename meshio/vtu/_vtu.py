@@ -185,14 +185,12 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
 
     out_cells = []
 
-    # IMPLEMENTATION NOTE: The treatment of polyhedral cells is quite
-    # a bit different from the other cells; moreover, there are some
-    # strong (?) assumptions on such cells. The processing of such cells
-    # is therefore moved to a dedicated function for the time being,
-    # while all other cell types are treated by the same function.
-    # There are still similarities between processing of polyhedral and
-    # the rest, so it may be possible to unify the implementations at a
-    # later stage.
+    # IMPLEMENTATION NOTE: The treatment of polyhedral cells is quite a bit different
+    # from the other cells; moreover, there are some strong (?) assumptions on such
+    # cells. The processing of such cells is therefore moved to a dedicated function for
+    # the time being, while all other cell types are treated by the same function.
+    # There are still similarities between processing of polyhedral and the rest, so it
+    # may be possible to unify the implementations at a later stage.
 
     # Check if polyhedral cells are present.
     polyhedral_mesh = False
@@ -686,6 +684,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     header_type = (
         "UInt32" if header_type is None else vtk_file.set("header_type", header_type)
     )
+    assert header_type is not None
 
     if binary and compression:
         # TODO lz4, lzma <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>
@@ -839,6 +838,9 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     if mesh.cells is not None:
         cls = ET.SubElement(piece, "Cells")
 
+        faces = None
+        faceoffsets = None
+
         if is_polyhedron_grid:
             # The VTK polyhedron format requires both Cell-node connectivity, and a
             # definition of faces. The cell-node relation must be recoved from the
@@ -897,9 +899,11 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                 # function for more information of how to specify this.
                 faces_loc, faceoffsets_loc = _polyhedron_face_cells(v)
                 # Adjust offsets to global numbering
+                assert faceoffsets is not None
                 if len(faceoffsets) > 0:
                     faceoffsets_loc = [fi + faceoffsets[-1] for fi in faceoffsets_loc]
 
+                assert faces is not None
                 faces += faces_loc
                 faceoffsets += faceoffsets_loc
             else:
