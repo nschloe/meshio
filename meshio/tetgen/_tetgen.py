@@ -151,8 +151,7 @@ def write(filename, mesh, float_fmt=".16e"):
         )
 
     # write cells
-    # TODO remove .as_posix when requiring Python 3.6
-    with open(ele_filename.as_posix(), "w") as fh:
+    with open(ele_filename, "w") as fh:
         attr_keys = list(mesh.cell_data.keys())
         ref_keys = [k for k in attr_keys if ":ref" in k]
         if len(attr_keys) > 0:
