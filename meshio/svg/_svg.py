@@ -10,7 +10,7 @@ def write(
     filename,
     mesh,
     float_fmt=".3f",
-    stroke_width="1",
+    stroke_width=None,
     force_width=None,
     fill="none",
     stroke="black",
@@ -37,6 +37,9 @@ def write(
         width *= scaling_factor
         height *= scaling_factor
         pts *= scaling_factor
+
+    if stroke_width is None:
+        stroke_width = width / 100
 
     fmt = " ".join(4 * [f"{{:{float_fmt}}}"])
     svg = ET.Element(
