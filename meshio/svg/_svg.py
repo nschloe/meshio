@@ -57,7 +57,7 @@ def write(
         "stroke-linejoin:bevel",
     ]
     # Use path, not polygon, because svgo converts polygons to paths and doesn't convert
-    # the style alongside. No problem it's paths all along.
+    # the style alongside. No problem if it's paths all the way.
     style.text = "path {" + "; ".join(opts) + "}"
 
     for cell_block in mesh.cells:
