@@ -10,7 +10,7 @@ def write(
     filename,
     mesh,
     float_fmt=".3f",
-    stroke_width="1",
+    stroke_width=None,
     force_width=None,
     fill="none",
     stroke="black",
@@ -38,6 +38,9 @@ def write(
         height *= scaling_factor
         pts *= scaling_factor
 
+    if stroke_width is None:
+        stroke_width = width / 100
+
     fmt = " ".join(4 * [f"{{:{float_fmt}}}"])
     svg = ET.Element(
         "svg",
@@ -54,7 +57,7 @@ def write(
         "stroke-linejoin:bevel",
     ]
     # Use path, not polygon, because svgo converts polygons to paths and doesn't convert
-    # the style alongside. No problem it's paths all along.
+    # the style alongside. No problem if it's paths all the way.
     style.text = "path {" + "; ".join(opts) + "}"
 
     for cell_block in mesh.cells:
