@@ -13,7 +13,6 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
 
-CHUNK_SIZE = 8
 nastran_to_meshio_type = {
     "CELAS1": "vertex",
     "CBEAM": "line",
@@ -68,14 +67,14 @@ def read_buffer(f):
     cells_id = []
     cell = None
     cell_type = None
-    keyword_prev = None
     point_refs = []
     cell_refs = []
     cell_ref = None
 
-    def add_cell(cell, cell_type, cell_ref, keyword_prev):
+    def add_cell(nastran_type, cell, cell_type, cell_ref):
+        cell_type = nastran_to_meshio_type[keyword]
         cell = list(map(int, cell))
-        cell = _convert_to_vtk_ordering(cell, keyword_prev)
+        cell = _convert_to_vtk_ordering(cell, nastran_type)
 
         # Treat 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
         if len(cell) > num_nodes_per_cell[cell_type]:
@@ -101,21 +100,37 @@ def read_buffer(f):
                 cell_refs.append([cell_ref])
 
     while True:
-        line = f.readline()
-        if not line:
-            break
-
-        # End loop when ENDDATA detected
-        line = line.strip()
-        if line.startswith("ENDDATA"):
-            break
-
+        next_line = f.readline()
         # Blank lines or comments
-        if len(line) < 4 or line.startswith(("$", "//", "#")):
+        if len(next_line) < 4 or next_line.startswith(("$", "//", "#")):
             continue
+        else:
+            break
 
-        chunks = _chunk_string(line)
-        keyword = chunks[0].strip()
+    while True:
+        # End loop when ENDDATA detected
+        if next_line.startswith("ENDDATA"):
+            break
+
+        # read line and merge with all continuation lines (starting with `+`)
+        chunks = _chunk_line(next_line)
+        while True:
+            next_line = f.readline()
+            if not next_line:
+                exit(1)
+            next_line = next_line.rstrip()
+            # Blank lines or comments
+            if len(next_line) < 4 or next_line.startswith(("$", "//", "#")):
+                continue
+            elif next_line[0] == "+":
+                # skip the continuation chunk
+                chunks += _chunk_line(next_line)[1:]
+            else:
+                break
+
+        chunks = [chunk.strip() for chunk in chunks]
+
+        keyword = chunks[0]
 
         # Points
         if keyword == "GRID":
@@ -131,8 +146,8 @@ def read_buffer(f):
             if len(pref) > 0:
                 point_refs.append(int(pref))
             points_id.append(point_id)
-            line = f.readline().strip()
-            chunks2 = _chunk_string(line)
+            chunks2 = _chunk_line(next_line)
+            next_line = f.readline()
             points.append(
                 [
                     _nastran_string_to_float(i + j)
@@ -142,30 +157,25 @@ def read_buffer(f):
 
         # CellBlock
         elif keyword in nastran_to_meshio_type:
-            # Add previous cell and cell_id
-            if cell is not None:
-                add_cell(cell, cell_type, cell_ref, keyword_prev)
-
-            # Current cell
-            cell_type = nastran_to_meshio_type[keyword]
             cell_id = int(chunks[1])
             cell_ref = chunks[2].strip()
             cell_ref = int(cell_ref) if len(cell_ref) > 0 else None
 
-            n_nodes = num_nodes_per_cell[cell_type]
-            if keyword in nastran_solid_types or n_nodes > 6:
-                cell = chunks[3:]
+            if keyword == "CBAR":
+                # A CBAR line can be
+                # ```
+                # CBAR          37               3       11.0     0.0     0.0
+                # ```
+                # No idea what the last three floats are. Just remove them.
+                cell = chunks[3:5]
             else:
-                cell = chunks[3 : 3 + n_nodes]
+                cell = chunks[3:]
 
-            keyword_prev = keyword
+            # remove empty chunks
+            cell = [item for item in cell if item != ""]
 
-        # CellBlock card continuation for 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
-        elif keyword[0] == "+" and cell is not None:
-            cell.extend(chunks[1:])
-
-    # Add the last cell
-    add_cell(cell, cell_type, cell_ref, keyword_prev)
+            if cell is not None:
+                add_cell(keyword, cell, cell_type, cell_ref)
 
     # Convert to numpy arrays
     points = numpy.array(points)
@@ -339,15 +349,14 @@ def _nastran_string_to_float(string):
         return float(string[0] + string[1:].replace("+", "e+").replace("-", "e-"))
 
 
-def _chunk_string(string):
-    string = string.strip()
-    if "," in string:  # free format
-        chunks = string.split(",")
+def _chunk_line(line):
+    if "," in line:  # free format
+        chunks = line.split(",")
     else:  # fixed format
-        chunks = [
-            string[0 + i : CHUNK_SIZE + i] for i in range(0, len(string), CHUNK_SIZE)
-        ]
-    return chunks[:9]  # the 10-th chunk is ignored
+        CHUNK_SIZE = 8
+        chunks = [line[i : CHUNK_SIZE + i] for i in range(0, len(line), CHUNK_SIZE)]
+    # everything after the 9th chunk is ignored
+    return chunks[:9]
 
 
 def _convert_to_vtk_ordering(cell, nastran_type):
