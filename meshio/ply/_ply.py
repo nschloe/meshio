@@ -238,6 +238,7 @@ def _read_ascii(
                 i += n + 1
             else:
                 dtype = ply_to_numpy_dtype[dtype]
+                # use n from vertex_indices
                 cell_data[name][n] += [dtype(data[j]) for j in range(i, i + 1)]
                 i += 1
 
@@ -245,7 +246,10 @@ def _read_ascii(
         CellBlock(cell_type_from_count(n), numpy.array(data))
         for (n, data) in polygons.items()
     ]
-    cell_data = {key: [v for v in value.values()] for key, value in cell_data.items()}
+    cell_data = {
+        key: [numpy.array(v) for v in value.values()]
+        for key, value in cell_data.items()
+    }
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 
