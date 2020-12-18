@@ -281,7 +281,7 @@ def write(filename, mesh):
         rootgrp.createDimension("time_step", None)
 
         # dummy time step
-        data = rootgrp.createVariable("time_whole", "f4", "time_step")
+        data = rootgrp.createVariable("time_whole", "f4", ("time_step",))
         data[:] = 0.0
 
         # points
@@ -289,10 +289,10 @@ def write(filename, mesh):
             "coor_names", "S1", ("num_dim", "len_string")
         )
         coor_names.set_auto_mask(False)
-        coor_names[0, 0] = "X"
-        coor_names[1, 0] = "Y"
+        coor_names[0, 0] = b"X"
+        coor_names[1, 0] = b"Y"
         if mesh.points.shape[1] == 3:
-            coor_names[2, 0] = "Z"
+            coor_names[2, 0] = b"Z"
         data = rootgrp.createVariable(
             "coord",
             numpy_to_exodus_dtype[mesh.points.dtype.name],
