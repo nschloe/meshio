@@ -67,14 +67,14 @@ def read_buffer(f):
     cells_id = []
     cell = None
     cell_type = None
-    keyword_prev = None
     point_refs = []
     cell_refs = []
     cell_ref = None
 
-    def add_cell(cell, cell_type, cell_ref, keyword_prev):
+    def add_cell(nastran_type, cell, cell_type, cell_ref):
+        cell_type = nastran_to_meshio_type[keyword]
         cell = list(map(int, cell))
-        cell = _convert_to_vtk_ordering(cell, keyword_prev)
+        cell = _convert_to_vtk_ordering(cell, nastran_type)
 
         # Treat 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
         if len(cell) > num_nodes_per_cell[cell_type]:
@@ -114,7 +114,6 @@ def read_buffer(f):
 
         # read line and merge with all continuation lines (starting with `+`)
         chunks = _chunk_line(next_line)
-        print(repr(next_line))
         while True:
             next_line = f.readline()
             if not next_line:
@@ -130,7 +129,6 @@ def read_buffer(f):
                 break
 
         chunks = [chunk.strip() for chunk in chunks]
-        print(chunks)
 
         keyword = chunks[0]
 
@@ -159,7 +157,6 @@ def read_buffer(f):
 
         # CellBlock
         elif keyword in nastran_to_meshio_type:
-            cell_type = nastran_to_meshio_type[keyword]
             cell_id = int(chunks[1])
             cell_ref = chunks[2].strip()
             cell_ref = int(cell_ref) if len(cell_ref) > 0 else None
@@ -178,7 +175,7 @@ def read_buffer(f):
             cell = [item for item in cell if item != ""]
 
             if cell is not None:
-                add_cell(cell, cell_type, cell_ref, keyword)
+                add_cell(keyword, cell, cell_type, cell_ref)
 
     # Convert to numpy arrays
     points = numpy.array(points)
