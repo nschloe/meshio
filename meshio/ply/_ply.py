@@ -217,30 +217,35 @@ def _read_ascii(
         data = line.split()
         if k == 0:
             # initialize the cell data arrays
-            n = []
             i = 0
             cell_data = {}
+            assert len(cell_data_names) == len(cell_dtypes)
             for name, dtype in zip(cell_data_names, cell_dtypes):
-                n = int(data[i])
-                if name != "vertex_indices":
-                    cell_data[name] = []
-                i += n + 1
+                if name == "vertex_indices":
+                    n = int(data[i])
+                    i += n + 1
+                else:
+                    n = 1
+                    cell_data[name] = collections.defaultdict(list)
+                    i += 1
 
         i = 0
         for name, dtype in zip(cell_data_names, cell_dtypes):
-            n = int(data[i])
-            dtype = ply_to_numpy_dtype[dtype[1]]
-            data = [dtype(data[j]) for j in range(i + 1, i + n + 1)]
             if name == "vertex_indices":
-                polygons[n].append(data)
+                n = int(data[i])
+                dtype = ply_to_numpy_dtype[dtype[1]]
+                polygons[n].append([dtype(data[j]) for j in range(i + 1, i + n + 1)])
+                i += n + 1
             else:
-                cell_data[name].append(data)
-            i += n + 1
+                dtype = ply_to_numpy_dtype[dtype]
+                cell_data[name][n] += [dtype(data[j]) for j in range(i, i + 1)]
+                i += 1
 
     cells = [
         CellBlock(cell_type_from_count(n), numpy.array(data))
         for (n, data) in polygons.items()
     ]
+    cell_data = {key: [v for v in value.values()] for key, value in cell_data.items()}
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
 

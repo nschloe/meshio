@@ -34,7 +34,10 @@ def test_ply(mesh, binary):
 
 @pytest.mark.parametrize(
     "filename, ref_sum, ref_num_cells",
-    [("bun_zipper_res4.ply", 3.414583969116211e01, 948)],
+    [
+        ("bun_zipper_res4.ply", 3.414583969116211e01, 948),
+        ("tet.ply", 6, 4),
+    ],
 )
 def test_reference_file(filename, ref_sum, ref_num_cells):
     this_dir = pathlib.Path(__file__).resolve().parent
