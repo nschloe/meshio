@@ -91,7 +91,12 @@ def read(filename):  # noqa: C901
         for key, value in nc.variables.items():
             if key == "info_records":
                 value.set_auto_mask(False)
-                info += [b"".join(c).decode("UTF-8") for c in value[:]]
+                for c in value[:]:
+                    try:
+                        info += [b"".join(c).decode("UTF-8")]
+                    except UnicodeDecodeError:
+                        # https://github.com/nschloe/meshio/issues/983
+                        pass
             elif key == "qa_records":
                 value.set_auto_mask(False)
                 for val in value:
