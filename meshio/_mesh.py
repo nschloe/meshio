@@ -125,7 +125,7 @@ class Mesh:
         all_cells_flat = numpy.concatenate([c.data.flat for c in self.cells])
         orphaned_nodes = numpy.setdiff1d(numpy.arange(len(self.points)), all_cells_flat)
 
-        if not orphaned_nodes:
+        if len(orphaned_nodes) == 0:
             return
 
         self.points = numpy.delete(self.points, orphaned_nodes, axis=0)
