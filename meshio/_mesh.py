@@ -126,10 +126,10 @@ class Mesh:
         orphaned_nodes = numpy.setdiff1d(numpy.arange(len(self.points)), all_cells_flat)
         self.points = numpy.delete(self.points, orphaned_nodes, axis=0)
         # also adapt the point data
-        for key in self.point_data:
-            self.point_data[key] = numpy.delete(
-                self.point_data[key], orphaned_nodes, axis=0
-            )
+        self.point_data = {
+            key: numpy.delete(val, orphaned_nodes, axis=0)
+            for key, val in self.point_data.items()
+        }
 
         # reset GLOBAL_ID
         if "GLOBAL_ID" in self.point_data:
