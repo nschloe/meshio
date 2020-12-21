@@ -17,8 +17,28 @@ def test_print_prune():
     mesh = copy.deepcopy(helpers.tri_mesh)
     print(mesh)
     mesh.remove_lower_dimensional_cells()
-    mesh.remove_orphaned_nodes()
     mesh.prune_z_0()
+
+
+def test_remove_orphaned():
+    points = numpy.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [3.14, 2.71],  # orphaned
+        ]
+    )
+    cells = numpy.array([[0, 1, 2]])
+    a = {"a": numpy.array([0.1, 0.2, 0.3, 0.4])}
+    mesh = meshio.Mesh(points, {"triangle": cells}, point_data=a)
+    mesh.remove_orphaned_nodes()
+
+    assert len(mesh.points) == 3
+    assert len(mesh.point_data["a"]) == 3
+    # make sure the dict `a` wasn't changed,
+    # <https://github.com/nschloe/meshio/pull/994>
+    assert len(a["a"]) == 4
 
 
 def test_cells_dict():
