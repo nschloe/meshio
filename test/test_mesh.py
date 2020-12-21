@@ -23,13 +23,13 @@ def test_print_prune():
 def test_remove_orphaned():
     points = numpy.array(
         [
+            [3.14, 2.71],  # orphaned
             [0.0, 0.0],
             [1.0, 0.0],
             [0.0, 1.0],
-            [3.14, 2.71],  # orphaned
         ]
     )
-    cells = numpy.array([[0, 1, 2]])
+    cells = numpy.array([[1, 2, 3]])
     a = {"a": numpy.array([0.1, 0.2, 0.3, 0.4])}
     mesh = meshio.Mesh(points, {"triangle": cells}, point_data=a)
     mesh.remove_orphaned_nodes()
@@ -39,6 +39,7 @@ def test_remove_orphaned():
     # make sure the dict `a` wasn't changed,
     # <https://github.com/nschloe/meshio/pull/994>
     assert len(a["a"]) == 4
+    assert numpy.all(mesh.cells[0].data == [0, 1, 2])
 
 
 def test_cells_dict():
