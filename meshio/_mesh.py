@@ -124,6 +124,10 @@ class Mesh:
         """Remove nodes which don't belong to any cell."""
         all_cells_flat = numpy.concatenate([c.data.flat for c in self.cells])
         orphaned_nodes = numpy.setdiff1d(numpy.arange(len(self.points)), all_cells_flat)
+
+        if not orphaned_nodes:
+            return
+
         self.points = numpy.delete(self.points, orphaned_nodes, axis=0)
         # also adapt the point data
         self.point_data = {
@@ -133,6 +137,8 @@ class Mesh:
 
         # reset GLOBAL_ID
         if "GLOBAL_ID" in self.point_data:
+            n = len(self.point_data["GLOBAL_ID"])
+            assert numpy.all(self.point_data["GLOBAL_ID"] == numpy.arange(1, n + 1))
             self.point_data["GLOBAL_ID"] = numpy.arange(1, len(self.points) + 1)
 
         # We now need to adapt the cells too.
@@ -140,12 +146,12 @@ class Mesh:
         for orphan in orphaned_nodes:
             diff[numpy.argwhere(all_cells_flat > orphan)] += 1
         all_cells_flat -= diff
-        k = 0
+        i = 0
         for k, c in enumerate(self.cells):
             s = c.data.shape
             n = numpy.prod(s)
-            self.cells[k] = CellBlock(c.type, all_cells_flat[k : k + n].reshape(s))
-            k += n
+            self.cells[k] = CellBlock(c.type, all_cells_flat[i : i + n].reshape(s))
+            i += n
 
     def prune_z_0(self, tol: float = 1.0e-13):
         """Remove third (z) component of points if it is 0 everywhere (up to a
