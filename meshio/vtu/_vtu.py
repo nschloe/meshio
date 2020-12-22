@@ -5,7 +5,6 @@ I/O for VTU.
 """
 import base64
 import logging
-import lzma
 import re
 import sys
 import zlib
@@ -24,6 +23,12 @@ from .._common import (
 from .._exceptions import ReadError
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
+
+# Paraview 5.8.1's built-in Python doesn't have lzma.
+try:
+    import lzma
+except ModuleNotFoundError:
+    lzma = None
 
 
 def num_bytes_to_num_base64_chars(num_bytes):
