@@ -351,11 +351,11 @@ class XdmfWriter:
         #     grid, "Information", Name="Information", Value=str(len(mesh.field_data))
         # )
 
-        self.points(grid, mesh.points)
+        self.write_points(grid, mesh.points)
         # self.field_data(mesh.field_data, information)
-        self.cells(mesh.cells, grid)
-        self.point_data(mesh.point_data, grid)
-        self.cell_data(mesh.cell_data, grid)
+        self.write_cells(mesh.cells, grid)
+        self.write_point_data(mesh.point_data, grid)
+        self.write_cell_data(mesh.cell_data, grid)
 
         ET.register_namespace("xi", "https://www.w3.org/2001/XInclude/")
 
@@ -388,7 +388,7 @@ class XdmfWriter:
         )
         return os.path.basename(self.h5_filename) + ":/" + name
 
-    def points(self, grid, points):
+    def write_points(self, grid, points):
         if points.shape[1] == 1:
             geometry_type = "X"
         elif points.shape[1] == 2:
@@ -411,7 +411,7 @@ class XdmfWriter:
         )
         data_item.text = self.numpy_to_xml_string(points)
 
-    def cells(self, cells, grid):
+    def write_cells(self, cells, grid):
         if len(cells) == 1:
             meshio_type = cells[0].type
             num_cells = len(cells[0].data)
@@ -474,7 +474,7 @@ class XdmfWriter:
             )
             data_item.text = self.numpy_to_xml_string(cd)
 
-    def point_data(self, point_data, grid):
+    def write_point_data(self, point_data, grid):
         for name, data in point_data.items():
             att = ET.SubElement(
                 grid,
@@ -495,7 +495,7 @@ class XdmfWriter:
             )
             data_item.text = self.numpy_to_xml_string(data)
 
-    def cell_data(self, cell_data, grid):
+    def write_cell_data(self, cell_data, grid):
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(
