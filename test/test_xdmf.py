@@ -34,19 +34,18 @@ test_set_reduced = [
 
 
 @pytest.mark.parametrize("mesh", test_set_full)
-@pytest.mark.parametrize("data_format", ["XML", "Binary", "HDF"])
-def test_xdmf3(mesh, data_format):
+@pytest.mark.parametrize(
+    "kwargs0",
+    [
+        {"data_format": "XML"},
+        {"data_format": "Binary"},
+        {"data_format": "HDF"},
+        {"data_format": "HDF", "compression": "gzip"},
+    ],
+)
+def test_xdmf3(mesh, kwargs0):
     def write(*args, **kwargs):
-        return meshio.xdmf.write(*args, data_format=data_format, **kwargs)
-
-    helpers.write_read(write, meshio.xdmf.read, mesh, 1.0e-14)
-
-
-# HDF5 compressed I/O
-@pytest.mark.parametrize("mesh", test_set_full)
-def test_compression(mesh):
-    def write(*args, **kwargs):
-        return meshio.xdmf.write(*args, data_format="HDF", compression="gzip", **kwargs)
+        return meshio.xdmf.write(*args, **{**kwargs0, **kwargs})
 
     helpers.write_read(write, meshio.xdmf.read, mesh, 1.0e-14)
 
