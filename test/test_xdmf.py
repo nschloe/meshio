@@ -39,7 +39,7 @@ test_set_reduced = [
     [
         {"data_format": "XML"},
         {"data_format": "Binary"},
-        {"data_format": "HDF"},
+        {"data_format": "HDF", "compression": None},
         {"data_format": "HDF", "compression": "gzip"},
     ],
 )
