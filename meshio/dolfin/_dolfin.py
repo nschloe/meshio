@@ -76,7 +76,7 @@ def _read_mesh(filename):
     return points, cells, cell_type
 
 
-def _read_cell_data(filename, cell_type):
+def _read_cell_data(filename):
     dolfin_type_to_numpy_type = {
         "int": numpy.dtype("int"),
         "float": numpy.dtype("float"),
@@ -87,9 +87,8 @@ def _read_cell_data(filename, cell_type):
     dir_name = pathlib.Path(filename).resolve().parent
 
     # Loop over all files in the same directory as `filename`.
-    basename = os.path.splitext(os.path.basename(filename))[0]
-    # TODO remove .as_posix when requiring Python 3.6
-    for f in os.listdir(dir_name.as_posix()):
+    basename = pathlib.Path(filename).stem
+    for f in os.listdir(dir_name):
         # Check if there are files by the name "<filename>_*.xml"; if yes,
         # extract the * pattern and make it the name of the data set.
         out = re.match(f"{basename}_([^\\.]+)\\.xml", f)
@@ -125,8 +124,8 @@ def _read_cell_data(filename, cell_type):
 
 
 def read(filename):
-    points, cells, cell_type = _read_mesh(filename)
-    cell_data = _read_cell_data(filename, cell_type)
+    points, cells, _ = _read_mesh(filename)
+    cell_data = _read_cell_data(filename)
     return Mesh(points, cells, cell_data=cell_data)
 
 
