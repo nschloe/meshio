@@ -1,6 +1,7 @@
 import warnings
 
 import h5py
+
 import meshio
 
 from .._common import cell_data_from_raw, raw_from_cell_data
@@ -31,7 +32,7 @@ def read(filename):
 
             elif key == "Geometry":
                 # TODO is GeometryType really needed?
-                assert value.attrs["GeometryType"] in ["XY", "XYZ"]
+                assert value.attrs["GeometryType"] in ["X", "XY", "XYZ"]
                 points = value[()]
 
             elif key == "CellAttributes":
@@ -44,9 +45,6 @@ def read(filename):
                     point_data[name] = na[()]
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
-
-        print(cells)
-        print(cell_data)
 
         return meshio.Mesh(
             points,
@@ -75,21 +73,13 @@ def write(filename, mesh, compression="gzip", compression_opts=4):
 
 
 def _write_points(grid, points, compression, compression_opts):
-    if points.shape[1] == 1:
-        geometry_type = "X"
-    elif points.shape[1] == 2:
-        geometry_type = "XY"
-    else:
-        assert points.shape[1] == 3
-        geometry_type = "XYZ"
-
     geo = grid.create_dataset(
         "Geometry",
         data=points,
         compression=compression,
         compression_opts=compression_opts,
     )
-    geo.attrs["GeometryType"] = geometry_type
+    geo.attrs["GeometryType"] = "XYZ"[: points.shape[1]]
 
 
 def _write_cells(cell_blocks, grid, compression, compression_opts):
@@ -114,13 +104,25 @@ def _write_cells(cell_blocks, grid, compression, compression_opts):
 #
 # We cannot register multiple entries with the same name in HDF, so instead of
 # "Attribute", use
-#
+# ```
 # NodeAttributes
 #   -> name0 + data0
 #   -> name1 + data0
 #   -> ...
 # CellAttributes
 #   -> ...
+# ```
+# Alternative:
+# ```
+#  NodeAttribute0
+#    -> name
+#    -> data
+#  NodeAttribute1
+#    -> name
+#    -> data
+#  ...
+# ```
+# It's done similarly for Topologies (cells).
 #
 def _write_point_data(point_data, grid, compression, compression_opts):
     na = grid.create_group("NodeAttributes")

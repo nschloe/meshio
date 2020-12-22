@@ -389,14 +389,10 @@ class XdmfWriter:
         return os.path.basename(self.h5_filename) + ":/" + name
 
     def write_points(self, grid, points):
-        if points.shape[1] == 1:
-            geometry_type = "X"
-        elif points.shape[1] == 2:
-            geometry_type = "XY"
-        else:
-            if points.shape[1] != 3:
-                raise WriteError()
-            geometry_type = "XYZ"
+        if points.shape[1] > 3:
+            raise WriteError("Can only write points up to dimension 3.")
+
+        geometry_type = "XYZ"[: points.shape[1]]
 
         geo = ET.SubElement(grid, "Geometry", GeometryType=geometry_type)
         dt, prec = numpy_to_xdmf_dtype[points.dtype.name]
