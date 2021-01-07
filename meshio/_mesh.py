@@ -25,7 +25,7 @@ class Mesh:
         gmsh_periodic=None,
         info=None,
     ):
-        self.points = points
+        self.points = numpy.asarray(points)
         if isinstance(cells, dict):
             # Let's not deprecate this for now.
             # import warnings
@@ -36,10 +36,13 @@ class Mesh:
             # )
             # old dict, deprecated
             self.cells = [
-                CellBlock(cell_type, data) for cell_type, data in cells.items()
+                CellBlock(cell_type, numpy.asarray(data))
+                for cell_type, data in cells.items()
             ]
         else:
-            self.cells = [CellBlock(cell_type, data) for cell_type, data in cells]
+            self.cells = [
+                CellBlock(cell_type, numpy.asarray(data)) for cell_type, data in cells
+            ]
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
         self.field_data = {} if field_data is None else field_data
