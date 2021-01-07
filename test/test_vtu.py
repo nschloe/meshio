@@ -18,6 +18,8 @@ test_set = [
     helpers.tet10_mesh,
     helpers.hex_mesh,
     helpers.hex20_mesh,
+    helpers.pyramid_mesh,
+    helpers.wedge_mesh,
     helpers.polyhedron_mesh,
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),

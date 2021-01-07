@@ -174,14 +174,28 @@ hex_mesh = meshio.Mesh(
     [("hexahedron", [[0, 1, 2, 3, 4, 5, 6, 7]])],
 )
 
-# mesh containing many different cell types, all lined up next to each other
-# everything_mesh = meshio.Mesh(
-#     [
-#     ],
-#  [
-#          ("vertex", [0])
-#  ]
-# )
+wedge_mesh = meshio.Mesh(
+    [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 1.0],
+        [1.0, 1.0, 1.0],
+    ],
+    [("wedge", [[0, 1, 2, 3, 4, 5]])],
+)
+
+pyramid_mesh = meshio.Mesh(
+    [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.5, 0.5, 1.0],
+    ],
+    [("pyramid", [[0, 1, 2, 3, 4]])],
+)
 
 hex20_mesh = meshio.Mesh(
     [
