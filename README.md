@@ -71,6 +71,7 @@ meshio-ascii      input.msh              # convert to ASCII format
 with any of the supported formats.
 
 In Python, simply do
+<!--exdown-skip-->
 ```python
 import meshio
 
@@ -84,39 +85,35 @@ mesh = meshio.read(
 ```
 to read a mesh. To write, do
 ```python
-points = numpy.array(
-    [
-        [0.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 1.0],
-    ]
-)
-cells = [("triangle", numpy.array([[0, 1, 2]]))]
+import meshio
+
+points = [
+    [0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0],
+    [0.0, 0.0, 1.0],
+]
+cells = [("triangle", [[0, 1, 2]])]
+
 meshio.write_points_cells(
-    "foo.vtk",
+    "foo.vtk",  # str, os.PathLike, or buffer/open file
     points,
     cells,
+    # file_format="vtk",  # optional if first argument is a path; inferred from extension
     # Optionally provide extra data on points, cells, etc.
     # point_data=point_data,
     # cell_data=cell_data,
     # field_data=field_data
 )
-```
-or explicitly create a mesh object for writing
-```python
-mesh = meshio.Mesh(points, cells)
-meshio.write(
-    "foo.vtk",  # str, os.PathLike, or buffer/ open file
-    mesh,
-    # file_format="vtk",  # optional if first argument is a path; inferred from extension
-)
 
-# mesh.vtk.write() is also possible
+# or explicitly create a mesh object for writing
+mesh = meshio.Mesh(points, cells)
+mesh.write("foo.vtk")
 ```
 For both input and output, you can optionally specify the exact `file_format`
 (in case you would like to enforce ASCII over binary VTK, for example).
 
 Reading and writing can also be handled directly by the `Mesh` object:
+<!--exdown-skip-->
 ```python
 m = meshio.Mesh.read(filename, "vtk")  # same arguments as meshio.read
 m.write("foo.vtk")  # same arguments as meshio.write, besides `mesh`
@@ -126,6 +123,7 @@ m.write("foo.vtk")  # same arguments as meshio.write, besides `mesh`
 
 The [XDMF format](http://www.xdmf.org/index.php/XDMF_Model_and_Format) supports time
 series with a shared mesh. You can write times series data using meshio with
+<!--exdown-skip-->
 ```python
 with meshio.xdmf.TimeSeriesWriter(filename) as writer:
     writer.write_points_cells(points, cells)
@@ -133,6 +131,7 @@ with meshio.xdmf.TimeSeriesWriter(filename) as writer:
         writer.write_data(t, point_data={"phi": data})
 ```
 and read it with
+<!--exdown-skip-->
 ```python
 with meshio.xdmf.TimeSeriesReader(filename) as reader:
     points, cells = reader.read_points_cells()

@@ -13,6 +13,8 @@ import meshio
         helpers.tri_quad_mesh,
         helpers.tet_mesh,
         helpers.hex_mesh,
+        helpers.pyramid_mesh,
+        helpers.wedge_mesh,
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])

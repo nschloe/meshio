@@ -8,6 +8,6 @@ def _get_version_text():
         [
             f"meshio {__version__} "
             f"[Python {version_info.major}.{version_info.minor}.{version_info.micro}]",
-            "Copyright (c) 2015-2020 Nico Schlömer et al.",
+            "Copyright (c) 2015-2021 Nico Schlömer et al.",
         ]
     )
