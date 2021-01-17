@@ -153,7 +153,7 @@ def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
         # Done with this cell
         # Find number of nodes for this cell
         num_nodes_this_cell = numpy.unique(
-            numpy.hstack(([v for v in faces_this_cell]))
+            numpy.hstack([v for v in faces_this_cell])
         ).size
 
         key = f"polyhedron{num_nodes_this_cell}"
@@ -711,6 +711,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             for cell_info in data:
                 new_face_info = []
                 for face_info in cell_info:
+                    face_info = numpy.asarray(face_info)
                     new_face_info.append(
                         face_info.astype(face_info.dtype.newbyteorder("="), copy=False)
                     )

@@ -65,7 +65,7 @@ def write(
             continue
         if cell_block.type == "line":
             fmt = (
-                "M {{:{}}} {{:{}}}".format(float_fmt, float_fmt)
+                f"M {{:{float_fmt}}} {{:{float_fmt}}}"
                 + f"L {{:{float_fmt}}} {{:{float_fmt}}}"
             )
         elif cell_block.type == "triangle":

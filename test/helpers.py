@@ -266,16 +266,16 @@ polyhedron_mesh = meshio.Mesh(
             "polyhedron4",
             [
                 [
-                    numpy.array([1, 2, 5]),
-                    numpy.array([1, 2, 7]),
-                    numpy.array([1, 5, 7]),
-                    numpy.array([2, 5, 7]),
+                    [1, 2, 5],
+                    [1, 2, 7],
+                    [1, 5, 7],
+                    [2, 5, 7],
                 ],
                 [
-                    numpy.array([2, 5, 6]),
-                    numpy.array([2, 6, 7]),
-                    numpy.array([2, 5, 7]),
-                    numpy.array([5, 6, 7]),
+                    [2, 5, 6],
+                    [2, 6, 7],
+                    [2, 5, 7],
+                    [5, 6, 7],
                 ],
             ],
         ),
@@ -283,19 +283,21 @@ polyhedron_mesh = meshio.Mesh(
             "polyhedron5",
             [
                 [
-                    numpy.array([0, 1, 2, 3]),  # pyramid base is a rectangle
-                    numpy.array([0, 1, 7]),
-                    numpy.array([1, 2, 7]),
-                    numpy.array([2, 3, 7]),
-                    numpy.array([3, 0, 7]),
+                    # numpy.asarray on this causes a numpy warning
+                    # TODO come up with a better data structure for polyhedra
+                    [0, 1, 2, 3],  # pyramid base is a rectangle
+                    [0, 1, 7],
+                    [1, 2, 7],
+                    [2, 3, 7],
+                    [3, 0, 7],
                 ],
                 [
-                    numpy.array([0, 1, 5]),  # pyramid base split in two triangles
-                    numpy.array([0, 4, 5]),
-                    numpy.array([0, 1, 7]),
-                    numpy.array([1, 5, 7]),
-                    numpy.array([5, 4, 7]),
-                    numpy.array([0, 4, 7]),
+                    [0, 1, 5],  # pyramid base split in two triangles
+                    [0, 4, 5],
+                    [0, 1, 7],
+                    [1, 5, 7],
+                    [5, 4, 7],
+                    [0, 4, 7],
                 ],
             ],
         ),
