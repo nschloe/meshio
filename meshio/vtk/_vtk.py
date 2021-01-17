@@ -61,7 +61,6 @@ vtk_type_to_numnodes = numpy.array(
 
 
 # These are all VTK data types.
-# One sometimes finds 'vtktypeint64', but this is ill-formed.
 vtk_to_numpy_dtype_name = {
     "bit": "bool",
     "unsigned_char": "uint8",

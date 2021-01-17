@@ -149,7 +149,6 @@ def _write_cell_data(cell_data, grid, compression, compression_opts):
         )
 
 
-# TODO register all xdmf except hdf outside this try block
 register(
     "hmf",
     [".hmf"],

@@ -486,13 +486,13 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
             if binary:
                 numpy.zeros(3, dtype=c_double).tofile(fh)
             else:
-                fh.write("0 0 0 ".encode("utf-8"))
+                fh.write(b"0 0 0 ")
         else:
             # Bounding box has six coordinates
             if binary:
                 numpy.zeros(6, dtype=c_double).tofile(fh)
             else:
-                fh.write("0 0 0 0 0 0 ".encode("utf-8"))
+                fh.write(b"0 0 0 0 0 0 ")
 
         # If there is a corresponding cell block, write physical tags (if any)
         # and bounding entities (if any)
@@ -510,7 +510,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
             if binary:
                 numpy.array([0], dtype=c_size_t).tofile(fh)
             else:
-                fh.write("0 ".encode("utf-8"))
+                fh.write(b"0 ")
 
         if dim > 0:
             # Entities not of the lowest dimension can have their
@@ -527,24 +527,24 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
                         fh.write(f"{num_bounds} ".encode("utf-8"))
                         for bi in bounds:
                             fh.write(f"{bi} ".encode("utf-8"))
-                        fh.write("\n".encode("utf-8"))
+                        fh.write(b"\n")
                 else:
                     # Register that there are no bounding elements
                     if binary:
                         numpy.array([0], dtype=c_size_t).tofile(fh)
                     else:
-                        fh.write("0\n".encode("utf-8"))
+                        fh.write(b"0\n")
 
             else:
                 # Register that there are no bounding elements
                 if binary:
                     numpy.array([0], dtype=c_size_t).tofile(fh)
                 else:
-                    fh.write("0\n".encode("utf-8"))
+                    fh.write(b"0\n")
         else:
             # If ascii, enforce line change
             if not binary:
-                fh.write("\n".encode("utf-8"))
+                fh.write(b"\n")
 
     if binary:
         fh.write(b"\n")
