@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import optimesh
 import pygmsh
 
@@ -72,7 +72,7 @@ def create_logo2(y=0.0):
     X = mesh.points
     cells = mesh.get_cells_type("triangle")
 
-    # numpy.bincount doesn't work with uint
+    # np.bincount doesn't work with uint
     # <https://github.com/numpy/numpy/issues/17760>
     cells = cells.astype(int)
 
@@ -88,5 +88,5 @@ if __name__ == "__main__":
     mesh = meshio.Mesh(X, {"triangle": cells})
     meshio.svg.write("logo.svg", mesh, force_width=300)
 
-    X = numpy.column_stack([X[:, 0], X[:, 1], numpy.zeros(X.shape[0])])
+    X = np.column_stack([X[:, 0], X[:, 1], np.zeros(X.shape[0])])
     meshio.Mesh(X, {"triangle": cells}).write("logo.vtk")

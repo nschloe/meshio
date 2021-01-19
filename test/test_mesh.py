@@ -2,7 +2,7 @@ import copy
 import sys
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -21,7 +21,7 @@ def test_print_prune():
 
 
 def test_remove_orphaned():
-    points = numpy.array(
+    points = np.array(
         [
             [3.14, 2.71],  # orphaned
             [0.0, 0.0],
@@ -29,8 +29,8 @@ def test_remove_orphaned():
             [0.0, 1.0],
         ]
     )
-    cells = numpy.array([[1, 2, 3]])
-    a = {"a": numpy.array([0.1, 0.2, 0.3, 0.4])}
+    cells = np.array([[1, 2, 3]])
+    a = {"a": np.array([0.1, 0.2, 0.3, 0.4])}
     mesh = meshio.Mesh(points, {"triangle": cells}, point_data=a)
     mesh.remove_orphaned_nodes()
 
@@ -39,29 +39,27 @@ def test_remove_orphaned():
     # make sure the dict `a` wasn't changed,
     # <https://github.com/nschloe/meshio/pull/994>
     assert len(a["a"]) == 4
-    assert numpy.all(mesh.cells[0].data == [0, 1, 2])
+    assert np.all(mesh.cells[0].data == [0, 1, 2])
 
 
 def test_cells_dict():
     mesh = copy.deepcopy(helpers.tri_mesh)
     assert len(mesh.cells_dict) == 1
-    assert numpy.array_equal(mesh.cells_dict["triangle"], [[0, 1, 2], [0, 2, 3]])
+    assert np.array_equal(mesh.cells_dict["triangle"], [[0, 1, 2], [0, 2, 3]])
 
     # two cells groups
     mesh = meshio.Mesh(
-        numpy.array(
-            [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
-        )
+        np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
         / 3,
         [
-            ("triangle", numpy.array([[0, 1, 2]])),
-            ("triangle", numpy.array([[0, 2, 3]])),
+            ("triangle", np.array([[0, 1, 2]])),
+            ("triangle", np.array([[0, 2, 3]])),
         ],
         cell_data={"a": [[0.5], [1.3]]},
     )
     assert len(mesh.cells_dict) == 1
-    assert numpy.array_equal(mesh.cells_dict["triangle"], [[0, 1, 2], [0, 2, 3]])
-    assert numpy.array_equal(mesh.cell_data_dict["a"]["triangle"], [0.5, 1.3])
+    assert np.array_equal(mesh.cells_dict["triangle"], [[0, 1, 2], [0, 2, 3]])
+    assert np.array_equal(mesh.cell_data_dict["a"]["triangle"], [0.5, 1.3])
 
 
 @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires Python 3.6 or higher")
@@ -70,18 +68,18 @@ def test_sets_to_int_data():
 
     mesh.sets_to_int_data()
     assert "grain0-grain1" in mesh.cell_data
-    assert numpy.all(mesh.cell_data["grain0-grain1"][0] == [0, 1])
+    assert np.all(mesh.cell_data["grain0-grain1"][0] == [0, 1])
 
 
 def test_int_data_to_sets():
     mesh = helpers.tri_mesh
-    mesh.cell_data = {"grain0-grain1": [numpy.array([0, 1])]}
+    mesh.cell_data = {"grain0-grain1": [np.array([0, 1])]}
 
     mesh.int_data_to_sets()
     assert "grain0" in mesh.cell_sets
-    assert numpy.all(mesh.cell_sets["grain0"][0] == [0])
+    assert np.all(mesh.cell_sets["grain0"][0] == [0])
     assert "grain1" in mesh.cell_sets
-    assert numpy.all(mesh.cell_sets["grain1"][0] == [1])
+    assert np.all(mesh.cell_sets["grain1"][0] == [1])
 
 
 if __name__ == "__main__":

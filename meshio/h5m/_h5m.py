@@ -5,7 +5,7 @@ I/O for h5m, cf.
 import logging
 from datetime import datetime
 
-import numpy
+import numpy as np
 
 from .. import __about__
 from .._helpers import register
@@ -83,7 +83,7 @@ def read(filename):
     #     # create the sets
     #     for key, value in sets_tags.items():
     #         mod_key = 'set::' + key
-    #         cell_data[mod_key] = numpy.empty(len(cells), dtype=int)
+    #         cell_data[mod_key] = np.empty(len(cells), dtype=int)
     #         end = 0
     #         for k, row in enumerate(sets_list):
     #             bits = _int_to_bool_list(row[3])
@@ -148,7 +148,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     # Copy to pd to avoid changing point_data. The items are not deep-copied.
     pd = mesh.point_data.copy()
     if "GLOBAL_ID" not in pd and add_global_ids:
-        pd["GLOBAL_ID"] = numpy.arange(1, len(mesh.points) + 1)
+        pd["GLOBAL_ID"] = np.arange(1, len(mesh.points) + 1)
 
     # add point data
     if pd:
@@ -166,7 +166,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
             # H5M doesn't accept n-x-k arrays as data; it wants an n-x-1
             # array with k-tuples as entries.
             n, k = data.shape
-            dtype = numpy.dtype((data.dtype, (k,)))
+            dtype = np.dtype((data.dtype, (k,)))
             dset = tags.create_dataset(
                 key,
                 (n,),

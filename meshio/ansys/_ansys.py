@@ -5,7 +5,7 @@ I/O for Ansys's msh format, cf.
 import logging
 import re
 
-import numpy
+import numpy as np
 
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
@@ -64,7 +64,7 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
 
     if out.group(1) == "":
         # ASCII data
-        pts = numpy.empty((num_points, dim))
+        pts = np.empty((num_points, dim))
         for k in range(num_points):
             # skip ahead to the first line with data
             line = ""
@@ -78,13 +78,13 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
     else:
         # binary data
         if out.group(1) == "20":
-            dtype = numpy.float32
+            dtype = np.float32
         else:
             if out.group(1) != "30":
                 ReadError("Expected keys '20' or '30', got {}.".format(out.group(1)))
-            dtype = numpy.float64
+            dtype = np.float64
         # read point data
-        pts = numpy.fromfile(f, count=dim * num_points, dtype=dtype).reshape(
+        pts = np.fromfile(f, count=dim * num_points, dtype=dtype).reshape(
             (num_points, dim)
         )
 
@@ -151,7 +151,7 @@ def _read_cells(f, line):
         # read cell data
         if out.group(1) == "":
             # ASCII cells
-            data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
+            data = np.empty((num_cells, num_nodes_per_cell), dtype=int)
             for k in range(num_cells):
                 line = f.readline().decode("utf-8")
                 dat = line.split()
@@ -163,16 +163,16 @@ def _read_cells(f, line):
                 raise ReadError("Cannot read mixed cells in binary mode yet")
             # binary cells
             if out.group(1) == "20":
-                dtype = numpy.int32
+                dtype = np.int32
             else:
                 if out.group(1) != "30":
                     ReadError(
                         "Expected keys '20' or '30', got {}.".format(out.group(1))
                     )
-                dtype = numpy.int64
+                dtype = np.int64
             shape = (num_cells, num_nodes_per_cell)
             count = shape[0] * shape[1]
-            data = numpy.fromfile(f, count=count, dtype=dtype).reshape(shape)
+            data = np.fromfile(f, count=count, dtype=dtype).reshape(shape)
 
     # make sure that the data set is properly closed
     _skip_close(f, 2)
@@ -244,11 +244,11 @@ def _read_faces(f, line):
                     [int(d, 16) for d in dat[1 : num_nodes_per_cell + 1]]
                 )
 
-            data = {key: numpy.array(data[key]) for key in data}
+            data = {key: np.array(data[key]) for key in data}
 
         else:
             # read cell data
-            data = numpy.empty((num_cells, num_nodes_per_cell), dtype=int)
+            data = np.empty((num_cells, num_nodes_per_cell), dtype=int)
             for k in range(num_cells):
                 line = f.readline().decode("utf-8")
                 dat = line.split()
@@ -264,11 +264,11 @@ def _read_faces(f, line):
     else:
         # binary
         if out.group(1) == "20":
-            dtype = numpy.int32
+            dtype = np.int32
         else:
             if out.group(1) != "30":
                 ReadError("Expected keys '20' or '30', got {}.".format(out.group(1)))
-            dtype = numpy.int64
+            dtype = np.int64
 
         if key == "mixed":
             raise ReadError("Mixed element type for binary faces not supported yet")
@@ -281,7 +281,7 @@ def _read_faces(f, line):
         # and c* are the adjacent cells.
         shape = (num_cells, num_nodes_per_cell + 2)
         count = shape[0] * shape[1]
-        data = numpy.fromfile(f, count=count, dtype=dtype).reshape(shape)
+        data = np.fromfile(f, count=count, dtype=dtype).reshape(shape)
         # Cut off the adjacent cell data.
         data = data[:, :num_nodes_per_cell]
         data = {key: data}
@@ -375,7 +375,7 @@ def read(filename):  # noqa: C901
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count("(") - line.count(")"))
 
-    points = numpy.concatenate(points)
+    points = np.concatenate(points)
 
     # Gauge the cells with the first point_index.
     for k, c in enumerate(cells):
@@ -423,7 +423,7 @@ def write(filename, mesh, binary=True):
             fh.write(b"\n)")
             fh.write(b"End of Binary Section 3010)\n")
         else:
-            numpy.savetxt(fh, mesh.points, fmt="%.16e")
+            np.savetxt(fh, mesh.points, fmt="%.16e")
             fh.write(b"))\n")
 
         # Write cells
@@ -439,9 +439,9 @@ def write(filename, mesh, binary=True):
         }
         first_index = 0
         binary_dtypes = {
-            # numpy.int16 is not allowed
-            numpy.dtype("int32"): "2012",
-            numpy.dtype("int64"): "3012",
+            # np.int16 is not allowed
+            np.dtype("int32"): "2012",
+            np.dtype("int64"): "3012",
         }
         for cell_type, values in mesh.cells:
             key = binary_dtypes[values.dtype] if binary else "12"
@@ -465,7 +465,7 @@ def write(filename, mesh, binary=True):
                 fh.write(b"\n)")
                 fh.write((f"End of Binary Section {key})\n").encode("utf8"))
             else:
-                numpy.savetxt(fh, values + first_node_index, fmt="%x")
+                np.savetxt(fh, values + first_node_index, fmt="%x")
                 fh.write(b"))\n")
             first_index = last_index + 1
 

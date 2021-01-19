@@ -4,7 +4,7 @@ I/O for Gmsh's msh format, cf.
 """
 import logging
 
-import numpy
+import numpy as np
 
 from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
@@ -22,8 +22,8 @@ from .common import (
     _write_physical_names,
 )
 
-c_int = numpy.dtype("i")
-c_double = numpy.dtype("d")
+c_int = np.dtype("i")
+c_double = np.dtype("d")
 
 
 def read_buffer(f, is_ascii, data_size):
@@ -81,7 +81,7 @@ def read_buffer(f, is_ascii, data_size):
             end = start + len(cell_array)
             offset[cell_type] = end
             tags = tag_dict.get(cell_type, [])
-            tags = numpy.array(tags[start:end], dtype=c_int)
+            tags = np.array(tags[start:end], dtype=c_int)
             cell_data[tag_name].append(tags)
 
     return Mesh(
@@ -99,17 +99,17 @@ def _read_nodes(f, is_ascii, data_size):
     line = f.readline().decode("utf-8")
     num_nodes = int(line)
     if is_ascii:
-        points = numpy.fromfile(f, count=num_nodes * 4, sep=" ").reshape((num_nodes, 4))
+        points = np.fromfile(f, count=num_nodes * 4, sep=" ").reshape((num_nodes, 4))
         # The first number is the index
         point_tags = points[:, 0]
         points = points[:, 1:]
     else:
         # binary
         dtype = [("index", c_int), ("x", c_double, (3,))]
-        data = numpy.fromfile(f, count=num_nodes, dtype=dtype)
+        data = np.fromfile(f, count=num_nodes, dtype=dtype)
         if not (data["index"] == range(1, num_nodes + 1)).all():
             raise ReadError()
-        points = numpy.ascontiguousarray(data["x"])
+        points = np.ascontiguousarray(data["x"])
         point_tags = data["index"]
 
     _fast_forward_to_end_block(f, "Nodes")
@@ -128,9 +128,9 @@ def _read_cells(f, cells, point_tags, is_ascii):
         _read_cells_binary(f, cells, cell_tags, total_num_cells)
     cells[:] = _gmsh_to_meshio_order(cells)
 
-    point_tags = numpy.asarray(point_tags, dtype=numpy.int32) - 1
-    remap = -numpy.ones((numpy.max(point_tags) + 1,), dtype=numpy.int32)
-    remap[point_tags] = numpy.arange(point_tags.shape[0])
+    point_tags = np.asarray(point_tags, dtype=np.int32) - 1
+    remap = -np.ones((np.max(point_tags) + 1,), dtype=np.int32)
+    remap[point_tags] = np.arange(point_tags.shape[0])
 
     for ic, (ct, cd) in enumerate(cells):
         cells[ic] = (ct, remap[cd])
@@ -149,8 +149,8 @@ def _read_cells(f, cells, point_tags, is_ascii):
                 geometrical.append(item[1])
             if len(item) > 2:
                 has_additional_tag_data = True
-        physical = numpy.array(physical, dtype=c_int)
-        geometrical = numpy.array(geometrical, dtype=c_int)
+        physical = np.array(physical, dtype=c_int)
+        geometrical = np.array(geometrical, dtype=c_int)
         if len(physical) > 0:
             if "gmsh:physical" not in output_cell_tags:
                 output_cell_tags["gmsh:physical"] = {}
@@ -194,7 +194,7 @@ def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
     # convert to numpy arrays
     # Subtract one to account for the fact that python indices are 0-based.
     for k, c in enumerate(cells):
-        cells[k] = (c[0], numpy.array(c[1], dtype=c_int) - 1)
+        cells[k] = (c[0], np.array(c[1], dtype=c_int) - 1)
     # Cannot convert cell_tags[key] to numpy array: There may be a different number of
     # tags for each cell.
 
@@ -203,14 +203,14 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells):
     num_elems = 0
     while num_elems < total_num_cells:
         # read element header
-        elem_type, num_elems0, num_tags = numpy.fromfile(f, count=3, dtype=c_int)
+        elem_type, num_elems0, num_tags = np.fromfile(f, count=3, dtype=c_int)
         t = _gmsh_to_meshio_type[elem_type]
         num_nodes_per_elem = num_nodes_per_cell[t]
 
         # read element data
         shape = (num_elems0, 1 + num_tags + num_nodes_per_elem)
         count = shape[0] * shape[1]
-        data = numpy.fromfile(f, count=count, dtype=c_int).reshape(shape)
+        data = np.fromfile(f, count=count, dtype=c_int).reshape(shape)
 
         if len(cells) == 0 or t != cells[-1][0]:
             cells.append((t, []))
@@ -224,11 +224,11 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells):
 
     # collect cells
     for k, c in enumerate(cells):
-        cells[k] = (c[0], numpy.vstack(c[1]) - 1)
+        cells[k] = (c[0], np.vstack(c[1]) - 1)
 
     # collect cell tags
     for key in cell_tags:
-        cell_tags[key] = numpy.vstack(cell_tags[key])
+        cell_tags[key] = np.vstack(cell_tags[key])
 
 
 def _read_periodic(f):
@@ -240,7 +240,7 @@ def _read_periodic(f):
         line = f.readline().decode("utf-8").strip()
         if line.startswith("Affine"):
             affine = line.replace("Affine", "", 1)
-            affine = numpy.fromstring(affine, float, sep=" ")
+            affine = np.fromstring(affine, float, sep=" ")
             num_nodes = int(f.readline().decode("utf-8"))
         else:
             affine = None
@@ -250,7 +250,7 @@ def _read_periodic(f):
             line = f.readline().decode("utf-8")
             snode, mnode = [int(s) for s in line.split()]
             slave_master.append([snode, mnode])
-        slave_master = numpy.array(slave_master, dtype=c_int).reshape(-1, 2)
+        slave_master = np.array(slave_master, dtype=c_int).reshape(-1, 2)
         slave_master -= 1  # Subtract one, Python is 0-based
         periodic.append([edim, (stag, mtag), affine, slave_master])
     _fast_forward_to_end_block(f, "Periodic")
@@ -266,8 +266,8 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             "msh2 requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = numpy.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        mesh.points = np.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
         )
 
     if binary:
@@ -277,7 +277,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
                     "Binary Gmsh needs 32-bit integers (got %s). Converting.",
                     value.dtype,
                 )
-                mesh.cells[k] = CellBlock(key, numpy.array(value, dtype=c_int))
+                mesh.cells[k] = CellBlock(key, np.array(value, dtype=c_int))
 
     cells = _meshio_to_gmsh_order(mesh.cells)
 
@@ -304,14 +304,14 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             logging.warning(
                 "Appending zeros to replace the missing {} tag data.".format(tag[5:])
             )
-            tag_data[tag] = [numpy.zeros(len(x.data), dtype=c_int) for x in mesh.cells]
+            tag_data[tag] = [np.zeros(len(x.data), dtype=c_int) for x in mesh.cells]
 
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
         fh.write(f"$MeshFormat\n2.2 {mode_idx} {size_of_double}\n".encode("utf-8"))
         if binary:
-            numpy.array([1], dtype=c_int).tofile(fh)
+            np.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
         fh.write(b"$EndMeshFormat\n")
 
@@ -335,8 +335,8 @@ def _write_nodes(fh, points, float_fmt, binary):
     fh.write("{}\n".format(len(points)).encode("utf-8"))
     if binary:
         dtype = [("index", c_int), ("x", c_double, (3,))]
-        tmp = numpy.empty(len(points), dtype=dtype)
-        tmp["index"] = 1 + numpy.arange(len(points))
+        tmp = np.empty(len(points), dtype=dtype)
+        tmp["index"] = 1 + np.arange(len(points))
         tmp["x"] = points
         tmp.tofile(fh)
         fh.write(b"\n")
@@ -360,19 +360,19 @@ def _write_elements(fh, cells, tag_data, binary):
         for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
             if name in tag_data:
                 tags.append(tag_data[name][k])
-        fcd = numpy.concatenate([tags]).astype(c_int).T
+        fcd = np.concatenate([tags]).astype(c_int).T
 
         if len(fcd) == 0:
-            fcd = numpy.empty((len(node_idcs), 0), dtype=c_int)
+            fcd = np.empty((len(node_idcs), 0), dtype=c_int)
 
         if binary:
             # header
             header = [_meshio_to_gmsh_type[cell_type], node_idcs.shape[0], fcd.shape[1]]
-            numpy.array(header, dtype=c_int).tofile(fh)
+            np.array(header, dtype=c_int).tofile(fh)
             # actual data
-            a = numpy.arange(len(node_idcs), dtype=c_int)[:, numpy.newaxis]
+            a = np.arange(len(node_idcs), dtype=c_int)[:, np.newaxis]
             a += 1 + consecutive_index
-            array = numpy.hstack([a, fcd, node_idcs + 1])
+            array = np.hstack([a, fcd, node_idcs + 1])
             if array.dtype != c_int:
                 raise WriteError(f"Wrong dtype (require c_int, got {array.dtype})")
             array.tofile(fh)
@@ -390,7 +390,7 @@ def _write_elements(fh, cells, tag_data, binary):
                         consecutive_index + i + 1,
                         " ".join([str(val) for val in fcd[i]]),
                         # a bit clumsy for `c+1`, but if c is uint64, c+1 is float64
-                        " ".join([str(cc) for cc in c + numpy.array(1, dtype=c.dtype)]),
+                        " ".join([str(cc) for cc in c + np.array(1, dtype=c.dtype)]),
                     ).encode("utf-8")
                 )
 
@@ -407,10 +407,10 @@ def _write_periodic(fh, periodic, float_fmt):
         fh.write(f"{dim} {stag} {mtag}\n".encode("utf-8"))
         if affine is not None:
             fh.write(b"Affine ")
-            affine = numpy.array(affine, dtype=float)
-            affine = numpy.atleast_2d(affine.ravel())
-            numpy.savetxt(fh, affine, fmt="%" + float_fmt)
-        slave_master = numpy.array(slave_master, dtype=c_int).reshape(-1, 2)
+            affine = np.array(affine, dtype=float)
+            affine = np.atleast_2d(affine.ravel())
+            np.savetxt(fh, affine, fmt="%" + float_fmt)
+        slave_master = np.array(slave_master, dtype=c_int).reshape(-1, 2)
         slave_master = slave_master + 1  # Add one, Gmsh is 0-based
         fh.write("{}\n".format(len(slave_master)).encode("utf-8"))
         for snode, mnode in slave_master:

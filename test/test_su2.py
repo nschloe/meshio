@@ -1,7 +1,7 @@
 import pathlib
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -36,10 +36,10 @@ def test_structured(
     assert sum(len(block.data) for block in mesh.cells) == ref_num_cells
     assert len(mesh.points) == ref_num_points
 
-    all_tags = numpy.concatenate([tags for tags in mesh.cell_data["su2:tag"]])
+    all_tags = np.concatenate([tags for tags in mesh.cell_data["su2:tag"]])
 
     assert sum(all_tags) == sum_tags
 
-    all_unique_tags = numpy.unique(all_tags)
+    all_unique_tags = np.unique(all_tags)
 
     assert len(all_unique_tags) == ref_num_unique_tags + 1

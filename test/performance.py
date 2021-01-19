@@ -6,7 +6,7 @@ import tracemalloc
 
 import dufte
 import matplotlib.pyplot as plt
-import numpy
+import numpy as np
 import meshzoo
 
 import meshio
@@ -43,13 +43,13 @@ def generate_tetrahedral_mesh():
 def plot_speed(names, elapsed_write, elapsed_read):
     plt.style.use(dufte.style)
 
-    names = numpy.asarray(names)
-    elapsed_write = numpy.asarray(elapsed_write)
-    elapsed_read = numpy.asarray(elapsed_read)
+    names = np.asarray(names)
+    elapsed_write = np.asarray(elapsed_write)
+    elapsed_read = np.asarray(elapsed_read)
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
-    idx = numpy.argsort(elapsed_write)[::-1]
+    idx = np.argsort(elapsed_write)[::-1]
     ax[0].barh(range(len(names)), elapsed_write[idx], align="center")
     ax[0].set_yticks(range(len(names)))
     ax[0].set_yticklabels(names[idx])
@@ -57,7 +57,7 @@ def plot_speed(names, elapsed_write, elapsed_read):
     ax[0].set_title("write")
     ax[0].grid()
 
-    idx = numpy.argsort(elapsed_read)[::-1]
+    idx = np.argsort(elapsed_read)[::-1]
     ax[1].barh(range(len(names)), elapsed_read[idx], align="center")
     ax[1].set_yticks(range(len(names)))
     ax[1].set_yticklabels(names[idx])
@@ -72,13 +72,13 @@ def plot_speed(names, elapsed_write, elapsed_read):
 
 
 def plot_file_sizes(names, file_sizes, mem_size):
-    idx = numpy.argsort(file_sizes)
+    idx = np.argsort(file_sizes)
     file_sizes = [file_sizes[i] for i in idx]
     names = [names[i] for i in idx]
 
     plt.figure(figsize=(8, 8))
     ax = plt.gca()
-    y_pos = numpy.arange(len(file_sizes))
+    y_pos = np.arange(len(file_sizes))
     ax.barh(y_pos, file_sizes, align="center")
     #
     ylim = ax.get_ylim()
@@ -99,13 +99,13 @@ def plot_file_sizes(names, file_sizes, mem_size):
 
 
 def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
-    names = numpy.asarray(names)
-    peak_memory_write = numpy.asarray(peak_memory_write)
-    peak_memory_read = numpy.asarray(peak_memory_read)
+    names = np.asarray(names)
+    peak_memory_write = np.asarray(peak_memory_write)
+    peak_memory_read = np.asarray(peak_memory_read)
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
-    idx = numpy.argsort(peak_memory_write)[::-1]
+    idx = np.argsort(peak_memory_write)[::-1]
     ax[0].barh(range(len(names)), peak_memory_write[idx], align="center")
     ax[0].set_yticks(range(len(names)))
     ax[0].set_yticklabels(names[idx])
@@ -119,7 +119,7 @@ def plot_memory_usage(names, peak_memory_write, peak_memory_read, mem_size):
     )
     ax[0].set_ylim(ylim)
 
-    idx = numpy.argsort(peak_memory_read)[::-1]
+    idx = np.argsort(peak_memory_read)[::-1]
     ax[1].barh(range(len(names)), peak_memory_read[idx], align="center")
     ax[1].set_yticks(range(len(names)))
     ax[1].set_yticklabels(names[idx])
@@ -319,11 +319,11 @@ def read_write(plot=False):
 
     names = list(formats.keys())
     # convert to MB
-    file_sizes = numpy.array(file_sizes)
+    file_sizes = np.array(file_sizes)
     file_sizes = file_sizes / 1024.0 ** 2
-    peak_memory_write = numpy.array(peak_memory_write)
+    peak_memory_write = np.array(peak_memory_write)
     peak_memory_write = peak_memory_write / 1024.0 ** 2
-    peak_memory_read = numpy.array(peak_memory_read)
+    peak_memory_read = np.array(peak_memory_read)
     peak_memory_read = peak_memory_read / 1024.0 ** 2
 
     if plot:

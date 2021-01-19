@@ -3,7 +3,7 @@ import pathlib
 import sys
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -23,7 +23,7 @@ import meshio
 def test(mesh, binary, data):
     if data:
         mesh = copy.deepcopy(mesh)
-        mesh.cell_data["flac3d:group"] = [numpy.array(data)]
+        mesh.cell_data["flac3d:group"] = [np.array(data)]
     helpers.write_read(
         lambda f, m: meshio.flac3d.write(f, m, binary=binary),
         meshio.flac3d.read,
@@ -45,7 +45,7 @@ def test_reference_file(filename):
     mesh = meshio.read(filename)
 
     # points
-    assert numpy.isclose(mesh.points.sum(), 307.0)
+    assert np.isclose(mesh.points.sum(), 307.0)
 
     # cells
     ref_num_cells = [

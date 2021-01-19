@@ -5,7 +5,7 @@ I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2+), cf.
 import logging
 from functools import partial
 
-import numpy
+import numpy as np
 
 from .._common import (
     _topological_dimension,
@@ -28,13 +28,13 @@ from .common import (
     _write_physical_names,
 )
 
-c_int = numpy.dtype("i")
-c_size_t = numpy.dtype("P")
-c_double = numpy.dtype("d")
+c_int = np.dtype("i")
+c_size_t = np.dtype("P")
+c_double = np.dtype("d")
 
 
 def _size_type(data_size):
-    return numpy.dtype(f"u{data_size}")
+    return np.dtype(f"u{data_size}")
 
 
 def read_buffer(f, is_ascii, data_size):
@@ -125,7 +125,7 @@ def _read_entities(f, is_ascii, data_size):
     # is not difficult, but for the moment, the entropy of adding more data
     # does not seem warranted.
 
-    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    fromfile = partial(np.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
     physical_tags = ({}, {}, {}, {})
     bounding_entities = ({}, {}, {}, {})
@@ -152,7 +152,7 @@ def _read_nodes(f, is_ascii, data_size):
     # Note that entity tags are 1-offset within each dimension, thus it is
     # necessary to keep track of both tag and dimension of the entity
 
-    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    fromfile = partial(np.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
 
     # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
@@ -160,9 +160,9 @@ def _read_nodes(f, is_ascii, data_size):
         f, c_size_t, 4
     )
 
-    points = numpy.empty((total_num_nodes, 3), dtype=float)
-    tags = numpy.empty(total_num_nodes, dtype=int)
-    dim_tags = numpy.empty((total_num_nodes, 2), dtype=int)
+    points = np.empty((total_num_nodes, 3), dtype=float)
+    tags = np.empty(total_num_nodes, dtype=int)
+    dim_tags = np.empty((total_num_nodes, 2), dtype=int)
 
     # To save the entity block id for each node, initialize an array here,
     # populate it with num_nodes
@@ -201,7 +201,7 @@ def _read_nodes(f, is_ascii, data_size):
 def _read_elements(
     f, point_tags, physical_tags, bounding_entities, is_ascii, data_size, field_data
 ):
-    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    fromfile = partial(np.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
 
     # numEntityBlocks numElements minElementTag maxElementTag (all size_t)
@@ -218,7 +218,7 @@ def _read_elements(
         dim, tag, type_ele = fromfile(f, c_int, 3)
         (num_ele,) = fromfile(f, c_size_t, 1)
         for physical_name, cell_set in cell_sets.items():
-            cell_set[k] = numpy.arange(
+            cell_set[k] = np.arange(
                 num_ele
                 if (
                     physical_tags
@@ -246,8 +246,8 @@ def _read_elements(
     _fast_forward_to_end_block(f, "Elements")
 
     # Inverse point tags
-    inv_tags = numpy.full(numpy.max(point_tags) + 1, -1, dtype=int)
-    inv_tags[point_tags] = numpy.arange(len(point_tags))
+    inv_tags = np.full(np.max(point_tags) + 1, -1, dtype=int)
+    inv_tags[point_tags] = np.arange(len(point_tags))
 
     # Note that the first column in the data array is the element tag; discard it.
     data = [
@@ -262,11 +262,11 @@ def _read_elements(
             if "gmsh:physical" not in cell_data:
                 cell_data["gmsh:physical"] = []
             cell_data["gmsh:physical"].append(
-                numpy.full(len(values), physical_tag[0], int)
+                np.full(len(values), physical_tag[0], int)
             )
         if "gmsh:geometrical" not in cell_data:
             cell_data["gmsh:geometrical"] = []
-        cell_data["gmsh:geometrical"].append(numpy.full(len(values), geom_tag, int))
+        cell_data["gmsh:geometrical"].append(np.full(len(values), geom_tag, int))
 
         # The bounding entities is stored in the cell_sets.
         if bounding_entities:
@@ -280,7 +280,7 @@ def _read_elements(
 
 
 def _read_periodic(f, is_ascii, data_size):
-    fromfile = partial(numpy.fromfile, sep=" " if is_ascii else "")
+    fromfile = partial(np.fromfile, sep=" " if is_ascii else "")
     c_size_t = _size_type(data_size)
     periodic = []
     # numPeriodicLinks(size_t)
@@ -311,8 +311,8 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             "msh4 requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = numpy.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        mesh.points = np.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
         )
 
     if binary:
@@ -347,7 +347,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
         fh.write(b"$MeshFormat\n")
         fh.write(f"4.1 {file_type} {data_size}\n".encode("utf-8"))
         if binary:
-            numpy.array([1], dtype=c_int).tofile(fh)
+            np.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
         fh.write(b"$EndMeshFormat\n")
 
@@ -425,10 +425,10 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     # Array of entity tag (first row) and dimension (second row) per node.
     # We need to combine the two, since entity tags are reset for each dimension.
     # Uniquify, so that each row in node_dim_tags represent a unique entity
-    node_dim_tags = numpy.unique(point_data["gmsh:dim_tags"], axis=0)
+    node_dim_tags = np.unique(point_data["gmsh:dim_tags"], axis=0)
 
     # Write number of entities per dimension
-    num_occ = numpy.bincount(node_dim_tags[:, 0], minlength=4)
+    num_occ = np.bincount(node_dim_tags[:, 0], minlength=4)
     if num_occ.size > 4:
         raise ValueError("Encountered entity with dimension > 3")
 
@@ -441,7 +441,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
 
     # Array of dimension and entity tag per cell. Will be compared with the
     # similar not array.
-    cell_dim_tags = numpy.empty((len(cells), 2), dtype=int)
+    cell_dim_tags = np.empty((len(cells), 2), dtype=int)
     for ci in range(len(cells)):
         cell_dim_tags[ci] = [
             _topological_dimension[cells[ci][0]],
@@ -457,8 +457,8 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     for dim, tag in node_dim_tags:
 
         # Find the matching cell block, if it exists
-        matching_cell_block = numpy.where(
-            numpy.logical_and(cell_dim_tags[:, 0] == dim, cell_dim_tags[:, 1] == tag)
+        matching_cell_block = np.where(
+            np.logical_and(cell_dim_tags[:, 0] == dim, cell_dim_tags[:, 1] == tag)
         )[0]
         if matching_cell_block.size > 1:
             # It is not 100% clear if this is not permissible, but the current
@@ -472,7 +472,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
 
         # Entity tag
         if binary:
-            numpy.array([tag], dtype=c_int).tofile(fh)
+            np.array([tag], dtype=c_int).tofile(fh)
         else:
             fh.write(f"{tag} ".encode("utf-8"))
 
@@ -484,13 +484,13 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
         if dim == 0:
             # Bounding box is a point
             if binary:
-                numpy.zeros(3, dtype=c_double).tofile(fh)
+                np.zeros(3, dtype=c_double).tofile(fh)
             else:
                 fh.write(b"0 0 0 ")
         else:
             # Bounding box has six coordinates
             if binary:
-                numpy.zeros(6, dtype=c_double).tofile(fh)
+                np.zeros(6, dtype=c_double).tofile(fh)
             else:
                 fh.write(b"0 0 0 0 0 0 ")
 
@@ -501,14 +501,14 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
             # ASSUMPTION: There is a single physical tag for this
             physical_tag = tag_data["gmsh:physical"][matching_cell_block[0]][0]
             if binary:
-                numpy.array([1], dtype=c_size_t).tofile(fh)
-                numpy.array([physical_tag], dtype=c_int).tofile(fh)
+                np.array([1], dtype=c_size_t).tofile(fh)
+                np.array([physical_tag], dtype=c_int).tofile(fh)
             else:
                 fh.write(f"1 {physical_tag} ".encode("utf-8"))
         else:
             # The number of physical tags is zero
             if binary:
-                numpy.array([0], dtype=c_size_t).tofile(fh)
+                np.array([0], dtype=c_size_t).tofile(fh)
             else:
                 fh.write(b"0 ")
 
@@ -521,8 +521,8 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
                 num_bounds = len(bounds)
                 if num_bounds > 0:
                     if binary:
-                        numpy.array(num_bounds, dtype=c_size_t).tofile(fh)
-                        numpy.array(bounds, dtype=c_int).tofile(fh)
+                        np.array(num_bounds, dtype=c_size_t).tofile(fh)
+                        np.array(bounds, dtype=c_int).tofile(fh)
                     else:
                         fh.write(f"{num_bounds} ".encode("utf-8"))
                         for bi in bounds:
@@ -531,14 +531,14 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
                 else:
                     # Register that there are no bounding elements
                     if binary:
-                        numpy.array([0], dtype=c_size_t).tofile(fh)
+                        np.array([0], dtype=c_size_t).tofile(fh)
                     else:
                         fh.write(b"0\n")
 
             else:
                 # Register that there are no bounding elements
                 if binary:
-                    numpy.array([0], dtype=c_size_t).tofile(fh)
+                    np.array([0], dtype=c_size_t).tofile(fh)
                 else:
                     fh.write(b"0\n")
         else:
@@ -597,7 +597,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
         # reverse_index_map maps from all nodes to their respective representation
         # in (the uniquified) node_dim_tags. This approach works for general
         # orderings of the nodes
-        node_dim_tags, reverse_index_map = numpy.unique(
+        node_dim_tags, reverse_index_map = np.unique(
             point_data["gmsh:dim_tags"],
             axis=0,
             return_inverse=True,
@@ -613,9 +613,9 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
 
         dim = _topological_dimension[cells[0][0]]
         tag = 0
-        node_dim_tags = numpy.array([[dim, tag]])
+        node_dim_tags = np.array([[dim, tag]])
         # All nodes map to the (single) dimension-entity object
-        reverse_index_map = numpy.full(n, 0, dtype=int)
+        reverse_index_map = np.full(n, 0, dtype=int)
 
     num_blocks = node_dim_tags.shape[0]
 
@@ -626,26 +626,26 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
                 "Binary Gmsh needs c_double points (got %s). Converting.", points.dtype
             )
             points = points.astype(c_double)
-        numpy.array([num_blocks, n, min_tag, max_tag], dtype=c_size_t).tofile(fh)
+        np.array([num_blocks, n, min_tag, max_tag], dtype=c_size_t).tofile(fh)
     else:
         fh.write(f"{num_blocks} {n} {min_tag} {max_tag}\n".encode("utf-8"))
 
     for j in range(num_blocks):
         dim, tag = node_dim_tags[j]
 
-        node_tags = numpy.where(reverse_index_map == j)[0]
+        node_tags = np.where(reverse_index_map == j)[0]
         num_points_this = node_tags.size
 
         if binary:
-            numpy.array([dim, tag, is_parametric], dtype=c_int).tofile(fh)
-            numpy.array([num_points_this], dtype=c_size_t).tofile(fh)
+            np.array([dim, tag, is_parametric], dtype=c_int).tofile(fh)
+            np.array([num_points_this], dtype=c_size_t).tofile(fh)
             (node_tags + 1).astype(c_size_t).tofile(fh)
             points[node_tags].tofile(fh)
         else:
             fh.write(f"{dim} {tag} {is_parametric} {num_points_this}\n".encode("utf-8"))
             (node_tags + 1).astype(c_size_t).tofile(fh, "\n", "%d")
             fh.write(b"\n")
-            numpy.savetxt(fh, points[node_tags], delimiter=" ", fmt="%" + float_fmt)
+            np.savetxt(fh, points[node_tags], delimiter=" ", fmt="%" + float_fmt)
 
     if binary:
         fh.write(b"\n")
@@ -673,7 +673,7 @@ def _write_elements(fh, cells, tag_data, binary):
     min_element_tag = 1
     max_element_tag = total_num_cells
     if binary:
-        numpy.array(
+        np.array(
             [num_blocks, total_num_cells, min_element_tag, max_element_tag],
             dtype=c_size_t,
         ).tofile(fh)
@@ -691,9 +691,9 @@ def _write_elements(fh, cells, tag_data, binary):
                 entity_tag = 0
 
             cell_type = _meshio_to_gmsh_type[cell_type]
-            numpy.array([dim, entity_tag, cell_type], dtype=c_int).tofile(fh)
+            np.array([dim, entity_tag, cell_type], dtype=c_int).tofile(fh)
             n = node_idcs.shape[0]
-            numpy.array([n], dtype=c_size_t).tofile(fh)
+            np.array([n], dtype=c_size_t).tofile(fh)
 
             if node_idcs.dtype != c_size_t:
                 logging.warning(
@@ -702,9 +702,9 @@ def _write_elements(fh, cells, tag_data, binary):
                 )
                 node_idcs = node_idcs.astype(c_size_t)
 
-            numpy.column_stack(
+            np.column_stack(
                 [
-                    numpy.arange(tag0, tag0 + n, dtype=c_size_t),
+                    np.arange(tag0, tag0 + n, dtype=c_size_t),
                     # increment indices by one to conform with gmsh standard
                     node_idcs + 1,
                 ]
@@ -733,10 +733,10 @@ def _write_elements(fh, cells, tag_data, binary):
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]
             fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode("utf-8"))
-            numpy.savetxt(
+            np.savetxt(
                 fh,
                 # Gmsh indexes from 1 not 0
-                numpy.column_stack([numpy.arange(tag0, tag0 + n), node_idcs + 1]),
+                np.column_stack([np.arange(tag0, tag0 + n), node_idcs + 1]),
                 "%d",
                 " ",
             )
@@ -764,14 +764,14 @@ def _write_periodic(fh, periodic, float_fmt, binary):
     """
 
     def tofile(fh, value, dtype, **kwargs):
-        ary = numpy.array(value, dtype=dtype)
+        ary = np.array(value, dtype=dtype)
         if binary:
             ary.tofile(fh)
         else:
-            ary = numpy.atleast_2d(ary)
+            ary = np.atleast_2d(ary)
             fmt = float_fmt if dtype == c_double else "d"
             fmt = "%" + kwargs.pop("fmt", fmt)
-            numpy.savetxt(fh, ary, fmt=fmt, **kwargs)
+            np.savetxt(fh, ary, fmt=fmt, **kwargs)
 
     fh.write(b"$Periodic\n")
     tofile(fh, len(periodic), c_size_t)
@@ -782,7 +782,7 @@ def _write_periodic(fh, periodic, float_fmt, binary):
         else:
             tofile(fh, len(affine), c_size_t, newline=" ")
             tofile(fh, affine, c_double, fmt=float_fmt)
-        slave_master = numpy.array(slave_master, dtype=c_size_t)
+        slave_master = np.array(slave_master, dtype=c_size_t)
         slave_master = slave_master.reshape(-1, 2)
         slave_master = slave_master + 1  # Add one, Gmsh is 1-based
         tofile(fh, len(slave_master), c_size_t)

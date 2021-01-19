@@ -5,7 +5,7 @@ I/O SU2 mesh format
 import logging
 from itertools import chain, islice
 
-import numpy
+import numpy as np
 
 from .._common import _pick_first_int_data
 from .._exceptions import ReadError
@@ -93,12 +93,12 @@ def read_buffer(f):
             #
             first_line = f.readline()
             first_line = first_line.split()
-            first_line = numpy.array(first_line, dtype=ftype)
+            first_line = np.array(first_line, dtype=ftype)
 
             extra_columns = first_line.shape[0] - dim
 
             num_verts = int(rest_of_line.split()[0]) - 1
-            points = numpy.fromfile(
+            points = np.fromfile(
                 f, count=num_verts * (dim + extra_columns), dtype=ftype, sep=" "
             ).reshape(num_verts, dim + extra_columns)
 
@@ -108,7 +108,7 @@ def read_buffer(f):
                 points = points[:, :-extra_columns]
 
             # add the first line we read separately
-            points = numpy.vstack([first_line, points])
+            points = np.vstack([first_line, points])
 
         elif name == "NELEM" or name == "MARKER_ELEMS":
             # we cannot? read at onece using numpy becasue we do not know the
@@ -135,7 +135,7 @@ def read_buffer(f):
             gen = chain([first_line_str], gen)
 
             cell_array = " ".join([line.rstrip("\n") for line in gen])
-            cell_array = numpy.fromiter(cell_array.split(), dtype=itype)
+            cell_array = np.fromiter(cell_array.split(), dtype=itype)
 
             cells_, cell_data_ = _translate_cells(cell_array, has_extra_column)
 
@@ -144,10 +144,10 @@ def read_buffer(f):
                 num_block_elems = len(data)
                 if name == "NELEM":
                     cell_data["su2:tag"].append(
-                        numpy.full(num_block_elems, 0, dtype=numpy.int32)
+                        np.full(num_block_elems, 0, dtype=np.int32)
                     )
                 else:
-                    tags = numpy.full(num_block_elems, next_tag_id, dtype=numpy.int32)
+                    tags = np.full(num_block_elems, next_tag_id, dtype=np.int32)
                     cell_data["su2:tag"].append(tags)
 
         elif name == "NMARK":
@@ -190,9 +190,9 @@ def read_buffer(f):
     for type, indices in indices_to_merge.items():
         if len(indices) > 1:
             cells[indices[0]] = CellBlock(
-                type, numpy.concatenate([cells[i].data for i in indices])
+                type, np.concatenate([cells[i].data for i in indices])
             )
-            cdata[indices[0]] = numpy.concatenate([cdata[i] for i in indices])
+            cdata[indices[0]] = np.concatenate([cdata[i] for i in indices])
 
     # delete merged blocks
     idelete = []
@@ -226,23 +226,23 @@ def _translate_cells(data, has_extra_column=False):
         types.append(data[i])
         i += su2_type_to_numnodes[data[i]] + entry_offset
 
-    types = numpy.array(types)
-    bins = {u: numpy.where(types == u)[0] for u in numpy.unique(types)}
+    types = np.array(types)
+    bins = {u: np.where(types == u)[0] for u in np.unique(types)}
 
     # Deduct offsets from the cell types. This is much faster than manually
     # going through the data array. Slight disadvantage: This doesn't work for
     # cells with a custom number of points.
-    numnodes = numpy.empty(len(types), dtype=int)
+    numnodes = np.empty(len(types), dtype=int)
     for tpe, idx in bins.items():
         numnodes[idx] = su2_type_to_numnodes[tpe]
-    offsets = numpy.cumsum(numnodes + entry_offset) - (numnodes + entry_offset)
+    offsets = np.cumsum(numnodes + entry_offset) - (numnodes + entry_offset)
 
     cells = {}
     cell_data = {}
     for tpe, b in bins.items():
         meshio_type = su2_to_meshio_type[tpe]
         nnodes = su2_type_to_numnodes[tpe]
-        indices = numpy.add.outer(offsets[b], numpy.arange(1, nnodes + 1))
+        indices = np.add.outer(offsets[b], np.arange(1, nnodes + 1))
         cells[meshio_type] = data[indices]
 
     return cells, cell_data
@@ -257,7 +257,7 @@ def write(filename, mesh):
         # Write points
         num_points = mesh.points.shape[0]
         f.write(f"NPOIN= {num_points}\n".encode("utf-8"))
-        numpy.savetxt(f, mesh.points)
+        np.savetxt(f, mesh.points)
 
         # Through warnings about unsupported types
         for type, _ in mesh.cells:
@@ -283,15 +283,15 @@ def write(filename, mesh):
         for cell_block in cells:
             cell_type = meshio_to_su2_type[cell_block.type]
             # create a column with the value cell_type
-            type_column = numpy.full(
+            type_column = np.full(
                 cell_block.data.shape[0],
                 cell_type,
                 dtype=cell_block.data.dtype,
             )
 
             # prepend a column with the value cell_type
-            cell_block_to_write = numpy.column_stack([type_column, cell_block.data])
-            numpy.savetxt(f, cell_block_to_write, fmt="%d")
+            cell_block_to_write = np.column_stack([type_column, cell_block.data])
+            np.savetxt(f, cell_block_to_write, fmt="%d")
 
         # write boundary information
 
@@ -320,11 +320,11 @@ def write(filename, mesh):
             labels = (
                 mesh.cell_data[labels_key][index]
                 if labels_key
-                else numpy.ones(len(data), dtype=data.dtype)
+                else np.ones(len(data), dtype=data.dtype)
             )
 
             # Get unique tags and number of instances of each tag for this Cell block
-            tags_tmp, counts_tmp = numpy.unique(labels, return_counts=True)
+            tags_tmp, counts_tmp = np.unique(labels, return_counts=True)
 
             for tag, count in zip(tags_tmp, counts_tmp):
                 if tag not in tags_per_cell_block:
@@ -348,26 +348,26 @@ def write(filename, mesh):
                 labels = (
                     mesh.cell_data[labels_key][index]
                     if labels_key
-                    else numpy.ones(len(data), dtype=data.dtype)
+                    else np.ones(len(data), dtype=data.dtype)
                 )
 
                 # Pick elements with given tag
-                mask = numpy.where(labels == tag)
+                mask = np.where(labels == tag)
 
                 cells_to_write = data[mask]
 
                 cell_type = meshio_to_su2_type[cell_type]
 
                 # create a column with the value cell_type
-                type_column = numpy.full(
+                type_column = np.full(
                     cells_to_write.shape[0],
                     cell_type,
                     dtype=cells_to_write.dtype,
                 )
 
                 # prepend a column with the value cell_type
-                cell_block_to_write = numpy.column_stack([type_column, cells_to_write])
-                numpy.savetxt(f, cell_block_to_write, fmt="%d")
+                cell_block_to_write = np.column_stack([type_column, cells_to_write])
+                np.savetxt(f, cell_block_to_write, fmt="%d")
 
     return
 

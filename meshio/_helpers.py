@@ -1,7 +1,7 @@
 import pathlib
 from typing import List, Optional
 
-import numpy
+import numpy as np
 
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
@@ -81,10 +81,10 @@ def write_points_cells(
     file_format=None,
     **kwargs,
 ):
-    points = numpy.asarray(points)
+    points = np.asarray(points)
     if isinstance(cells, dict):
         cells = [CellBlock(name, vals) for name, vals in cells.items()]
-    cells = [(key, numpy.asarray(value)) for key, value in cells]
+    cells = [(key, np.asarray(value)) for key, value in cells]
     mesh = Mesh(
         points,
         cells,

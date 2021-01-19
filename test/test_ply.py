@@ -1,7 +1,7 @@
 import pathlib
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -16,9 +16,9 @@ import meshio
         helpers.add_point_data(helpers.tri_mesh, 1, dtype=int),
         helpers.add_point_data(helpers.tri_mesh, 1, dtype=float),
         helpers.line_mesh,
-        # helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
-        # helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float64)]),
-        # helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
+        # helpers.add_cell_data(helpers.tri_mesh, [("a", (), np.float64)]),
+        # helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), np.float64)]),
+        # helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), np.float64)]),
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
@@ -27,7 +27,7 @@ def test_ply(mesh, binary):
         return meshio.ply.write(*args, binary=binary, **kwargs)
 
     for k, c in enumerate(mesh.cells):
-        mesh.cells[k] = meshio.CellBlock(c.type, c.data.astype(numpy.int32))
+        mesh.cells[k] = meshio.CellBlock(c.type, c.data.astype(np.int32))
 
     helpers.write_read(writer, meshio.ply.read, mesh, 1.0e-12)
 
@@ -45,7 +45,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells):
 
     mesh = meshio.read(filename)
     tol = 1.0e-2
-    s = numpy.sum(mesh.points)
+    s = np.sum(mesh.points)
     assert abs(s - ref_sum) < tol * abs(ref_sum)
     assert len(mesh.get_cells_type("triangle")) == ref_num_cells
 
@@ -54,10 +54,10 @@ def test_reference_file(filename, ref_sum, ref_num_cells):
 def test_no_cells(binary):
     import io
 
-    vertices = numpy.random.random((30, 3))
+    vertices = np.random.random((30, 3))
     mesh = meshio.Mesh(vertices, [])
     file = io.BytesIO()
     mesh.write(file, "ply", binary=binary)
     mesh2 = meshio.read(io.BytesIO(file.getvalue()), "ply")
-    assert numpy.array_equal(mesh.points, mesh2.points)
+    assert np.array_equal(mesh.points, mesh2.points)
     assert len(mesh2.cells) == 0

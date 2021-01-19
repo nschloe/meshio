@@ -1,5 +1,5 @@
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -20,7 +20,7 @@ test_set_full = [
     helpers.pyramid_mesh,
     helpers.wedge_mesh,
     helpers.add_point_data(helpers.tri_mesh, 1),
-    helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (), np.float64)]),
 ]
 
 test_set_reduced = [
@@ -31,7 +31,7 @@ test_set_reduced = [
     helpers.tet_mesh,
     helpers.hex_mesh,
     helpers.add_point_data(helpers.tri_mesh, 1),
-    helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (), np.float64)]),
 ]
 
 
@@ -66,11 +66,11 @@ def test_time_series():
         writer.write_points_cells(helpers.tri_mesh_2d.points, helpers.tri_mesh_2d.cells)
         n = helpers.tri_mesh_2d.points.shape[0]
 
-        times = numpy.linspace(0.0, 1.0, 5)
+        times = np.linspace(0.0, 1.0, 5)
         point_data = [
             {
-                "phi": numpy.full(n, t),
-                "u": numpy.full(helpers.tri_mesh_2d.points.shape, t),
+                "phi": np.full(n, t),
+                "u": np.full(helpers.tri_mesh_2d.points.shape, t),
             }
             for t in times
         ]
@@ -84,23 +84,23 @@ def test_time_series():
         points, cells = reader.read_points_cells()
         for k in range(reader.num_steps):
             t, pd, cd = reader.read_data(k)
-            assert numpy.abs(times[k] - t) < 1.0e-12
+            assert np.abs(times[k] - t) < 1.0e-12
             for key, value in pd.items():
-                assert numpy.all(numpy.abs(value - point_data[k][key]) < 1.0e-12)
+                assert np.all(np.abs(value - point_data[k][key]) < 1.0e-12)
 
 
 # def test_information_xdmf():
 #     mesh_out = meshio.Mesh(
-#         numpy.array(
+#         np.array(
 #             [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
 #         )
 #         / 3,
-#         [("triangle", numpy.array([[0, 1, 2], [0, 2, 3]]))],
+#         [("triangle", np.array([[0, 1, 2], [0, 2, 3]]))],
 #         field_data={
-#             "bottom": numpy.array([1, 1]),
-#             "right": numpy.array([2, 1]),
-#             "top": numpy.array([3, 1]),
-#             "left": numpy.array([4, 1]),
+#             "bottom": np.array([1, 1]),
+#             "right": np.array([2, 1]),
+#             "top": np.array([3, 1]),
+#             "left": np.array([4, 1]),
 #         },
 #     )
 #     # write the data

@@ -1,5 +1,5 @@
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -12,7 +12,7 @@ import meshio
         helpers.tri_mesh_2d,
         helpers.tet_mesh,
         helpers.add_cell_data(
-            helpers.tri_mesh, [("a", (), float), ("b", (), numpy.int64)]
+            helpers.tri_mesh, [("a", (), float), ("b", (), np.int64)]
         ),
     ],
 )

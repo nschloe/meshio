@@ -9,7 +9,7 @@ Node ordering described in
 """
 import logging
 
-import numpy
+import numpy as np
 
 from .._common import _pick_first_int_data
 from .._exceptions import ReadError
@@ -57,8 +57,8 @@ def read(filename):
 
 def _read_section(f, file_type, count, dtype):
     if file_type["type"] == "ascii":
-        return numpy.fromfile(f, count=count, dtype=dtype, sep=" ")
-    return numpy.fromfile(f, count=count, dtype=dtype)
+        return np.fromfile(f, count=count, dtype=dtype, sep=" ")
+    return np.fromfile(f, count=count, dtype=dtype)
 
 
 def read_buffer(f, file_type):
@@ -135,7 +135,7 @@ def read_buffer(f, file_type):
         cells.append(CellBlock(key, out - 1))
 
         # fill volume element attributes with zero
-        cell_data["ugrid:ref"].append(numpy.zeros(nitems, dtype=int))
+        cell_data["ugrid:ref"].append(np.zeros(nitems, dtype=int))
 
     if file_type["type"] == "F":
         _read_section(f, file_type, count=1, dtype=itype)
@@ -147,7 +147,7 @@ def _write_section(f, file_type, array, dtype):
     if file_type["type"] == "ascii":
         ncols = array.shape[1]
         fmt = " ".join(["%r"] * ncols)
-        numpy.savetxt(f, array, fmt=fmt)
+        np.savetxt(f, array, fmt=fmt)
     else:
         array.astype(dtype).tofile(f)
 
@@ -194,14 +194,14 @@ def _write_buffer(f, file_type, mesh):
             logging.warning(msg)
             continue
 
-    nitems = numpy.array([list(ugrid_counts.values())])
+    nitems = np.array([list(ugrid_counts.values())])
     # header
 
     # fortran_header corresponds to the number of bytes in each record
     # it has to be before and after each record
     fortran_header = None
     if file_type["type"] == "F":
-        fortran_header = numpy.array([nitems.nbytes])
+        fortran_header = np.array([nitems.nbytes])
         _write_section(f, file_type, fortran_header, itype)
 
     _write_section(f, file_type, nitems, itype)
@@ -216,10 +216,10 @@ def _write_buffer(f, file_type, mesh):
             fortran_header += array.nbytes
         # boundary tags
         if ugrid_counts["triangle"] > 0:
-            fortran_header += ugrid_counts["triangle"] * numpy.dtype(itype).itemsize
+            fortran_header += ugrid_counts["triangle"] * np.dtype(itype).itemsize
         if ugrid_counts["quad"] > 0:
-            fortran_header += ugrid_counts["quad"] * numpy.dtype(itype).itemsize
-        fortran_header = numpy.array([fortran_header])
+            fortran_header += ugrid_counts["quad"] * np.dtype(itype).itemsize
+        fortran_header = np.array([fortran_header])
         _write_section(f, file_type, fortran_header, itype)
 
     _write_section(f, file_type, mesh.points, ftype)
@@ -238,7 +238,7 @@ def _write_buffer(f, file_type, mesh):
 
         # pick out cell data
         # for data in mesh.cell_data.values():
-        #     if data.dtype in [numpy.int8, numpy.int16, numpy.int32, numpy.int64]:
+        #     if data.dtype in [np.int8, np.int16, np.int32, np.int64]:
         #         labels = data
         #         break
 
@@ -252,7 +252,7 @@ def _write_buffer(f, file_type, mesh):
         labels = (
             mesh.cell_data[labels_key]
             if labels_key
-            else numpy.ones(ugrid_counts[key], dtype=int)
+            else np.ones(ugrid_counts[key], dtype=int)
         )
 
         labels = labels.reshape(ugrid_counts[key], 1)

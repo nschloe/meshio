@@ -1,6 +1,6 @@
 from xml.etree import ElementTree as ET
 
-import numpy
+import numpy as np
 
 # See <https://github.com/nschloe/meshio/wiki/Node-ordering-in-cells> for the node
 # ordering.
@@ -151,12 +151,12 @@ _topological_dimension = {
 
 
 def cell_data_from_raw(cells, cell_data_raw):
-    cs = numpy.cumsum([len(c[1]) for c in cells])[:-1]
-    return {name: numpy.split(d, cs) for name, d in cell_data_raw.items()}
+    cs = np.cumsum([len(c[1]) for c in cells])[:-1]
+    return {name: np.split(d, cs) for name, d in cell_data_raw.items()}
 
 
 def raw_from_cell_data(cell_data):
-    return {name: numpy.concatenate(value) for name, value in cell_data.items()}
+    return {name: np.concatenate(value) for name, value in cell_data.items()}
 
 
 def write_xml(filename, root):
@@ -257,13 +257,13 @@ def _vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
     # [1] http://gmsh.info/doc/texinfo/gmsh.html#Node-ordering
     # [2] https://vtk.org/doc/nightly/html/classvtkWedge.html
     if vtk_type == 13:
-        return numpy.array([0, 2, 1, 3, 5, 4], dtype=dtype)
+        return np.array([0, 2, 1, 3, 5, 4], dtype=dtype)
     else:
-        return numpy.arange(0, numnodes, dtype=dtype)
+        return np.arange(0, numnodes, dtype=dtype)
 
 
 def _meshio_to_vtk_order(meshio_type, numnodes, dtype=int):
     if meshio_type == "wedge":
-        return numpy.array([0, 2, 1, 3, 5, 4], dtype=dtype)
+        return np.array([0, 2, 1, 3, 5, 4], dtype=dtype)
     else:
-        return numpy.arange(0, numnodes, dtype=dtype)
+        return np.arange(0, numnodes, dtype=dtype)

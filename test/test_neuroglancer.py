@@ -1,7 +1,7 @@
 import pathlib
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -23,6 +23,6 @@ def test_reference_file(filename, ref_sum, ref_num_cells):
 
     mesh = meshio.read(filename, "neuroglancer")
     tol = 1.0e-5
-    s = numpy.sum(mesh.points)
+    s = np.sum(mesh.points)
     assert abs(s - ref_sum) < tol * abs(ref_sum)
     assert len(mesh.cells[0].data) == ref_num_cells

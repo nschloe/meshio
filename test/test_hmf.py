@@ -1,5 +1,5 @@
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -18,7 +18,7 @@ test_set_full = [
     helpers.hex_mesh,
     helpers.hex20_mesh,
     helpers.add_point_data(helpers.tri_mesh, 1),
-    helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (), np.float64)]),
 ]
 
 

@@ -3,7 +3,7 @@ import warnings
 from io import BytesIO
 from xml.etree import ElementTree as ET
 
-import numpy
+import numpy as np
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
@@ -192,13 +192,13 @@ class TimeSeriesReader:
             precision = "4"
 
         if data_item.get("Format") == "XML":
-            return numpy.fromstring(
+            return np.fromstring(
                 data_item.text,
                 dtype=xdmf_to_numpy_type[(data_type, precision)],
                 sep=" ",
             ).reshape(dims)
         elif data_item.get("Format") == "Binary":
-            return numpy.fromfile(
+            return np.fromfile(
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
         elif data_item.get("Format") != "HDF":
@@ -223,7 +223,7 @@ class TimeSeriesReader:
 
         for key in h5path[1:].split("/"):
             f = f[key]
-        # `[()]` gives a numpy.ndarray
+        # `[()]` gives a np.ndarray
         return f[()]
 
 
@@ -309,7 +309,7 @@ class TimeSeriesWriter:
         # permit old dict strucutre, convert it to list of tuples
         for name, entry in cell_data.items():
             if isinstance(entry, dict):
-                cell_data[name] = numpy.array(list(entry.values()))
+                cell_data[name] = np.array(list(entry.values()))
         if cell_data:
             self.cell_data(cell_data, grid)
 
@@ -317,7 +317,7 @@ class TimeSeriesWriter:
         if self.data_format == "XML":
             s = BytesIO()
             fmt = dtype_to_format_string[data.dtype.name]
-            numpy.savetxt(s, data.flatten(), fmt)
+            np.savetxt(s, data.flatten(), fmt)
             return s.getvalue().decode()
         elif self.data_format == "Binary":
             bin_filename = "{}{}.bin".format(
@@ -396,19 +396,19 @@ class TimeSeriesWriter:
                 TopologyType="Mixed",
                 NumberOfElements=str(total_num_cells),
             )
-            total_num_cell_items = sum(numpy.prod(c.data.shape) for c in cells)
+            total_num_cell_items = sum(np.prod(c.data.shape) for c in cells)
             dim = total_num_cell_items + total_num_cells
             # Lines translate to Polylines, and one needs to specify the exact
             # number of nodes. Hence, prepend 2.
             for c in cells:
                 if c.type == "line":
-                    c.data[:] = numpy.insert(c.data, 0, 2, axis=1)
+                    c.data[:] = np.insert(c.data, 0, 2, axis=1)
                     dim += len(c.data)
             dim = str(dim)
-            cd = numpy.concatenate(
+            cd = np.concatenate(
                 [
                     # prepend column with xdmf type index
-                    numpy.insert(
+                    np.insert(
                         value, 0, meshio_type_to_xdmf_index[key], axis=1
                     ).flatten()
                     for key, value in cells

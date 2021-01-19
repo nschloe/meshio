@@ -7,7 +7,7 @@ The MDPA format is unsuitable for fast consumption, this is why:
 """
 import logging
 
-import numpy
+import numpy as np
 
 from .._common import num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
@@ -115,7 +115,7 @@ def _read_nodes(f, is_ascii, data_size):
         num_nodes += 1
     f.seek(pos)
 
-    points = numpy.fromfile(f, count=num_nodes * 4, sep=" ").reshape((num_nodes, 4))
+    points = np.fromfile(f, count=num_nodes * 4, sep=" ").reshape((num_nodes, 4))
     # The first number is the index
     points = points[:, 1:]
 
@@ -161,7 +161,7 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
         if len(cells) == 0 or t != cells[-1].type:
             cells.append(CellBlock(t, []))
         # Subtract one to account for the fact that python indices are 0-based.
-        cells[-1].data.append(numpy.array(data[-num_nodes_per_elem:]) - 1)
+        cells[-1].data.append(np.array(data[-num_nodes_per_elem:]) - 1)
 
         # Using the property id as tag
         if t not in cell_tags:
@@ -170,7 +170,7 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
 
     # convert to numpy arrays
     for k, c in enumerate(cells):
-        cells[k] = CellBlock(c.type, numpy.array(c.data, dtype=int))
+        cells[k] = CellBlock(c.type, np.array(c.data, dtype=int))
 
     # Cannot convert cell_tags[key] to numpy array: There may be a
     # different number of tags for each cell.
@@ -194,10 +194,10 @@ def _prepare_cells(cells, cell_tags):
                 output_cell_tags[key]["gmsh:geometrical"].append(item[1])
             if len(item) > 2:
                 has_additional_tag_data = True
-        output_cell_tags[key]["gmsh:physical"] = numpy.array(
+        output_cell_tags[key]["gmsh:physical"] = np.array(
             output_cell_tags[key]["gmsh:physical"], dtype=int
         )
-        output_cell_tags[key]["gmsh:geometrical"] = numpy.array(
+        output_cell_tags[key]["gmsh:geometrical"] = np.array(
             output_cell_tags[key]["gmsh:geometrical"], dtype=int
         )
 
@@ -263,7 +263,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
     num_items = integer_tags[2]
 
     # Creating data
-    data = numpy.fromfile(f, count=num_items * (1 + num_components), sep=" ").reshape(
+    data = np.fromfile(f, count=num_items * (1 + num_components), sep=" ").reshape(
         (num_items, 1 + num_components)
     )
     # The first number is the index
@@ -418,7 +418,7 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
             )
 
         # TODO: Add proper tag recognition in the future
-        fcd = numpy.empty((len(node_idcs), 0), dtype=numpy.int32)
+        fcd = np.empty((len(node_idcs), 0), dtype=np.int32)
 
         form = "{} " + str(fcd.shape[1]) + " {} {}\n"
         for k, c in enumerate(node_idcs):
@@ -471,8 +471,8 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
             "mdpa requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = numpy.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        mesh.points = np.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
         )
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
@@ -529,7 +529,7 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
         other_data = {}
         for key, data in mesh.cell_data.items():
             if key in ["gmsh:physical", "gmsh:geometrical"]:
-                tag_data[key] = [entry.astype(numpy.int32) for entry in data]
+                tag_data[key] = [entry.astype(np.int32) for entry in data]
             else:
                 other_data[key] = data
 

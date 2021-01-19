@@ -3,7 +3,7 @@ I/O for PERMAS dat files.
 """
 import logging
 
-import numpy
+import numpy as np
 
 from ..__about__ import __version__
 from .._exceptions import ReadError
@@ -130,7 +130,7 @@ def _read_nodes(f):
         index += 1
 
     f.seek(last_pos)
-    return numpy.array(points, dtype=float), point_gids
+    return np.array(points, dtype=float), point_gids
 
 
 def _read_cells(f, line0, point_gids):
@@ -155,7 +155,7 @@ def _read_cells(f, line0, point_gids):
             cells.append(idx)
             idx = []
     f.seek(last_pos)
-    return cell_type, numpy.array(cells)
+    return cell_type, np.array(cells)
 
 
 def get_param_map(word, required_keys=None):
@@ -211,10 +211,10 @@ def read_set(f, params_map):
     if "generate" in params_map:
         if len(set_ids) != 3:
             raise ReadError(set_ids)
-        set_ids = numpy.arange(set_ids[0], set_ids[1], set_ids[2])
+        set_ids = np.arange(set_ids[0], set_ids[1], set_ids[2])
     else:
         try:
-            set_ids = numpy.unique(numpy.array(set_ids, dtype="int32"))
+            set_ids = np.unique(np.array(set_ids, dtype="int32"))
         except ValueError:
             raise
     return set_ids
@@ -226,8 +226,8 @@ def write(filename, mesh):
             "PERMAS requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = numpy.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], numpy.zeros(mesh.points.shape[0])]
+        mesh.points = np.column_stack(
+            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
         )
 
     with open_file(filename, "wt") as f:

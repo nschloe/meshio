@@ -2,7 +2,7 @@ import pathlib
 import sys
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -135,10 +135,10 @@ def test_reference_file(
             continue
         all_tags.append(mesh.cell_data["ugrid:ref"][k])
 
-    all_tags = numpy.concatenate(all_tags)
+    all_tags = np.concatenate(all_tags)
 
     # validate against known values
-    unique, counts = numpy.unique(all_tags, return_counts=True)
+    unique, counts = np.unique(all_tags, return_counts=True)
     tags = dict(zip(unique, counts))
     assert tags.keys() == ref_tag_counts.keys()
     for key in tags.keys():
@@ -155,9 +155,9 @@ def _tet_volume(cell):
     | d_x d_y d_z 1 |
     """
 
-    t = numpy.ones((4, 1))
-    cell = numpy.append(cell, t, axis=1)
-    vol = -numpy.linalg.det(cell) / 6.0
+    t = np.ones((4, 1))
+    cell = np.append(cell, t, axis=1)
+    vol = -np.linalg.det(cell) / 6.0
     return vol
 
 
@@ -188,10 +188,10 @@ def test_volume(filename, volume, accuracy):
     assert mesh.cells[0].data.shape == (6, 5)
     vol = 0.0
     for _cell in mesh.cells[0].data:
-        cell = numpy.array([mesh.points[i] for i in _cell])
+        cell = np.array([mesh.points[i] for i in _cell])
         v = _pyramid_volume(cell)
         vol += v
-    assert numpy.isclose(vol, 1.0, accuracy)
+    assert np.isclose(vol, 1.0, accuracy)
 
 
 def _triangle_area(cell):
@@ -200,7 +200,7 @@ def _triangle_area(cell):
     """
     u = cell[0] - cell[1]
     v = cell[0] - cell[2]
-    return numpy.linalg.norm(numpy.cross(u, v)) / 2.0
+    return np.linalg.norm(np.cross(u, v)) / 2.0
 
 
 def _quad_area(cell):
@@ -237,15 +237,15 @@ def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
     tria = mesh.cells[ugrid_meshio_id["triangle"]]
     total_tri_area = 0
     for _cell in tria.data:
-        cell = numpy.array([mesh.points[i] for i in _cell])
+        cell = np.array([mesh.points[i] for i in _cell])
         a = _triangle_area(cell)
         total_tri_area += a
-    assert numpy.isclose(total_tri_area, area_tria_ref, accuracy)
+    assert np.isclose(total_tri_area, area_tria_ref, accuracy)
 
     quad = mesh.cells[ugrid_meshio_id["quad"]]
     total_quad_area = 0
     for _cell in quad.data:
-        cell = numpy.array([mesh.points[i] for i in _cell])
+        cell = np.array([mesh.points[i] for i in _cell])
         a = _quad_area(cell)
         total_quad_area += a
-    assert numpy.isclose(total_quad_area, area_quad_ref, accuracy)
+    assert np.isclose(total_quad_area, area_quad_ref, accuracy)

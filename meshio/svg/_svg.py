@@ -1,6 +1,6 @@
 from xml.etree import ElementTree as ET
 
-import numpy
+import numpy as np
 
 from .._exceptions import WriteError
 from .._helpers import register
@@ -15,7 +15,7 @@ def write(
     fill="none",
     stroke="black",
 ):
-    if mesh.points.shape[1] == 3 and not numpy.allclose(
+    if mesh.points.shape[1] == 3 and not np.allclose(
         mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
     ):
         raise WriteError(
@@ -23,12 +23,12 @@ def write(
         )
 
     pts = mesh.points[:, :2].copy()
-    pts[:, 1] = numpy.max(pts[:, 1]) - pts[:, 1]
+    pts[:, 1] = np.max(pts[:, 1]) - pts[:, 1]
 
-    min_x = numpy.min(pts[:, 0])
-    min_y = numpy.min(pts[:, 1])
-    width = numpy.max(pts[:, 0]) - min_x
-    height = numpy.max(pts[:, 1]) - min_y
+    min_x = np.min(pts[:, 0])
+    min_y = np.min(pts[:, 1])
+    width = np.max(pts[:, 0]) - min_x
+    height = np.max(pts[:, 1]) - min_y
 
     if force_width is not None:
         scaling_factor = force_width / width

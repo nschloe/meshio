@@ -5,7 +5,7 @@ I/O for the Wavefront .obj file format, cf.
 import datetime
 import logging
 
-import numpy
+import numpy as np
 
 from ..__about__ import __version__
 from .._exceptions import WriteError
@@ -67,9 +67,9 @@ def read_buffer(f):
     # Remove them.
     face_groups = [f for f in face_groups if len(f) > 0]
 
-    points = numpy.array(points)
-    texture_coords = numpy.array(texture_coords)
-    vertex_normals = numpy.array(vertex_normals)
+    points = np.array(points)
+    texture_coords = np.array(texture_coords)
+    vertex_normals = np.array(vertex_normals)
     point_data = {}
     if len(texture_coords) > 0:
         point_data["obj:vt"] = texture_coords
@@ -77,7 +77,7 @@ def read_buffer(f):
         point_data["obj:vn"] = vertex_normals
 
     # convert to numpy arrays
-    face_groups = [numpy.array(f) for f in face_groups]
+    face_groups = [np.array(f) for f in face_groups]
     cells = []
     for f in face_groups:
         if f.shape[1] == 3:

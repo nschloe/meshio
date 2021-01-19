@@ -4,7 +4,7 @@ import string
 import tempfile
 from pathlib import Path
 
-import numpy
+import numpy as np
 
 import meshio
 
@@ -15,26 +15,24 @@ MESHES_DIR = TEST_DIR / "meshes"
 # Use values with an infinite decimal representation to test precision.
 
 line_mesh = meshio.Mesh(
-    numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
-    / 3,
+    np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]) / 3,
     [("line", [[0, 1], [0, 2], [0, 3], [1, 2], [2, 3]])],
 )
 
 tri_mesh_2d = meshio.Mesh(
-    numpy.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]) / 3,
-    [("triangle", numpy.array([[0, 1, 2], [0, 2, 3]]))],
+    np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]) / 3,
+    [("triangle", np.array([[0, 1, 2], [0, 2, 3]]))],
 )
 
 tri_mesh = meshio.Mesh(
-    numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
-    / 3,
+    np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]) / 3,
     [("triangle", [[0, 1, 2], [0, 2, 3]])],
 )
 
 line_tri_mesh = meshio.Mesh(line_mesh.points, line_mesh.cells + tri_mesh.cells)
 
 triangle6_mesh = meshio.Mesh(
-    numpy.array(
+    np.array(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -52,7 +50,7 @@ triangle6_mesh = meshio.Mesh(
 )
 
 quad_mesh = meshio.Mesh(
-    numpy.array(
+    np.array(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -63,12 +61,12 @@ quad_mesh = meshio.Mesh(
         ]
     )
     / 3.0,
-    [("quad", numpy.array([[0, 1, 4, 5], [1, 2, 3, 4]]))],
+    [("quad", np.array([[0, 1, 4, 5], [1, 2, 3, 4]]))],
 )
 
 d = 0.1
 quad8_mesh = meshio.Mesh(
-    numpy.array(
+    np.array(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -86,11 +84,11 @@ quad8_mesh = meshio.Mesh(
         ]
     )
     / 3.0,
-    [("quad8", numpy.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 8, 9, 2, 10, 11, 12, 5]]))],
+    [("quad8", np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 8, 9, 2, 10, 11, 12, 5]]))],
 )
 
 tri_quad_mesh = meshio.Mesh(
-    numpy.array(
+    np.array(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -102,14 +100,14 @@ tri_quad_mesh = meshio.Mesh(
     )
     / 3.0,
     [
-        ("triangle", numpy.array([[0, 1, 4], [0, 4, 5]])),
-        ("quad", numpy.array([[1, 2, 3, 4]])),
+        ("triangle", np.array([[0, 1, 4], [0, 4, 5]])),
+        ("quad", np.array([[1, 2, 3, 4]])),
     ],
 )
 
 # same as tri_quad_mesh with reversed cell type order
 quad_tri_mesh = meshio.Mesh(
-    numpy.array(
+    np.array(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -121,13 +119,13 @@ quad_tri_mesh = meshio.Mesh(
     )
     / 3.0,
     [
-        ("quad", numpy.array([[1, 2, 3, 4]])),
-        ("triangle", numpy.array([[0, 1, 4], [0, 4, 5]])),
+        ("quad", np.array([[1, 2, 3, 4]])),
+        ("triangle", np.array([[0, 1, 4], [0, 4, 5]])),
     ],
 )
 
 tet_mesh = meshio.Mesh(
-    numpy.array(
+    np.array(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -137,11 +135,11 @@ tet_mesh = meshio.Mesh(
         ]
     )
     / 3.0,
-    [("tetra", numpy.array([[0, 1, 2, 4], [0, 2, 3, 4]]))],
+    [("tetra", np.array([[0, 1, 2, 4], [0, 2, 3, 4]]))],
 )
 
 tet10_mesh = meshio.Mesh(
-    numpy.array(
+    np.array(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -157,7 +155,7 @@ tet10_mesh = meshio.Mesh(
         ]
     )
     / 3.0,
-    [("tetra10", numpy.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]]))],
+    [("tetra10", np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]]))],
 )
 
 hex_mesh = meshio.Mesh(
@@ -223,7 +221,7 @@ hex20_mesh = meshio.Mesh(
         [0.5, 1.0, 1.0],
         [0.0, 0.5, 1.0],
     ],
-    [("hexahedron20", [numpy.arange(20)])],
+    [("hexahedron20", [np.arange(20)])],
 )
 
 polygon_mesh = meshio.Mesh(
@@ -249,7 +247,7 @@ polygon_mesh = meshio.Mesh(
 )
 
 polyhedron_mesh = meshio.Mesh(
-    numpy.array(
+    np.array(
         [  # Two layers of a unit square
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -283,7 +281,7 @@ polyhedron_mesh = meshio.Mesh(
             "polyhedron5",
             [
                 [
-                    # numpy.asarray on this causes a numpy warning
+                    # np.asarray on this causes a numpy warning
                     # TODO come up with a better data structure for polyhedra
                     [0, 1, 2, 3],  # pyramid base is a rectangle
                     [0, 1, 7],
@@ -306,11 +304,11 @@ polyhedron_mesh = meshio.Mesh(
 
 
 def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=float):
-    numpy.random.seed(seed)
+    np.random.seed(seed)
     mesh2 = copy.deepcopy(mesh)
 
     shape = (len(mesh.points),) if dim == 1 else (len(mesh.points), dim)
-    data = [(100 * numpy.random.rand(*shape)).astype(dtype) for _ in range(num_tags)]
+    data = [(100 * np.random.rand(*shape)).astype(dtype) for _ in range(num_tags)]
 
     mesh2.point_data = {string.ascii_lowercase[k]: d for k, d in enumerate(data)}
     return mesh2
@@ -318,10 +316,10 @@ def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=float):
 
 def add_cell_data(mesh, specs):
     mesh2 = copy.deepcopy(mesh)
-    numpy.random.seed(0)
+    np.random.seed(0)
     mesh2.cell_data = {
         name: [
-            (100 * numpy.random.rand(*((len(cells),) + shape))).astype(dtype)
+            (100 * np.random.rand(*((len(cells),) + shape))).astype(dtype)
             for _, cells in mesh.cells
         ]
         for name, shape, dtype in specs
@@ -335,13 +333,13 @@ def add_cell_data(mesh, specs):
 
 def add_field_data(mesh, value, dtype):
     mesh2 = copy.deepcopy(mesh)
-    mesh2.field_data = {"a": numpy.array(value, dtype=dtype)}
+    mesh2.field_data = {"a": np.array(value, dtype=dtype)}
     return mesh2
 
 
 def add_point_sets(mesh):
     mesh2 = copy.deepcopy(mesh)
-    mesh2.point_sets = {"fixed": numpy.array([1, 2])}
+    mesh2.point_sets = {"fixed": np.array([1, 2])}
     return mesh2
 
 
@@ -350,8 +348,8 @@ def add_cell_sets(mesh):
     assert len(mesh.cells) == 1
     n = len(mesh.cells[0])
     mesh2.cell_sets = {
-        "grain0": [numpy.array([0])],
-        "grain1": [numpy.arange(1, n)],
+        "grain0": [np.array([0])],
+        "grain1": [np.arange(1, n)],
     }
     return mesh2
 
@@ -369,7 +367,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     # Make sure the output is writeable
     assert mesh.points.flags["WRITEABLE"]
     for cells in input_mesh.cells:
-        if isinstance(cells.data, numpy.ndarray):
+        if isinstance(cells.data, np.ndarray):
             assert cells.data.flags["WRITEABLE"]
         else:
             # This is assumed to be a polyhedron
@@ -378,13 +376,13 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
                     assert face.flags["WRITEABLE"]
 
     # assert that the input mesh hasn't changed at all
-    assert numpy.allclose(in_mesh.points, input_mesh.points, atol=atol, rtol=0.0)
+    assert np.allclose(in_mesh.points, input_mesh.points, atol=atol, rtol=0.0)
 
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
     # Use allclose.
     n = in_mesh.points.shape[1]
-    assert numpy.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
+    assert np.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
 
     # To avoid errors from sorted (below), specify the key as first cell type
     # then index of the first point of the first cell. This may still lead to
@@ -407,22 +405,22 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
             # Data is a list (one item per cell) of numpy arrays
             for c_in, c_out in zip(cells0.data, cells1.data):
                 for face_in, face_out in zip(c_in, c_out):
-                    assert numpy.allclose(face_in, face_out, atol=atol, rtol=0.0)
+                    assert np.allclose(face_in, face_out, atol=atol, rtol=0.0)
         else:
-            assert numpy.array_equal(cells0.data, cells1.data)
+            assert np.array_equal(cells0.data, cells1.data)
 
     for key in input_mesh.point_data.keys():
-        assert numpy.allclose(
+        assert np.allclose(
             input_mesh.point_data[key], mesh.point_data[key], atol=atol, rtol=0.0
         )
 
     for name, cell_type_data in input_mesh.cell_data.items():
         for d0, d1 in zip(cell_type_data, mesh.cell_data[name]):
             # assert d0.dtype == d1.dtype, (d0.dtype, d1.dtype)
-            assert numpy.allclose(d0, d1, atol=atol, rtol=0.0)
+            assert np.allclose(d0, d1, atol=atol, rtol=0.0)
 
     for name, data in input_mesh.field_data.items():
-        assert numpy.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
+        assert np.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
 
     # Test of cell sets (assumed to be a list of numpy arrays),
     for name, data in input_mesh.cell_sets.items():
@@ -431,7 +429,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
             continue
         data2 = mesh.cell_sets[name]
         for var1, var2 in zip(data, data2):
-            assert numpy.allclose(var1, var2, atol=atol, rtol=0.0)
+            assert np.allclose(var1, var2, atol=atol, rtol=0.0)
 
 
 def generic_io(filename):

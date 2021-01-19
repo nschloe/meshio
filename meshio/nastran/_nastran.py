@@ -5,7 +5,7 @@ See <http://help.autodesk.com/view/NSTRN/2019/ENU/?guid=GUID-42B54ACB-FBE3-47CA-
 """
 import logging
 
-import numpy
+import numpy as np
 
 from ..__about__ import __version__
 from .._common import num_nodes_per_cell
@@ -178,16 +178,16 @@ def read_buffer(f):
                 add_cell(keyword, cell, cell_type, cell_ref)
 
     # Convert to numpy arrays
-    points = numpy.array(points)
-    points_id = numpy.array(points_id, dtype=int)
+    points = np.array(points)
+    points_id = np.array(points_id, dtype=int)
     for k, (c, cid) in enumerate(zip(cells, cells_id)):
-        cells[k] = CellBlock(c.type, numpy.array(c.data, dtype=int))
-        cells_id[k] = numpy.array(cid, dtype=int)
+        cells[k] = CellBlock(c.type, np.array(c.data, dtype=int))
+        cells_id[k] = np.array(cid, dtype=int)
 
     # Convert to natural point ordering
     # https://stackoverflow.com/questions/16992713/translate-every-element-in-numpy-array-according-to-key
-    points_id_dict = dict(zip(points_id, numpy.arange(len(points), dtype=int)))
-    points_id_get = numpy.vectorize(points_id_dict.__getitem__)
+    points_id_dict = dict(zip(points_id, np.arange(len(points), dtype=int)))
+    points_id_get = np.vectorize(points_id_dict.__getitem__)
     for k, c in enumerate(cells):
         cells[k] = CellBlock(c.type, points_id_get(c.data))
 
@@ -196,9 +196,9 @@ def read_buffer(f):
     mesh.points_id = points_id
     mesh.cells_id = cells_id
     if len(point_refs) > 0:
-        mesh.point_data["nastran:ref"] = numpy.array(point_refs)
+        mesh.point_data["nastran:ref"] = np.array(point_refs)
     if len(cell_refs) > 0:
-        mesh.cell_data["nastran:ref"] = [numpy.array(i) for i in cell_refs]
+        mesh.cell_data["nastran:ref"] = [np.array(i) for i in cell_refs]
     return mesh
 
 
@@ -244,7 +244,7 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
             "Nastran requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        points = numpy.column_stack([mesh.points, numpy.zeros(mesh.points.shape[0])])
+        points = np.column_stack([mesh.points, np.zeros(mesh.points.shape[0])])
     else:
         points = mesh.points
 

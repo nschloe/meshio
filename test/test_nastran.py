@@ -1,7 +1,7 @@
 import pathlib
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -34,7 +34,7 @@ def test_reference_file(filename):
     mesh = meshio.read(filename)
 
     # points
-    assert numpy.isclose(mesh.points.sum(), 16.5316866)
+    assert np.isclose(mesh.points.sum(), 16.5316866)
 
     # cells
     ref_num_cells = {

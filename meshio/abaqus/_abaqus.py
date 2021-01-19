@@ -3,7 +3,7 @@ I/O for Abaqus inp files.
 """
 import pathlib
 
-import numpy
+import numpy as np
 
 from ..__about__ import __version__
 from .._exceptions import ReadError
@@ -144,7 +144,7 @@ def read_buffer(f):
             params_map = get_param_map(line, required_keys=["NSET"])
             set_ids, _, line = _read_set(f, params_map)
             name = params_map["NSET"]
-            point_sets[name] = numpy.array(
+            point_sets[name] = np.array(
                 [point_ids[point_id] for point_id in set_ids], dtype="int32"
             )
         elif keyword == "ELSET":
@@ -154,7 +154,7 @@ def read_buffer(f):
             cell_sets[name] = []
             if set_ids.size:
                 for cell_ids_ in cell_ids:
-                    cell_sets_ = numpy.array(
+                    cell_sets_ = np.array(
                         [
                             cell_ids_[set_id]
                             for set_id in set_ids
@@ -208,9 +208,7 @@ def read_buffer(f):
             cell_sets[name] = []
             for ic in range(len(cells)):
                 cell_sets[name].append(
-                    cell_sets_element[name]
-                    if i == ic
-                    else numpy.array([], dtype="int32")
+                    cell_sets_element[name] if i == ic else np.array([], dtype="int32")
                 )
 
     return Mesh(
@@ -241,7 +239,7 @@ def _read_nodes(f):
         points.append([float(x) for x in coords])
         counter += 1
 
-    return numpy.array(points, dtype=float), point_ids, line
+    return np.array(points, dtype=float), point_ids, line
 
 
 def _read_cells(f, params_map, point_ids):
@@ -270,12 +268,12 @@ def _read_cells(f, params_map, point_ids):
             counter += 1
 
     cell_sets = (
-        {params_map["ELSET"]: numpy.arange(counter, dtype="int32")}
+        {params_map["ELSET"]: np.arange(counter, dtype="int32")}
         if "ELSET" in params_map.keys()
         else {}
     )
 
-    return cell_type, numpy.array(cells), cell_ids, cell_sets, line
+    return cell_type, np.array(cells), cell_ids, cell_sets, line
 
 
 def merge(
@@ -294,12 +292,12 @@ def merge(
     :param cell_sets:
     :type mesh: Mesh
     """
-    ext_points = numpy.array([p for p in mesh.points])
+    ext_points = np.array([p for p in mesh.points])
 
     if len(points) > 0:
         new_point_id = points.shape[0]
         # new_cell_id = len(cells) + 1
-        points = numpy.concatenate([points, ext_points])
+        points = np.concatenate([points, ext_points])
     else:
         # new_cell_id = 0
         new_point_id = 0
@@ -307,7 +305,7 @@ def merge(
 
     cnt = 0
     for c in mesh.cells:
-        new_data = numpy.array([d + new_point_id for d in c.data])
+        new_data = np.array([d + new_point_id for d in c.data])
         cells.append(CellBlock(c.type, new_data))
         cnt += 1
 
@@ -324,7 +322,7 @@ def merge(
     # Todo: Add support for merging cell sets
     # cellblockref = [[] for i in range(cnt-new_cell_id)]
     # for key, val in mesh.cell_sets.items():
-    #     cell_sets[key] = cellblockref + [numpy.array([x for x in val[0]])]
+    #     cell_sets[key] = cellblockref + [np.array([x for x in val[0]])]
 
     return points, cells
 
@@ -384,11 +382,11 @@ def _read_set(f, params_map):
         else:
             set_names.append(line[0])
 
-    set_ids = numpy.array(set_ids, dtype="int32")
+    set_ids = np.array(set_ids, dtype="int32")
     if "GENERATE" in params_map:
         if len(set_ids) != 3:
             raise ReadError(set_ids)
-        set_ids = numpy.arange(set_ids[0], set_ids[1] + 1, set_ids[2], dtype="int32")
+        set_ids = np.arange(set_ids[0], set_ids[1] + 1, set_ids[2], dtype="int32")
     return set_ids, set_names, line
 
 
