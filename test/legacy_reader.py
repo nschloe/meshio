@@ -6,7 +6,7 @@ from meshio.vtk_io import vtk_to_meshio_type
 
 def read(filetype, filename):
     import vtk
-    from vtk.util import numpy as np_support
+    from vtk.util import numpy as numpy_support
 
     def _read_data(data):
         """Extract numpy arrays from a VTK data set."""

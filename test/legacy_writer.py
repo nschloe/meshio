@@ -160,7 +160,7 @@ def write(filetype, filename, mesh):
 
 def _generate_vtk_mesh(points, cells):
     import vtk
-    from vtk.util import numpy as np_support
+    from vtk.util import numpy as numpy_support
 
     mesh = vtk.vtkUnstructuredGrid()
 
