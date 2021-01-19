@@ -3,7 +3,7 @@ CGNS <https://cgns.github.io/>
 
 TODO link to specification?
 """
-import numpy
+import numpy as np
 
 from .._exceptions import ReadError
 from .._helpers import register
@@ -18,12 +18,12 @@ def read(filename):
     x = f["Base"]["Zone1"]["GridCoordinates"]["CoordinateX"][" data"]
     y = f["Base"]["Zone1"]["GridCoordinates"]["CoordinateY"][" data"]
     z = f["Base"]["Zone1"]["GridCoordinates"]["CoordinateZ"][" data"]
-    points = numpy.column_stack([x, y, z])
+    points = np.column_stack([x, y, z])
 
     # f["Base"]["Zone1"]["GridElements"]["ElementRange"][" data"])
     idx_min, idx_max = f["Base"]["Zone1"]["GridElements"]["ElementRange"][" data"]
     data = f["Base"]["Zone1"]["GridElements"]["ElementConnectivity"][" data"]
-    cells = numpy.array(data).reshape(idx_max, -1) - 1
+    cells = np.array(data).reshape(idx_max, -1) - 1
 
     # TODO how to distinguish cell types?
     if cells.shape[1] != 4:

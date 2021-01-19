@@ -7,7 +7,7 @@ import pathlib
 from io import BytesIO
 from xml.etree import ElementTree as ET
 
-import numpy
+import numpy as np
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
@@ -86,13 +86,13 @@ class XdmfReader:
             precision = "4"
 
         if data_item.get("Format") == "XML":
-            return numpy.fromstring(
+            return np.fromstring(
                 data_item.text,
                 dtype=xdmf_to_numpy_type[(data_type, precision)],
                 sep=" ",
             ).reshape(dims)
         elif data_item.get("Format") == "Binary":
-            return numpy.fromfile(
+            return np.fromfile(
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
         elif data_item.get("Format") != "HDF":
@@ -114,7 +114,7 @@ class XdmfReader:
 
         for key in h5path.split("/"):
             f = f[key]
-        # `[()]` gives a numpy.ndarray
+        # `[()]` gives a np.ndarray
         return f[()]
 
     def read_information(self, c_data):
@@ -129,7 +129,7 @@ class XdmfReader:
             if child.text is None:
                 raise ReadError()
             num_tag = int(child.text)
-            field_data[str_tag] = numpy.array([num_tag, dim])
+            field_data[str_tag] = np.array([num_tag, dim])
         return field_data
 
     def read_xdmf2(self, root):  # noqa: C901
@@ -164,7 +164,7 @@ class XdmfReader:
                 topology_type = c.get("TopologyType")
                 if topology_type == "Mixed":
                     cells = translate_mixed_cells(
-                        numpy.fromstring(
+                        np.fromstring(
                             data_items[0].text,
                             int,
                             int(data_items[0].get("Dimensions")),
@@ -365,7 +365,7 @@ class XdmfWriter:
         if self.data_format == "XML":
             s = BytesIO()
             fmt = dtype_to_format_string[data.dtype.name]
-            numpy.savetxt(s, data, fmt)
+            np.savetxt(s, data, fmt)
             return "\n" + s.getvalue().decode()
         elif self.data_format == "Binary":
             base = os.path.splitext(self.filename)[0]
@@ -440,16 +440,16 @@ class XdmfWriter:
                 TopologyType="Mixed",
                 NumberOfElements=str(total_num_cells),
             )
-            total_num_cell_items = sum(numpy.prod(c.data.shape) for c in cells)
+            total_num_cell_items = sum(np.prod(c.data.shape) for c in cells)
             num_vertices_and_lines = sum(
                 c.data.shape[0] for c in cells if c.type in {"vertex", "line"}
             )
             dim = str(total_num_cell_items + total_num_cells + num_vertices_and_lines)
-            cd = numpy.concatenate(
+            cd = np.concatenate(
                 [
-                    numpy.hstack(
+                    np.hstack(
                         [
-                            numpy.full(
+                            np.full(
                                 (value.shape[0], 2 if key in {"vertex", "line"} else 1),
                                 meshio_type_to_xdmf_index[key],
                             ),

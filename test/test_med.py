@@ -1,7 +1,7 @@
 import pathlib
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -27,9 +27,9 @@ h5py = pytest.importorskip("h5py")
         helpers.add_point_data(helpers.tri_mesh, 2),
         helpers.add_point_data(helpers.tri_mesh, 3),
         helpers.add_point_data(helpers.hex_mesh, 3),
-        helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
-        helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float64)]),
-        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), numpy.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (), np.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), np.float64)]),
+        helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), np.float64)]),
     ],
 )
 def test_io(mesh):
@@ -48,7 +48,7 @@ def test_reference_file_with_mixed_cells():
     mesh = meshio.read(filename)
 
     # Points
-    assert numpy.isclose(mesh.points.sum(), 16.53169892762988)
+    assert np.isclose(mesh.points.sum(), 16.53169892762988)
 
     # CellBlock
     ref_num_cells = {"pyramid": 18, "quad": 18, "line": 17, "tetra": 63, "triangle": 4}
@@ -91,7 +91,7 @@ def test_reference_file_with_point_cell_data():
     mesh = meshio.read(filename)
 
     # Points
-    assert numpy.isclose(mesh.points.sum(), 12)
+    assert np.isclose(mesh.points.sum(), 12)
 
     # CellBlock
     assert {k: len(v) for k, v in mesh.cells} == {"hexahedron": 1}
@@ -99,29 +99,29 @@ def test_reference_file_with_point_cell_data():
     # Point data
     data_u = mesh.point_data["resu____DEPL"]
     assert data_u.shape == (8, 3)
-    assert numpy.isclose(data_u.sum(), 12)
+    assert np.isclose(data_u.sum(), 12)
 
     # Cell data
     # ELNO (1 data point for every node of each element)
     data_eps = mesh.cell_data["resu____EPSI_ELNO"][0]
     assert data_eps.shape == (1, 8, 6)  # (n_cells, n_nodes_per_element, n_components)
-    data_eps_mean = numpy.mean(data_eps, axis=1)[0]
-    eps_ref = numpy.array([1, 0, 0, 0.5, 0.5, 0])
-    assert numpy.allclose(data_eps_mean, eps_ref)
+    data_eps_mean = np.mean(data_eps, axis=1)[0]
+    eps_ref = np.array([1, 0, 0, 0.5, 0.5, 0])
+    assert np.allclose(data_eps_mean, eps_ref)
 
     data_sig = mesh.cell_data["resu____SIEF_ELNO"][0]
     assert data_sig.shape == (1, 8, 6)  # (n_cells, n_nodes_per_element, n_components)
-    data_sig_mean = numpy.mean(data_sig, axis=1)[0]
-    sig_ref = numpy.array(
+    data_sig_mean = np.mean(data_sig, axis=1)[0]
+    sig_ref = np.array(
         [7328.44611253, 2645.87030114, 2034.06063679, 1202.6, 569.752, 0]
     )
-    assert numpy.allclose(data_sig_mean, sig_ref)
+    assert np.allclose(data_sig_mean, sig_ref)
 
     data_psi = mesh.cell_data["resu____ENEL_ELNO"][0]
     assert data_psi.shape == (1, 8, 1)  # (n_cells, n_nodes_per_element, n_components)
 
     # ELEM (1 data point for each element)
     data_psi_elem = mesh.cell_data["resu____ENEL_ELEM"][0]
-    assert numpy.isclose(numpy.mean(data_psi, axis=1)[0, 0], data_psi_elem[0])
+    assert np.isclose(np.mean(data_psi, axis=1)[0, 0], data_psi_elem[0])
 
     helpers.write_read(meshio.med.write, meshio.med.read, mesh, 1.0e-15)

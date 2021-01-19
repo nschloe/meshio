@@ -4,7 +4,7 @@ I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 import logging
 from functools import reduce
 
-import numpy
+import numpy as np
 
 from ..__about__ import __version__
 from .._common import (
@@ -18,7 +18,7 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
 
-vtk_type_to_numnodes = numpy.array(
+vtk_type_to_numnodes = np.array(
     [
         0,  # empty
         1,  # vertex
@@ -228,11 +228,11 @@ def _read_section(f, info):
             # <https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127>.
             info.num_offsets = int(info.split[1])
             info.num_items = int(info.split[2])
-            dtype = numpy.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
+            dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
             offsets = _read_cells(f, info.is_ascii, info.num_offsets, dtype)
             line = f.readline().decode("utf-8")
             assert "CONNECTIVITY" in line
-            dtype = numpy.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
+            dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
             connectivity = _read_cells(f, info.is_ascii, info.num_items, dtype)
             info.c = (offsets, connectivity)
         else:
@@ -255,17 +255,17 @@ def _read_section(f, info):
 
     elif info.section == "LOOKUP_TABLE":
         info.num_items = int(info.split[2])
-        numpy.fromfile(f, count=info.num_items * 4, sep=" ", dtype=float)
+        np.fromfile(f, count=info.num_items * 4, sep=" ", dtype=float)
         # rgba = data.reshape((info.num_items, 4))
 
     elif info.section == "COLOR_SCALARS":
         nValues = int(info.split[2])
         # re-use num_items from active POINT/CELL_DATA
         num_items = info.num_items
-        dtype = numpy.ubyte
+        dtype = np.ubyte
         if info.is_ascii:
             dtype = float
-        numpy.fromfile(f, count=num_items * nValues, dtype=dtype)
+        np.fromfile(f, count=num_items * nValues, dtype=dtype)
 
 
 def _read_subsection(f, info):
@@ -321,7 +321,7 @@ def _check_mesh(info):
             else info.dataset["ASPECT_RATIO"]
         )
         axis = [
-            numpy.linspace(ori[i], ori[i] + (dim[i] - 1.0) * spa[i], dim[i])
+            np.linspace(ori[i], ori[i] + (dim[i] - 1.0) * spa[i], dim[i])
             for i in range(3)
         ]
         info.points = _generate_points(axis)
@@ -342,35 +342,35 @@ def _generate_cells(dim):
     ele_dim = [d - 1 for d in dim if d > 1]
     # TODO use math.prod when requiring Python 3.8+? this would save the int conversion
     # <https://github.com/microsoft/pyright/issues/1226>
-    ele_no = int(numpy.prod(ele_dim))
+    ele_no = int(np.prod(ele_dim))
     spatial_dim = len(ele_dim)
 
     if spatial_dim == 1:
         # cells are lines in 1D
-        cells = numpy.empty((ele_no, 3), dtype=int)
+        cells = np.empty((ele_no, 3), dtype=int)
         cells[:, 0] = 2
-        cells[:, 1] = numpy.arange(ele_no, dtype=int)
+        cells[:, 1] = np.arange(ele_no, dtype=int)
         cells[:, 2] = cells[:, 1] + 1
-        cell_types = numpy.full(ele_no, 3, dtype=int)
+        cell_types = np.full(ele_no, 3, dtype=int)
     elif spatial_dim == 2:
         # cells are quad in 2D
-        cells = numpy.empty((ele_no, 5), dtype=int)
+        cells = np.empty((ele_no, 5), dtype=int)
         cells[:, 0] = 4
-        cells[:, 1] = numpy.arange(0, ele_no, dtype=int)
-        cells[:, 1] += numpy.arange(0, ele_no, dtype=int) // ele_dim[0]
+        cells[:, 1] = np.arange(0, ele_no, dtype=int)
+        cells[:, 1] += np.arange(0, ele_no, dtype=int) // ele_dim[0]
         cells[:, 2] = cells[:, 1] + 1
         cells[:, 3] = cells[:, 1] + 2 + ele_dim[0]
         cells[:, 4] = cells[:, 3] - 1
-        cell_types = numpy.full(ele_no, 9, dtype=int)
+        cell_types = np.full(ele_no, 9, dtype=int)
     else:
         # cells are hex in 3D
-        cells = numpy.empty((ele_no, 9), dtype=int)
+        cells = np.empty((ele_no, 9), dtype=int)
         cells[:, 0] = 8
-        cells[:, 1] = numpy.arange(ele_no)
+        cells[:, 1] = np.arange(ele_no)
         cells[:, 1] += (ele_dim[0] + ele_dim[1] + 1) * (
-            numpy.arange(ele_no) // (ele_dim[0] * ele_dim[1])
+            np.arange(ele_no) // (ele_dim[0] * ele_dim[1])
         )
-        cells[:, 1] += (numpy.arange(ele_no) % (ele_dim[0] * ele_dim[1])) // ele_dim[0]
+        cells[:, 1] += (np.arange(ele_no) % (ele_dim[0] * ele_dim[1])) // ele_dim[0]
         cells[:, 2] = cells[:, 1] + 1
         cells[:, 3] = cells[:, 1] + 2 + ele_dim[0]
         cells[:, 4] = cells[:, 3] - 1
@@ -378,7 +378,7 @@ def _generate_cells(dim):
         cells[:, 6] = cells[:, 5] + 1
         cells[:, 7] = cells[:, 5] + 2 + ele_dim[0]
         cells[:, 8] = cells[:, 7] - 1
-        cell_types = numpy.full(ele_no, 12, dtype=int)
+        cell_types = np.full(ele_no, 12, dtype=int)
 
     return cells.reshape(-1), cell_types
 
@@ -388,8 +388,8 @@ def _generate_points(axis):
     y_dim = len(axis[1])
     z_dim = len(axis[2])
     pnt_no = x_dim * y_dim * z_dim
-    x_id, y_id, z_id = numpy.mgrid[0:x_dim, 0:y_dim, 0:z_dim]
-    points = numpy.empty((pnt_no, 3), dtype=axis[0].dtype)
+    x_id, y_id, z_id = np.mgrid[0:x_dim, 0:y_dim, 0:z_dim]
+    points = np.empty((pnt_no, 3), dtype=axis[0].dtype)
     # VTK sorts points and cells in Fortran order
     points[:, 0] = axis[0][x_id.reshape(-1, order="F")]
     points[:, 1] = axis[1][y_id.reshape(-1, order="F")]
@@ -398,14 +398,14 @@ def _generate_points(axis):
 
 
 def _read_coords(f, data_type, is_ascii, num_points):
-    dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+    dtype = np.dtype(vtk_to_numpy_dtype_name[data_type])
     if is_ascii:
-        coords = numpy.fromfile(f, count=num_points, sep=" ", dtype=dtype)
+        coords = np.fromfile(f, count=num_points, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
-        coords = numpy.fromfile(f, count=num_points, dtype=dtype)
+        coords = np.fromfile(f, count=num_points, dtype=dtype)
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
@@ -413,26 +413,26 @@ def _read_coords(f, data_type, is_ascii, num_points):
 
 
 def _read_points(f, data_type, is_ascii, num_points):
-    dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+    dtype = np.dtype(vtk_to_numpy_dtype_name[data_type])
     if is_ascii:
-        points = numpy.fromfile(f, count=num_points * 3, sep=" ", dtype=dtype)
+        points = np.fromfile(f, count=num_points * 3, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
-        points = numpy.fromfile(f, count=num_points * 3, dtype=dtype)
+        points = np.fromfile(f, count=num_points * 3, dtype=dtype)
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
     return points.reshape((num_points, 3))
 
 
-def _read_cells(f, is_ascii, num_items, dtype=numpy.dtype("int32")):
+def _read_cells(f, is_ascii, num_items, dtype=np.dtype("int32")):
     if is_ascii:
-        c = numpy.fromfile(f, count=num_items, sep=" ", dtype=dtype)
+        c = np.fromfile(f, count=num_items, sep=" ", dtype=dtype)
     else:
         dtype = dtype.newbyteorder(">")
-        c = numpy.fromfile(f, count=num_items, dtype=dtype)
+        c = np.fromfile(f, count=num_items, dtype=dtype)
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
@@ -441,10 +441,10 @@ def _read_cells(f, is_ascii, num_items, dtype=numpy.dtype("int32")):
 
 def _read_cell_types(f, is_ascii, num_items):
     if is_ascii:
-        ct = numpy.fromfile(f, count=int(num_items), sep=" ", dtype=int)
+        ct = np.fromfile(f, count=int(num_items), sep=" ", dtype=int)
     else:
         # binary
-        ct = numpy.fromfile(f, count=int(num_items), dtype=">i4")
+        ct = np.fromfile(f, count=int(num_items), dtype=">i4")
         line = f.readline().decode("utf-8")
         # Sometimes, there's no newline at the end
         if line.strip() != "":
@@ -465,18 +465,18 @@ def _read_scalar_field(f, num_data, split, is_ascii):
     if not (0 < num_comp < 5):
         raise ReadError("The parameter numComp must range between (1,4) inclusive")
 
-    dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+    dtype = np.dtype(vtk_to_numpy_dtype_name[data_type])
     lt, _ = f.readline().decode("utf-8").split()
     if lt.upper() != "LOOKUP_TABLE":
         raise ReadError()
 
     if is_ascii:
-        data = numpy.fromfile(f, count=num_data * num_comp, sep=" ", dtype=dtype)
+        data = np.fromfile(f, count=num_data * num_comp, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
-        data = numpy.fromfile(f, count=num_data * num_comp, dtype=dtype)
+        data = np.fromfile(f, count=num_data * num_comp, dtype=dtype)
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
@@ -489,18 +489,18 @@ def _read_field(f, num_data, split, shape, is_ascii):
     data_name = split[1]
     data_type = split[2].lower()
 
-    dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type])
+    dtype = np.dtype(vtk_to_numpy_dtype_name[data_type])
     # prod()
     # <https://stackoverflow.com/q/2104782/353337>
     k = reduce((lambda x, y: x * y), shape)
 
     if is_ascii:
-        data = numpy.fromfile(f, count=k * num_data, sep=" ", dtype=dtype)
+        data = np.fromfile(f, count=k * num_data, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
         # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
-        data = numpy.fromfile(f, count=k * num_data, dtype=dtype)
+        data = np.fromfile(f, count=k * num_data, dtype=dtype)
         line = f.readline().decode("utf-8")
         if line != "\n":
             raise ReadError()
@@ -521,15 +521,15 @@ def _read_fields(f, num_fields, is_ascii):
 
         shape0 = int(shape0)
         shape1 = int(shape1)
-        dtype = numpy.dtype(vtk_to_numpy_dtype_name[data_type.lower()])
+        dtype = np.dtype(vtk_to_numpy_dtype_name[data_type.lower()])
 
         if is_ascii:
-            dat = numpy.fromfile(f, count=shape0 * shape1, sep=" ", dtype=dtype)
+            dat = np.fromfile(f, count=shape0 * shape1, sep=" ", dtype=dtype)
         else:
             # Binary data is big endian, see
             # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
             dtype = dtype.newbyteorder(">")
-            dat = numpy.fromfile(f, count=shape0 * shape1, dtype=dtype)
+            dat = np.fromfile(f, count=shape0 * shape1, dtype=dtype)
             line = f.readline().decode("utf-8")
             if line != "\n":
                 raise ReadError()
@@ -558,15 +558,15 @@ def translate_cells(data, types, cell_data_raw):
     # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
     # or a tuple with (offsets, connectivity)
-    has_polygon = numpy.any(types == meshio_to_vtk_type["polygon"])
+    has_polygon = np.any(types == meshio_to_vtk_type["polygon"])
 
     cells = []
     cell_data = {}
     if has_polygon:
-        numnodes = numpy.empty(len(types), dtype=int)
+        numnodes = np.empty(len(types), dtype=int)
         # If some polygons are in the VTK file, loop over the cells
         numcells = len(types)
-        offsets = numpy.empty(len(types), dtype=int)
+        offsets = np.empty(len(types), dtype=int)
         offsets[0] = 0
         for idx in range(numcells - 1):
             numnodes[idx] = data[offsets[idx]]
@@ -574,7 +574,7 @@ def translate_cells(data, types, cell_data_raw):
 
         idx = numcells - 1
         numnodes[idx] = data[offsets[idx]]
-        if not numpy.all(numnodes == data[offsets]):
+        if not np.all(numnodes == data[offsets]):
             raise ReadError()
 
         # TODO: cell_data
@@ -596,35 +596,35 @@ def translate_cells(data, types, cell_data_raw):
 
         # convert data to numpy arrays
         for k, c in enumerate(cells):
-            cells[k] = CellBlock(c.type, numpy.array(c.data))
+            cells[k] = CellBlock(c.type, np.array(c.data))
     else:
         # Deduct offsets from the cell types. This is much faster than manually going
         # through the data array. Slight disadvantage: This doesn't work for cells with
         # a custom number of points.
         numnodes = vtk_type_to_numnodes[types]
-        if not numpy.all(numnodes > 0):
+        if not np.all(numnodes > 0):
             raise ReadError("File contains cells that meshio cannot handle.")
         if isinstance(data, tuple):
             offsets, conn = data
-            if not numpy.all(numnodes == numpy.diff(offsets)):
+            if not np.all(numnodes == np.diff(offsets)):
                 raise ReadError()
             idx0 = 0
         else:
-            offsets = numpy.cumsum(numnodes + 1) - (numnodes + 1)
+            offsets = np.cumsum(numnodes + 1) - (numnodes + 1)
 
-            if not numpy.all(numnodes == data[offsets]):
+            if not np.all(numnodes == data[offsets]):
                 raise ReadError()
             idx0 = 1
             conn = data
 
-        b = numpy.concatenate(
-            [[0], numpy.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
+        b = np.concatenate(
+            [[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
         )
         for start, end in zip(b[:-1], b[1:]):
             meshio_type = vtk_to_meshio_type[types[start]]
             n = numnodes[start]
             cell_idx = idx0 + _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)
-            indices = numpy.add.outer(offsets[start:end], cell_idx)
+            indices = np.add.outer(offsets[start:end], cell_idx)
             cells.append(CellBlock(meshio_type, conn[indices]))
             for name, d in cell_data_raw.items():
                 if name not in cell_data:
@@ -636,7 +636,7 @@ def translate_cells(data, types, cell_data_raw):
 
 def write(filename, mesh, binary=True):
     def pad(array):
-        return numpy.pad(array, ((0, 0), (0, 1)), "constant")
+        return np.pad(array, ((0, 0), (0, 1)), "constant")
 
     if mesh.points.shape[1] == 2:
         logging.warning(
@@ -722,12 +722,12 @@ def _write_cells(f, cells, binary):
         for c in cells:
             n = c.data.shape[1]
             cell_idx = _meshio_to_vtk_order(c.type, n)
-            dtype = numpy.dtype(">i4")
+            dtype = np.dtype(">i4")
             # One must force endianness here:
             # <https://github.com/numpy/numpy/issues/15088>
-            numpy.column_stack(
+            np.column_stack(
                 [
-                    numpy.full(c.data.shape[0], n, dtype=dtype),
+                    np.full(c.data.shape[0], n, dtype=dtype),
                     c.data[:, cell_idx].astype(dtype),
                 ],
             ).astype(dtype).tofile(f, sep="")
@@ -738,9 +738,9 @@ def _write_cells(f, cells, binary):
             n = c.data.shape[1]
             cell_idx = _meshio_to_vtk_order(c.type, n)
             # prepend a column with the value n
-            numpy.column_stack(
+            np.column_stack(
                 [
-                    numpy.full(c.data.shape[0], n, dtype=c.data.dtype),
+                    np.full(c.data.shape[0], n, dtype=c.data.dtype),
                     c.data[:, cell_idx],
                 ]
             ).tofile(f, sep="\n")
@@ -752,15 +752,13 @@ def _write_cells(f, cells, binary):
         for c in cells:
             key_ = c.type[:7] if c.type[:7] == "polygon" else c.type
             vtk_type = meshio_to_vtk_type[key_]
-            numpy.full(len(c.data), vtk_type, dtype=numpy.dtype(">i4")).tofile(
-                f, sep=""
-            )
+            np.full(len(c.data), vtk_type, dtype=np.dtype(">i4")).tofile(f, sep="")
         f.write(b"\n")
     else:
         # ascii
         for c in cells:
             key_ = c.type[:7] if c.type[:7] == "polygon" else c.type
-            numpy.full(len(c.data), meshio_to_vtk_type[key_]).tofile(f, sep="\n")
+            np.full(len(c.data), meshio_to_vtk_type[key_]).tofile(f, sep="\n")
             f.write(b"\n")
 
 
@@ -768,7 +766,7 @@ def _write_field_data(f, data, binary):
     f.write(("FIELD FieldData {}\n".format(len(data))).encode("utf-8"))
     for name, values in data.items():
         if isinstance(values, list):
-            values = numpy.concatenate(values)
+            values = np.concatenate(values)
         if len(values.shape) == 1:
             num_tuples = values.shape[0]
             num_components = 1
@@ -794,7 +792,7 @@ def _write_field_data(f, data, binary):
         else:
             # ascii
             values.tofile(f, sep=" ")
-            # numpy.savetxt(f, points)
+            # np.savetxt(f, points)
         f.write(b"\n")
 
 

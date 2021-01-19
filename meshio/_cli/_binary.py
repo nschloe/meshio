@@ -20,7 +20,7 @@ def binary(argv=None):
     mesh = read(args.infile, file_format=args.input_format)
 
     # # Some converters (like VTK) require `points` to be contiguous.
-    # mesh.points = numpy.ascontiguousarray(mesh.points)
+    # mesh.points = np.ascontiguousarray(mesh.points)
 
     # write it out
     if fmt == "ansys":

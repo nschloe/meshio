@@ -8,7 +8,7 @@ import pathlib
 import re
 from xml.etree import ElementTree as ET
 
-import numpy
+import numpy as np
 
 from .._exceptions import ReadError, WriteError
 from .._helpers import register
@@ -45,7 +45,7 @@ def _read_mesh(filename):
         elif elem.tag == "vertices":
             if dim is None:
                 raise ReadError("Expected `mesh` before `vertices`")
-            points = numpy.empty((int(elem.attrib["size"]), dim))
+            points = np.empty((int(elem.attrib["size"]), dim))
             keys = ["x", "y"]
             if dim == 3:
                 keys += ["z"]
@@ -60,9 +60,7 @@ def _read_mesh(filename):
             cells = [
                 (
                     cell_type,
-                    numpy.empty(
-                        (int(elem.attrib["size"]), num_nodes_per_cell), dtype=int
-                    ),
+                    np.empty((int(elem.attrib["size"]), num_nodes_per_cell), dtype=int),
                 )
             ]
         elif elem.tag in ["triangle", "tetrahedron"]:
@@ -78,9 +76,9 @@ def _read_mesh(filename):
 
 def _read_cell_data(filename):
     dolfin_type_to_numpy_type = {
-        "int": numpy.dtype("int"),
-        "float": numpy.dtype("float"),
-        "uint": numpy.dtype("uint"),
+        "int": np.dtype("int"),
+        "float": np.dtype("float"),
+        "uint": np.dtype("uint"),
     }
 
     cell_data = {}
@@ -109,7 +107,7 @@ def _read_cell_data(filename):
             raise ReadError()
         size = int(mesh_function.attrib["size"])
         dtype = dolfin_type_to_numpy_type[mesh_function.attrib["type"]]
-        data = numpy.empty(size, dtype=dtype)
+        data = np.empty(size, dtype=dtype)
         for child in mesh_function:
             if child.tag != "entity":
                 raise ReadError()
@@ -182,13 +180,13 @@ def _write_mesh(filename, points, cell_type, cells):
 
 def _numpy_type_to_dolfin_type(dtype):
     types = {
-        "int": [numpy.int8, numpy.int16, numpy.int32, numpy.int64],
-        "uint": [numpy.uint8, numpy.uint16, numpy.uint32, numpy.uint64],
-        "float": [numpy.float16, numpy.float32, numpy.float64],
+        "int": [np.int8, np.int16, np.int32, np.int64],
+        "uint": [np.uint8, np.uint16, np.uint32, np.uint64],
+        "float": [np.float16, np.float32, np.float64],
     }
     for key, numpy_types in types.items():
         for numpy_type in numpy_types:
-            if numpy.issubdtype(dtype, numpy_type):
+            if np.issubdtype(dtype, numpy_type):
                 return key
 
     raise WriteError("Could not convert NumPy data type to DOLFIN data type.")
@@ -232,7 +230,7 @@ def write(filename, mesh):
             fname = os.path.splitext(filename)[0]
             cell_data_filename = f"{fname}_{name}.xml"
             dim = 2 if mesh.points.shape[1] == 2 or all(mesh.points[:, 2] == 0) else 3
-            _write_cell_data(cell_data_filename, dim, numpy.array(data))
+            _write_cell_data(cell_data_filename, dim, np.array(data))
 
 
 register("dolfin-xml", [".xml"], read, {"dolfin-xml": write})

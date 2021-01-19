@@ -2,7 +2,7 @@ import pathlib
 from functools import partial
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -60,7 +60,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
 
     mesh = meshio.read(filename)
     tol = 1.0e-2
-    s = numpy.sum(mesh.points)
+    s = np.sum(mesh.points)
     assert abs(s - ref_sum) < tol * ref_sum
     assert mesh.cells[0].type == "triangle"
     assert len(mesh.cells[0].data) == ref_num_cells

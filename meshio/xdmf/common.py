@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._exceptions import ReadError
 from .._mesh import CellBlock
@@ -142,18 +142,16 @@ def translate_mixed_cells(data):
         r += 1
         r += xdmf_idx_to_num_nodes[xdmf_type]
 
-    types = numpy.array(types)
-    offsets = numpy.array(offsets)
+    types = np.array(types)
+    offsets = np.array(offsets)
 
-    b = numpy.concatenate(
-        [[0], numpy.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
-    )
+    b = np.concatenate([[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]])
     cells = []
     for start, end in zip(b[:-1], b[1:]):
         meshio_type = xdmf_idx_to_meshio_type[types[start]]
         n = xdmf_idx_to_num_nodes[types[start]]
         point_offsets = offsets[start:end] + (2 if types[start] == 2 else 1)
-        indices = numpy.array([numpy.arange(n) + o for o in point_offsets])
+        indices = np.array([np.arange(n) + o for o in point_offsets])
         cells.append(CellBlock(meshio_type, data[indices]))
 
     return cells

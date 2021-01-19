@@ -1,12 +1,12 @@
 import logging
 import shlex
 
-import numpy
+import numpy as np
 
 from .._exceptions import ReadError, WriteError
 
-c_int = numpy.dtype("int32")
-c_double = numpy.dtype("float64")
+c_int = np.dtype("int32")
+c_double = np.dtype("float64")
 
 
 def _fast_forward_to_end_block(f, block):
@@ -42,7 +42,7 @@ def _read_physical_names(f, field_data):
     for _ in range(num_phys_names):
         line = shlex.split(f.readline().decode("utf-8"))
         key = line[2]
-        value = numpy.array(line[1::-1], dtype=int)
+        value = np.array(line[1::-1], dtype=int)
         field_data[key] = value
     _fast_forward_to_end_block(f, "PhysicalNames")
 
@@ -64,18 +64,18 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
     num_components = integer_tags[1]
     num_items = integer_tags[2]
     if is_ascii:
-        data = numpy.fromfile(
-            f, count=num_items * (1 + num_components), sep=" "
-        ).reshape((num_items, 1 + num_components))
+        data = np.fromfile(f, count=num_items * (1 + num_components), sep=" ").reshape(
+            (num_items, 1 + num_components)
+        )
         # The first entry is the node number
         data = data[:, 1:]
     else:
         # binary
         dtype = [("index", c_int), ("values", c_double, (num_components,))]
-        data = numpy.fromfile(f, count=num_items, dtype=dtype)
+        data = np.fromfile(f, count=num_items, dtype=dtype)
         if not (data["index"] == range(1, num_items + 1)).all():
             raise ReadError()
-        data = numpy.ascontiguousarray(data["values"])
+        data = np.ascontiguousarray(data["values"])
 
     _fast_forward_to_end_block(f, tag)
 
@@ -269,8 +269,8 @@ def _write_data(fh, tag, name, data, binary):
             dtype = [("index", c_int), ("data", c_double)]
         else:
             dtype = [("index", c_int), ("data", c_double, num_components)]
-        tmp = numpy.empty(len(data), dtype=dtype)
-        tmp["index"] = 1 + numpy.arange(len(data))
+        tmp = np.empty(len(data), dtype=dtype)
+        tmp["index"] = 1 + np.arange(len(data))
         tmp["data"] = data
         tmp.tofile(fh)
         fh.write(b"\n")

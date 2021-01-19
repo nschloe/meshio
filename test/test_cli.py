@@ -1,16 +1,16 @@
 import tempfile
 
 import helpers
-import numpy
+import numpy as np
 
 import meshio
 
 
 def is_same_mesh(mesh0, mesh1, atol):
-    if not numpy.allclose(mesh0.points, mesh1.points, atol=atol, rtol=0.0):
+    if not np.allclose(mesh0.points, mesh1.points, atol=atol, rtol=0.0):
         return False
     for cells0, cells1 in zip(mesh0.cells, mesh1.cells):
-        if cells0.type != cells1.type or not numpy.allclose(cells0.data, cells1.data):
+        if cells0.type != cells1.type or not np.allclose(cells0.data, cells1.data):
             return False
     return True
 
@@ -36,11 +36,11 @@ def test_convert():
     mesh = meshio.read(outfile, file_format="vtk")
 
     atol = 1.0e-15
-    assert numpy.allclose(input_mesh.points, mesh.points, atol=atol, rtol=0.0)
+    assert np.allclose(input_mesh.points, mesh.points, atol=atol, rtol=0.0)
 
     for cells0, cells1 in zip(input_mesh.cells, mesh.cells):
         assert cells0.type == cells1.type
-        assert numpy.allclose(cells0.data, cells1.data)
+        assert np.allclose(cells0.data, cells1.data)
 
 
 def test_compress():

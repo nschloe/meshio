@@ -1,6 +1,6 @@
 import logging
 
-import numpy
+import numpy as np
 
 # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {
@@ -133,7 +133,7 @@ def write(filetype, filename, mesh):
         for cell_type in mesh.cell_data:
             assert key in mesh.cell_data[cell_type]
     unified_cell_data = {
-        key: numpy.concatenate([value[key] for value in mesh.cell_data.values()])
+        key: np.concatenate([value[key] for value in mesh.cell_data.values()])
         for key in all_keys
     }
     # add the array data to the mesh
@@ -160,7 +160,7 @@ def write(filetype, filename, mesh):
 
 def _generate_vtk_mesh(points, cells):
     import vtk
-    from vtk.util import numpy_support
+    from vtk.util import numpy as numpy_support
 
     mesh = vtk.vtkUnstructuredGrid()
 
@@ -187,30 +187,28 @@ def _generate_vtk_mesh(points, cells):
         else:
             vtk_type = meshio_to_vtk_type[meshio_type]
         # add cell types
-        cell_types.append(numpy.empty(numcells, dtype=numpy.ubyte))
+        cell_types.append(np.empty(numcells, dtype=np.ubyte))
         cell_types[-1].fill(vtk_type)
         # add cell offsets
         cell_offsets.append(
-            numpy.arange(
+            np.arange(
                 len_array,
                 len_array + numcells * (num_local_nodes + 1),
                 num_local_nodes + 1,
-                dtype=numpy.int64,
+                dtype=np.int64,
             )
         )
         cell_connectivity.append(
-            numpy.c_[
-                num_local_nodes * numpy.ones(numcells, dtype=data.dtype), data
-            ].flatten()
+            np.c_[num_local_nodes * np.ones(numcells, dtype=data.dtype), data].flatten()
         )
         len_array += len(cell_connectivity[-1])
 
-    cell_types = numpy.concatenate(cell_types)
-    cell_offsets = numpy.concatenate(cell_offsets)
-    cell_connectivity = numpy.concatenate(cell_connectivity)
+    cell_types = np.concatenate(cell_types)
+    cell_offsets = np.concatenate(cell_offsets)
+    cell_connectivity = np.concatenate(cell_connectivity)
 
     connectivity = vtk.util.numpy_support.numpy_to_vtkIdTypeArray(
-        cell_connectivity.astype(numpy.int64), deep=1
+        cell_connectivity.astype(np.int64), deep=1
     )
 
     # wrap the data into a vtkCellArray

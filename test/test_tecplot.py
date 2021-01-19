@@ -2,7 +2,7 @@ import pathlib
 from copy import deepcopy
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -42,25 +42,25 @@ def test_varlocation():
     num_cells = sum(len(c.data) for c in mesh.cells)
 
     # Add point data: no VARLOCATION
-    mesh.point_data["one"] = numpy.ones(num_points)
+    mesh.point_data["one"] = np.ones(num_points)
     helpers.write_read(writer, reader, mesh, 1.0e-15)
 
     # Add cell data: VARLOCATION = ([5] = CELLCENTERED)
-    mesh.cell_data["two"] = [numpy.ones(num_cells) * 2.0]
+    mesh.cell_data["two"] = [np.ones(num_cells) * 2.0]
     helpers.write_read(writer, reader, mesh, 1.0e-15)
 
     # Add point data: VARLOCATION = ([6] = CELLCENTERED)
-    mesh.point_data["three"] = numpy.ones(num_points) * 3.0
+    mesh.point_data["three"] = np.ones(num_points) * 3.0
     helpers.write_read(writer, reader, mesh, 1.0e-15)
 
     # Add cell data: VARLOCATION = ([6-7] = CELLCENTERED)
-    mesh.cell_data["four"] = [numpy.ones(num_cells) * 4.0]
+    mesh.cell_data["four"] = [np.ones(num_cells) * 4.0]
     helpers.write_read(writer, reader, mesh, 1.0e-15)
 
     # Add point data: VARLOCATION = ([7-8] = CELLCENTERED)
-    mesh.point_data["five"] = numpy.ones(num_points) * 5.0
+    mesh.point_data["five"] = np.ones(num_points) * 5.0
     helpers.write_read(writer, reader, mesh, 1.0e-15)
 
     # Add cell data: VARLOCATION = ([7-9] = CELLCENTERED)
-    mesh.cell_data["six"] = [numpy.ones(num_cells) * 6.0]
+    mesh.cell_data["six"] = [np.ones(num_cells) * 6.0]
     helpers.write_read(writer, reader, mesh, 1.0e-15)

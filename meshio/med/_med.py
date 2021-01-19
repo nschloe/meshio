@@ -2,7 +2,7 @@
 I/O for MED/Salome, cf.
 <https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html>.
 """
-import numpy
+import numpy as np
 
 from .._common import num_nodes_per_cell
 from .._exceptions import ReadError, WriteError
@@ -29,7 +29,7 @@ meshio_to_med_type = {
     "wedge15": "P15",
 }
 med_to_meshio_type = {v: k for k, v in meshio_to_med_type.items()}
-numpy_void_str = numpy.string_("")
+numpy_void_str = np.string_("")
 
 
 def read(filename):
@@ -159,7 +159,7 @@ def _read_nodal_data(med_data, profiles):
         n_data = profiles[profile].attrs["NBR"]
         index_profile = profiles[profile]["PFL"][()] - 1
         values_profile = data_profile["CO"][()].reshape(n_data, -1, order="F")
-        values = numpy.full((n_points, values_profile.shape[1]), numpy.nan)
+        values = np.full((n_points, values_profile.shape[1]), np.nan)
         values[index_profile] = values_profile
     if values.shape[-1] == 1:  # cut off for scalars
         values = values[:, 0]
@@ -179,8 +179,8 @@ def _read_cell_data(med_data, profiles):
         values_profile = data_profile["CO"][()].reshape(
             n_data, n_gauss_points, -1, order="F"
         )
-        values = numpy.full(
-            (n_cells, values_profile.shape[1], values_profile.shape[2]), numpy.nan
+        values = np.full(
+            (n_cells, values_profile.shape[1], values_profile.shape[2]), np.nan
         )
         values[index_profile] = values_profile
 
@@ -232,9 +232,9 @@ def write(filename, mesh):
     med_mesh.attrs.create("UNI", numpy_void_str)  # spatial unit
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
     med_mesh.attrs.create(
-        "NOM", numpy.string_(_component_names(mesh.points.shape[1]))
+        "NOM", np.string_(_component_names(mesh.points.shape[1]))
     )  # component names
-    med_mesh.attrs.create("DES", numpy.string_("Mesh created with meshio"))
+    med_mesh.attrs.create("DES", np.string_("Mesh created with meshio"))
     med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
 
     # Time-step
@@ -250,7 +250,7 @@ def write(filename, mesh):
     nodes_group.attrs.create("CGT", 1)
     nodes_group.attrs.create("CGS", 1)
     profile = "MED_NO_PROFILE_INTERNAL"
-    nodes_group.attrs.create("PFL", numpy.string_(profile))
+    nodes_group.attrs.create("PFL", np.string_(profile))
     coo = nodes_group.create_dataset("COO", data=mesh.points.flatten(order="F"))
     coo.attrs.create("CGT", 1)
     coo.attrs.create("NBR", len(mesh.points))
@@ -262,7 +262,7 @@ def write(filename, mesh):
         family.attrs.create("NBR", len(mesh.points))
 
     # Cells (mailles in French)
-    if len(mesh.cells) != len(numpy.unique([c.type for c in mesh.cells])):
+    if len(mesh.cells) != len(np.unique([c.type for c in mesh.cells])):
         raise WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
@@ -271,7 +271,7 @@ def write(filename, mesh):
         med_cells = cells_group.create_group(med_type)
         med_cells.attrs.create("CGT", 1)
         med_cells.attrs.create("CGS", 1)
-        med_cells.attrs.create("PFL", numpy.string_(profile))
+        med_cells.attrs.create("PFL", np.string_(profile))
         nod = med_cells.create_dataset("NOD", data=cells.flatten(order="F") + 1)
         nod.attrs.create("CGT", 1)
         nod.attrs.create("NBR", len(cells))
@@ -360,13 +360,13 @@ def _write_data(
     # Field
     try:  # a same MED field may contain fields of different natures
         field = fields.create_group(name)
-        field.attrs.create("MAI", numpy.string_(mesh_name))
+        field.attrs.create("MAI", np.string_(mesh_name))
         field.attrs.create("TYP", 6)  # MED_FLOAT64
         field.attrs.create("UNI", numpy_void_str)  # physical unit
         field.attrs.create("UNT", numpy_void_str)  # time unit
         n_components = 1 if data.ndim == 1 else data.shape[-1]
         field.attrs.create("NCO", n_components)  # number of components
-        field.attrs.create("NOM", numpy.string_(_component_names(n_components)))
+        field.attrs.create("NOM", np.string_(_component_names(n_components)))
 
         # Time-step
         step = "0000000000000000000100000000000000000001"
@@ -391,7 +391,7 @@ def _write_data(
         typ = time_step.create_group("MAI." + med_type)
 
     typ.attrs.create("GAU", numpy_void_str)  # no associated Gauss points
-    typ.attrs.create("PFL", numpy.string_(profile))
+    typ.attrs.create("PFL", np.string_(profile))
     profile = typ.create_group(profile)
     profile.attrs.create("NBR", len(data))  # number of data
     if supp == "ELNO":
@@ -434,7 +434,7 @@ def _write_families(fm_group, tags):
             # make name 80 characters
             name_80 = name[i] + "\x00" * (80 - len(name[i]))
             # Needs numpy array, see <https://github.com/h5py/h5py/issues/1735>
-            dataset[i] = numpy.array([ord(x) for x in name_80])
+            dataset[i] = np.array([ord(x) for x in name_80])
 
 
 register("med", [".med"], read, {"med": write})

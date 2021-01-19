@@ -1,7 +1,7 @@
 import pathlib
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -24,12 +24,12 @@ test_set = [
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),
     helpers.add_point_data(helpers.tri_mesh, 3),
-    helpers.add_cell_data(helpers.tri_mesh, [("a", (), numpy.float64)]),
-    helpers.add_cell_data(helpers.tri_quad_mesh, [("a", (), numpy.float64)]),
-    helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), numpy.float32)]),
-    helpers.add_cell_data(helpers.tri_mesh, [("b", (3,), numpy.float64)]),
-    helpers.add_cell_data(helpers.polygon_mesh, [("a", (), numpy.float32)]),
-    helpers.add_cell_data(helpers.polyhedron_mesh, [("a", (2,), numpy.float32)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (), np.float64)]),
+    helpers.add_cell_data(helpers.tri_quad_mesh, [("a", (), np.float64)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), np.float32)]),
+    helpers.add_cell_data(helpers.tri_mesh, [("b", (3,), np.float64)]),
+    helpers.add_cell_data(helpers.polygon_mesh, [("a", (), np.float32)]),
+    helpers.add_cell_data(helpers.polyhedron_mesh, [("a", (2,), np.float32)]),
 ]
 
 

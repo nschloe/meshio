@@ -8,7 +8,7 @@ import datetime
 import re
 import warnings
 
-import numpy
+import numpy as np
 
 from ..__about__ import __version__
 from .._exceptions import ReadError
@@ -68,15 +68,15 @@ def read(filename):  # noqa: C901
     import netCDF4
 
     with netCDF4.Dataset(filename) as nc:
-        # assert nc.version == numpy.float32(5.1)
-        # assert nc.api_version == numpy.float32(5.1)
+        # assert nc.version == np.float32(5.1)
+        # assert nc.api_version == np.float32(5.1)
         # assert nc.floating_point_word_size == 8
 
         # assert b''.join(nc.variables['coor_names'][0]) == b'X'
         # assert b''.join(nc.variables['coor_names'][1]) == b'Y'
         # assert b''.join(nc.variables['coor_names'][2]) == b'Z'
 
-        points = numpy.zeros((len(nc.dimensions["num_nodes"]), 3))
+        points = np.zeros((len(nc.dimensions["num_nodes"]), 3))
         point_data_names = []
         cell_data_names = []
         pd = {}
@@ -150,7 +150,7 @@ def read(filename):  # noqa: C901
 
         # merge element block data; can't handle blocks yet
         for k, value in cd.items():
-            cd[k] = numpy.concatenate(list(value.values()))
+            cd[k] = np.concatenate(list(value.values()))
 
         # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
         # triplets in the point data. If yes, they belong together.
@@ -160,9 +160,9 @@ def read(filename):  # noqa: C901
         for name, idx in single:
             point_data[name] = pd[idx]
         for name, idx0, idx1 in double:
-            point_data[name] = numpy.column_stack([pd[idx0], pd[idx1]])
+            point_data[name] = np.column_stack([pd[idx0], pd[idx1]])
         for name, idx0, idx1, idx2 in triple:
-            point_data[name] = numpy.column_stack([pd[idx0], pd[idx1], pd[idx2]])
+            point_data[name] = np.column_stack([pd[idx0], pd[idx1], pd[idx2]])
 
         cell_data = {}
         k = 0
@@ -264,8 +264,8 @@ def write(filename, mesh):
         # set global data
         now = datetime.datetime.now().isoformat()
         rootgrp.title = f"Created by meshio v{__version__}, {now}"
-        rootgrp.version = numpy.float32(5.1)
-        rootgrp.api_version = numpy.float32(5.1)
+        rootgrp.version = np.float32(5.1)
+        rootgrp.api_version = np.float32(5.1)
         rootgrp.floating_point_word_size = 8
 
         # set dimensions

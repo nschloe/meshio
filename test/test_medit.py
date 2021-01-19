@@ -1,7 +1,7 @@
 import os
 
 import helpers
-import numpy
+import numpy as np
 import pytest
 
 import meshio
@@ -124,10 +124,10 @@ def test_reference_file(
             continue
         all_tags.append(mesh.cell_data["medit:ref"][k])
 
-    all_tags = numpy.concatenate(all_tags)
+    all_tags = np.concatenate(all_tags)
 
     # validate against known values
-    unique, counts = numpy.unique(all_tags, return_counts=True)
+    unique, counts = np.unique(all_tags, return_counts=True)
     tags = dict(zip(unique, counts))
     assert tags.keys() == ref_tag_counts.keys()
     for key in tags.keys():

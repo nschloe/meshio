@@ -48,7 +48,7 @@ def read_buffer(file):
     num_vertices = struct.unpack("<I", file.read(4))[0]
     # TODO handle format errors
     #
-    # Use frombuffer instead of numpy.fromfile, because the latter expects a
+    # Use frombuffer instead of np.fromfile, because the latter expects a
     # real file and performs direct I/O on file.fileno(), which can fail or
     # read garbage e.g. if the file is an instance of gzip.GzipFile.
     buf = file.read(4 * 3 * num_vertices)

@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from meshio import Mesh
 from meshio.vtk_io import vtk_to_meshio_type
@@ -6,7 +6,7 @@ from meshio.vtk_io import vtk_to_meshio_type
 
 def read(filetype, filename):
     import vtk
-    from vtk.util import numpy_support
+    from vtk.util import numpy as numpy_support
 
     def _read_data(data):
         """Extract numpy arrays from a VTK data set."""
@@ -16,17 +16,17 @@ def read(filetype, filename):
             array = data.GetArray(k)
             if array:
                 array_name = array.GetName()
-                out[array_name] = numpy.copy(vtk.util.numpy_support.vtk_to_numpy(array))
+                out[array_name] = np.copy(vtk.util.numpy_support.vtk_to_numpy(array))
         return out
 
     def _read_cells(vtk_mesh):
-        data = numpy.copy(
+        data = np.copy(
             vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCells().GetData())
         )
-        offsets = numpy.copy(
+        offsets = np.copy(
             vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCellLocationsArray())
         )
-        types = numpy.copy(
+        types = np.copy(
             vtk.util.numpy_support.vtk_to_numpy(vtk_mesh.GetCellTypesArray())
         )
 
@@ -36,7 +36,7 @@ def read(filetype, filename):
         cells = {}
         for vtk_type, meshio_type in vtk_to_meshio_type.items():
             # Get all offsets for vtk_type
-            os = offsets[numpy.argwhere(types == vtk_type).transpose()[0]]
+            os = offsets[np.argwhere(types == vtk_type).transpose()[0]]
             num_cells = len(os)
             if num_cells > 0:
                 if meshio_type == "polygon":
@@ -45,13 +45,13 @@ def read(filetype, filename):
                         cell = data[os[idx_cell] + 1 : os[idx_cell] + 1 + num_pts]
                         key = meshio_type + str(num_pts)
                         if key in cells:
-                            cells[key] = numpy.vstack([cells[key], cell])
+                            cells[key] = np.vstack([cells[key], cell])
                         else:
                             cells[key] = cell
                 else:
                     num_pts = data[os[0]]
                     # instantiate the array
-                    arr = numpy.empty((num_cells, num_pts), dtype=int)
+                    arr = np.empty((num_cells, num_pts), dtype=int)
                     # store the num_pts entries after the offsets into the columns
                     # of arr
                     for k in range(num_pts):
@@ -105,7 +105,7 @@ def read(filetype, filename):
         vtk_mesh = _read_exodusii_mesh(reader)
 
     # Explicitly extract points, cells, point data, field data
-    points = numpy.copy(numpy_support.vtk_to_numpy(vtk_mesh.GetPoints().GetData()))
+    points = np.copy(numpy_support.vtk_to_numpy(vtk_mesh.GetPoints().GetData()))
     cells = _read_cells(vtk_mesh)
 
     point_data = _read_data(vtk_mesh.GetPointData())

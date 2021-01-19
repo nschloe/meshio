@@ -9,7 +9,7 @@ import re
 import sys
 import warnings
 
-import numpy
+import numpy as np
 
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
@@ -22,25 +22,25 @@ ply_to_numpy_dtype = {
     # [u]char is often used as [u]int, e.g., from Wikipedia:
     # > The word 'list' indicates that the data is a list of values, the first of which
     # > is the number of entries in the list (represented as a 'uchar' in this case).
-    "char": numpy.int8,
-    "uchar": numpy.uint8,
-    "short": numpy.int16,
-    "ushort": numpy.uint16,
-    "int": numpy.int32,
-    "int8": numpy.int8,
-    "int32": numpy.int32,
-    "int64": numpy.int64,
-    "uint": numpy.uint32,
-    "uint8": numpy.uint8,
-    "uint16": numpy.uint16,
-    "uint32": numpy.uint32,
-    "uint64": numpy.uint64,
-    "float": numpy.float32,
-    "float32": numpy.float32,
-    "float64": numpy.float64,
-    "double": numpy.float64,
+    "char": np.int8,
+    "uchar": np.uint8,
+    "short": np.int16,
+    "ushort": np.uint16,
+    "int": np.int32,
+    "int8": np.int8,
+    "int32": np.int32,
+    "int64": np.int64,
+    "uint": np.uint32,
+    "uint8": np.uint8,
+    "uint16": np.uint16,
+    "uint32": np.uint32,
+    "uint64": np.uint64,
+    "float": np.float32,
+    "float32": np.float32,
+    "float64": np.float64,
+    "double": np.float64,
 }
-numpy_to_ply_dtype = {numpy.dtype(v): k for k, v in ply_to_numpy_dtype.items()}
+numpy_to_ply_dtype = {np.dtype(v): k for k, v in ply_to_numpy_dtype.items()}
 
 
 _cell_type_to_count = {"vertex": 1, "line": 2, "triangle": 3, "quad": 4}
@@ -182,13 +182,13 @@ def _read_ascii(
 ):
     # assert that all formats are the same
     # Now read the data
-    dtype = numpy.dtype(
+    dtype = np.dtype(
         [
             (name, ply_to_numpy_dtype[fmt])
             for name, fmt in zip(point_data_names, point_data_formats)
         ]
     )
-    pd = numpy.genfromtxt(f, max_rows=num_verts, dtype=dtype)
+    pd = np.genfromtxt(f, max_rows=num_verts, dtype=dtype)
 
     # split off coordinate data and additional point data
     verts = []
@@ -202,7 +202,7 @@ def _read_ascii(
     if point_data_names[2] == "z":
         verts.append(pd["z"])
         k += 1
-    verts = numpy.column_stack(verts)
+    verts = np.column_stack(verts)
 
     point_data = {
         point_data_names[i]: pd[point_data_names[i]]
@@ -243,12 +243,11 @@ def _read_ascii(
                 i += 1
 
     cells = [
-        CellBlock(cell_type_from_count(n), numpy.array(data))
+        CellBlock(cell_type_from_count(n), np.array(data))
         for (n, data) in polygons.items()
     ]
     cell_data = {
-        key: [numpy.array(v) for v in value.values()]
-        for key, value in cell_data.items()
+        key: [np.array(v) for v in value.values()] for key, value in cell_data.items()
     }
 
     return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
@@ -285,10 +284,10 @@ def _read_binary(
         (name, endianness + ply_to_numpy_dtype_string[fmt])
         for name, fmt in zip(point_data_names, formats)
     ]
-    point_data = numpy.frombuffer(
-        f.read(num_verts * numpy.dtype(dtype).itemsize), dtype=dtype
+    point_data = np.frombuffer(
+        f.read(num_verts * np.dtype(dtype).itemsize), dtype=dtype
     )
-    verts = numpy.column_stack([point_data["x"], point_data["y"], point_data["z"]])
+    verts = np.column_stack([point_data["x"], point_data["y"], point_data["z"]])
     point_data = {
         name: point_data[name]
         for name in point_data_names
@@ -319,8 +318,8 @@ def _read_binary(
                 buffer[buffer_position:], *dt, num_cells, endianness
             )
         else:
-            buffer_increment = numpy.dtype(dt).itemsize
-            cell_data[name] = numpy.frombuffer(
+            buffer_increment = np.dtype(dt).itemsize
+            cell_data[name] = np.frombuffer(
                 buffer[buffer_position : buffer_position + buffer_increment], dtype=dt
             )[0]
         buffer_position += buffer_increment
@@ -335,13 +334,13 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
     length. The only way to know how many bytes the list takes up is to parse
     it. Hence this function also returns the number of bytes consumed.
     """
-    count_dtype, data_dtype = numpy.dtype(count_dtype), numpy.dtype(data_dtype)
+    count_dtype, data_dtype = np.dtype(count_dtype), np.dtype(data_dtype)
     count_itemsize = count_dtype.itemsize
     data_itemsize = data_dtype.itemsize
     byteorder = "little" if endianness == "<" else "big"
 
     # Firstly, walk the buffer to extract all start and end ids (in bytes) of
-    # each row into `byte_starts_ends`. Using `numpy.fromiter(generator)` is
+    # each row into `byte_starts_ends`. Using `np.fromiter(generator)` is
     # 2-3x faster than list comprehension or manually populating an array with
     # a for loop. This is still very much the bottleneck - might be worth
     # ctype-ing in future?
@@ -354,14 +353,12 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
             yield at
 
     # Row `i` is given by `buffer[byte_starts_ends[i]: byte_starts_ends[i+1]]`.
-    byte_starts_ends = numpy.fromiter(
-        parse_ragged(0, num_cells), numpy.intp, num_cells + 1
-    )
+    byte_starts_ends = np.fromiter(parse_ragged(0, num_cells), np.intp, num_cells + 1)
 
     # Next, find where the row length changes and list the (start, end) row ids
     # of each homogenous block into `block_bounds`.
-    row_lengths = numpy.diff(byte_starts_ends)
-    count_changed_ids = numpy.nonzero(numpy.diff(row_lengths))[0] + 1
+    row_lengths = np.diff(byte_starts_ends)
+    count_changed_ids = np.nonzero(np.diff(row_lengths))[0] + 1
 
     block_bounds = []
     start = 0
@@ -380,10 +377,10 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
             continue
         block_buffer = buffer[byte_starts_ends[start] : byte_starts_ends[end]]
         cells_per_row = (row_lengths[start] - count_itemsize) // data_itemsize
-        block_dtype = numpy.dtype(
+        block_dtype = np.dtype(
             [("count", count_dtype), ("data", data_dtype * cells_per_row)]
         )
-        cells = numpy.frombuffer(block_buffer, dtype=block_dtype)["data"]
+        cells = np.frombuffer(block_buffer, dtype=block_dtype)["data"]
 
         cell_type = cell_type_from_count(cells.shape[1])
 
@@ -419,16 +416,16 @@ def write(filename, mesh, binary=True):  # noqa: C901
         #
         # We're adding [u]int64 here.
         type_name_table = {
-            numpy.dtype(numpy.int8): "int8",
-            numpy.dtype(numpy.int16): "int16",
-            numpy.dtype(numpy.int32): "int32",
-            numpy.dtype(numpy.int64): "int64",
-            numpy.dtype(numpy.uint8): "uint8",
-            numpy.dtype(numpy.uint16): "uint16",
-            numpy.dtype(numpy.uint32): "uint32",
-            numpy.dtype(numpy.uint64): "uint64",
-            numpy.dtype(numpy.float32): "float",
-            numpy.dtype(numpy.float64): "double",
+            np.dtype(np.int8): "int8",
+            np.dtype(np.int16): "int16",
+            np.dtype(np.int32): "int32",
+            np.dtype(np.int64): "int64",
+            np.dtype(np.uint8): "uint8",
+            np.dtype(np.uint16): "uint16",
+            np.dtype(np.uint32): "uint32",
+            np.dtype(np.uint64): "uint64",
+            np.dtype(np.float32): "float",
+            np.dtype(np.float64): "double",
         }
         for k in range(mesh.points.shape[1]):
             type_name = type_name_table[mesh.points.dtype]
@@ -457,9 +454,9 @@ def write(filename, mesh, binary=True):  # noqa: C901
             # possibly cast down to int32
             has_cast = False
             for k, (cell_type, data) in enumerate(mesh.cells):
-                if data.dtype == numpy.int64:
+                if data.dtype == np.int64:
                     has_cast = True
-                    mesh.cells[k] = CellBlock(cell_type, data.astype(numpy.int32))
+                    mesh.cells[k] = CellBlock(cell_type, data.astype(np.int32))
 
             if has_cast:
                 warnings.warn(
@@ -487,7 +484,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
         if binary:
             # points and point_data
-            out = numpy.rec.fromarrays([coord for coord in mesh.points.T] + pd)
+            out = np.rec.fromarrays([coord for coord in mesh.points.T] + pd)
             fh.write(out.tobytes())
 
             # cells
@@ -498,18 +495,18 @@ def write(filename, mesh, binary=True):  # noqa: C901
                     )
                     continue
                 # prepend with count
-                out = numpy.rec.fromarrays(
+                out = np.rec.fromarrays(
                     [
-                        numpy.broadcast_to(numpy.uint8(data.shape[1]), data.shape[0]),
+                        np.broadcast_to(np.uint8(data.shape[1]), data.shape[0]),
                         *data.T,
                     ]
                 )
                 fh.write(out.tobytes())
         else:
             # vertices
-            # numpy.savetxt(fh, mesh.points, "%r")  # slower
-            # out = numpy.column_stack([mesh.points] + list(mesh.point_data.values()))
-            out = numpy.rec.fromarrays([coord for coord in mesh.points.T] + pd)
+            # np.savetxt(fh, mesh.points, "%r")  # slower
+            # out = np.column_stack([mesh.points] + list(mesh.point_data.values()))
+            out = np.rec.fromarrays([coord for coord in mesh.points.T] + pd)
             fmt = " ".join(["{}"] * len(out[0]))
             out = "\n".join([fmt.format(*row) for row in out]) + "\n"
             fh.write(out.encode("utf-8"))
@@ -518,11 +515,11 @@ def write(filename, mesh, binary=True):  # noqa: C901
             for cell_type, data in mesh.cells:
                 #                if cell_type not in cell_type_to_count.keys():
                 #                    continue
-                out = numpy.column_stack(
-                    [numpy.full(data.shape[0], data.shape[1], dtype=data.dtype), data]
+                out = np.column_stack(
+                    [np.full(data.shape[0], data.shape[1], dtype=data.dtype), data]
                 )
                 # savetxt is slower
-                # numpy.savetxt(fh, out, "%d  %d %d %d")
+                # np.savetxt(fh, out, "%d  %d %d %d")
                 fmt = " ".join(["{}"] * out.shape[1])
                 out = "\n".join([fmt.format(*row) for row in out]) + "\n"
                 fh.write(out.encode("utf-8"))

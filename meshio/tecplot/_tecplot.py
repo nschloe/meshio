@@ -4,7 +4,7 @@ I/O for Tecplot ASCII data format, cf.
 """
 import logging
 
-import numpy
+import numpy as np
 
 from ..__about__ import __version__ as version
 from .._exceptions import ReadError, WriteError
@@ -142,9 +142,9 @@ def read_buffer(f):
             break
 
     data = (
-        numpy.split(numpy.concatenate(data), numpy.cumsum(num_data[:-1]))
+        np.split(np.concatenate(data), np.cumsum(num_data[:-1]))
         if zone_format == "FEBLOCK"
-        else numpy.transpose(data)
+        else np.transpose(data)
     )
     data = {k: v for k, v in zip(variables, data)}
 
@@ -158,9 +158,9 @@ def read_buffer(f):
     x = "X" if "X" in point_data.keys() else "x"
     y = "Y" if "Y" in point_data.keys() else "y"
     z = "Z" if "Z" in point_data.keys() else "z" if "z" in point_data.keys() else ""
-    points = numpy.column_stack((point_data.pop(x), point_data.pop(y)))
+    points = np.column_stack((point_data.pop(x), point_data.pop(y)))
     if z:
-        points = numpy.column_stack((points, point_data.pop(z)))
+        points = np.column_stack((points, point_data.pop(z)))
     cells = [(tecplot_to_meshio_type[zone_type], cells - 1)]
 
     return Mesh(points, cells, point_data, cell_data)
@@ -277,7 +277,7 @@ def _parse_fezone(zone, variables):
         raise ReadError("Number of elements not found")
 
     # Variable locations
-    is_cell_centered = numpy.zeros(len(variables), dtype=int)
+    is_cell_centered = np.zeros(len(variables), dtype=int)
     if zone_format == "FEBLOCK":
         if "NV" in zone.keys():
             node_value = zone.pop("NV")
@@ -316,7 +316,7 @@ def _read_zone_data(f, num_data, num_cells, zone_format):
             cells += [[[int(x) for x in line]]]
             count += 1
 
-    return data, numpy.concatenate(cells)
+    return data, np.concatenate(cells)
 
 
 def write(filename, mesh):
@@ -336,13 +336,13 @@ def write(filename, mesh):
             )
 
     # Define cells and zone type
-    cell_types = numpy.unique(cell_types)
+    cell_types = np.unique(cell_types)
     if len(cell_types) == 0:
         raise WriteError("No cell type supported by Tecplot in mesh")
     elif len(cell_types) == 1:
         # Nothing much to do except converting pyramids and wedges to hexahedra
         zone_type = meshio_to_tecplot_type[cell_types[0]]
-        cells = numpy.concatenate(
+        cells = np.concatenate(
             [
                 mesh.cells[ic].data[:, meshio_to_tecplot_order[mesh.cells[ic].type]]
                 for ic in cell_blocks
@@ -353,13 +353,13 @@ def write(filename, mesh):
         num_dims = [meshio_type_to_ndim[mesh.cells[ic].type] for ic in cell_blocks]
 
         # Skip 2D cells if it does
-        if len(numpy.unique(num_dims)) == 2:
+        if len(np.unique(num_dims)) == 2:
             logging.warning("Mesh contains 2D and 3D cells. Skipping 2D cells.")
             cell_blocks = [ic for ic, ndim in zip(cell_blocks, num_dims) if ndim == 3]
 
         # Convert 2D cells to quads / 3D cells to hexahedra
         zone_type = "FEQUADRILATERAL" if num_dims[0] == 2 else "FEBRICK"
-        cells = numpy.concatenate(
+        cells = np.concatenate(
             [
                 mesh.cells[ic].data[:, meshio_to_tecplot_order_2[mesh.cells[ic].type]]
                 for ic in cell_blocks
@@ -394,7 +394,7 @@ def write(filename, mesh):
         varrange[1] = varrange[0] - 1
         for k, v in mesh.cell_data.items():
             if k not in {"X", "Y", "Z", "x", "y", "z"}:
-                v = numpy.concatenate([v[ic] for ic in cell_blocks])
+                v = np.concatenate([v[ic] for ic in cell_blocks])
                 if v.ndim == 1:
                     variables += [k]
                     data += [v]
@@ -442,7 +442,7 @@ def write(filename, mesh):
 
 def _write_table(f, data, ncol=20):
     nrow = len(data) // ncol
-    lines = numpy.split(data, numpy.full(nrow, ncol).cumsum())
+    lines = np.split(data, np.full(nrow, ncol).cumsum())
     for line in lines:
         if len(line):
             f.write("{}\n".format(" ".join(str(l) for l in line)))

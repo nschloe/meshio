@@ -1,6 +1,6 @@
 import argparse
 
-import numpy
+import numpy as np
 
 from .._helpers import _writer_map, read, reader_map, write
 from ._helpers import _get_version_text
@@ -20,12 +20,12 @@ def convert(argv=None):
     if (
         args.prune_z_0
         and mesh.points.shape[1] == 3
-        and numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-13)
+        and np.all(np.abs(mesh.points[:, 2]) < 1.0e-13)
     ):
         mesh.points = mesh.points[:, :2]
 
     # Some converters (like VTK) require `points` to be contiguous.
-    mesh.points = numpy.ascontiguousarray(mesh.points)
+    mesh.points = np.ascontiguousarray(mesh.points)
 
     if args.sets_to_int_data:
         mesh.sets_to_int_data()
