@@ -212,6 +212,8 @@ class Mesh:
             sets_dict[key] = {}
             offsets = {}
             for members, cells in zip(member_list, self.cells):
+                if members is None:
+                    continue
                 if cells.type in offsets:
                     offset = offsets[cells.type]
                     offsets[cells.type] += cells.data.shape[0]
