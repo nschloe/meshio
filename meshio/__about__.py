@@ -1,5 +1,5 @@
 try:
-    # Python 3.8
+    # Python 3.8+
     from importlib import metadata
 except ImportError:
     try:
