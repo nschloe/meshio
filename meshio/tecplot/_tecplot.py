@@ -220,7 +220,7 @@ def _read_zone(line):
     # Split remaining key/value pairs separated by '='
     line = [x for x in line.replace(",", " ").split() if x != "="]
     i = 0
-    while i < len(line) - 1:
+    while i < len(line):
         if "=" in line[i]:
             if not (line[i].startswith("=") or line[i].endswith("=")):
                 key, value = line[i].split("=")
