@@ -91,9 +91,17 @@ def read(filename):
     return out
 
 
+def readline(f):
+    line = f.readline().strip()
+    while line.startswith("#"):
+        line = f.readline().strip()
+
+    return line
+
+
 def read_buffer(f):
     while True:
-        line = f.readline().strip()
+        line = readline(f)
 
         if line.upper().startswith("VARIABLES"):
             variables = _read_variables(line)
@@ -108,12 +116,12 @@ def read_buffer(f):
             # is valid (and understood by ParaView and VisIt).
             lines = [line]
             i = f.tell()
-            line = f.readline().strip().upper()
+            line = readline(f).upper()
             while True:
                 if line and not line[0].isdigit():
                     lines += [line]
                     i = f.tell()
-                    line = f.readline().strip().upper()
+                    line = readline(f).upper()
                 else:
                     f.seek(i)
                     break
@@ -304,14 +312,14 @@ def _parse_fezone(zone, variables):
 def _read_zone_data(f, num_data, num_cells, zone_format):
     data, count = [], 0
     while count < num_data:
-        line = f.readline().strip().split()
+        line = readline(f).split()
         if line:
             data += [[float(x) for x in line]]
             count += len(line) if zone_format == "FEBLOCK" else 1
 
     cells, count = [], 0
     while count < num_cells:
-        line = f.readline().strip().split()
+        line = readline(f).split()
         if line:
             cells += [[[int(x) for x in line]]]
             count += 1
