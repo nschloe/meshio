@@ -104,6 +104,21 @@ def read_buffer(f):
         line = readline(f)
 
         if line.upper().startswith("VARIABLES"):
+            # Multilines for VARIABLES appears to work only if
+            # variable name is double quoted
+            lines = [line]
+            i = f.tell()
+            line = readline(f).upper()
+            while True:
+                if line.startswith('"'):
+                    lines += [line]
+                    i = f.tell()
+                    line = readline(f).upper()
+                else:
+                    f.seek(i)
+                    break
+            line = "".join(lines)
+
             variables = _read_variables(line)
 
         elif line.upper().startswith("ZONE"):
