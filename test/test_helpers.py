@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-import helpers
 import pytest
 
 import meshio
