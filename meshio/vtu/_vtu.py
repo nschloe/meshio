@@ -54,7 +54,19 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
             meshio_type = vtk_to_meshio_type[types[start]]
         except KeyError:
             raise ReadError("File contains cells that meshio cannot handle.")
-        if meshio_type == "polygon":
+
+        # cells with varying number of points
+        special_cells = [
+            "polygon",
+            "VTK_LAGRANGE_CURVE",
+            "VTK_LAGRANGE_TRIANGLE",
+            "VTK_LAGRANGE_QUADRILATERAL",
+            "VTK_LAGRANGE_TETRAHEDRON",
+            "VTK_LAGRANGE_HEXAHEDRON",
+            "VTK_LAGRANGE_WEDGE",
+            "VTK_LAGRANGE_PYRAMID",
+        ]
+        if meshio_type in special_cells:
             # Polygons have unknown and varying number of nodes per cell.
             # IMPLEMENTATION NOTE: While polygons are different from other cells
             # they are much less different than polyhedral cells (for polygons,
@@ -893,10 +905,28 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         for k, v in mesh.cells:
             # For polygon and polyhedron grids, the number of nodes is part of the cell
             # type key. This part must be stripped away.
-            if k[:7] == "polygon":
-                key_ = k[:7]
-            elif k[:10] == "polyhedron":
-                key_ = k[:10]
+            special_cells = [
+                "polygon",
+                "polyhedron",
+                "VTK_LAGRANGE_CURVE",
+                "VTK_LAGRANGE_TRIANGLE",
+                "VTK_LAGRANGE_QUADRILATERAL",
+                "VTK_LAGRANGE_TETRAHEDRON",
+                "VTK_LAGRANGE_HEXAHEDRON",
+                "VTK_LAGRANGE_WEDGE",
+                "VTK_LAGRANGE_PYRAMID",
+            ]
+            key_ = None
+            for string in special_cells:
+                if k.startswith(string):
+                    key_ = string
+
+            if key_ is None:
+                # No special treatment
+                key_ = k
+
+            # further adaptions for polyhedron
+            if k.startswith("polyhedron"):
                 # Get face-cell relation on the vtu format. See comments in helper
                 # function for more information of how to specify this.
                 faces_loc, faceoffsets_loc = _polyhedron_face_cells(v)
@@ -908,9 +938,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                 assert faces is not None
                 faces += faces_loc
                 faceoffsets += faceoffsets_loc
-            else:
-                # No special treatment
-                key_ = k
+
             types_array.append(np.full(len(v), meshio_to_vtk_type[key_]))
 
         types = np.concatenate(
