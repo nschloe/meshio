@@ -1,5 +1,6 @@
 """
 I/O for Tecplot ASCII data format, cf.
+<https://download.tecplot.com/360/current/360_data_format_guide.pdf>,
 <http://paulbourke.net/dataformats/tp/>.
 """
 import logging
@@ -30,7 +31,17 @@ zone_key_to_type = {
 }
 
 
+# 0=ORDERED
+# 1=FELINESEG
+# 2=FETRIANGLE
+# 3=FEQUADRILATERAL
+# 4=FETETRAHEDRON
+# 5=FEBRICK
+# 6=FEPOLYGON
+# 7=FEPOLYHEDRON
 tecplot_to_meshio_type = {
+    "LINESEG": "line",
+    "FELINESEG": "line",
     "TRIANGLE": "triangle",
     "FETRIANGLE": "triangle",
     "QUADRILATERAL": "quad",
@@ -43,6 +54,7 @@ tecplot_to_meshio_type = {
 
 
 meshio_to_tecplot_type = {
+    "line": "FELINESEG",
     "triangle": "FETRIANGLE",
     "quad": "FEQUADRILATERAL",
     "tetra": "FETETRAHEDRON",
@@ -56,6 +68,7 @@ meshio_only = set(meshio_to_tecplot_type.keys())
 
 
 meshio_to_tecplot_order = {
+    "line": [0, 1],
     "triangle": [0, 1, 2],
     "quad": [0, 1, 2, 3],
     "tetra": [0, 1, 2, 3],
@@ -76,6 +89,7 @@ meshio_to_tecplot_order_2 = {
 
 
 meshio_type_to_ndim = {
+    "line": 1,
     "triangle": 2,
     "quad": 2,
     "tetra": 3,

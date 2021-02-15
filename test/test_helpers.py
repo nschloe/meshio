@@ -1,12 +1,11 @@
 import sys
 from pathlib import Path
 
-import helpers
 import pytest
 
 import meshio
 
-OBJ_PATH = helpers.MESHES_DIR / "obj" / "elephav.obj"
+OBJ_PATH = Path(__file__).resolve().parent / "meshes" / "obj" / "elephav.obj"
 
 
 def test_read_str():

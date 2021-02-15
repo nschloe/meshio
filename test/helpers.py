@@ -8,9 +8,6 @@ import numpy as np
 
 import meshio
 
-TEST_DIR = Path(__file__).resolve().parent
-MESHES_DIR = TEST_DIR / "meshes"
-
 # In general:
 # Use values with an infinite decimal representation to test precision.
 
@@ -21,7 +18,7 @@ line_mesh = meshio.Mesh(
 
 tri_mesh_2d = meshio.Mesh(
     np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]) / 3,
-    [("triangle", np.array([[0, 1, 2], [0, 2, 3]]))],
+    [("triangle", [[0, 1, 2], [0, 2, 3]])],
 )
 
 tri_mesh = meshio.Mesh(
@@ -61,7 +58,7 @@ quad_mesh = meshio.Mesh(
         ]
     )
     / 3.0,
-    [("quad", np.array([[0, 1, 4, 5], [1, 2, 3, 4]]))],
+    [("quad", [[0, 1, 4, 5], [1, 2, 3, 4]])],
 )
 
 d = 0.1
@@ -84,7 +81,7 @@ quad8_mesh = meshio.Mesh(
         ]
     )
     / 3.0,
-    [("quad8", np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 8, 9, 2, 10, 11, 12, 5]]))],
+    [("quad8", [[0, 1, 2, 3, 4, 5, 6, 7], [1, 8, 9, 2, 10, 11, 12, 5]])],
 )
 
 tri_quad_mesh = meshio.Mesh(
@@ -100,8 +97,8 @@ tri_quad_mesh = meshio.Mesh(
     )
     / 3.0,
     [
-        ("triangle", np.array([[0, 1, 4], [0, 4, 5]])),
-        ("quad", np.array([[1, 2, 3, 4]])),
+        ("triangle", [[0, 1, 4], [0, 4, 5]]),
+        ("quad", [[1, 2, 3, 4]]),
     ],
 )
 
@@ -119,8 +116,8 @@ quad_tri_mesh = meshio.Mesh(
     )
     / 3.0,
     [
-        ("quad", np.array([[1, 2, 3, 4]])),
-        ("triangle", np.array([[0, 1, 4], [0, 4, 5]])),
+        ("quad", [[1, 2, 3, 4]]),
+        ("triangle", [[0, 1, 4], [0, 4, 5]]),
     ],
 )
 
@@ -135,7 +132,7 @@ tet_mesh = meshio.Mesh(
         ]
     )
     / 3.0,
-    [("tetra", np.array([[0, 1, 2, 4], [0, 2, 3, 4]]))],
+    [("tetra", [[0, 1, 2, 4], [0, 2, 3, 4]])],
 )
 
 tet10_mesh = meshio.Mesh(
@@ -155,7 +152,7 @@ tet10_mesh = meshio.Mesh(
         ]
     )
     / 3.0,
-    [("tetra10", np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]]))],
+    [("tetra10", [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]])],
 )
 
 hex_mesh = meshio.Mesh(
@@ -247,18 +244,16 @@ polygon_mesh = meshio.Mesh(
 )
 
 polyhedron_mesh = meshio.Mesh(
-    np.array(
-        [  # Two layers of a unit square
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [1.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0],
-            [1.0, 0.0, 1.0],
-            [1.0, 1.0, 1.0],
-            [0.0, 1.0, 1.0],
-        ]
-    ),
+    [  # Two layers of a unit square
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 1.0],
+        [1.0, 1.0, 1.0],
+        [0.0, 1.0, 1.0],
+    ],
     [  # Split the cube into tets and pyramids.
         (
             "polyhedron4",
@@ -282,6 +277,13 @@ polyhedron_mesh = meshio.Mesh(
             [
                 [
                     # np.asarray on this causes a numpy warning
+                    # ```
+                    # VisibleDeprecationWarning: Creating an ndarray from ragged nested
+                    # sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays
+                    # with different lengths or shapes) is deprecated. If you meant to
+                    # do this, you must specify 'dtype=object' when creating the
+                    # ndarray.
+                    # ```
                     # TODO come up with a better data structure for polyhedra
                     [0, 1, 2, 3],  # pyramid base is a rectangle
                     [0, 1, 7],
