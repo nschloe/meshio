@@ -54,7 +54,19 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
             meshio_type = vtk_to_meshio_type[types[start]]
         except KeyError:
             raise ReadError("File contains cells that meshio cannot handle.")
-        if meshio_type == "polygon":
+
+        # cells with varying number of points
+        special_cells = [
+            "polygon",
+            "VTK_LAGRANGE_CURVE",
+            "VTK_LAGRANGE_TRIANGLE",
+            "VTK_LAGRANGE_QUADRILATERAL",
+            "VTK_LAGRANGE_TETRAHEDRON",
+            "VTK_LAGRANGE_HEXAHEDRON",
+            "VTK_LAGRANGE_WEDGE",
+            "VTK_LAGRANGE_PYRAMID",
+        ]
+        if meshio_type in special_cells:
             # Polygons have unknown and varying number of nodes per cell.
             # IMPLEMENTATION NOTE: While polygons are different from other cells
             # they are much less different than polyhedral cells (for polygons,
