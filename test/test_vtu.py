@@ -75,4 +75,4 @@ def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
 
 
 if __name__ == "__main__":
-    test(helpers.tet10_mesh, binary=False)
+    test(helpers.tet10_mesh, (True, None))
