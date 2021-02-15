@@ -23,7 +23,9 @@ def test(mesh):
     helpers.write_read(meshio.tecplot.write, meshio.tecplot.read, mesh, 1.0e-15)
 
 
-@pytest.mark.parametrize("filename", ["quad_zone_comma.tec", "quad_zone_space.tec"])
+@pytest.mark.parametrize(
+    "filename", ["quad_zone_comma.tec", "quad_zone_space.tec", "quad_zone_multivar.tec"]
+)
 def test_comma_space(filename):
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "tecplot" / filename
