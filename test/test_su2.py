@@ -7,6 +7,7 @@ import pytest
 import meshio
 
 test_set = [
+    helpers.empty_mesh,
     helpers.tri_mesh_2d,
     helpers.tet_mesh,
     helpers.hex_mesh,

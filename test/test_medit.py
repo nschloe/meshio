@@ -10,6 +10,7 @@ import meshio
 @pytest.mark.parametrize(
     "mesh",
     [
+        helpers.empty_mesh,
         helpers.line_mesh,
         helpers.tri_mesh,
         helpers.tri_mesh_2d,

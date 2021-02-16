@@ -14,6 +14,7 @@ this_dir = pathlib.Path(__file__).resolve().parent
 @pytest.mark.parametrize(
     "mesh",
     [
+        helpers.empty_mesh,
         helpers.tri_mesh,
         helpers.quad_mesh,
         helpers.tri_quad_mesh,

@@ -6,6 +6,7 @@ import meshio
 netCDF4 = pytest.importorskip("netCDF4")
 
 test_set = [
+    helpers.empty_mesh,
     helpers.tri_mesh,
     helpers.tri_mesh_2d,
     helpers.triangle6_mesh,

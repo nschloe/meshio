@@ -5,6 +5,7 @@ import pytest
 import meshio
 
 test_set_full = [
+    helpers.empty_mesh,
     helpers.line_mesh,
     helpers.tri_mesh,
     helpers.line_tri_mesh,

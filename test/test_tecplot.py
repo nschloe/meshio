@@ -11,6 +11,7 @@ import meshio
 @pytest.mark.parametrize(
     "mesh",
     [
+        helpers.empty_mesh,
         helpers.tri_mesh,
         helpers.quad_mesh,
         # Those two tests suddenly started failing on gh-actions. No idea why.

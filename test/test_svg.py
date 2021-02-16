@@ -6,7 +6,13 @@ import pytest
 
 import meshio
 
-test_set = [helpers.line_mesh, helpers.tri_mesh, helpers.tri_mesh_2d, helpers.quad_mesh]
+test_set = [
+    helpers.empty_mesh,
+    helpers.line_mesh,
+    helpers.tri_mesh,
+    helpers.tri_mesh_2d,
+    helpers.quad_mesh,
+]
 
 
 @pytest.mark.parametrize("mesh", test_set)
