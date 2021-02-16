@@ -97,6 +97,8 @@ class Mesh:
         """Remove all cells of topological dimension lower than the max dimension in the
         mesh, i.e., in a mesh that contains tetrahedra, remove triangles, lines, etc.
         """
+        if not self.cells:
+            return
         max_topological_dim = max(_topological_dimension[c.type] for c in self.cells)
         new_cells = []
         new_cell_data = {}
@@ -125,7 +127,11 @@ class Mesh:
 
     def remove_orphaned_nodes(self):
         """Remove nodes which don't belong to any cell."""
-        all_cells_flat = np.concatenate([c.data.flat for c in self.cells])
+        flat = [c.data.flat for c in self.cells]
+        if flat:
+            all_cells_flat = np.concatenate([c.data.flat for c in self.cells])
+        else:
+            all_cells_flat = []
         orphaned_nodes = np.setdiff1d(np.arange(len(self.points)), all_cells_flat)
 
         if len(orphaned_nodes) == 0:
@@ -160,6 +166,8 @@ class Mesh:
         """Remove third (z) component of points if it is 0 everywhere (up to a
         tolerance).
         """
+        if self.points.shape[0] == 0:
+            return
         if self.points.shape[1] == 3 and np.all(np.abs(self.points[:, 2]) < tol):
             self.points = self.points[:, :2]
 
