@@ -13,9 +13,14 @@ def test_public_attributes():
     meshio.extension_to_filetype
 
 
-def test_print_prune():
-    mesh = copy.deepcopy(helpers.tri_mesh)
+@pytest.mark.parametrize(
+    "mesh",
+    [helpers.tri_mesh, helpers.empty_mesh],
+)
+def test_print_prune(mesh):
+    mesh = copy.deepcopy(mesh)
     print(mesh)
+    mesh.remove_orphaned_nodes()
     mesh.remove_lower_dimensional_cells()
     mesh.prune_z_0()
 

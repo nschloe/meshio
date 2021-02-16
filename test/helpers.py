@@ -11,6 +11,8 @@ import meshio
 # In general:
 # Use values with an infinite decimal representation to test precision.
 
+empty_mesh = meshio.Mesh([], [])
+
 line_mesh = meshio.Mesh(
     np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]) / 3,
     [("line", [[0, 1], [0, 2], [0, 3], [1, 2], [2, 3]])],
