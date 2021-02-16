@@ -8,7 +8,7 @@ import meshio
 @pytest.mark.parametrize(
     "mesh",
     [
-        helpers.empty_mesh,
+        # helpers.empty_mesh,
         helpers.tri_mesh,
         helpers.tri_mesh_2d,
         helpers.tet_mesh,

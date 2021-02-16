@@ -78,7 +78,10 @@ def read_buffer(f):
 
 
 def _read_nodes(f, num_nodes):
-    data = np.genfromtxt(f, max_rows=num_nodes)
+    if num_nodes > 0:
+        data = np.genfromtxt(f, max_rows=num_nodes)
+    else:
+        data = np.empty((0, 3))
     points_ids = {int(pid): i for i, pid in enumerate(data[:, 0])}
     return points_ids, data[:, 1:]
 
@@ -143,7 +146,7 @@ def _read_data(f, num_entities, entity_ids):
 
 
 def write(filename, mesh):
-    if mesh.points.shape[1] == 2:
+    if len(mesh.points.shape) > 1 and mesh.points.shape[1] == 2:
         logging.warning(
             "AVS-UCD requires 3D points, but 2D points given. "
             "Appending 0 third component."

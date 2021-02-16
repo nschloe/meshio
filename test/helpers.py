@@ -385,8 +385,11 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
     # Use allclose.
-    n = in_mesh.points.shape[1]
-    assert np.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
+    if in_mesh.points.shape[0] == 0:
+        assert mesh.points.shape[0] == 0
+    else:
+        n = in_mesh.points.shape[1]
+        assert np.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
 
     # To avoid errors from sorted (below), specify the key as first cell type
     # then index of the first point of the first cell. This may still lead to

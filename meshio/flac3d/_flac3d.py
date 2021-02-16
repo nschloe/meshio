@@ -307,8 +307,10 @@ def _update_slots(slots, slot):
 
 def write(filename, mesh, float_fmt=".16e", binary=False):
     """Write FLAC3D f3grid grid file."""
-    if not any(c.type in meshio_only["zone"].keys() for c in mesh.cells):
-        raise WriteError("FLAC3D format only supports 3D cells")
+    skip = [c for c in mesh.cells if c.type not in meshio_only["zone"]]
+    if skip:
+        string = ", ".join(skip)
+        logging.warning("FLAC3D format only supports 3D cells. Skipping {string}.")
 
     # Pick out material
     material = None
