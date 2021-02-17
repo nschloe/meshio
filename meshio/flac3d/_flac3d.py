@@ -9,7 +9,7 @@ import numpy as np
 
 from ..__about__ import __version__ as version
 from .._common import _pick_first_int_data
-from .._exceptions import ReadError, WriteError
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
@@ -307,8 +307,11 @@ def _update_slots(slots, slot):
 
 def write(filename, mesh, float_fmt=".16e", binary=False):
     """Write FLAC3D f3grid grid file."""
-    if not any(c.type in meshio_only["zone"].keys() for c in mesh.cells):
-        raise WriteError("FLAC3D format only supports 3D cells")
+    skip = [c for c in mesh.cells if c.type not in meshio_only["zone"]]
+    if skip:
+        logging.warning(
+            f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.'
+        )
 
     # Pick out material
     material = None
@@ -317,10 +320,9 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
         if key:
             material = np.concatenate(mesh.cell_data[key])
             if other:
-                other_str = ", ".join(other)
                 logging.warning(
                     "FLAC3D can only write one cell data array. "
-                    f"Picking {key}, skipping {other_str}."
+                    f'Picking {key}, skipping {", ".join(other)}.'
                 )
 
     mode = "wb" if binary else "w"

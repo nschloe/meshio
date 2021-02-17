@@ -1,10 +1,11 @@
+import logging
 import re
 from collections import OrderedDict
 from io import StringIO
 
 import numpy as np
 
-from .._exceptions import ReadError, WriteError
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
@@ -75,18 +76,15 @@ def write(filename, mesh):
 
 
 def write_buffer(f, mesh):
-    tris = None
-    for c in mesh.cells:
-        if c.type == "triangle":
-            tris = c.data
+    skip = [c for c in mesh.cells if c.type != "triangle"]
+    if skip:
+        logging.warning('WTK only supports triangle cells. Skipping {", ".join(skip)}.')
 
-    if tris is None:
-        raise WriteError("WKT meshes can only have triangles")
+    triangles = mesh.get_cells_type("triangle")
 
     f.write("TIN (")
-
     joiner = ""
-    for tri_points in mesh.points[tris]:
+    for tri_points in mesh.points[triangles]:
         f.write(
             "{0}(({1}, {2}, {3}, {1}))".format(
                 joiner, *(arr_to_str(p) for p in tri_points)

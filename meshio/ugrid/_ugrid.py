@@ -247,7 +247,7 @@ def _write_buffer(f, file_type, mesh):
         if labels_key and other:
             logging.warning(
                 "UGRID can only write one cell data array. "
-                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+                f'Picking {labels_key}, skipping {", ".join(other)}.'
             )
         labels = (
             mesh.cell_data[labels_key]

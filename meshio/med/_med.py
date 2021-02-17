@@ -47,6 +47,8 @@ def read(filename):
     mesh_name = list(meshes)[0]
     mesh = mesh_ensemble[mesh_name]
 
+    dim = mesh.attrs["ESP"]
+
     # Possible time-stepping
     if "NOE" not in mesh:
         # One needs NOE (node) and MAI (French maillage, meshing) data. If they
@@ -66,7 +68,7 @@ def read(filename):
     # Points
     pts_dataset = mesh["NOE"]["COO"]
     n_points = pts_dataset.attrs["NBR"]
-    points = pts_dataset[()].reshape(n_points, -1, order="F")
+    points = pts_dataset[()].reshape((n_points, dim), order="F")
 
     # Point tags
     if "FAM" in mesh["NOE"]:

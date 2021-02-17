@@ -7,7 +7,13 @@ import pytest
 import meshio
 
 
-@pytest.mark.parametrize("mesh", [helpers.tri_mesh])
+@pytest.mark.parametrize(
+    "mesh",
+    [
+        # helpers.empty_mesh,
+        helpers.tri_mesh
+    ],
+)
 def test_neuroglancer(mesh):
     def writer(*args, **kwargs):
         return meshio.neuroglancer.write(*args, **kwargs)

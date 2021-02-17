@@ -11,6 +11,8 @@ import meshio
 # In general:
 # Use values with an infinite decimal representation to test precision.
 
+empty_mesh = meshio.Mesh(np.empty((0, 3)), [])
+
 line_mesh = meshio.Mesh(
     np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]) / 3,
     [("line", [[0, 1], [0, 2], [0, 3], [1, 2], [2, 3]])],
@@ -383,20 +385,23 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     # Numpy's array_equal is too strict here, cf.
     # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
     # Use allclose.
-    n = in_mesh.points.shape[1]
-    assert np.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
+    if in_mesh.points.shape[0] == 0:
+        assert mesh.points.shape[0] == 0
+    else:
+        n = in_mesh.points.shape[1]
+        assert np.allclose(in_mesh.points, mesh.points[:, :n], atol=atol, rtol=0.0)
 
-    # To avoid errors from sorted (below), specify the key as first cell type
-    # then index of the first point of the first cell. This may still lead to
-    # comparison of what should be different blocks, but chances seem low.
+    # To avoid errors from sorted (below), specify the key as first cell type then index
+    # of the first point of the first cell. This may still lead to comparison of what
+    # should be different blocks, but chances seem low.
     def cell_sorter(cell):
-        if cell.type[:10] == "polyhedron":
+        if cell.type.startswith("polyhedron"):
             # Polyhedra blocks should be well enough distinguished by their type
             return cell.type
         else:
             return (cell.type, cell.data[0, 0])
 
-    # to make sure we are testing same type of cells we sort the list
+    # to make sure we are testing the same type of cells we sort the list
     for cells0, cells1 in zip(
         sorted(input_mesh.cells, key=cell_sorter), sorted(mesh.cells, key=cell_sorter)
     ):

@@ -8,6 +8,7 @@ import pytest
 import meshio
 
 test_set = [
+    helpers.empty_mesh,
     helpers.line_mesh,
     helpers.tri_mesh_2d,
     helpers.tri_mesh,

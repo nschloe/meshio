@@ -4,7 +4,13 @@ import pytest
 import meshio
 
 
-@pytest.mark.parametrize("mesh", [helpers.tet_mesh])
+@pytest.mark.parametrize(
+    "mesh",
+    [
+        # helpers.empty_mesh,
+        helpers.tet_mesh
+    ],
+)
 def test(mesh):
     def writer(*args, **kwargs):
         return meshio.cgns.write(*args, **kwargs)

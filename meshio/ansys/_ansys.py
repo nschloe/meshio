@@ -392,7 +392,7 @@ def write(filename, mesh, binary=True):
         fh.write(f'(1 "meshio {__version__}")\n'.encode("utf8"))
 
         # dimension
-        dim = mesh.points.shape[1]
+        num_points, dim = mesh.points.shape
         if dim not in [2, 3]:
             raise WriteError(f"Can only write dimension 2, 3, got {dim}.")
         fh.write((f"(2 {dim})\n").encode("utf8"))
@@ -400,9 +400,9 @@ def write(filename, mesh, binary=True):
         # total number of nodes
         first_node_index = 1
         fh.write(
-            (
-                "(10 (0 {:x} {:x} 0))\n".format(first_node_index, len(mesh.points))
-            ).encode("utf8")
+            ("(10 (0 {:x} {:x} 0))\n".format(first_node_index, num_points)).encode(
+                "utf8"
+            )
         )
 
         # total number of cells
@@ -412,11 +412,9 @@ def write(filename, mesh, binary=True):
         # Write nodes
         key = "3010" if binary else "10"
         fh.write(
-            (
-                "({} (1 {:x} {:x} 1 {:x})(\n".format(
-                    key, first_node_index, mesh.points.shape[0], mesh.points.shape[1]
-                )
-            ).encode("utf8")
+            f"({key} (1 {first_node_index:x} {num_points:x} 1 {dim:x})(\n".encode(
+                "utf8"
+            )
         )
         if binary:
             mesh.points.tofile(fh)
@@ -454,11 +452,9 @@ def write(filename, mesh, binary=True):
                     f"Illegal ANSYS cell type '{cell_type}'. (legal: {legal_keys})"
                 )
             fh.write(
-                (
-                    "({} (1 {:x} {:x} 1 {})(\n".format(
-                        key, first_index, last_index, ansys_cell_type
-                    )
-                ).encode("utf8")
+                f"({key} (1 {first_index:x} {last_index:x} 1 {ansys_cell_type})(\n".encode(
+                    "utf8"
+                )
             )
             if binary:
                 (values + first_node_index).tofile(fh)

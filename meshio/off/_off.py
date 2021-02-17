@@ -7,7 +7,7 @@ import logging
 
 import numpy as np
 
-from .._exceptions import ReadError, WriteError
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
@@ -56,16 +56,19 @@ def write(filename, mesh):
     if mesh.points.shape[1] == 2:
         logging.warning(
             "OFF requires 3D points, but 2D points given. "
-            "Appending 0 third component."
+            "Appending 0 as third component."
         )
         mesh.points = np.column_stack(
             [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
         )
 
-    if not any(c.type == "triangle" for c in mesh.cells):
-        raise WriteError("Can only deal with triangular faces")
+    skip = [c for c in mesh.cells if c.type != "triangle"]
+    if skip:
+        logging.warning(
+            f'OFF only supports triangle cells. Skipping {", ".join(skip)}.'
+        )
 
-    tri = np.concatenate([c.data for c in mesh.cells if c.type == "triangle"])
+    tri = mesh.get_cells_type("triangle")
 
     with open_file(filename, "wb") as fh:
         fh.write(b"OFF\n")
@@ -83,9 +86,7 @@ def write(filename, mesh):
         fh.write(out.encode("utf-8"))
 
         # triangles
-        out = np.column_stack(
-            [np.full(tri.shape[0], tri.shape[1], dtype=tri.dtype), tri]
-        )
+        out = np.column_stack([np.full(tri.shape[0], 3, dtype=tri.dtype), tri])
         # savetxt is slower
         # np.savetxt(fh, out, "%d  %d %d %d")
         fmt = " ".join(["{}"] * out.shape[1])

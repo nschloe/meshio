@@ -5,7 +5,10 @@ import pytest
 
 import meshio
 
-test_set = [helpers.tet_mesh]
+test_set = [
+    # helpers.empty_mesh,
+    helpers.tet_mesh
+]
 
 
 @pytest.mark.parametrize("mesh", test_set)

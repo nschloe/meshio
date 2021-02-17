@@ -1,5 +1,4 @@
 import copy
-import sys
 
 import helpers
 import numpy as np
@@ -13,9 +12,14 @@ def test_public_attributes():
     meshio.extension_to_filetype
 
 
-def test_print_prune():
-    mesh = copy.deepcopy(helpers.tri_mesh)
+@pytest.mark.parametrize(
+    "mesh",
+    [helpers.tri_mesh, helpers.empty_mesh],
+)
+def test_print_prune(mesh):
+    mesh = copy.deepcopy(mesh)
     print(mesh)
+    mesh.remove_orphaned_nodes()
     mesh.remove_lower_dimensional_cells()
     mesh.prune_z_0()
 
@@ -62,7 +66,6 @@ def test_cells_dict():
     assert np.array_equal(mesh.cell_data_dict["a"]["triangle"], [0.5, 1.3])
 
 
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires Python 3.6 or higher")
 def test_sets_to_int_data():
     mesh = helpers.add_cell_sets(helpers.tri_mesh)
 

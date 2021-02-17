@@ -28,8 +28,7 @@ def read(filename):
     cell_data = {}
 
     # read nodes
-    # TODO remove as_posix
-    with open(node_filename.as_posix()) as f:
+    with open(node_filename) as f:
         line = f.readline().strip()
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
@@ -45,7 +44,7 @@ def read(filename):
         ).reshape(num_points, 4 + num_attrs + num_bmarkers)
 
         node_index_base = int(points[0, 0])
-        # make sure the nodes a numbered consecutively
+        # make sure the nodes are numbered consecutively
         if not np.all(
             points[:, 0]
             == np.arange(node_index_base, node_index_base + points.shape[0])
@@ -104,8 +103,7 @@ def write(filename, mesh, float_fmt=".16e"):
         raise WriteError("Can only write 3D points")
 
     # write nodes
-    # TODO remove .as_posix when requiring Python 3.6
-    with open(node_filename.as_posix(), "w") as fh:
+    with open(node_filename, "w") as fh:
         # identify ":ref" key
         attr_keys = list(mesh.point_data.keys())
         ref_keys = [k for k in attr_keys if ":ref" in k]
@@ -140,14 +138,10 @@ def write(filename, mesh, float_fmt=".16e"):
             )
             fh.write(fmt.format(k, *data))
 
-    if not any(c.type == "tetra" for c in mesh.cells):
-        raise WriteError("TegGen only supports tetrahedra")
-
     if any(c.type != "tetra" for c in mesh.cells):
+        string = ", ".join([c.type for c in mesh.cells if c.type != "tetra"])
         logging.warning(
-            "TetGen only supports tetrahedra, but mesh has {}. Skipping those.".format(
-                ", ".join([c.type for c in mesh.cells if c.type != "tetra"])
-            )
+            f"TetGen only supports tetrahedra, but mesh has {string}. Skipping those."
         )
 
     # write cells

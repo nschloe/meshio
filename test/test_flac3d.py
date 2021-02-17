@@ -10,17 +10,16 @@ import meshio
 
 
 @pytest.mark.parametrize(
-    "mesh, binary, data",
+    "mesh, data",
     [
-        (helpers.tet_mesh, False, []),
-        (helpers.hex_mesh, False, []),
-        (helpers.tet_mesh, False, [1, 2]),
-        (helpers.tet_mesh, True, []),
-        (helpers.hex_mesh, True, []),
-        (helpers.tet_mesh, True, [1, 2]),
+        (helpers.empty_mesh, []),
+        (helpers.tet_mesh, []),
+        (helpers.hex_mesh, []),
+        (helpers.tet_mesh, [1, 2]),
     ],
 )
-def test(mesh, binary, data):
+@pytest.mark.parametrize("binary", [False, True])
+def test(mesh, data, binary):
     if data:
         mesh = copy.deepcopy(mesh)
         mesh.cell_data["flac3d:group"] = [np.array(data)]
