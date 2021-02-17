@@ -86,11 +86,13 @@ class XdmfReader:
             precision = "4"
 
         if data_item.get("Format") == "XML":
-            return np.fromstring(
-                data_item.text,
-                dtype=xdmf_to_numpy_type[(data_type, precision)],
-                sep=" ",
-            ).reshape(dims)
+            dtype = xdmf_to_numpy_type[(data_type, precision)]
+            if data_item.text.strip() == "":
+                # https://github.com/numpy/numpy/issues/18435
+                data = np.empty((0,), dtype=dtype)
+            else:
+                data = np.fromstring(data_item.text, dtype=dtype, sep=" ")
+            return data.reshape(dims)
         elif data_item.get("Format") == "Binary":
             return np.fromfile(
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]

@@ -44,7 +44,7 @@ def read(filename):
         ).reshape(num_points, 4 + num_attrs + num_bmarkers)
 
         node_index_base = int(points[0, 0])
-        # make sure the nodes a numbered consecutively
+        # make sure the nodes are numbered consecutively
         if not np.all(
             points[:, 0]
             == np.arange(node_index_base, node_index_base + points.shape[0])
@@ -138,14 +138,10 @@ def write(filename, mesh, float_fmt=".16e"):
             )
             fh.write(fmt.format(k, *data))
 
-    if not any(c.type == "tetra" for c in mesh.cells):
-        raise WriteError("TegGen only supports tetrahedra")
-
     if any(c.type != "tetra" for c in mesh.cells):
+        string = ", ".join([c.type for c in mesh.cells if c.type != "tetra"])
         logging.warning(
-            "TetGen only supports tetrahedra, but mesh has {}. Skipping those.".format(
-                ", ".join([c.type for c in mesh.cells if c.type != "tetra"])
-            )
+            f"TetGen only supports tetrahedra, but mesh has {string}. Skipping those."
         )
 
     # write cells

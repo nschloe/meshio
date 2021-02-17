@@ -309,8 +309,9 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
     """Write FLAC3D f3grid grid file."""
     skip = [c for c in mesh.cells if c.type not in meshio_only["zone"]]
     if skip:
-        string = ", ".join(skip)
-        logging.warning("FLAC3D format only supports 3D cells. Skipping {string}.")
+        logging.warning(
+            f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.'
+        )
 
     # Pick out material
     material = None
@@ -319,10 +320,9 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
         if key:
             material = np.concatenate(mesh.cell_data[key])
             if other:
-                other_str = ", ".join(other)
                 logging.warning(
                     "FLAC3D can only write one cell data array. "
-                    f"Picking {key}, skipping {other_str}."
+                    f'Picking {key}, skipping {", ".join(other)}.'
                 )
 
     mode = "wb" if binary else "w"

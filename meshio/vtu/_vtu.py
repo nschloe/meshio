@@ -194,7 +194,7 @@ def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
 
 def _organize_cells(point_offsets, cells, cell_data_raw):
     if len(point_offsets) != len(cells):
-        raise ReadError()
+        raise ReadError(f"Inconsistent data! {len(point_offsets) = }, {len(cells) = }")
 
     out_cells = []
 
@@ -610,7 +610,11 @@ class VtuReader:
 
         if fmt == "ascii":
             # ascii
-            data = np.fromstring(c.text, dtype=dtype, sep=" ")
+            if c.text.strip() == "":
+                # https://github.com/numpy/numpy/issues/18435
+                data = np.empty((0,), dtype=dtype)
+            else:
+                data = np.fromstring(c.text, dtype=dtype, sep=" ")
         elif fmt == "binary":
             reader = (
                 self.read_uncompressed_binary
@@ -849,7 +853,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         pts = ET.SubElement(piece, "Points")
         numpy_to_xml_array(pts, "Points", points)
 
-    if mesh.cells is not None:
+    if mesh.cells is not None and len(mesh.cells) > 0:
         cls = ET.SubElement(piece, "Cells")
 
         faces = None

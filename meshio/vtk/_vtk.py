@@ -621,6 +621,8 @@ def translate_cells(data, types, cell_data_raw):
             [[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
         )
         for start, end in zip(b[:-1], b[1:]):
+            if start == end:
+                continue
             meshio_type = vtk_to_meshio_type[types[start]]
             n = numnodes[start]
             cell_idx = idx0 + _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)

@@ -28,8 +28,9 @@ def write_buffer(f, mesh):
     vertices = np.asarray(mesh.points, "<f")
     skip = [c for c in mesh.cells if c.type != "triangle"]
     if skip:
-        string = ", ".join(skip)
-        logging.warning("Neuroglancer only supports triangle cells. Skipping {string}.")
+        logging.warning(
+            "Neuroglancer only supports triangle cells. " f'Skipping {", ".join(skip)}.'
+        )
 
     f.write(struct.pack("<I", vertices.shape[0]))
     f.write(vertices.tobytes(order="C"))
