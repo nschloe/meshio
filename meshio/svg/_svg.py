@@ -23,12 +23,15 @@ def write(
         )
 
     pts = mesh.points[:, :2].copy()
-    pts[:, 1] = np.max(pts[:, 1]) - pts[:, 1]
+    min_x = np.min(pts[:, 0]) if len(pts) > 0 else 0.0
+    max_x = np.max(pts[:, 0]) if len(pts) > 0 else 0.0
+    min_y = np.min(pts[:, 1]) if len(pts) > 0 else 0.0
+    max_y = np.max(pts[:, 1]) if len(pts) > 0 else 0.0
 
-    min_x = np.min(pts[:, 0])
-    min_y = np.min(pts[:, 1])
-    width = np.max(pts[:, 0]) - min_x
-    height = np.max(pts[:, 1]) - min_y
+    pts[:, 1] = max_y + min_y - pts[:, 1]
+
+    width = max_x - min_x
+    height = max_y - min_y
 
     if force_width is not None:
         scaling_factor = force_width / width
