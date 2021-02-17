@@ -408,6 +408,8 @@ class XdmfWriter:
         data_item.text = self.numpy_to_xml_string(points)
 
     def write_cells(self, cells, grid):
+        if len(cells) == 0:
+            return
         if len(cells) == 1:
             meshio_type = cells[0].type
             num_cells = len(cells[0].data)

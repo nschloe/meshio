@@ -392,11 +392,7 @@ def write(filename, mesh, binary=True):
         fh.write(f'(1 "meshio {__version__}")\n'.encode("utf8"))
 
         # dimension
-        num_points = mesh.points.shape[0]
-        if num_points == 0:
-            dim = 2
-        else:
-            dim = mesh.points.shape[1]
+        num_points, dim = mesh.points.shape
         if dim not in [2, 3]:
             raise WriteError(f"Can only write dimension 2, 3, got {dim}.")
         fh.write((f"(2 {dim})\n").encode("utf8"))

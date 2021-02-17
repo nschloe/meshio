@@ -3,6 +3,7 @@ Neuroglancer format, used in large-scale neuropil segmentation data.
 
 Adapted from https://github.com/HumanBrainProject/neuroglancer-scripts/blob/1fcabb613a715ba17c65d52596dec3d687ca3318/src/neuroglancer_scripts/mesh.py (MIT license)
 """
+import logging
 import struct
 
 import numpy as np
@@ -25,8 +26,10 @@ def write_buffer(f, mesh):
     :param meshio.Mesh mesh: Mesh object to write
     """
     vertices = np.asarray(mesh.points, "<f")
-    if not any(c.type == "triangle" for c in mesh.cells):
-        raise WriteError("Neuroglancer files can only contain triangle cells.")
+    skip = [c for c in mesh.cells if c.type != "triangle"]
+    if skip:
+        string = ", ".join(skip)
+        logging.warning("Neuroglancer only supports triangle cells. Skipping {string}.")
 
     f.write(struct.pack("<I", vertices.shape[0]))
     f.write(vertices.tobytes(order="C"))

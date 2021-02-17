@@ -49,21 +49,21 @@ def write(filename, mesh, compression="gzip", compression_opts=4):
     coord_x = coords.create_group("CoordinateX")
     coord_x.create_dataset(
         " data",
-        data=mesh.points[:, 0] if mesh.points.shape[0] > 0 else [],
+        data=mesh.points[:, 0],
         compression=compression,
         compression_opts=compression_opts,
     )
     coord_y = coords.create_group("CoordinateY")
     coord_y.create_dataset(
         " data",
-        data=mesh.points[:, 1] if mesh.points.shape[0] > 0 else [],
+        data=mesh.points[:, 1],
         compression=compression,
         compression_opts=compression_opts,
     )
     coord_z = coords.create_group("CoordinateZ")
     coord_z.create_dataset(
         " data",
-        data=mesh.points[:, 2] if mesh.points.shape[0] > 0 else [],
+        data=mesh.points[:, 2],
         compression=compression,
         compression_opts=compression_opts,
     )
