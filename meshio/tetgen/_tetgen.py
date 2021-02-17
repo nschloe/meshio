@@ -28,8 +28,7 @@ def read(filename):
     cell_data = {}
 
     # read nodes
-    # TODO remove as_posix
-    with open(node_filename.as_posix()) as f:
+    with open(node_filename) as f:
         line = f.readline().strip()
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
@@ -104,8 +103,7 @@ def write(filename, mesh, float_fmt=".16e"):
         raise WriteError("Can only write 3D points")
 
     # write nodes
-    # TODO remove .as_posix when requiring Python 3.6
-    with open(node_filename.as_posix(), "w") as fh:
+    with open(node_filename, "w") as fh:
         # identify ":ref" key
         attr_keys = list(mesh.point_data.keys())
         ref_keys = [k for k in attr_keys if ":ref" in k]
