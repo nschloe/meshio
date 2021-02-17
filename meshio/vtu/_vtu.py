@@ -194,7 +194,7 @@ def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
 
 def _organize_cells(point_offsets, cells, cell_data_raw):
     if len(point_offsets) != len(cells):
-        raise ReadError(f"Inconsistent data! {len(point_offsets) = }, {len(cells) = }")
+        raise ReadError(f"Inconsistent data!")
 
     out_cells = []
 
