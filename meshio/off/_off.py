@@ -7,7 +7,7 @@ import logging
 
 import numpy as np
 
-from .._exceptions import ReadError, WriteError
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
@@ -64,8 +64,9 @@ def write(filename, mesh):
 
     skip = [c for c in mesh.cells if c.type != "triangle"]
     if skip:
-        string = ", ".join(skip)
-        logging.warning("OFF only supports triangle cells. Skipping {string}.")
+        logging.warning(
+            f'OFF only supports triangle cells. Skipping {", ".join(skip)}.'
+        )
 
     tri = mesh.get_cells_type("triangle")
 

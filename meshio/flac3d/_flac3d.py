@@ -9,7 +9,7 @@ import numpy as np
 
 from ..__about__ import __version__ as version
 from .._common import _pick_first_int_data
-from .._exceptions import ReadError, WriteError
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh

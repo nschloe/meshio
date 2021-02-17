@@ -5,7 +5,7 @@ TODO link to specification?
 """
 import numpy as np
 
-from .._exceptions import ReadError, WriteError
+from .._exceptions import ReadError
 from .._helpers import register
 from .._mesh import Mesh
 

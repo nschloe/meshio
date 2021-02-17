@@ -1,5 +1,4 @@
 import copy
-import sys
 
 import helpers
 import numpy as np

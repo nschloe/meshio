@@ -1,5 +1,4 @@
 import pathlib
-import sys
 
 import helpers
 import numpy as np

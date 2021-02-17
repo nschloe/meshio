@@ -8,7 +8,7 @@ import os
 import numpy as np
 
 from ..__about__ import __version__
-from .._exceptions import ReadError, WriteError
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
