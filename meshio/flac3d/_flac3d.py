@@ -377,7 +377,7 @@ def _write_cells(f, points, cells, flag, binary):
                     np.full(num_cells, num_verts),
                     cdata + 1,
                 )
-            )
+            ).astype(int)
             f.write(
                 struct.pack("<{}I".format((num_verts + 2) * num_cells), *tmp.ravel())
             )
