@@ -23,11 +23,11 @@ There are various mesh formats available for representing unstructured meshes.
 meshio can read and write all of the following and smoothly converts between them:
 
 > [Abaqus](http://abaqus.software.polimi.it/v6.14/index.html),
- [ANSYS msh](https://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf),
+ ANSYS msh,
  [AVS-UCD](https://lanl.github.io/LaGriT/pages/docs/read_avs.html),
  [CGNS](https://cgns.github.io/),
  [DOLFIN XML](https://manpages.ubuntu.com/manpages/disco/man1/dolfin-convert.1.html),
- [Exodus](https://cubit.sandia.gov/public/13.2/help_manual/WebHelp/finite_element_model/exodus/block_specification.htm),
+ [Exodus](https://nschloe.github.io/meshio/exodus.pdf),
  [FLAC3D](https://www.itascacg.com/software/flac3d),
  [H5M](https://www.mcs.anl.gov/~fathom/moab-docs/h5mmain.html),
  [Kratos/MDPA](https://github.com/KratosMultiphysics/Kratos/wiki/Input-data),
@@ -35,7 +35,7 @@ meshio can read and write all of the following and smoothly converts between the
  [MED/Salome](https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html),
  [Nastran](https://help.autodesk.com/view/NSTRN/2019/ENU/?guid=GUID-42B54ACB-FBE3-47CA-B8FE-475E7AD91A00) (bulk data),
  [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed#mesh-representation-of-segmented-object-surfaces),
- [Gmsh](http://gmsh.info/doc/texinfo/gmsh.html#File-formats) (format versions 2.2, 4.0, and 4.1),
+ [Gmsh](https://gmsh.info/doc/texinfo/gmsh.html#File-formats) (format versions 2.2, 4.0, and 4.1),
  [OBJ](https://en.wikipedia.org/wiki/Wavefront_.obj_file),
  [OFF](https://segeval.cs.princeton.edu/public/off_format.html),
  [PERMAS](https://www.intes.de),
@@ -43,13 +43,13 @@ meshio can read and write all of the following and smoothly converts between the
  [STL](https://en.wikipedia.org/wiki/STL_(file_format)),
  [Tecplot .dat](http://paulbourke.net/dataformats/tp/),
  [TetGen .node/.ele](https://wias-berlin.de/software/tetgen/fformats.html),
- [SVG](https://www.w3.org/TR/SVG/) (2D only, output only),
+ [SVG](https://www.w3.org/TR/SVG/) (2D output only),
  [SU2](https://su2code.github.io/docs_v7/Mesh-File),
  [UGRID](http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html),
  [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf),
  [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats),
  [WKT](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry) ([TIN](https://en.wikipedia.org/wiki/Triangulated_irregular_network)),
- [XDMF](http://www.xdmf.org/index.php/XDMF_Model_and_Format).
+ [XDMF](https://www.xdmf.org/index.php/XDMF_Model_and_Format).
 
 Install with
 ```
@@ -121,7 +121,7 @@ m.write("foo.vtk")  # same arguments as meshio.write, besides `mesh`
 
 #### Time series
 
-The [XDMF format](http://www.xdmf.org/index.php/XDMF_Model_and_Format) supports time
+The [XDMF format](https://www.xdmf.org/index.php/XDMF_Model_and_Format) supports time
 series with a shared mesh. You can write times series data using meshio with
 <!--exdown-skip-->
 ```python
