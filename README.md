@@ -94,30 +94,23 @@ points = [
 ]
 cells = [("triangle", [[0, 1, 2]])]
 
-meshio.write_points_cells(
-    "foo.vtk",  # str, os.PathLike, or buffer/open file
+meshio.Mesh(
     points,
-    cells,
-    # file_format="vtk",  # optional if first argument is a path; inferred from extension
+    cells
     # Optionally provide extra data on points, cells, etc.
     # point_data=point_data,
     # cell_data=cell_data,
     # field_data=field_data
+).write(
+    "foo.vtk",  # str, os.PathLike, or buffer/open file
+    # file_format="vtk",  # optional if first argument is a path; inferred from extension
 )
 
-# or explicitly create a mesh object for writing
-mesh = meshio.Mesh(points, cells)
-mesh.write("foo.vtk")
+# Alternative with the same options
+meshio.write_points_cells("foo.vtk", points, cells)
 ```
 For both input and output, you can optionally specify the exact `file_format`
 (in case you would like to enforce ASCII over binary VTK, for example).
-
-Reading and writing can also be handled directly by the `Mesh` object:
-<!--exdown-skip-->
-```python
-m = meshio.Mesh.read(filename, "vtk")  # same arguments as meshio.read
-m.write("foo.vtk")  # same arguments as meshio.write, besides `mesh`
-```
 
 #### Time series
 

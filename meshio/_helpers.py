@@ -94,7 +94,7 @@ def write_points_cells(
         point_sets=point_sets,
         cell_sets=cell_sets,
     )
-    return write(filename, mesh, file_format=file_format, **kwargs)
+    mesh.write(filename, file_format=file_format, **kwargs)
 
 
 def write(filename, mesh: Mesh, file_format: Optional[str] = None, **kwargs):
