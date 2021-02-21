@@ -246,6 +246,12 @@ class Mesh:
         # avoid circular import
         from ._helpers import read
 
+        # 2021-02-21
+        warnings.warn(
+            "meshio.Mesh.read is deprecated, use meshio.read instead",
+            DeprecationWarning,
+        )
+
         return read(path_or_buf, file_format)
 
     def sets_to_int_data(self):
