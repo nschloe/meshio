@@ -1,3 +1,4 @@
+from typing import Optional, Union
 from xml.etree import ElementTree as ET
 
 import numpy as np
@@ -9,11 +10,11 @@ from .._helpers import register
 def write(
     filename,
     mesh,
-    float_fmt=".3f",
-    stroke_width=None,
-    force_width=None,
-    fill="none",
-    stroke="black",
+    float_fmt: str = ".3f",
+    stroke_width: Optional[str] = None,
+    force_width: Optional[Union[int, float]] = None,
+    fill: str = "none",
+    stroke: str = "black",
 ):
     if mesh.points.shape[1] == 3 and not np.allclose(
         mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
@@ -66,6 +67,7 @@ def write(
     for cell_block in mesh.cells:
         if cell_block.type not in ["line", "triangle", "quad"]:
             continue
+
         if cell_block.type == "line":
             fmt = (
                 f"M {{:{float_fmt}}} {{:{float_fmt}}}"
