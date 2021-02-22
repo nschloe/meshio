@@ -221,14 +221,24 @@ def _binary(filename, points, cells):
         msg += (79 - len(msg)) * "X"
         msg += "\n"
         fh.write(msg.encode("utf-8"))
+
+        dtype = np.dtype(
+            [
+                ("normal", ("<f4", 3)),
+                ("points", ("<f4", (3, 3))),
+                ("attr", "<u2"),
+            ]
+        )
         for c in filter(lambda c: c.type == "triangle", cells):
             pts = points[c.data]
             normals = _compute_normals(pts)
-            fh.write(np.uint32(len(c.data)))
-            for pt, normal in zip(pts, normals):
-                fh.write(normal.astype(np.float32))
-                fh.write(pt.astype(np.float32))
-                fh.write(np.uint16(0))
+            fh.write(np.array(len(c.data)).astype("<u4"))
+
+            a = np.empty(len(c.data), dtype=dtype)
+            a["normal"] = normals
+            a["points"] = pts
+            a["attr"] = 0
+            a.tofile(fh)
 
 
 register("stl", [".stl"], read, {"stl": write})
