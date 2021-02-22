@@ -246,4 +246,4 @@ def _write_data(f, labels, data_array, num_entities, num_data, num_data_sum):
     np.savetxt(f, data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_data_sum)
 
 
-register("avsucd", [], read, {"avsucd": write})
+register("avsucd", [".avs"], read, {"avsucd": write})
