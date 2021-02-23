@@ -183,7 +183,7 @@ and can be pulled in by
 pip install meshio[all]
 ```
 
-You can also install meshio from [anaconda](https://anaconda.org/conda-forge/meshio):
+You can also install meshio from [Anaconda](https://anaconda.org/conda-forge/meshio):
 ```
 conda install -c conda-forge meshio
 ```
