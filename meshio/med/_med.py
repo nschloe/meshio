@@ -124,6 +124,10 @@ def read(filename):
 
 def _read_data(fields, profiles, cell_types, point_data, cell_data, field_data):
     for name, data in fields.items():
+        if "NOM" not in field_data:
+            field_data["NOM"] = []
+        field_data["NOM"].append(data.attrs['NOM'].decode().split())
+
         time_step = sorted(data.keys())  # associated time-steps
         if len(time_step) == 1:  # single time-step
             names = [name]  # do not change field name
