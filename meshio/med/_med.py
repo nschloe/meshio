@@ -124,9 +124,9 @@ def read(filename):
 
 def _read_data(fields, profiles, cell_types, point_data, cell_data, field_data):
     for name, data in fields.items():
-        # if "NOM" not in field_data:
-        #     field_data["NOM"] = []
-        # field_data["NOM"].append(data.attrs['NOM'].decode().split())
+        if "med:nom" not in field_data:
+            field_data["med:nom"] = []
+        field_data["med:nom"].append(data.attrs["NOM"].decode().split())
 
         time_step = sorted(data.keys())  # associated time-steps
         if len(time_step) == 1:  # single time-step
@@ -237,9 +237,10 @@ def write(filename, mesh):
     med_mesh.attrs.create("UNT", numpy_void_str)  # time unit
     med_mesh.attrs.create("UNI", numpy_void_str)  # spatial unit
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
-    med_mesh.attrs.create(
-        "NOM", np.string_(_component_names(mesh.points.shape[1]))
-    )  # component names
+    # component names:
+    names = _component_names(mesh.points.shape[1])
+    print(names)
+    med_mesh.attrs.create("NOM", np.string_("".join(names)))
     med_mesh.attrs.create("DES", np.string_("Mesh created with meshio"))
     med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
 
@@ -372,7 +373,8 @@ def _write_data(
         field.attrs.create("UNT", numpy_void_str)  # time unit
         n_components = 1 if data.ndim == 1 else data.shape[-1]
         field.attrs.create("NCO", n_components)  # number of components
-        field.attrs.create("NOM", np.string_(_component_names(n_components)))
+        names = _component_names(n_components)
+        field.attrs.create("NOM", np.string_("".join(names)))
 
         # Time-step
         step = "0000000000000000000100000000000000000001"
@@ -411,25 +413,21 @@ def _write_data(
 
 
 def _component_names(n_components):
+    """To be correctly read in a MED viewer, each component must be a string of width
+    16. Since we do not know the physical nature of the data, we just use V1, V2,...
     """
-    To be correctly read in a MED viewer, each component must be a string of width 16.
-    Since we do not know the physical nature of the data, we just use V1, V2, ...
-    """
-    return "".join(["V%-15d" % (i + 1) for i in range(n_components)])
+    return [f"V{(i+1):<15d}" for i in range(n_components)]
 
 
 def _family_name(set_id, name):
-    """
-    Return the FAM object name corresponding to the unique set id and a list of subset
-    names
+    """Return the FAM object name corresponding to the unique set id and a list of
+    subset names
     """
     return "FAM" + "_" + str(set_id) + "_" + "_".join(name)
 
 
 def _write_families(fm_group, tags):
-    """
-    Write point/cell tag information under FAS/[mesh_name]
-    """
+    """Write point/cell tag information under FAS/[mesh_name]"""
     for set_id, name in tags.items():
         family = fm_group.create_group(_family_name(set_id, name))
         family.attrs.create("NUM", set_id)
