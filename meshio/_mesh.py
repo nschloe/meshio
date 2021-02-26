@@ -82,6 +82,10 @@ class Mesh:
             names = ", ".join(self.cell_data.keys())
             lines.append(f"  Cell data: {names}")
 
+        if self.field_data:
+            names = ", ".join(self.field_data.keys())
+            lines.append(f"  Field data: {names}")
+
         return "\n".join(lines)
 
     def prune(self):

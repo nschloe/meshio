@@ -1,5 +1,4 @@
 import copy
-import os
 import string
 import tempfile
 from pathlib import Path
@@ -363,8 +362,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     in_mesh = copy.deepcopy(input_mesh)
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = os.path.join(temp_dir, "test" + extension)
-        p = Path(filepath)
+        p = Path(temp_dir) / ("test" + extension)
         writer(p, input_mesh)
         mesh = reader(p)
 
@@ -426,8 +424,16 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
             # assert d0.dtype == d1.dtype, (d0.dtype, d1.dtype)
             assert np.allclose(d0, d1, atol=atol, rtol=0.0)
 
+    print()
+    print("helpers:")
+    print(input_mesh.field_data)
+    print()
+    print(mesh.field_data)
     for name, data in input_mesh.field_data.items():
-        assert np.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
+        if isinstance(data, list):
+            assert data == mesh.field_data[name]
+        else:
+            assert np.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
 
     # Test of cell sets (assumed to be a list of numpy arrays),
     for name, data in input_mesh.cell_sets.items():
@@ -441,7 +447,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
 
 def generic_io(filename):
     with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = os.path.join(temp_dir, filename)
+        filepath = Path(temp_dir) / filename
         meshio.write_points_cells(filepath, tri_mesh.points, tri_mesh.cells)
         out_mesh = meshio.read(filepath)
         assert (abs(out_mesh.points - tri_mesh.points) < 1.0e-15).all()

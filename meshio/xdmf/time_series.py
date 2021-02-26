@@ -1,4 +1,5 @@
 import os
+import pathlib
 import warnings
 from io import BytesIO
 from xml.etree import ElementTree as ET
@@ -208,7 +209,8 @@ class TimeSeriesReader:
         filename, h5path = info.split(":")
 
         # The HDF5 file path is given with respect to the XDMF (XML) file.
-        full_hdf5_path = os.path.join(os.path.dirname(self.filename), filename)
+        dirpath = pathlib.Path(self.filename).resolve().parent
+        full_hdf5_path = dirpath / filename
 
         if full_hdf5_path in self.hdf5_files:
             f = self.hdf5_files[full_hdf5_path]

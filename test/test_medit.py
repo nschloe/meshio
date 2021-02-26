@@ -1,4 +1,4 @@
-import os
+import pathlib
 
 import helpers
 import numpy as np
@@ -65,8 +65,8 @@ def test_reference_file(
     ref_num_hex,
     ref_tag_counts,
 ):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(this_dir, "meshes", "medit", filename)
+    this_dir = pathlib.Path(__file__).resolve().parent
+    filename = this_dir / "meshes" / "medit" / filename
 
     mesh = meshio.read(filename)
     assert mesh.points.shape[0] == ref_num_points

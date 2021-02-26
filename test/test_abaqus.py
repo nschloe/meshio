@@ -1,4 +1,3 @@
-import os
 import pathlib
 import tempfile
 
@@ -66,7 +65,7 @@ def test_elset():
     mesh_ref = meshio.Mesh(points, cells, cell_sets=cell_sets)
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = os.path.join(temp_dir, "test.inp")
+        filepath = pathlib.Path(temp_dir) / "test.inp"
         meshio.abaqus.write(filepath, mesh_ref)
         mesh = meshio.abaqus.read(filepath)
 

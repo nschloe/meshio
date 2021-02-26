@@ -27,7 +27,7 @@ def read_buffer(f):
         raise ReadError("Expected text buffer, not bytes.")
 
     if line.strip() != "OFF":
-        raise ReadError("Expected OFF at the beginning of the file.")
+        raise ReadError("Expected the first line to be `OFF`.")
 
     # fast forward to the next significant line
     while True:
