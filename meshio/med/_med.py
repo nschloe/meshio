@@ -60,17 +60,6 @@ def read(filename):
             )
         mesh = mesh[list(time_step)[0]]
 
-    # print("xx", mesh.keys())
-    # print("xx", mesh["NOE"].keys())
-    # print("xx", mesh["NOE"].keys())
-    # if "NOM" in mesh["NOE"]:
-    #     print("xx", mesh["NOE"]["NOM"])
-    # print("xx", mesh.attrs.keys())
-    # if "DIM" in mesh.attrs:
-    #     print("mn dim", mesh.attrs["DIM"])
-    # if "NOM" in mesh.attrs:
-    #     print("mn", mesh.attrs["NOM"])
-
     # Initialize data
     point_data = {}
     cell_data = {}
@@ -250,20 +239,6 @@ def write(filename, mesh):
     med_mesh.attrs.create("UNI", numpy_void_str)  # spatial unit
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
     # component names:
-    print(f"{mesh.field_data = }")
-    print()
-    for key, pd in mesh.point_data.items():
-        print(key, pd.shape)
-    print()
-    for key, cd in mesh.cell_data.items():
-        print(key, cd[0].shape)
-    print()
-
-    # if "med:nom" in mesh.field_data:
-    #     names = mesh.field_data["med:nom"][0]
-    # else:
-    #     names = _create_component_names(mesh.points.shape[1])
-    # print(f"{names = }")
     # med_mesh.attrs.create("NOM", np.string_("".join(f"{name:<16}" for name in names)))
     med_mesh.attrs.create("DES", np.string_("Mesh created with meshio"))
     med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
@@ -340,9 +315,6 @@ def write(filename, mesh):
     # Write nodal/cell data
     fields = f.create_group("CHA")
 
-    print(mesh.point_data.keys())
-    print(mesh.cell_data.keys())
-    print(mesh.field_data.keys())
     name_idx = 0
     field_names = mesh.field_data["med:nom"] if "med:nom" in mesh.field_data else []
 
@@ -353,7 +325,6 @@ def write(filename, mesh):
         supp = "NOEU"  # nodal data
         field_name = field_names[name_idx] if field_names else None
         name_idx += 1
-        print("fn", field_name)
         _write_data(fields, mesh_name, field_name, profile, name, supp, data)
 
     # Cell data
@@ -375,7 +346,6 @@ def write(filename, mesh):
                 supp = "ELGA"
             field_name = field_names[name_idx] if field_names else None
             name_idx += 1
-            print("fn", field_name)
             _write_data(
                 fields,
                 mesh_name,
