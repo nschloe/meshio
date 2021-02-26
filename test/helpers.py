@@ -425,11 +425,15 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
             assert np.allclose(d0, d1, atol=atol, rtol=0.0)
 
     print()
+    print("helpers:")
     print(input_mesh.field_data)
     print()
     print(mesh.field_data)
     for name, data in input_mesh.field_data.items():
-        assert np.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
+        if isinstance(data, list):
+            assert data == mesh.field_data[name]
+        else:
+            assert np.allclose(data, mesh.field_data[name], atol=atol, rtol=0.0)
 
     # Test of cell sets (assumed to be a list of numpy arrays),
     for name, data in input_mesh.cell_sets.items():
