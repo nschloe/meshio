@@ -240,7 +240,7 @@ def write(filename, mesh):
     # component names:
     names = _component_names(mesh.points.shape[1])
     print(names)
-    med_mesh.attrs.create("NOM", np.string_("".join(names)))
+    med_mesh.attrs.create("NOM", np.string_("".join(f"{name:<16}" for name in names)))
     med_mesh.attrs.create("DES", np.string_("Mesh created with meshio"))
     med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
 
@@ -374,7 +374,7 @@ def _write_data(
         n_components = 1 if data.ndim == 1 else data.shape[-1]
         field.attrs.create("NCO", n_components)  # number of components
         names = _component_names(n_components)
-        field.attrs.create("NOM", np.string_("".join(names)))
+        field.attrs.create("NOM", np.string_("".join(f"{name:<16}" for name in names)))
 
         # Time-step
         step = "0000000000000000000100000000000000000001"
@@ -416,7 +416,7 @@ def _component_names(n_components):
     """To be correctly read in a MED viewer, each component must be a string of width
     16. Since we do not know the physical nature of the data, we just use V1, V2,...
     """
-    return [f"V{(i+1):<15d}" for i in range(n_components)]
+    return [f"V{(i+1)}" for i in range(n_components)]
 
 
 def _family_name(set_id, name):
