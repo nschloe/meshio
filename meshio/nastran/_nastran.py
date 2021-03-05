@@ -1,7 +1,5 @@
 """
 I/O for Nastran bulk data.
-
-See <http://help.autodesk.com/view/NSTRN/2019/ENU/?guid=GUID-42B54ACB-FBE3-47CA-B8FE-475E7AD91A00>
 """
 import logging
 
@@ -9,6 +7,7 @@ import numpy as np
 
 from ..__about__ import __version__
 from .._common import num_nodes_per_cell
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
@@ -117,7 +116,7 @@ def read_buffer(f):
         while True:
             next_line = f.readline()
             if not next_line:
-                exit(1)
+                raise ReadError("Premature EOF")
             next_line = next_line.rstrip()
             # Blank lines or comments
             if len(next_line) < 4 or next_line.startswith(("$", "//", "#")):
