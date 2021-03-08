@@ -131,7 +131,7 @@ def read_buffer(f):
                 else:
                     f.seek(i)
                     break
-            line = "".join(lines)
+            line = " ".join(lines)
 
             variables = _read_variables(line)
 
