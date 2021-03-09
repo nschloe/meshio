@@ -86,7 +86,7 @@ if __name__ == "__main__":
     X, cells = create_logo2(y=0.08)
 
     mesh = meshio.Mesh(X, {"triangle": cells})
-    meshio.svg.write("logo.svg", mesh, force_width=300)
+    meshio.svg.write("logo.svg", mesh, image_width=300)
 
     X = np.column_stack([X[:, 0], X[:, 1], np.zeros(X.shape[0])])
     meshio.Mesh(X, {"triangle": cells}).write("logo.vtk")
