@@ -12,8 +12,12 @@ def write(
     mesh,
     float_fmt: str = ".3f",
     stroke_width: Optional[str] = None,
-    force_width: Optional[Union[int, float]] = None,
-    fill: str = "none",
+    # Use a default image_width (not None). If set to None, images will come out at the
+    # width of the mesh (which is okay). Some viewers (e.g., eog) have problems
+    # displaying SVGs of width around 1 since they interpret it as the width in pixels.
+    image_width: Optional[Union[int, float]] = 100,
+    # eggshell, approximately the default paraview fill color
+    fill: str = "#eae5d7",
     stroke: str = "black",
 ):
     if mesh.points.shape[1] == 3 and not np.allclose(
@@ -34,8 +38,8 @@ def write(
     width = max_x - min_x
     height = max_y - min_y
 
-    if force_width is not None:
-        scaling_factor = force_width / width
+    if image_width is not None:
+        scaling_factor = image_width / width
         min_x *= scaling_factor
         min_y *= scaling_factor
         width *= scaling_factor
