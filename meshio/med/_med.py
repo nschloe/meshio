@@ -389,9 +389,7 @@ def _write_data(
                 "NOM", np.string_("".join(f"{name:<16}" for name in field_name))
             )
         else:
-            field.attrs.create(
-                "NOM", np.string_(f"{'':<16}")
-            )
+            field.attrs.create("NOM", np.string_(f"{'':<16}"))
 
         # Time-step
         step = "0000000000000000000100000000000000000001"
