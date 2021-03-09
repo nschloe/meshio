@@ -38,7 +38,7 @@ def write(
     width = max_x - min_x
     height = max_y - min_y
 
-    if image_width is not None:
+    if image_width is not None and width != 0:
         scaling_factor = image_width / width
         min_x *= scaling_factor
         min_y *= scaling_factor
