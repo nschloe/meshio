@@ -345,7 +345,6 @@ def write(filename, mesh):
             else:  # general ELGA data defined at unknown Gauss points
                 supp = "ELGA"
             field_name = field_names[name_idx] if field_names else None
-            name_idx += 1
             _write_data(
                 fields,
                 mesh_name,
@@ -356,6 +355,7 @@ def write(filename, mesh):
                 data,
                 med_type,
             )
+        name_idx += 1
 
 
 def _write_data(
