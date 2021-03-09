@@ -594,21 +594,21 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     # combinations thereof, and a map from the full node set to the unique
     # set.
     if "gmsh:dim_tags" in point_data:
-        # reverse_index_map maps from all nodes to their respective representation
-        # in (the uniquified) node_dim_tags. This approach works for general
-        # orderings of the nodes
+        # reverse_index_map maps from all nodes to their respective representation in
+        # (the uniquified) node_dim_tags. This approach works for general orderings of
+        # the nodes
         node_dim_tags, reverse_index_map = np.unique(
             point_data["gmsh:dim_tags"],
             axis=0,
             return_inverse=True,
         )
     else:
-        # If entity information is not provided, we will assign the same entity
-        # for all nodes. This only makes sense if the cells are of a single
-        # type
+        # If entity information is not provided, we will assign the same entity for all
+        # nodes. This only makes sense if the cells are of a single type
         if len(cells) != 1:
             raise WriteError(
-                "Specify entity information to deal with more than one cell type"
+                "Specify entity information (gmsh:dim_tags in point_data) "
+                + "to deal with more than one cell type. "
             )
 
         dim = _topological_dimension[cells[0][0]]
@@ -623,7 +623,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     if binary:
         if points.dtype != c_double:
             logging.warning(
-                "Binary Gmsh needs c_double points (got %s). Converting.", points.dtype
+                f"Binary Gmsh needs c_double points (got {points.dtype}). Converting."
             )
             points = points.astype(c_double)
         np.array([num_blocks, n, min_tag, max_tag], dtype=c_size_t).tofile(fh)
@@ -697,8 +697,8 @@ def _write_elements(fh, cells, tag_data, binary):
 
             if node_idcs.dtype != c_size_t:
                 logging.warning(
-                    "Binary Gmsh cells need c_size_t (got %s). Converting.",
-                    node_idcs.dtype,
+                    f"Binary Gmsh cells need c_size_t (got {node_idcs.dtype}). "
+                    + "Converting."
                 )
                 node_idcs = node_idcs.astype(c_size_t)
 

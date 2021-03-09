@@ -16,9 +16,9 @@ def write(
     # width of the mesh (which is okay). Some viewers (e.g., eog) have problems
     # displaying SVGs of width around 1 since they interpret it as the width in pixels.
     image_width: Optional[Union[int, float]] = 100,
-    # eggshell, approximately the default paraview fill color
-    fill: str = "#eae5d7",
-    stroke: str = "black",
+    # ParaView's default colors
+    fill: str = "#c8c5bd",
+    stroke: str = "#000080",
 ):
     if mesh.points.shape[1] == 3 and not np.allclose(
         mesh.points[:, 2], 0.0, rtol=0.0, atol=1.0e-14
