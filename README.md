@@ -109,7 +109,12 @@ meshio.Mesh(
 meshio.write_points_cells("foo.vtk", points, cells)
 ```
 For both input and output, you can optionally specify the exact `file_format`
-(in case you would like to enforce ASCII over binary VTK, for example).
+(in case you would like to enforce ASCII over binary VTK, for example):
+```'abaqus', 'ansys', 'avsucd', 'cgns', 'dolfin-xml', 'exodus', 'flac3d', 
+'gmsh', 'gmsh22', 'h5m', 'hmf', 'mdpa', 'med', 'medit', 'nastran', 'neuroglancer', 
+'obj', 'off', 'permas', 'ply', 'stl', 'su2', 'svg', 'tecplot', 'tetgen', 
+'ugrid', 'vtk', 'vtu', 'wkt', 'xdmf'
+```
 
 #### Time series
 
