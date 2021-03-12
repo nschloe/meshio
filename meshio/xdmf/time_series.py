@@ -283,8 +283,10 @@ class TimeSeriesWriter:
         grid = ET.SubElement(
             self.domain, "Grid", Name=self.mesh_name, GridType="Uniform"
         )
-        self.points(grid, points)
-        self.cells(cells, grid)
+        self.points(grid, np.asarray(points))
+        self.cells(
+            [CellBlock(cell_type, np.asarray(data)) for cell_type, data in cells], grid
+        )
         self.has_mesh = True
 
     def write_data(self, t, point_data=None, cell_data=None):
