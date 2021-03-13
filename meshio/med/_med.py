@@ -239,7 +239,7 @@ def write(filename, mesh):
     med_mesh.attrs.create("UNI", numpy_void_str)  # spatial unit
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
     # component names:
-    names = ["X", "Y", "Z"][:mesh.points.shape[1]]
+    names = ["X", "Y", "Z"][: mesh.points.shape[1]]
     med_mesh.attrs.create("NOM", np.string_("".join(f"{name:<16}" for name in names)))
     med_mesh.attrs.create("DES", np.string_("Mesh created with meshio"))
     med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
