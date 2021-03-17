@@ -236,6 +236,10 @@ def read_ascii_buffer(f):
             # adapt for 0-base
             cells.append((meshio_type, out[:, :points_per_cell] - 1))
             cell_data["medit:ref"].append(out[:, -1])
+        elif items[0] == "Corners":
+            # those are just discarded
+            num_corners = int(f.readline())
+            np.fromfile(f, count=num_corners, dtype=dtype, sep=" ")
         elif items[0] == "Normals":
             # those are just discarded
             num_normals = int(f.readline())
