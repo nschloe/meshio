@@ -59,7 +59,7 @@ class Mesh:
             self.point_data[key] = np.asarray(item)
             if self.point_data[key].shape[0] != self.points.shape[0]:
                 raise ValueError(
-                    f"{len(points) = }, "
+                    f"len(points) = {len(points)}, "
                     f'but len(point_data["{key}"]) = {len(point_data[key])}'
                 )
 
