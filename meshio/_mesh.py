@@ -53,6 +53,11 @@ class Mesh:
 
         for key, item in self.point_data.items():
             self.point_data[key] = np.asarray(item)
+            if self.point_data[key].shape[0] != self.points.shape[0]:
+                raise ValueError(
+                    f"{len(points) = }, "
+                    f"but len(point_data[\"{key}\"]) = {len(point_data[key])}"
+                )
 
         for key, data in self.cell_data.items():
             assert len(data) == len(cells), (
