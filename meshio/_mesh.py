@@ -60,7 +60,7 @@ class Mesh:
             if self.point_data[key].shape[0] != self.points.shape[0]:
                 raise ValueError(
                     f"{len(points) = }, "
-                    f"but len(point_data[\"{key}\"]) = {len(point_data[key])}"
+                    f'but len(point_data["{key}"]) = {len(point_data[key])}'
                 )
 
         # assert cell data consistency and convert to numpy arrays
