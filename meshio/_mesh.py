@@ -51,6 +51,9 @@ class Mesh:
         self.gmsh_periodic = gmsh_periodic
         self.info = info
 
+        for key, item in self.point_data.items():
+            self.point_data[key] = np.asarray(item)
+
         for key, data in self.cell_data.items():
             assert len(data) == len(cells), (
                 "Incompatible cell data. "
