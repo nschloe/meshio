@@ -40,7 +40,6 @@ def read_buffer(f):
         split = strip.split()
 
         if split[0] == "v":
-            # vertex
             points.append([float(item) for item in split[1:]])
         elif split[0] == "vn":
             vertex_normals.append([float(item) for item in split[1:]])
@@ -85,10 +84,10 @@ def read_buffer(f):
         elif f.shape[1] == 4:
             cells.append(CellBlock("quad", f - 1))
         else:
-            # Anything else but triangles or quads not supported yet
+            # Only triangles or quads supported for now
             logging.warning(
                 "meshio::obj only supports triangles and quads. "
-                "Skipping {} polygons with {} nodes".format(f.shape[0], f.shape[1])
+                f"Skipping {f.shape[0]} polygons with {f.shape[1]} nodes"
             )
 
     return Mesh(points, cells, point_data=point_data)

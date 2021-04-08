@@ -11,6 +11,9 @@ class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
     def __repr__(self):
         return f"<meshio CellBlock, type: {self.type}, num cells: {len(self.data)}>"
 
+    def __len__(self):
+        return len(self.data)
+
 
 class Mesh:
     def __init__(
@@ -51,11 +54,31 @@ class Mesh:
         self.gmsh_periodic = gmsh_periodic
         self.info = info
 
+        # assert point data consistency and convert to numpy arrays
+        for key, item in self.point_data.items():
+            self.point_data[key] = np.asarray(item)
+            if self.point_data[key].shape[0] != self.points.shape[0]:
+                raise ValueError(
+                    f"len(points) = {len(points)}, "
+                    f'but len(point_data["{key}"]) = {len(point_data[key])}'
+                )
+
+        # assert cell data consistency and convert to numpy arrays
         for key, data in self.cell_data.items():
-            assert len(data) == len(cells), (
-                "Incompatible cell data. "
-                f"{len(cells)} cell blocks, but '{key}' has {len(data)} blocks."
-            )
+            if len(data) != len(cells):
+                raise ValueError(
+                    "Incompatible cell data. "
+                    f"{len(cells)} cell blocks, but '{key}' has {len(data)} blocks."
+                )
+
+            for k in range(len(data)):
+                data[k] = np.asarray(data[k])
+                if len(data[k]) != len(self.cells[k]):
+                    raise ValueError(
+                        "Incompatible cell data. "
+                        f"Cell block {k} has length {len(self.cells[k])}, but "
+                        f"corresponding cell data {key} item has length {len(data[k])}."
+                    )
 
     def __repr__(self):
         lines = ["<meshio mesh object>", f"  Number of points: {len(self.points)}"]
