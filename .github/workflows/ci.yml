@@ -3,8 +3,15 @@ name: ci
 on:
   push:
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
+
+# on:
+#   push:
+#     branches:
+#       - main
+#   pull_request:
+#     branches:
+#       - main
 
 jobs:
   lint:
