@@ -385,10 +385,12 @@ class VtuReader:
             raise ReadError()
         if root.attrib["type"] != "UnstructuredGrid":
             raise ReadError()
-        if root.attrib["version"] not in ["0.1", "1.0"]:
-            raise ReadError(
-                "Unknown VTU file version '{}'.".format(root.attrib["version"])
-            )
+
+        if "version" in root.attrib:
+            if root.attrib["version"] not in ["0.1", "1.0"]:
+                raise ReadError(
+                    "Unknown VTU file version '{}'.".format(root.attrib["version"])
+                )
 
         # fix empty NumberOfComponents attributes as produced by Firedrake
         for da_tag in root.findall(".//DataArray[@NumberOfComponents='']"):
