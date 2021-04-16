@@ -2,16 +2,11 @@ name: ci
 
 on:
   push:
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
-
-# on:
-#   push:
-#     branches:
-#       - main
-#   pull_request:
-#     branches:
-#       - main
+    branches:
+      - main
 
 jobs:
   lint:
