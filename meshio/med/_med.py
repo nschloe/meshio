@@ -76,10 +76,10 @@ def read(filename):
         point_data["point_tags"] = tags  # replacing previous "point_tags"
 
     # Information for point tags
-    point_tags = {}
+    point_sets = {}
     fas = mesh["FAS"] if "FAS" in mesh else f["FAS"][mesh_name]
     if "NOEUD" in fas:
-        point_tags = _read_families(fas["NOEUD"])
+        point_sets = _read_families(fas["NOEUD"])
 
     # CellBlock
     cells = []
@@ -100,9 +100,9 @@ def read(filename):
             cell_data["cell_tags"].append(tags)
 
     # Information for cell tags
-    cell_tags = {}
+    cell_sets = {}
     if "ELEME" in fas:
-        cell_tags = _read_families(fas["ELEME"])
+        cell_sets = _read_families(fas["ELEME"])
 
     # Read nodal and cell data if they exist
     try:
@@ -117,8 +117,8 @@ def read(filename):
     mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
-    mesh.point_tags = point_tags
-    mesh.cell_tags = cell_tags
+    mesh.point_sets = point_sets
+    mesh.cell_sets = cell_sets
     return mesh
 
 
@@ -298,20 +298,14 @@ def write(filename, mesh):
     family_zero.attrs.create("NUM", 0)
 
     # For point tags
-    try:
-        if len(mesh.point_tags) > 0:
-            node = families.create_group("NOEUD")
-            _write_families(node, mesh.point_tags)
-    except AttributeError:
-        pass
+    if len(mesh.point_sets) > 0:
+        node = families.create_group("NOEUD")
+        _write_families(node, mesh.point_sets)
 
     # For cell tags
-    try:
-        if len(mesh.cell_tags) > 0:
-            element = families.create_group("ELEME")
-            _write_families(element, mesh.cell_tags)
-    except AttributeError:
-        pass
+    if len(mesh.cell_sets) > 0:
+        element = families.create_group("ELEME")
+        _write_families(element, mesh.cell_sets)
 
     # Write nodal/cell data
     fields = f.create_group("CHA")
