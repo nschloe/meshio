@@ -442,7 +442,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
             continue
         data2 = mesh.cell_sets[name]
         for var1, var2 in zip(data, data2):
-            assert np.allclose(var1, var2, atol=atol, rtol=0.0)
+            assert var1 == var2
 
 
 def generic_io(filename):
