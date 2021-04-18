@@ -109,7 +109,7 @@ def read(filename):
 
     cell_sets = None
     if len(cell_tags) > 0:
-        cell_sets = _cell_tags_to_sets(cell_data, cell_tags, cell_types)
+        cell_sets = _cell_tags_to_sets(cell_data, cell_tags)
 
     # Read nodal and cell data if they exist
     try:
@@ -135,7 +135,7 @@ def _cell_tag_to_set(cell_data_array, cell_tags):
 
     :param cell_data_array:
     :param cell_tags:
-    :return:
+    :return: Cell Sets dictionary
     """
     cell_sets = dict()
     shared_sets = []
@@ -160,19 +160,17 @@ def _cell_tag_to_set(cell_data_array, cell_tags):
     return cell_sets
 
 
-def _cell_tags_to_sets(cell_data, cell_tags, cell_types):
+def _cell_tags_to_sets(cell_data, cell_tags):
     """
     Convert the cell tag data for all cell types into a cell_sets data dictionary
 
     :param cell_data:
     :param cell_tags:
-    :param cell_types:
-    :return:
+    :return: Cell sets dictionary
     """
     cell_sets = {v: [] for val in cell_tags.values() for v in val}
 
     for i, cell_data_array in enumerate(cell_data["cell_tags"]):
-        cell_type = cell_types[i]
         cell_type_sets = _cell_tag_to_set(cell_data_array, cell_tags)
         for set_name in cell_sets.keys():
             if set_name in cell_type_sets.keys():
@@ -183,6 +181,12 @@ def _cell_tags_to_sets(cell_data, cell_tags, cell_types):
 
 
 def _point_tags_to_sets(tags, point_tags):
+    """
+
+    :param tags:
+    :param point_tags:
+    :return: Point sets dictionary
+    """
     point_sets = dict()
     shared_sets = []
     for key, val in point_tags.items():
@@ -360,10 +364,12 @@ def write(filename, mesh, mesh_name="mesh"):
     family_zero = families.create_group("FAMILLE_ZERO")  # must be defined in any case
     family_zero.attrs.create("NUM", 0)
 
-    if len(mesh.point_sets) > 0:
-        _add_node_sets(nodes_group, mesh, families)
-    if len(mesh.cell_sets) > 0:
-        _add_cell_sets(cells_group, mesh, families)
+    if mesh.point_sets is not None:
+        if len(mesh.point_sets) > 0:
+            _add_node_sets(nodes_group, mesh, families)
+    if mesh.cell_sets is not None:
+        if len(mesh.cell_sets) > 0:
+            _add_cell_sets(cells_group, mesh, families)
 
     # Write nodal/cell data
     fields = f.create_group("CHA")
@@ -417,7 +423,7 @@ def _add_cell_sets(cells_group, mesh, families):
     :param cells_group:
     :param mesh:
     :param families:
-    :return:
+    :type mesh: meshio._mesh.Mesh
     """
     cell_id_num = -4
     # Cell tags
@@ -426,43 +432,28 @@ def _add_cell_sets(cells_group, mesh, families):
     cell_sets = mesh.cell_sets
 
     # TODO: Should I merge all cell_tags into one dict?
-    cell_tags_complete = dict()
+    tags = dict()
     for k, (cell_type, cells) in enumerate(mesh.cells):
-        cell_data, cell_tags, cell_id_num = _set_to_tags(
-            cell_sets, cells, cell_id_num, k
-        )
+        cell_data = _set_to_tags(cell_sets, cells, cell_id_num, tags, k)
         med_type = meshio_to_med_type[cell_type]
         med_cells = cells_group.get(med_type)
 
         family = med_cells.create_dataset("FAM", data=cell_data)
         family.attrs.create("CGT", 1)
         family.attrs.create("NBR", len(cells))
-        for key, val in cell_tags:
-            if key in cell_tags_complete.keys():
-                cell_tags_complete[key].append(val)
-            else:
-                cell_tags_complete[key] = val
 
-    _write_families(element, cell_tags_complete)
+    _write_families(element, tags)
 
 
 def _add_node_sets(nodes_group, mesh, families):
     """
-
-    tags = {
-             2: ['Side'],
-             3: ['Side', 'Top'],
-             4: ['Top']
-        }
-
-    points = [0,0,0,2,2,0,0,...]
-
     :param nodes_group:
     :param mesh:
     :param families:
-    :return:
+    :type mesh: meshio._mesh.Mesh
     """
-    points, tags, _ = _set_to_tags(mesh.point_sets, mesh.points, 2, None)
+    tags = dict()
+    points = _set_to_tags(mesh.point_sets, mesh.points, 2, tags)
 
     family = nodes_group.create_dataset("FAM", data=points)
     family.attrs.create("CGT", 1)
@@ -481,17 +472,11 @@ def _resolve_element_in_use_by_other_set(tagged_data, ind, tags, name, is_elem):
     :param ind:
     :param tags:
     :param name:
-    :param tag_int:
-    :return:
+    :param is_elem:
     """
     existing_id = int(tagged_data[ind])
     current_tags = tags[existing_id]
     all_tags = current_tags + [name]
-
-    if is_elem is True:
-        print('sd')
-
-    return_int = None
 
     if name not in current_tags:
         new_int = None
@@ -504,33 +489,28 @@ def _resolve_element_in_use_by_other_set(tagged_data, ind, tags, name, is_elem):
                 int(min(tags.keys()) - 1) if is_elem else int(max(tags.keys()) + 1)
             )
             tags[new_int] = tags[existing_id] + [name]
-            return_int = new_int
         tagged_data[ind] = new_int
     else:
         raise ValueError("This should not happen")
 
-    return return_int
 
-
-def _set_to_tags(sets, data, tag_start_int, cell_block_index):
+def _set_to_tags(sets, data, tag_start_int, tags, cell_block_index=None):
     """
 
     :param sets:
     :param data:
     :param tag_start_int:
-    :return:
+    :param
+    :return: The tagged data.
     """
-
-    tags = dict()
     tagged_data = np.zeros(len(data))
     tag_int = 0 + tag_start_int
 
     is_elem = False if tag_int > 0 else True
 
-    # Generate basic tags upfront
-
     tag_int = tag_start_int
     tag_map = dict()
+    # Generate basic tags upfront
     for name in sets.keys():
         tags[tag_int] = [name]
         tag_map[name] = tag_int
@@ -544,21 +524,16 @@ def _set_to_tags(sets, data, tag_start_int, cell_block_index):
         if len(set_data) == 0:
             continue
 
-        if is_elem is True:
-            print('d')
-
         for n in set_data:
             ind = int(n - 1)
             if tagged_data[ind] != 0:  # id is already defined in another set
-                return_int = _resolve_element_in_use_by_other_set(
+                _resolve_element_in_use_by_other_set(
                     tagged_data, ind, tags, name, is_elem
                 )
-                if return_int is not None:
-                    tag_int = return_int
             else:
                 tagged_data[ind] = tag_map[name]
 
-    return tagged_data, tags, tag_int
+    return tagged_data
 
 
 def _write_data(
