@@ -42,6 +42,7 @@ def read(filename, file_format: Optional[str] = None):
     :type filenames: str
 
     :returns mesh{2,3}d: The mesh data.
+    :rtype: meshio._mesh.Mesh
     """
     if is_buffer(filename, "r"):
         if file_format is None:

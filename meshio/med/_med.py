@@ -71,6 +71,7 @@ def read(filename):
     points = pts_dataset[()].reshape((n_points, dim), order="F")
 
     # Point tags
+    tags = None
     if "FAM" in mesh["NOE"]:
         tags = mesh["NOE"]["FAM"][()]
         point_data["point_tags"] = tags  # replacing previous "point_tags"
@@ -80,6 +81,19 @@ def read(filename):
     fas = mesh["FAS"] if "FAS" in mesh else f["FAS"][mesh_name]
     if "NOEUD" in fas:
         point_tags = _read_families(fas["NOEUD"])
+
+    point_sets = dict()
+    shared_sets = []
+    if tags is not None:
+        for key, val in point_tags.items():
+            if len(val) > 1:
+                for v in val:
+                    shared_sets.append((v, np.add(np.where(tags == key), 1)[0]))
+            else:
+                point_sets[val[0]] = np.add(np.where(tags == key), 1)[0]
+
+    for v, s in shared_sets:
+        point_sets[v] = np.concatenate([point_sets[v], s])
 
     # CellBlock
     cells = []
@@ -104,6 +118,22 @@ def read(filename):
     if "ELEME" in fas:
         cell_tags = _read_families(fas["ELEME"])
 
+    cell_sets = dict()
+    cell_tags_ = cell_data["cell_tags"][0]
+    shared_sets = []
+    for key, val in cell_tags.items():
+        if len(val) > 1:
+            for v in val:
+                shared_sets.append((v, np.add(np.where(cell_tags_ == key), 1)))
+        else:
+            cell_sets[val[0]] = np.add(np.where(cell_tags_ == key), 1)
+
+    for v, s in shared_sets:
+        if v in cell_sets.keys():
+            cell_sets[v] = np.array([np.concatenate([cell_sets[v][0], s[0]])])
+        else:
+            cell_sets[v] = s
+
     # Read nodal and cell data if they exist
     try:
         fields = f["CHA"]  # champs (fields) in French
@@ -117,8 +147,8 @@ def read(filename):
     mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
-    mesh.point_tags = point_tags
-    mesh.cell_tags = cell_tags
+    mesh.point_sets = point_sets
+    mesh.cell_sets = cell_sets
     return mesh
 
 
@@ -212,7 +242,7 @@ def _read_families(fas_data):
     return families
 
 
-def write(filename, mesh):
+def write(filename, mesh, mesh_name="mesh"):
     import h5py
 
     # MED doesn't support compression,
@@ -230,7 +260,7 @@ def write(filename, mesh):
 
     # Meshes
     mesh_ensemble = f.create_group("ENS_MAA")
-    mesh_name = "mesh"
+
     med_mesh = mesh_ensemble.create_group(mesh_name)
     med_mesh.attrs.create("DIM", mesh.points.shape[1])  # mesh dimension
     med_mesh.attrs.create("ESP", mesh.points.shape[1])  # spatial dimension
@@ -238,6 +268,7 @@ def write(filename, mesh):
     med_mesh.attrs.create("UNT", numpy_void_str)  # time unit
     med_mesh.attrs.create("UNI", numpy_void_str)  # spatial unit
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
+
     # component names:
     names = ["X", "Y", "Z"][: mesh.points.shape[1]]
     med_mesh.attrs.create("NOM", np.string_("".join(f"{name:<16}" for name in names)))
@@ -262,15 +293,10 @@ def write(filename, mesh):
     coo.attrs.create("CGT", 1)
     coo.attrs.create("NBR", len(mesh.points))
 
-    # Point tags
-    if "point_tags" in mesh.point_data:  # only works for med -> med
-        family = nodes_group.create_dataset("FAM", data=mesh.point_data["point_tags"])
-        family.attrs.create("CGT", 1)
-        family.attrs.create("NBR", len(mesh.points))
-
     # Cells (mailles in French)
     if len(mesh.cells) != len(np.unique([c.type for c in mesh.cells])):
         raise WriteError("MED files cannot have two sections of the same cell type.")
+
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
     for k, (cell_type, cells) in enumerate(mesh.cells):
@@ -283,35 +309,16 @@ def write(filename, mesh):
         nod.attrs.create("CGT", 1)
         nod.attrs.create("NBR", len(cells))
 
-        # Cell tags
-        if "cell_tags" in mesh.cell_data:  # works only for med -> med
-            family = med_cells.create_dataset(
-                "FAM", data=mesh.cell_data["cell_tags"][k]
-            )
-            family.attrs.create("CGT", 1)
-            family.attrs.create("NBR", len(cells))
-
     # Information about point and cell sets (familles in French)
     fas = f.create_group("FAS")
     families = fas.create_group(mesh_name)
     family_zero = families.create_group("FAMILLE_ZERO")  # must be defined in any case
     family_zero.attrs.create("NUM", 0)
 
-    # For point tags
-    try:
-        if len(mesh.point_tags) > 0:
-            node = families.create_group("NOEUD")
-            _write_families(node, mesh.point_tags)
-    except AttributeError:
-        pass
-
-    # For cell tags
-    try:
-        if len(mesh.cell_tags) > 0:
-            element = families.create_group("ELEME")
-            _write_families(element, mesh.cell_tags)
-    except AttributeError:
-        pass
+    if len(mesh.point_sets) > 0:
+        add_node_sets(nodes_group, mesh, families)
+    if len(mesh.cell_sets) > 0:
+        add_cell_sets(cells_group, mesh, families)
 
     # Write nodal/cell data
     fields = f.create_group("CHA")
@@ -357,6 +364,105 @@ def write(filename, mesh):
                 med_type,
             )
         name_idx += 1
+
+
+def add_cell_sets(cells_group, mesh, families):
+    """
+
+    :param cells_group:
+    :param mesh:
+    :param families:
+    :return:
+    """
+    # Cell tags
+    cell_tags_complete = []
+    for k, (cell_type, cells) in enumerate(mesh.cells):
+        cell_data, cell_tags = set_to_tags(mesh.cell_sets, cells, -4)
+        med_type = meshio_to_med_type[cell_type]
+        med_cells = cells_group.get(med_type)
+        family = med_cells.create_dataset("FAM", data=cell_data)
+        family.attrs.create("CGT", 1)
+        family.attrs.create("NBR", len(cells))
+        cell_tags_complete.append(cell_tags)
+
+    element = families.create_group("ELEME")
+    _write_families(element, cell_tags_complete)
+
+
+def add_node_sets(nodes_group, mesh, families):
+    """
+
+    tags = {
+             2: ['Side'],
+             3: ['Side', 'Top'],
+             4: ['Top']
+        }
+
+    points = [0,0,0,2,2,0,0,...]
+
+    :param nodes_group:
+    :param mesh:
+    :param families:
+    :return:
+    """
+    points, tags = set_to_tags(mesh.point_sets, mesh.points, 2)
+
+    family = nodes_group.create_dataset("FAM", data=points)
+    family.attrs.create("CGT", 1)
+    family.attrs.create("NBR", len(mesh.points))
+
+    # For point tags
+    node = families.create_group("NOEUD")
+    _write_families(node, tags)
+
+
+def set_to_tags(sets, data, tag_start_int):
+    """
+
+    :param sets:
+    :param data:
+    :param tag_start_int:
+    :return:
+    """
+
+    tags = dict()
+    tagged_data = np.zeros(len(data))
+    tag_int = tag_start_int
+    for name, set_data_ in sets.items():
+        tags[tag_int] = [name]
+        set_data = set_data_ if tag_int > 0 else set_data_[0]
+        for n in set_data:
+            ind = int(n - 1)
+            # Check IF id is already defined in another set
+            if ind > len(tagged_data):
+                print('sd')
+            if tagged_data[ind] != 0:
+                existing_id = int(tagged_data[ind])
+                current_tags = tags[existing_id]
+                if name not in current_tags:
+                    all_tags = current_tags + [name]
+                    new_int = None
+                    for i_, t_ in tags.items():
+                        if all_tags in t_:
+                            new_int = i_
+                    if new_int is None:
+                        new_int = (
+                            int(max(tags.keys()) + 1)
+                            if tag_int > 0
+                            else int(min(tags.keys()) - 1)
+                        )
+                        tags[new_int] = tags[existing_id] + [name]
+                        tag_int = new_int
+                    tagged_data[ind] = new_int
+                else:
+                    raise ValueError("This should not happen")
+            else:
+                tagged_data[ind] = tag_int
+        if tag_int > 0:
+            tag_int += 1
+        else:
+            tag_int -= 1
+    return tagged_data, tags
 
 
 def _write_data(
