@@ -41,9 +41,7 @@ def read(filename):
     mesh_ensemble = f["ENS_MAA"]
     meshes = mesh_ensemble.keys()
     if len(meshes) != 1:
-        raise ReadError(
-            "Must only contain exactly 1 mesh, found {}.".format(len(meshes))
-        )
+        raise ReadError(f"Must only contain exactly 1 mesh, found {len(meshes)}.")
     mesh_name = list(meshes)[0]
     mesh = mesh_ensemble[mesh_name]
 

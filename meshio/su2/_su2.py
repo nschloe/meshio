@@ -332,7 +332,7 @@ def write(filename, mesh):
                 else:
                     tags_per_cell_block[tag] += count
 
-        f.write("NMARK= {}\n".format(len(tags_per_cell_block)).encode("utf-8"))
+        f.write(f"NMARK= {len(tags_per_cell_block)}\n".encode("utf-8"))
 
         # write the blocks you found in previous step
         for tag, count in tags_per_cell_block.items():

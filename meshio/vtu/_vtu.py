@@ -749,7 +749,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         fmt = "{:.11e}" if vtu_type.startswith("Float") else "{:d}"
         da = ET.SubElement(parent, "DataArray", type=vtu_type, Name=name)
         if len(data.shape) == 2:
-            da.set("NumberOfComponents", "{}".format(data.shape[1]))
+            da.set("NumberOfComponents", f"{data.shape[1]}")
         if binary:
             da.set("format", "binary")
             if compression:
@@ -846,7 +846,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     piece = ET.SubElement(
         grid,
         "Piece",
-        NumberOfPoints="{}".format(len(points)),
+        NumberOfPoints=f"{len(points)}",
         NumberOfCells=f"{total_num_cells}",
     )
 

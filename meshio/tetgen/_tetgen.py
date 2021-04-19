@@ -52,7 +52,7 @@ def read(filename):
             raise ReadError()
         # read point attributes
         for k in range(num_attrs):
-            point_data["tetgen:attr{}".format(k + 1)] = points[:, 4 + k]
+            point_data[f"tetgen:attr{k + 1}"] = points[:, 4 + k]
         # read boundary markers, the first is "ref", the others are "ref2", "ref3", ...
         for k in range(num_bmarkers):
             flag = "" if k == 0 else str(k + 1)
@@ -123,7 +123,7 @@ def write(filename, mesh, float_fmt=".16e"):
                     ", ".join(attr_keys + ref_keys)
                 )
             )
-        fh.write("{} {} {} {}\n".format(mesh.points.shape[0], 3, nattr, nref))
+        fh.write(f"{mesh.points.shape[0]} {3} {nattr} {nref}\n")
         fmt = (
             "{} "
             + " ".join((3 + nattr) * ["{:" + float_fmt + "}"])
@@ -158,7 +158,7 @@ def write(filename, mesh, float_fmt=".16e"):
         if nattr > 0:
             fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))
         for id, (_, data) in enumerate(filter(lambda c: c.type == "tetra", mesh.cells)):
-            fh.write("{} {} {}\n".format(data.shape[0], 4, nattr))
+            fh.write(f"{data.shape[0]} {4} {nattr}\n")
             fmt = " ".join((5 + nattr) * ["{}"]) + "\n"
             for k, tet in enumerate(data):
                 data = list(tet[:4]) + [mesh.cell_data[key][id][k] for key in attr_keys]

@@ -107,7 +107,7 @@ def write(filename, mesh):
             )
         )
         for p in mesh.points:
-            f.write("v {} {} {}\n".format(p[0], p[1], p[2]))
+            f.write(f"v {p[0]} {p[1]} {p[2]}\n")
 
         if "obj:vn" in mesh.point_data:
             dat = mesh.point_data["obj:vn"]

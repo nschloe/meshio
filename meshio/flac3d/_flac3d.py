@@ -378,9 +378,7 @@ def _write_cells(f, points, cells, flag, binary):
                     cdata + 1,
                 )
             ).astype(int)
-            f.write(
-                struct.pack("<{}I".format((num_verts + 2) * num_cells), *tmp.ravel())
-            )
+            f.write(struct.pack(f"<{(num_verts + 2) * num_cells}I", *tmp.ravel()))
             count += num_cells
     else:
         entity, abbrev = {
@@ -425,7 +423,7 @@ def _write_groups(f, cells, cell_data, field_data, flag, binary):
 
             f.write(f"* {flag.upper()} GROUPS\n")
             for k in sorted(groups.keys()):
-                f.write('{} "{}"\n'.format(flag_to_text[flag], labels[k]))
+                f.write(f'{flag_to_text[flag]} "{labels[k]}"\n')
                 _write_table(f, groups[k])
     else:
         if binary:
