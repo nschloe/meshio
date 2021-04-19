@@ -765,7 +765,7 @@ def _write_cells(f, cells, binary):
 
 
 def _write_field_data(f, data, binary):
-    f.write(("FIELD FieldData {}\n".format(len(data))).encode("utf-8"))
+    f.write((f"FIELD FieldData {len(data)}\n").encode("utf-8"))
     for name, values in data.items():
         if isinstance(values, list):
             values = np.concatenate(values)

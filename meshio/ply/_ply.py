@@ -406,7 +406,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
         )
 
         # counts
-        fh.write("element vertex {:d}\n".format(mesh.points.shape[0]).encode("utf-8"))
+        fh.write(f"element vertex {mesh.points.shape[0]:d}\n".encode("utf-8"))
         #
         dim_names = ["x", "y", "z"]
         # From <https://en.wikipedia.org/wiki/PLY_(file_format)>:
@@ -429,7 +429,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
         }
         for k in range(mesh.points.shape[1]):
             type_name = type_name_table[mesh.points.dtype]
-            fh.write("property {} {}\n".format(type_name, dim_names[k]).encode("utf-8"))
+            fh.write(f"property {type_name} {dim_names[k]}\n".encode("utf-8"))
 
         pd = []
         for key, value in mesh.point_data.items():

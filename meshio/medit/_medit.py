@@ -254,7 +254,7 @@ def read_ascii_buffer(f):
             ).reshape(num_normal_at_vertices, 2)
         else:
             if items[0] != "End":
-                raise ReadError("Unknown keyword '{}'.".format(items[0]))
+                raise ReadError(f"Unknown keyword '{items[0]}'.")
 
     if points is None:
         raise ReadError("Expected `Vertices`")
@@ -324,7 +324,7 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
                 continue
             fh.write(b"\n")
             fh.write(f"{medit_name}\n".encode("utf-8"))
-            fh.write("{}\n".format(len(data)).encode("utf-8"))
+            fh.write(f"{len(data)}\n".encode("utf-8"))
 
             # pick out cell data
             labels = (

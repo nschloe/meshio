@@ -302,7 +302,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     for tag in ["gmsh:physical", "gmsh:geometrical"]:
         if tag not in tag_data:
             logging.warning(
-                "Appending zeros to replace the missing {} tag data.".format(tag[5:])
+                f"Appending zeros to replace the missing {tag[5:]} tag data."
             )
             tag_data[tag] = [np.zeros(len(x.data), dtype=c_int) for x in mesh.cells]
 
@@ -332,7 +332,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
 
 def _write_nodes(fh, points, float_fmt, binary):
     fh.write(b"$Nodes\n")
-    fh.write("{}\n".format(len(points)).encode("utf-8"))
+    fh.write(f"{len(points)}\n".encode("utf-8"))
     if binary:
         dtype = [("index", c_int), ("x", c_double, (3,))]
         tmp = np.empty(len(points), dtype=dtype)
@@ -402,7 +402,7 @@ def _write_elements(fh, cells, tag_data, binary):
 
 def _write_periodic(fh, periodic, float_fmt):
     fh.write(b"$Periodic\n")
-    fh.write("{}\n".format(len(periodic)).encode("utf-8"))
+    fh.write(f"{len(periodic)}\n".encode("utf-8"))
     for dim, (stag, mtag), affine, slave_master in periodic:
         fh.write(f"{dim} {stag} {mtag}\n".encode("utf-8"))
         if affine is not None:
@@ -412,7 +412,7 @@ def _write_periodic(fh, periodic, float_fmt):
             np.savetxt(fh, affine, fmt="%" + float_fmt)
         slave_master = np.array(slave_master, dtype=c_int).reshape(-1, 2)
         slave_master = slave_master + 1  # Add one, Gmsh is 0-based
-        fh.write("{}\n".format(len(slave_master)).encode("utf-8"))
+        fh.write(f"{len(slave_master)}\n".encode("utf-8"))
         for snode, mnode in slave_master:
             fh.write(f"{snode} {mnode}\n".encode("utf-8"))
     fh.write(b"$EndPeriodic\n")

@@ -219,7 +219,7 @@ def write(filename, mesh):
 
 def _write_nodes(f, points):
     for i, (x, y, z) in enumerate(points):
-        f.write("{} {} {} {}\n".format(i + 1, x, y, z))
+        f.write(f"{i + 1} {x} {y} {z}\n")
 
 
 def _write_cells(f, cells, material):
@@ -237,7 +237,7 @@ def _write_cells(f, cells, material):
 
 def _write_data(f, labels, data_array, num_entities, num_data, num_data_sum):
     num_data_str = " ".join(str(i) for i in num_data)
-    f.write("{} {}\n".format(len(num_data), num_data_str))
+    f.write(f"{len(num_data)} {num_data_str}\n")
 
     for label in labels:
         f.write(f"{label}, real\n")

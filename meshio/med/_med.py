@@ -42,7 +42,7 @@ def read(filename):
     meshes = mesh_ensemble.keys()
     if len(meshes) != 1:
         raise ReadError(
-            "Must only contain exactly 1 mesh, found {}.".format(len(meshes))
+            f"Must only contain exactly 1 mesh, found {len(meshes)}."
         )
     mesh_name = list(meshes)[0]
     mesh = mesh_ensemble[mesh_name]
