@@ -22,6 +22,21 @@ tri_mesh_2d = meshio.Mesh(
     [("triangle", [[0, 1, 2], [0, 2, 3]])],
 )
 
+tri_mesh_5 = meshio.Mesh(
+    np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [2.0, 0.0],
+            [3.0, 1.0],
+            [2.0, 1.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+        ]
+    ),
+    [("triangle", [[0, 1, 5], [0, 5, 6], [1, 2, 5], [2, 4, 5], [2, 3, 4]])],
+)
+
 tri_mesh = meshio.Mesh(
     np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]) / 3,
     [("triangle", [[0, 1, 2], [0, 2, 3]])],
@@ -342,7 +357,11 @@ def add_field_data(mesh, value, dtype):
 
 def add_point_sets(mesh):
     mesh2 = copy.deepcopy(mesh)
-    mesh2.point_sets = {"fixed": np.array([1, 2])}
+    n = len(mesh.points)
+    mesh2.point_sets = {
+        "fixed": np.arange(0, n // 2),
+        "loose": np.arange(n // 2, n),
+    }
     return mesh2
 
 
@@ -351,8 +370,8 @@ def add_cell_sets(mesh):
     assert len(mesh.cells) == 1
     n = len(mesh.cells[0])
     mesh2.cell_sets = {
-        "grain0": [np.array([0])],
-        "grain1": [np.arange(1, n)],
+        "grain0": [np.arange(0, n // 2)],
+        "grain1": [np.arange(n // 2, n)],
     }
     return mesh2
 

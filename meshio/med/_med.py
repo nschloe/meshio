@@ -117,6 +117,8 @@ def read(filename):
     mesh = Mesh(
         points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
     )
+    if point_tags != {}:
+        mesh.int_data_to_sets()
     mesh.point_tags = point_tags
     mesh.cell_tags = cell_tags
     return mesh

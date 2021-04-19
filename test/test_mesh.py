@@ -67,11 +67,16 @@ def test_cells_dict():
 
 
 def test_sets_to_int_data():
-    mesh = helpers.add_cell_sets(helpers.tri_mesh)
+    mesh = helpers.tri_mesh_5
+    mesh = helpers.add_point_sets(mesh)
+    mesh = helpers.add_cell_sets(mesh)
 
     mesh.sets_to_int_data()
     assert "grain0-grain1" in mesh.cell_data
-    assert np.all(mesh.cell_data["grain0-grain1"][0] == [0, 1])
+    assert np.all(mesh.cell_data["grain0-grain1"][0] == [0, 0, 1, 1, 1])
+
+    assert "fixed-loose" in mesh.point_data
+    assert np.all(mesh.point_data["fixed-loose"] == [0, 0, 0, 1, 1, 1, 1])
 
 
 def test_int_data_to_sets():
