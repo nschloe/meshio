@@ -1,11 +1,11 @@
 """
 I/O for AFLR's UGRID format
-[1] <http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html>.
+[1] <https://www.simcenter.msstate.edu/software/documentation/ug_io/3d_grid_file_type_ugrid.html>
 Check out
-[2] <http://www.simcenter.msstate.edu/software/downloads/ug_io/index_simsys_web.php?path=release>
+[2] <https://www.simcenter.msstate.edu/software/public/ug_io/index_simsys_web.php>
 for UG_IO C code able to read and convert UGRID files
 Node ordering described in
-[3] http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_input_output_grids.html
+[3] <http://www.simcenter.msstate.edu/software/documentation/ug_io/3d_input_output_grids.html>
 """
 import logging
 
@@ -19,10 +19,10 @@ from .._mesh import CellBlock, Mesh
 
 # Float size and endianess are recorded by these suffixes
 # binary files come in C-type or FORTRAN type
-# http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/ugc_file_formats.html
+# http://www.simcenter.msstate.edu/software/documentation/ug_io/ugc_file_formats.html
 #
 # 64-bit versions described here
-# http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/ugc_l_file_formats.html
+# http://www.simcenter.msstate.edu/software/documentation/ug_io/ugc_l_file_formats.html
 file_types = {
     "ascii": {"type": "ascii", "float_type": "f", "int_type": "i"},
     "b8l": {"type": "C", "float_type": ">f8", "int_type": ">i8"},
