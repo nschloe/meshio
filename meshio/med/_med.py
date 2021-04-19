@@ -144,12 +144,12 @@ def _cell_tag_to_set(cell_data_array, cell_tags):
             for v in tag_names:
                 res = np.where(cell_data_array == tag_id)[0]
                 if len(res) > 0:
-                    shared_sets.append((v, np.add(res, 1)))
+                    shared_sets.append((v, res))
         else:
             tag_name = tag_names[0]
             res = np.where(cell_data_array == tag_id)[0]
             if len(res) > 0:
-                cell_sets[tag_name] = np.add(res, 1)
+                cell_sets[tag_name] = res
 
     for v, s in shared_sets:
         if v in cell_sets.keys():
@@ -192,9 +192,9 @@ def _point_tags_to_sets(tags, point_tags):
     for key, val in point_tags.items():
         if len(val) > 1:
             for set_name in val:
-                shared_sets.append((set_name, np.add(np.where(tags == key), 1)[0]))
+                shared_sets.append((set_name, np.where(tags == key)[0]))
         else:
-            point_sets[val[0]] = np.add(np.where(tags == key), 1)[0]
+            point_sets[val[0]] = np.where(tags == key)[0]
 
     for set_name, s in shared_sets:
         point_sets[set_name] = np.concatenate([point_sets[set_name], s])
@@ -426,7 +426,6 @@ def _add_cell_sets(cells_group, mesh, families):
     :type mesh: meshio._mesh.Mesh
     """
     cell_id_num = -4
-    # Cell tags
 
     element = families.create_group("ELEME")
     cell_sets = mesh.cell_sets
@@ -525,7 +524,7 @@ def _set_to_tags(sets, data, tag_start_int, tags, cell_block_index=None):
             continue
 
         for n in set_data:
-            ind = int(n - 1)
+            ind = int(n)
             if tagged_data[ind] != 0:  # id is already defined in another set
                 _resolve_element_in_use_by_other_set(
                     tagged_data, ind, tags, name, is_elem
