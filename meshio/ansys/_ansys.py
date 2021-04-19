@@ -166,9 +166,7 @@ def _read_cells(f, line):
                 dtype = np.int32
             else:
                 if out.group(1) != "30":
-                    ReadError(
-                        f"Expected keys '20' or '30', got {out.group(1)}."
-                    )
+                    ReadError(f"Expected keys '20' or '30', got {out.group(1)}.")
                 dtype = np.int64
             shape = (num_cells, num_nodes_per_cell)
             count = shape[0] * shape[1]
@@ -399,11 +397,7 @@ def write(filename, mesh, binary=True):
 
         # total number of nodes
         first_node_index = 1
-        fh.write(
-            (f"(10 (0 {first_node_index:x} {num_points:x} 0))\n").encode(
-                "utf8"
-            )
-        )
+        fh.write((f"(10 (0 {first_node_index:x} {num_points:x} 0))\n").encode("utf8"))
 
         # total number of cells
         total_num_cells = sum([len(c) for c in mesh.cells])

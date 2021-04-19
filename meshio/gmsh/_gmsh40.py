@@ -317,11 +317,7 @@ def _write_nodes(fh, points, float_fmt, binary):
         fh.write(f"{1} {len(points)}\n".encode("utf-8"))
 
         # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-        fh.write(
-            f"{1} {dim_entity} {type_node} {len(points)}\n".encode(
-                "utf-8"
-            )
-        )
+        fh.write(f"{1} {dim_entity} {type_node} {len(points)}\n".encode("utf-8"))
 
         fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, x in enumerate(points):

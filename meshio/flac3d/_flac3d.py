@@ -378,9 +378,7 @@ def _write_cells(f, points, cells, flag, binary):
                     cdata + 1,
                 )
             ).astype(int)
-            f.write(
-                struct.pack(f"<{(num_verts + 2) * num_cells}I", *tmp.ravel())
-            )
+            f.write(struct.pack(f"<{(num_verts + 2) * num_cells}I", *tmp.ravel()))
             count += num_cells
     else:
         entity, abbrev = {
