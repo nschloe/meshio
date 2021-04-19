@@ -327,10 +327,39 @@ class Mesh:
                 # alternative names
                 names = [f"set{tag}" for tag in tags]
 
+            # TODO there's probably a better way besides np.where, something from
+            # np.unique or np.sort
             for name, tag in zip(names, tags):
-                self.cell_sets[name] = []
                 self.cell_sets[name] = [np.where(d == tag)[0] for d in data]
 
         # remove the cell data
         for key in keys:
             del self.cell_data[key]
+
+        # now point data
+        keys = []
+        for key, data in self.point_data.items():
+            # handle all int and uint data
+            if not np.all(v.dtype.kind in ["i", "u"] for v in data):
+                continue
+
+            keys.append(key)
+
+            # this call can be rather expensive
+            tags = np.unique(data)
+
+            # try and get the names by splitting the key along "-" (this is how
+            # sets_to_int_data() forms the key
+            names = sorted(list(set(key.split("-"))))
+            if len(names) != len(tags):
+                # alternative names
+                names = [f"set{tag}" for tag in tags]
+
+            # TODO there's probably a better way besides np.where, something from
+            # np.unique or np.sort
+            for name, tag in zip(names, tags):
+                self.point_sets[name] = np.where(data == tag)[0]
+
+        # remove the cell data
+        for key in keys:
+            del self.point_data[key]
