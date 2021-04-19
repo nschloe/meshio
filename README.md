@@ -44,7 +44,7 @@ meshio can read and write all of the following and smoothly converts between the
  [TetGen .node/.ele](https://wias-berlin.de/software/tetgen/fformats.html),
  [SVG](https://www.w3.org/TR/SVG/) (2D output only) (`.svg`),
  [SU2](https://su2code.github.io/docs_v7/Mesh-File) (`.su2`),
- [UGRID](http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html) (`.ugrid`),
+ [UGRID](http://www.simcenter.msstate.edu/software/documentation/ug_io/3d_grid_file_type_ugrid.html) (`.ugrid`),
  [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf) (`.vtk`),
  [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats) (`.vtu`),
  [WKT](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry) ([TIN](https://en.wikipedia.org/wiki/Triangulated_irregular_network)) (`.wkt`),
