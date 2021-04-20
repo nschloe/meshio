@@ -228,7 +228,7 @@ def _write_physical_names(fh, field_data):
     entries.sort()
     if entries:
         fh.write(b"$PhysicalNames\n")
-        fh.write("{}\n".format(len(entries)).encode("utf-8"))
+        fh.write(f"{len(entries)}\n".encode("utf-8"))
         for entry in entries:
             fh.write('{} {} "{}"\n'.format(*entry).encode("utf-8"))
         fh.write(b"$EndPhysicalNames\n")
@@ -242,14 +242,14 @@ def _write_data(fh, tag, name, data, binary):
     # > string-tag is interpreted as the name of the post-processing view and
     # > the second as the name of the interpolation scheme. The interpolation
     # > scheme is provided in the $InterpolationScheme section (see below).
-    fh.write("{}\n".format(1).encode("utf-8"))
+    fh.write(f"{1}\n".encode("utf-8"))
     fh.write(f'"{name}"\n'.encode("utf-8"))
-    fh.write("{}\n".format(1).encode("utf-8"))
-    fh.write("{}\n".format(0.0).encode("utf-8"))
+    fh.write(f"{1}\n".encode("utf-8"))
+    fh.write(f"{0.0}\n".encode("utf-8"))
     # three integer tags:
-    fh.write("{}\n".format(3).encode("utf-8"))
+    fh.write(f"{3}\n".encode("utf-8"))
     # time step
-    fh.write("{}\n".format(0).encode("utf-8"))
+    fh.write(f"{0}\n".encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
     if num_components not in [1, 3, 9]:
@@ -262,7 +262,7 @@ def _write_data(fh, tag, name, data, binary):
 
     fh.write(f"{num_components}\n".encode("utf-8"))
     # num data items
-    fh.write("{}\n".format(data.shape[0]).encode("utf-8"))
+    fh.write(f"{data.shape[0]}\n".encode("utf-8"))
     # actually write the data
     if binary:
         if num_components == 1:

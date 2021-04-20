@@ -212,7 +212,7 @@ def _read_variables(line):
     i = 0
     while i < len(line):
         if '"' in line[i] and not (line[i].startswith('"') and line[i].endswith('"')):
-            var = "{}_{}".format(line[i], line[i + 1])
+            var = f"{line[i]}_{line[i + 1]}"
             i += 1
         else:
             var = line[i]
@@ -460,9 +460,9 @@ def write(filename, mesh):
         if varrange[0] <= varrange[1]:
             f.write(",\n")
             varlocation_str = (
-                "{}".format(varrange[0])
+                f"{varrange[0]}"
                 if varrange[0] == varrange[1]
-                else "{}-{}".format(varrange[0], varrange[1])
+                else f"{varrange[0]}-{varrange[1]}"
             )
             f.write(f"VARLOCATION = ([{varlocation_str}] = CELLCENTERED)\n")
         else:

@@ -75,7 +75,7 @@ def write(filename, mesh):
         fh.write(b"# Created by meshio\n\n")
 
         # counts
-        c = "{} {} {}\n\n".format(mesh.points.shape[0], tri.shape[0], 0)
+        c = f"{mesh.points.shape[0]} {tri.shape[0]} {0}\n\n"
         fh.write(c.encode("utf-8"))
 
         # vertices

@@ -43,10 +43,10 @@ meshio can read and write all of the following and smoothly converts between the
  [Tecplot .dat](http://paulbourke.net/dataformats/tp/),
  [TetGen .node/.ele](https://wias-berlin.de/software/tetgen/fformats.html),
  [SVG](https://www.w3.org/TR/SVG/) (2D output only) (`.svg`),
- [SU2](https://su2code.github.io/docs_v7/Mesh-File) (`.su2`),
- [UGRID](http://www.simcenter.msstate.edu/software/downloads/doc/ug_io/3d_grid_file_type_ugrid.html) (`.ugrid`),
- [VTK](https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf) (`.vtk`),
- [VTU](https://www.vtk.org/Wiki/VTK_XML_Formats) (`.vtu`),
+ [SU2](https://su2code.github.io/docs_v7/Mesh-File/) (`.su2`),
+ [UGRID](https://www.simcenter.msstate.edu/software/documentation/ug_io/3d_grid_file_type_ugrid.html) (`.ugrid`),
+ [VTK](https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf) (`.vtk`),
+ [VTU](https://vtk.org/Wiki/VTK_XML_Formats) (`.vtu`),
  [WKT](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry) ([TIN](https://en.wikipedia.org/wiki/Triangulated_irregular_network)) (`.wkt`),
  [XDMF](https://www.xdmf.org/index.php/XDMF_Model_and_Format) (`.xdmf`, `.xmf`).
 
@@ -86,21 +86,29 @@ to read a mesh. To write, do
 ```python
 import meshio
 
+# two triangles and one quad
 points = [
-    [0.0, 0.0, 0.0],
-    [0.0, 1.0, 0.0],
-    [0.0, 0.0, 1.0],
+    [0.0, 0.0],
+    [1.0, 0.0],
+    [0.0, 1.0],
+    [1.0, 1.0],
+    [2.0, 0.0],
+    [2.0, 1.0],
 ]
-cells = [("triangle", [[0, 1, 2]])]
+cells = [
+    ("triangle", [[0, 1, 2], [1, 3, 2]]),
+    ("quad", [[1, 4, 5, 3]]),
+]
 
-meshio.Mesh(
+mesh = meshio.Mesh(
     points,
-    cells
+    cells,
     # Optionally provide extra data on points, cells, etc.
-    # point_data=point_data,
-    # cell_data=cell_data,
-    # field_data=field_data
-).write(
+    point_data={"T": [0.3, -1.2, 0.5, 0.7, 0.0, -3.0]},
+    # Each item in cell data must match the cells array
+    cell_data={"a": [[0.1, 0.2], [0.4]]},
+)
+mesh.write(
     "foo.vtk",  # str, os.PathLike, or buffer/open file
     # file_format="vtk",  # optional if first argument is a path; inferred from extension
 )

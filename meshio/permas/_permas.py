@@ -237,7 +237,7 @@ def write(filename, mesh):
         f.write("$STRUCTURE\n")
         f.write("$COOR\n")
         for k, x in enumerate(mesh.points):
-            f.write("{} {} {} {}\n".format(k + 1, x[0], x[1], x[2]))
+            f.write(f"{k + 1} {x[0]} {x[1]} {x[2]}\n")
         eid = 0
         tria6_order = [0, 3, 1, 4, 2, 5]
         tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]

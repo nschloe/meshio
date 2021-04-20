@@ -314,14 +314,10 @@ def _write_nodes(fh, points, float_fmt, binary):
     else:
         # write all points as one big block
         # numEntityBlocks(unsigned long) numNodes(unsigned long)
-        fh.write("{} {}\n".format(1, len(points)).encode("utf-8"))
+        fh.write(f"{1} {len(points)}\n".encode("utf-8"))
 
         # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-        fh.write(
-            "{} {} {} {}\n".format(1, dim_entity, type_node, len(points)).encode(
-                "utf-8"
-            )
-        )
+        fh.write(f"{1} {dim_entity} {type_node} {len(points)}\n".encode("utf-8"))
 
         fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, x in enumerate(points):
@@ -369,7 +365,7 @@ def _write_elements(fh, cells, binary):
     else:
         # count all cells
         total_num_cells = sum([data.shape[0] for _, data in cells])
-        fh.write("{} {}\n".format(len(cells), total_num_cells).encode("utf-8"))
+        fh.write(f"{len(cells)} {total_num_cells}\n".encode("utf-8"))
 
         consecutive_index = 0
         for cell_type, node_idcs in cells:

@@ -11,6 +11,9 @@ class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
     def __repr__(self):
         return f"<meshio CellBlock, type: {self.type}, num cells: {len(self.data)}>"
 
+    def __len__(self):
+        return len(self.data)
+
 
 class Mesh:
     def __init__(
@@ -51,11 +54,31 @@ class Mesh:
         self.gmsh_periodic = gmsh_periodic
         self.info = info
 
+        # assert point data consistency and convert to numpy arrays
+        for key, item in self.point_data.items():
+            self.point_data[key] = np.asarray(item)
+            if self.point_data[key].shape[0] != self.points.shape[0]:
+                raise ValueError(
+                    f"len(points) = {len(points)}, "
+                    f'but len(point_data["{key}"]) = {len(point_data[key])}'
+                )
+
+        # assert cell data consistency and convert to numpy arrays
         for key, data in self.cell_data.items():
-            assert len(data) == len(cells), (
-                "Incompatible cell data. "
-                f"{len(cells)} cell blocks, but '{key}' has {len(data)} blocks."
-            )
+            if len(data) != len(cells):
+                raise ValueError(
+                    "Incompatible cell data. "
+                    f"{len(cells)} cell blocks, but '{key}' has {len(data)} blocks."
+                )
+
+            for k in range(len(data)):
+                data[k] = np.asarray(data[k])
+                if len(data[k]) != len(self.cells[k]):
+                    raise ValueError(
+                        "Incompatible cell data. "
+                        f"Cell block {k} has length {len(self.cells[k])}, but "
+                        f"corresponding cell data {key} item has length {len(data[k])}."
+                    )
 
     def __repr__(self):
         lines = ["<meshio mesh object>", f"  Number of points: {len(self.points)}"]
@@ -255,7 +278,6 @@ class Mesh:
             "meshio.Mesh.read is deprecated, use meshio.read instead",
             DeprecationWarning,
         )
-
         return read(path_or_buf, file_format)
 
     def sets_to_int_data(self):
@@ -263,24 +285,27 @@ class Mesh:
         # cells appear exactly in one group.
         intfun = []
         for k, c in enumerate(zip(*self.cell_sets.values())):
-            # `c` contains the values of all cell sets for a particular cell block
-            c = [([] if cc is None else cc) for cc in c]
-            conc_c = np.concatenate(c)
-            argsort_c = np.argsort(conc_c)
-            d = conc_c[argsort_c]
-            if np.all(d == np.arange(len(d))):
-                # A typical case: All numbers appear exactly once in the groups.
-                arr = argsort_c
-            else:
-                # We could just append None, but some mesh formats expect _something_
-                # here. Go for an array of -1s. (NaN is not a legal int.)
-                arr = np.full(len(self.cells[k]), -1, dtype=int)
-
+            # Go for -1 as the default value. (NaN is not int.)
+            arr = np.full(len(self.cells[k]), -1, dtype=int)
+            for i, cc in enumerate(c):
+                if cc is None:
+                    continue
+                arr[cc] = i
             intfun.append(arr)
 
         data_name = "-".join(self.cell_sets.keys())
         self.cell_data = {data_name: intfun}
         self.cell_sets = {}
+
+        # now for the point sets
+        # Go for -1 as the default value. (NaN is not int.)
+        intfun = np.full(len(self.points), -1, dtype=int)
+        for i, cc in enumerate(self.point_sets.values()):
+            intfun[cc] = i
+
+        data_name = "-".join(self.point_sets.keys())
+        self.point_data = {data_name: intfun}
+        self.point_sets = {}
 
     def int_data_to_sets(self):
         """Convert all int data to {point,cell}_sets, where possible."""
@@ -302,10 +327,39 @@ class Mesh:
                 # alternative names
                 names = [f"set{tag}" for tag in tags]
 
+            # TODO there's probably a better way besides np.where, something from
+            # np.unique or np.sort
             for name, tag in zip(names, tags):
-                self.cell_sets[name] = []
                 self.cell_sets[name] = [np.where(d == tag)[0] for d in data]
 
         # remove the cell data
         for key in keys:
             del self.cell_data[key]
+
+        # now point data
+        keys = []
+        for key, data in self.point_data.items():
+            # handle all int and uint data
+            if not np.all(v.dtype.kind in ["i", "u"] for v in data):
+                continue
+
+            keys.append(key)
+
+            # this call can be rather expensive
+            tags = np.unique(data)
+
+            # try and get the names by splitting the key along "-" (this is how
+            # sets_to_int_data() forms the key
+            names = sorted(list(set(key.split("-"))))
+            if len(names) != len(tags):
+                # alternative names
+                names = [f"set{tag}" for tag in tags]
+
+            # TODO there's probably a better way besides np.where, something from
+            # np.unique or np.sort
+            for name, tag in zip(names, tags):
+                self.point_sets[name] = np.where(data == tag)[0]
+
+        # remove the cell data
+        for key in keys:
+            del self.point_data[key]
