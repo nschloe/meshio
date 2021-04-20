@@ -205,7 +205,7 @@ def read_ascii_buffer(f):
 
         if items[0] == "MeshVersionFormatted":
             version = items[1]
-            dtype = {"1": c_float, "2": c_double}[version]
+            dtype = {"0": c_float, "1": c_float, "2": c_double}[version]
         elif items[0] == "Dimension":
             if len(items) >= 2:
                 dim = int(items[1])
@@ -252,6 +252,32 @@ def read_ascii_buffer(f):
             np.fromfile(
                 f, count=num_normal_at_vertices * 2, dtype=int, sep=" "
             ).reshape(num_normal_at_vertices, 2)
+        elif items[0] == "SubDomainFromMesh":
+            # those are just discarded
+            num_sub_domain_from_mesh = int(f.readline())
+            np.fromfile(
+                f, count=num_sub_domain_from_mesh * 4, dtype=int, sep=" "
+            ).reshape(num_sub_domain_from_mesh, 4)
+        elif items[0] == "VertexOnGeometricVertex":
+            # those are just discarded
+            num_vertex_on_geometric_vertex = int(f.readline())
+            np.fromfile(
+                f, count=num_vertex_on_geometric_vertex * 2, dtype=int, sep=" "
+            ).reshape(num_vertex_on_geometric_vertex, 2)
+        elif items[0] == "VertexOnGeometricEdge":
+            # those are just discarded
+            num_vertex_on_geometric_edge = int(f.readline())
+            np.fromfile(
+                f, count=num_vertex_on_geometric_edge * 3, dtype=float, sep=" "
+            ).reshape(num_vertex_on_geometric_edge, 3)
+        elif items[0] == "EdgeOnGeometricEdge":
+            # those are just discarded
+            num_edge_on_geometric_edge = int(f.readline())
+            np.fromfile(
+                f, count=num_edge_on_geometric_edge * 2, dtype=int, sep=" "
+            ).reshape(num_edge_on_geometric_edge, 2)
+        elif items[0] == "Identifier" or items[0] == "Geometry":
+            f.readline()
         else:
             if items[0] != "End":
                 raise ReadError(f"Unknown keyword '{items[0]}'.")
