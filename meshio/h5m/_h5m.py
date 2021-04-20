@@ -18,9 +18,6 @@ from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
-    """Reads H5M files, cf.
-    https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
-    """
     import h5py
 
     f = h5py.File(filename, "r")
@@ -116,9 +113,6 @@ def read(filename):
 
 
 def write(filename, mesh, add_global_ids=True, compression="gzip", compression_opts=4):
-    """Writes H5M files, cf.
-    https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
-    """
     import h5py
 
     f = h5py.File(filename, "w")
