@@ -181,7 +181,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
         g["type"] = dtype
         # Add a class tag:
         # From
-        # <http://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
+        # <https://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
         # ```
         # /* Was dense tag data in mesh database */
         #  define mhdf_DENSE_TYPE   2

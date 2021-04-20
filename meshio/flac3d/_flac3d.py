@@ -93,7 +93,7 @@ flag_to_numdim = {
 def read(filename):
     """Read FLAC3D f3grid grid file."""
     # Read a small block of the file to assess its type
-    # See <http://code.activestate.com/recipes/173220/>
+    # See <https://code.activestate.com/recipes/173220/>
     with open_file(filename, "rb") as f:
         block = f.read(8)
         binary = b"\x00" in block

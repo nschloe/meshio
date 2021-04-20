@@ -185,7 +185,7 @@ def _pick_first_int_data(data):
     return key, other
 
 
-# https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
+# https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {
     0: "empty",
     1: "vertex",
