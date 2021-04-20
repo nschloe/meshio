@@ -1,5 +1,5 @@
 """
-I/O for VTK <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
+I/O for VTK <https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 """
 import logging
 from functools import reduce
@@ -403,7 +403,7 @@ def _read_coords(f, data_type, is_ascii, num_points):
         coords = np.fromfile(f, count=num_points, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
-        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         coords = np.fromfile(f, count=num_points, dtype=dtype)
         line = f.readline().decode("utf-8")
@@ -418,7 +418,7 @@ def _read_points(f, data_type, is_ascii, num_points):
         points = np.fromfile(f, count=num_points * 3, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
-        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         points = np.fromfile(f, count=num_points * 3, dtype=dtype)
         line = f.readline().decode("utf-8")
@@ -474,7 +474,7 @@ def _read_scalar_field(f, num_data, split, is_ascii):
         data = np.fromfile(f, count=num_data * num_comp, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
-        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         data = np.fromfile(f, count=num_data * num_comp, dtype=dtype)
         line = f.readline().decode("utf-8")
@@ -498,7 +498,7 @@ def _read_field(f, num_data, split, shape, is_ascii):
         data = np.fromfile(f, count=k * num_data, sep=" ", dtype=dtype)
     else:
         # Binary data is big endian, see
-        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         data = np.fromfile(f, count=k * num_data, dtype=dtype)
         line = f.readline().decode("utf-8")
@@ -527,7 +527,7 @@ def _read_fields(f, num_fields, is_ascii):
             dat = np.fromfile(f, count=shape0 * shape1, sep=" ", dtype=dtype)
         else:
             # Binary data is big endian, see
-            # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+            # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
             dtype = dtype.newbyteorder(">")
             dat = np.fromfile(f, count=shape0 * shape1, dtype=dtype)
             line = f.readline().decode("utf-8")
@@ -553,7 +553,7 @@ def _skip_meta(f):
 
 
 def translate_cells(data, types, cell_data_raw):
-    # https://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html
+    # https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
     # Translate it into the cells array.
     # `data` is a one-dimensional vector with
     # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
@@ -702,7 +702,7 @@ def _write_points(f, points, binary):
 
     if binary:
         # Binary data must be big endian, see
-        # <https://www.vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
+        # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         # if points.dtype.byteorder == "<" or (
         #     points.dtype.byteorder == "=" and sys.byteorder == "little"
         # ):

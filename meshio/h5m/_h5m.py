@@ -18,9 +18,6 @@ from .._mesh import CellBlock, Mesh
 
 
 def read(filename):
-    """Reads H5M files, cf.
-    https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
-    """
     import h5py
 
     f = h5py.File(filename, "r")
@@ -116,9 +113,6 @@ def read(filename):
 
 
 def write(filename, mesh, add_global_ids=True, compression="gzip", compression_opts=4):
-    """Writes H5M files, cf.
-    https://trac.mcs.anl.gov/projects/ITAPS/wiki/MOAB/h5m.
-    """
     import h5py
 
     f = h5py.File(filename, "w")
@@ -181,7 +175,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
         g["type"] = dtype
         # Add a class tag:
         # From
-        # <http://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
+        # <https://lists.mcs.anl.gov/pipermail/moab-dev/2015/007104.html>:
         # ```
         # /* Was dense tag data in mesh database */
         #  define mhdf_DENSE_TYPE   2

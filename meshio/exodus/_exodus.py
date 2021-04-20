@@ -1,8 +1,8 @@
 """
 I/O for Exodus II.
 
-See <http://prod.sandia.gov/techlib/access-control.cgi/1992/922137.pdf>, in
-particular Appendix A (page 171, Implementation of EXODUS II with netCDF).
+See <https://prod.sandia.gov/techlib/access-control.cgi/1992/922137.pdf>, in particular
+Appendix A (page 171, Implementation of EXODUS II with netCDF).
 """
 import datetime
 import re
@@ -333,7 +333,7 @@ def write(filename, mesh):
                     point_data_names[k, i] = letter.encode("utf-8")
 
             # Set data. ParaView might have some problems here, see
-            # <https://gitlab.kitware.com/paraview/paraview/issues/18403>.
+            # <https://gitlab.kitware.com/paraview/paraview/-/issues/18403>.
             for k, (name, data) in enumerate(mesh.point_data.items()):
                 for i, s in enumerate(data.shape):
                     rootgrp.createDimension(f"dim_nod_var{k}{i}", s)

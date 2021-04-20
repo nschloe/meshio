@@ -1,6 +1,6 @@
 """
 I/O SU2 mesh format
-<https://su2code.github.io/docs_v7/Mesh-File>
+<https://su2code.github.io/docs_v7/Mesh-File/>
 """
 import logging
 from itertools import chain, islice

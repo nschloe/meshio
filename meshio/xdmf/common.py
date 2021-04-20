@@ -28,7 +28,7 @@ dtype_to_format_string = {
 
 
 # See
-# <http://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
+# <https://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
 # <https://gitlab.kitware.com/xdmf/xdmf/blob/master/Xdmf.dtd#L34>
 # for XDMF types.
 # There appears to be no particular consistency, so allow for different
@@ -113,7 +113,7 @@ def translate_mixed_cells(data):
     # `data` is a one-dimensional vector with
     # (cell_type1, p0, p1, ... ,pk, cell_type2, p10, p11, ..., p1k, ...
 
-    # http://www.xdmf.org/index.php/XDMF_Model_and_Format#Arbitrary
+    # https://www.xdmf.org/index.php/XDMF_Model_and_Format#Arbitrary
     # https://gitlab.kitware.com/xdmf/xdmf/blob/master/XdmfTopologyType.hpp#L394
     xdmf_idx_to_num_nodes = {
         1: 1,  # vertex
@@ -158,7 +158,7 @@ def translate_mixed_cells(data):
 
 
 def attribute_type(data):
-    # <http://www.xdmf.org/index.php/XDMF_Model_and_Format#Attribute>
+    # <https://www.xdmf.org/index.php/XDMF_Model_and_Format#Attribute>
     if len(data.shape) == 1 or (len(data.shape) == 2 and data.shape[1] == 1):
         return "Scalar"
     elif len(data.shape) == 2 and data.shape[1] in [2, 3]:
