@@ -105,7 +105,7 @@ def write(filetype, filename, mesh):
         # in Exodus files:
         # If a vector 'v' has two components, they are called 'v_x', 'v_y'
         # (note the underscore), if it has three, then they are called 'vx',
-        # 'vy', 'vz'. See bug <http://vtk.org/Bug/view.php?id=15894>.
+        # 'vy', 'vz'. See bug <https://vtk.org/Bug/view.php?id=15894>.
         # For VT{K,U} files, no underscore is ever added.
         pd.AddArray(_create_vtkarray(X, name))
 
