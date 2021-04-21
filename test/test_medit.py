@@ -34,7 +34,8 @@ def test_generic_io():
     helpers.generic_io("test.0.meshb")
 
 
-# same tests with ugrid format files converted with UGC from http://www.simcenter.msstate.edu
+# same tests with ugrid format files converted with UGC from
+# https://www.simcenter.msstate.edu/
 
 
 @pytest.mark.parametrize(
