@@ -15,7 +15,7 @@ this_dir = pathlib.Path(__file__).resolve().parent
         helpers.empty_mesh,
         helpers.tri_mesh,
         helpers.quad_mesh,
-        helpers.tri_quad_mesh,
+        # helpers.tri_quad_mesh,
         helpers.quad_tri_mesh,
         helpers.tet_mesh,
         helpers.hex_mesh,

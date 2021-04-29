@@ -187,6 +187,8 @@ def _write_buffer(f, file_type, mesh):
 
     for i, (key, data) in enumerate(mesh.cells):
         if key in ugrid_counts:
+            if ugrid_counts[key] > 0:
+                raise ValueError("Ugrid can only handle one cell block of a type.")
             ugrid_counts[key] = data.shape[0]
             ugrid_meshio_id[key] = i
         else:
