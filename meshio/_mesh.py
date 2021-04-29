@@ -82,11 +82,22 @@ class Mesh:
 
     def __repr__(self):
         lines = ["<meshio mesh object>", f"  Number of points: {len(self.points)}"]
+        special_cells = [
+            "polygon",
+            "polyhedron",
+            "VTK_LAGRANGE_CURVE",
+            "VTK_LAGRANGE_TRIANGLE",
+            "VTK_LAGRANGE_QUADRILATERAL",
+            "VTK_LAGRANGE_TETRAHEDRON",
+            "VTK_LAGRANGE_HEXAHEDRON",
+            "VTK_LAGRANGE_WEDGE",
+            "VTK_LAGRANGE_PYRAMID",
+        ]
         if len(self.cells) > 0:
             lines.append("  Number of cells:")
             for cell_type, elems in self.cells:
                 string = cell_type
-                if cell_type == "polygon":
+                if cell_type in special_cells:
                     string += f"({elems.shape[1]})"
                 lines.append(f"    {string}: {len(elems)}")
         else:
