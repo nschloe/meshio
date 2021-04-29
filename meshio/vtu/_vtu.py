@@ -668,9 +668,10 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     # in certain places.
     is_polyhedron_grid = False
     for c in mesh.cells:
-        if c.type[:10] == "polyhedron":
+        if c.type.startswith("polyhedron"):
             is_polyhedron_grid = True
             break
+
     # The current implementation cannot mix polyhedral cells with other cell types.
     # To write such meshes, represent all cells as polyhedra.
     if is_polyhedron_grid:
@@ -908,31 +909,9 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
         # types
         types_array = []
-        for k, v in mesh.cells:
-            # For polygon and polyhedron grids, the number of nodes is part of the cell
-            # type key. This part must be stripped away.
-            special_cells = [
-                "polygon",
-                "polyhedron",
-                "VTK_LAGRANGE_CURVE",
-                "VTK_LAGRANGE_TRIANGLE",
-                "VTK_LAGRANGE_QUADRILATERAL",
-                "VTK_LAGRANGE_TETRAHEDRON",
-                "VTK_LAGRANGE_HEXAHEDRON",
-                "VTK_LAGRANGE_WEDGE",
-                "VTK_LAGRANGE_PYRAMID",
-            ]
-            key_ = None
-            for string in special_cells:
-                if k.startswith(string):
-                    key_ = string
-
-            if key_ is None:
-                # No special treatment
-                key_ = k
-
-            # further adaptions for polyhedron
-            if k.startswith("polyhedron"):
+        for key, v in mesh.cells:
+            # some adaptions for polyhedron
+            if key.startswith("polyhedron"):
                 # Get face-cell relation on the vtu format. See comments in helper
                 # function for more information of how to specify this.
                 faces_loc, faceoffsets_loc = _polyhedron_face_cells(v)
@@ -944,8 +923,9 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                 assert faces is not None
                 faces += faces_loc
                 faceoffsets += faceoffsets_loc
+                key = "polyhedron"
 
-            types_array.append(np.full(len(v), meshio_to_vtk_type[key_]))
+            types_array.append(np.full(len(v), meshio_to_vtk_type[key]))
 
         types = np.concatenate(
             types_array
