@@ -127,18 +127,19 @@ def _read_nodes(f, is_ascii, data_size):
 
 def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
     if not is_ascii:
-        raise ReadError()
+        raise ReadError("Can only read ASCII cells")
+
     # First we try to identify the entity
     t = None
     if environ is not None:
-        if "Begin Elements" in environ:
-            entity_name = environ.replace("Begin Elements", "")
+        if environ.startswith("Begin Elements "):
+            entity_name = environ[15:]
             for key in _mdpa_to_meshio_type:
                 if key in entity_name:
                     t = _mdpa_to_meshio_type[key]
                     break
-        elif "Begin Conditions" in environ:
-            entity_name = environ.replace("Begin Conditions", "")
+        elif environ.startswith("Begin Conditions "):
+            entity_name = environ[17:]
             for key in _mdpa_to_meshio_type:
                 if key in entity_name:
                     t = _mdpa_to_meshio_type[key]
@@ -146,14 +147,13 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
 
     while True:
         line = f.readline().decode("utf-8")
-        if "End Elements" in line or "End Conditions" in line:
+        if line.startswith("End Elements") or line.startswith("End Conditions"):
             break
         # data[0] gives the entity id
         # data[1] gives the property id
         # The rest are the ids of the nodes
         data = [int(k) for k in filter(None, line.split())]
         num_nodes_per_elem = len(data) - 2
-
         # We use this in case not alternative
         if t is None:
             t = inverse_num_nodes_per_cell[num_nodes_per_elem]
@@ -310,9 +310,11 @@ def read_buffer(f):
             break
         environ = line.strip()
 
-        if "Begin Nodes" in environ:
+        if environ.startswith("Begin Nodes"):
             points = _read_nodes(f, is_ascii, data_size)
-        elif "Begin Elements" in environ or "Begin Conditions" in environ:
+        elif environ.startswith("Begin Elements") or environ.startswith(
+            "Begin Conditions"
+        ):
             _read_cells(f, cells, is_ascii, cell_tags, environ)
 
     # We finally prepare the cells
@@ -380,50 +382,26 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
         raise WriteError()
     # write elements
     entity = "Elements"
-    dimension_name = str(dimension) + "D"
+    dimension_name = f"{dimension}D"
     wrong_dimension_name = "3D" if dimension == 2 else "2D"
     consecutive_index = 0
-    aux_cell_type = None
     for cell_type, node_idcs in cells:
         # NOTE: The names of the dummy conditions are not regular, require extra work
         # local_dimension = local_dimension_types[cell_type]
         # if (local_dimension < dimension):
         # entity = "Conditions"
-
-        if aux_cell_type is None:
-            aux_cell_type = cell_type
-            fh.write(
-                (
-                    "Begin "
-                    + entity
-                    + " "
-                    + _meshio_to_mdpa_type[cell_type].replace(
-                        wrong_dimension_name, dimension_name
-                    )
-                    + "\n"
-                ).encode("utf-8")
-            )
-        elif aux_cell_type != cell_type:
-            fh.write(("End " + entity + "\n\n").encode("utf-8"))
-            fh.write(
-                (
-                    "Begin "
-                    + entity
-                    + " "
-                    + _meshio_to_mdpa_type[cell_type].replace(
-                        wrong_dimension_name, dimension_name
-                    )
-                    + "\n"
-                ).encode("utf-8")
-            )
+        mdpa_cell_type = _meshio_to_mdpa_type[cell_type].replace(
+            wrong_dimension_name, dimension_name
+        )
+        fh.write(f"Begin {entity} {mdpa_cell_type}\n".encode("utf-8"))
 
         # TODO: Add proper tag recognition in the future
         fcd = np.empty((len(node_idcs), 0), dtype=np.int32)
 
-        form = "{} " + str(fcd.shape[1]) + " {} {}\n"
+        format_string = "{} " + str(fcd.shape[1]) + " {} {}\n"
         for k, c in enumerate(node_idcs):
             fh.write(
-                form.format(
+                format_string.format(
                     " " + str(consecutive_index + k + 1),
                     " ".join([str(val) for val in fcd[k]]),
                     " ".join([str(cc) for cc in c + 1]),
@@ -431,8 +409,7 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
             )
 
         consecutive_index += len(node_idcs)
-
-    fh.write(b"End Elements\n\n")
+        fh.write(f"End {entity}\n\n".encode("utf-8"))
 
 
 def _write_data(fh, tag, name, data, binary):
