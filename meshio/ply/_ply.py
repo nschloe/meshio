@@ -171,6 +171,8 @@ def _read_ascii(
     cell_data_names,
     cell_dtypes,
 ):
+    assert len(cell_data_names) == len(cell_dtypes)
+
     # assert that all formats are the same
     # Now read the data
     dtype = np.dtype(
@@ -201,16 +203,16 @@ def _read_ascii(
     }
     cell_data = {}
 
-    # polygons must be read line-by-line
-    polygons = collections.defaultdict(list)
+    cell_blocks = []
+
     for k in range(num_cells):
         line = f.readline().decode("utf-8").strip()
         data = line.split()
+
         if k == 0:
             # initialize the cell data arrays
             i = 0
             cell_data = {}
-            assert len(cell_data_names) == len(cell_dtypes)
             for name, dtype in zip(cell_data_names, cell_dtypes):
                 if name == "vertex_indices":
                     n = int(data[i])
@@ -220,12 +222,18 @@ def _read_ascii(
                     cell_data[name] = collections.defaultdict(list)
                     i += 1
 
+        # go over the line
         i = 0
         for name, dtype in zip(cell_data_names, cell_dtypes):
             if name == "vertex_indices":
-                n = int(data[i])
-                dtype = ply_to_numpy_dtype[dtype[1]]
-                polygons[n].append([dtype(data[j]) for j in range(i + 1, i + n + 1)])
+                idx_dtype, value_dtype = dtype
+                n = ply_to_numpy_dtype[idx_dtype](data[i])
+                dtype = ply_to_numpy_dtype[value_dtype]
+                idx = dtype(data[i + 1 : i + n + 1])
+                if len(cell_blocks) == 0 or len(cell_blocks[-1].data[-1]) != n:
+                    cell_blocks.append(CellBlock(cell_type_from_count(n), [idx]))
+                else:
+                    cell_blocks[-1].data.append(idx)
                 i += n + 1
             else:
                 dtype = ply_to_numpy_dtype[dtype]
@@ -233,15 +241,11 @@ def _read_ascii(
                 cell_data[name][n] += [dtype(data[j]) for j in range(i, i + 1)]
                 i += 1
 
-    cells = [
-        CellBlock(cell_type_from_count(n), np.array(data))
-        for (n, data) in polygons.items()
-    ]
     cell_data = {
         key: [np.array(v) for v in value.values()] for key, value in cell_data.items()
     }
 
-    return Mesh(verts, cells, point_data=point_data, cell_data=cell_data)
+    return Mesh(verts, cell_blocks, point_data=point_data, cell_data=cell_data)
 
 
 def _read_binary(
@@ -445,6 +449,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
 
             # possibly cast down to int32
+            # TODO don't alter the mesh data
             has_cast = False
             for k, (cell_type, data) in enumerate(mesh.cells):
                 if data.dtype == np.int64:
