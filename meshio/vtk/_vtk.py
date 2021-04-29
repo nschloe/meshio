@@ -159,13 +159,13 @@ def read_buffer(f):
     f.readline()
     f.readline()
 
-    data_type = f.readline().decode("utf-8").strip().upper()
+    data_type = f.readline().decode().strip().upper()
     if data_type not in ["ASCII", "BINARY"]:
         raise ReadError(f"Unknown VTK data type '{data_type}'.")
     info.is_ascii = data_type == "ASCII"
 
     while True:
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if not line:
             # EOF
             break
@@ -218,7 +218,7 @@ def _read_section(f, info):
         info.active = "CELLS"
         last_pos = f.tell()
         try:
-            line = f.readline().decode("utf-8")
+            line = f.readline().decode()
         except UnicodeDecodeError:
             line = ""
         if "OFFSETS" in line:
@@ -230,7 +230,7 @@ def _read_section(f, info):
             info.num_items = int(info.split[2])
             dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
             offsets = _read_cells(f, info.is_ascii, info.num_offsets, dtype)
-            line = f.readline().decode("utf-8")
+            line = f.readline().decode()
             assert "CONNECTIVITY" in line
             dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
             connectivity = _read_cells(f, info.is_ascii, info.num_items, dtype)
@@ -406,7 +406,7 @@ def _read_coords(f, data_type, is_ascii, num_points):
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         coords = np.fromfile(f, count=num_points, dtype=dtype)
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if line != "\n":
             raise ReadError()
     return coords
@@ -421,7 +421,7 @@ def _read_points(f, data_type, is_ascii, num_points):
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         points = np.fromfile(f, count=num_points * 3, dtype=dtype)
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if line != "\n":
             raise ReadError()
     return points.reshape((num_points, 3))
@@ -433,7 +433,7 @@ def _read_cells(f, is_ascii, num_items, dtype=np.dtype("int32")):
     else:
         dtype = dtype.newbyteorder(">")
         c = np.fromfile(f, count=num_items, dtype=dtype)
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if line != "\n":
             raise ReadError()
     return c
@@ -445,7 +445,7 @@ def _read_cell_types(f, is_ascii, num_items):
     else:
         # binary
         ct = np.fromfile(f, count=int(num_items), dtype=">i4")
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         # Sometimes, there's no newline at the end
         if line.strip() != "":
             raise ReadError()
@@ -466,7 +466,7 @@ def _read_scalar_field(f, num_data, split, is_ascii):
         raise ReadError("The parameter numComp must range between (1,4) inclusive")
 
     dtype = np.dtype(vtk_to_numpy_dtype_name[data_type])
-    lt, _ = f.readline().decode("utf-8").split()
+    lt, _ = f.readline().decode().split()
     if lt.upper() != "LOOKUP_TABLE":
         raise ReadError()
 
@@ -477,7 +477,7 @@ def _read_scalar_field(f, num_data, split, is_ascii):
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         data = np.fromfile(f, count=num_data * num_comp, dtype=dtype)
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if line != "\n":
             raise ReadError()
 
@@ -501,7 +501,7 @@ def _read_field(f, num_data, split, shape, is_ascii):
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         data = np.fromfile(f, count=k * num_data, dtype=dtype)
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if line != "\n":
             raise ReadError()
 
@@ -512,10 +512,10 @@ def _read_field(f, num_data, split, shape, is_ascii):
 def _read_fields(f, num_fields, is_ascii):
     data = {}
     for _ in range(num_fields):
-        line = f.readline().decode("utf-8").split()
+        line = f.readline().decode().split()
         if line[0] == "METADATA":
             _skip_meta(f)
-            name, shape0, shape1, data_type = f.readline().decode("utf-8").split()
+            name, shape0, shape1, data_type = f.readline().decode().split()
         else:
             name, shape0, shape1, data_type = line
 
@@ -530,7 +530,7 @@ def _read_fields(f, num_fields, is_ascii):
             # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
             dtype = dtype.newbyteorder(">")
             dat = np.fromfile(f, count=shape0 * shape1, dtype=dtype)
-            line = f.readline().decode("utf-8")
+            line = f.readline().decode()
             if line != "\n":
                 raise ReadError()
 
@@ -546,7 +546,7 @@ def _skip_meta(f):
     # skip possible metadata
     # https://vtk.org/doc/nightly/html/IOLegacyInformationFormat.html
     while True:
-        line = f.readline().decode("utf-8").strip()
+        line = f.readline().decode().strip()
         if not line:
             # end of metadata is a blank line
             break
@@ -677,8 +677,8 @@ def write(filename, mesh, binary=True):
 
     with open_file(filename, "wb") as f:
         f.write(b"# vtk DataFile Version 4.2\n")
-        f.write(f"written by meshio v{__version__}\n".encode("utf-8"))
-        f.write(("BINARY\n" if binary else "ASCII\n").encode("utf-8"))
+        f.write(f"written by meshio v{__version__}\n".encode())
+        f.write(("BINARY\n" if binary else "ASCII\n").encode())
         f.write(b"DATASET UNSTRUCTURED_GRID\n")
 
         # write points and cells
@@ -688,13 +688,13 @@ def write(filename, mesh, binary=True):
         # write point data
         if mesh.point_data:
             num_points = mesh.points.shape[0]
-            f.write(f"POINT_DATA {num_points}\n".encode("utf-8"))
+            f.write(f"POINT_DATA {num_points}\n".encode())
             _write_field_data(f, mesh.point_data, binary)
 
         # write cell data
         if mesh.cell_data:
             total_num_cells = sum(len(c.data) for c in mesh.cells)
-            f.write(f"CELL_DATA {total_num_cells}\n".encode("utf-8"))
+            f.write(f"CELL_DATA {total_num_cells}\n".encode())
             _write_field_data(f, mesh.cell_data, binary)
 
 
@@ -702,7 +702,7 @@ def _write_points(f, points, binary):
     f.write(
         "POINTS {} {}\n".format(
             len(points), numpy_to_vtk_dtype[points.dtype.name]
-        ).encode("utf-8")
+        ).encode()
     )
 
     if binary:
@@ -724,7 +724,7 @@ def _write_cells(f, cells, binary):
     total_num_idx = sum([c.data.size for c in cells])
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
-    f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode("utf-8"))
+    f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode())
     if binary:
         for c in cells:
             n = c.data.shape[1]
@@ -754,7 +754,7 @@ def _write_cells(f, cells, binary):
             f.write(b"\n")
 
     # write cell types
-    f.write(f"CELL_TYPES {total_num_cells}\n".encode("utf-8"))
+    f.write(f"CELL_TYPES {total_num_cells}\n".encode())
     if binary:
         for c in cells:
             vtk_type = meshio_to_vtk_type[c.type]
@@ -769,7 +769,7 @@ def _write_cells(f, cells, binary):
 
 
 def _write_field_data(f, data, binary):
-    f.write((f"FIELD FieldData {len(data)}\n").encode("utf-8"))
+    f.write((f"FIELD FieldData {len(data)}\n").encode())
     for name, values in data.items():
         if isinstance(values, list):
             values = np.concatenate(values)
@@ -791,7 +791,7 @@ def _write_field_data(f, data, binary):
                     num_tuples,
                     numpy_to_vtk_dtype[values.dtype.name],
                 )
-            ).encode("utf-8")
+            ).encode()
         )
         if binary:
             values.astype(values.dtype.newbyteorder(">")).tofile(f, sep="")

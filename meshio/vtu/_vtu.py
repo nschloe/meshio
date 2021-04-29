@@ -68,31 +68,25 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
         ]
         if meshio_type in special_cells:
             # Polygons have unknown and varying number of nodes per cell.
-            # IMPLEMENTATION NOTE: While polygons are different from other cells
-            # they are much less different than polyhedral cells (for polygons,
-            # it is still possible to define the faces implicitly by assuming that
-            # the cell-nodes have a cyclic ordering). Polygons are therefore
-            # handled here, while the polyhedra have a dedicated function for
-            # processing.
 
             # Index where the previous block of cells stopped. Needed to know the number
             # of nodes for the first cell in the block.
-            if start == 0:
-                # This is the very start of the offset array
-                first_node = 0
-            else:
-                # First node is the end of the offset for the previous block
-                first_node = offsets[start - 1]
+            first_node = 0 if start == 0 else offsets[start - 1]
 
-            # Start of the cell-node relation for each cell in this block
+            # Start off the cell-node relation for each cell in this block
             start_cn = np.hstack((first_node, offsets[start:end]))
             # Find the size of each cell
-            size = np.diff(start_cn)
+            sizes = np.diff(start_cn)
+
+            # find where the cell blocks start and end
+            b = np.diff(sizes)
+            c = np.concatenate([[0], np.where(b != 0)[0] + 1, [len(sizes)]])
 
             # Loop over all cell sizes, find all cells with this size, and assign
             # connectivity
-            for sz in np.unique(size):
-                items = np.where(size == sz)[0]
+            for cell_block_start, cell_block_end in zip(c, c[1:]):
+                items = np.arange(cell_block_start, cell_block_end)
+                sz = sizes[cell_block_start]
                 indices = np.add.outer(
                     start_cn[items + 1],
                     _vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
@@ -387,10 +381,9 @@ class VtuReader:
             raise ReadError()
 
         if "version" in root.attrib:
-            if root.attrib["version"] not in ["0.1", "1.0"]:
-                raise ReadError(
-                    "Unknown VTU file version '{}'.".format(root.attrib["version"])
-                )
+            version = root.attrib["version"]
+            if version not in ["0.1", "1.0"]:
+                raise ReadError(f"Unknown VTU file version '{version}'.")
 
         # fix empty NumberOfComponents attributes as produced by Firedrake
         for da_tag in root.findall(".//DataArray[@NumberOfComponents='']"):

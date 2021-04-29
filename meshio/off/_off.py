@@ -76,14 +76,14 @@ def write(filename, mesh):
 
         # counts
         c = f"{mesh.points.shape[0]} {tri.shape[0]} {0}\n\n"
-        fh.write(c.encode("utf-8"))
+        fh.write(c.encode())
 
         # vertices
         # np.savetxt(fh, mesh.points, "%r")  # slower
         out = mesh.points
         fmt = " ".join(["{}"] * out.shape[1])
         out = "\n".join([fmt.format(*row) for row in out]) + "\n"
-        fh.write(out.encode("utf-8"))
+        fh.write(out.encode())
 
         # triangles
         out = np.column_stack([np.full(tri.shape[0], 3, dtype=tri.dtype), tri])
@@ -91,7 +91,7 @@ def write(filename, mesh):
         # np.savetxt(fh, out, "%d  %d %d %d")
         fmt = " ".join(["{}"] * out.shape[1])
         out = "\n".join([fmt.format(*row) for row in out]) + "\n"
-        fh.write(out.encode("utf-8"))
+        fh.write(out.encode())
 
 
 register("off", [".off"], read, {"off": write})

@@ -15,7 +15,7 @@ def _fast_forward_to_end_block(f, block):
 
     for line in f:
         try:
-            line = line.decode("utf-8")
+            line = line.decode()
         except UnicodeDecodeError:
             pass
         if line.strip() == f"$End{block}":
@@ -27,7 +27,7 @@ def _fast_forward_to_end_block(f, block):
 def _fast_forward_over_blank_lines(f):
     is_eof = False
     while True:
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if not line:
             is_eof = True
             break
@@ -37,10 +37,10 @@ def _fast_forward_over_blank_lines(f):
 
 
 def _read_physical_names(f, field_data):
-    line = f.readline().decode("utf-8")
+    line = f.readline().decode()
     num_phys_names = int(line)
     for _ in range(num_phys_names):
-        line = shlex.split(f.readline().decode("utf-8"))
+        line = shlex.split(f.readline().decode())
         key = line[2]
         value = np.array(line[1::-1], dtype=int)
         field_data[key] = value
@@ -49,18 +49,17 @@ def _read_physical_names(f, field_data):
 
 def _read_data(f, tag, data_dict, data_size, is_ascii):
     # Read string tags
-    num_string_tags = int(f.readline().decode("utf-8"))
+    num_string_tags = int(f.readline().decode())
     string_tags = [
-        f.readline().decode("utf-8").strip().replace('"', "")
-        for _ in range(num_string_tags)
+        f.readline().decode().strip().replace('"', "") for _ in range(num_string_tags)
     ]
     # The real tags typically only contain one value, the time.
     # Discard it.
-    num_real_tags = int(f.readline().decode("utf-8"))
+    num_real_tags = int(f.readline().decode())
     for _ in range(num_real_tags):
         f.readline()
-    num_integer_tags = int(f.readline().decode("utf-8"))
-    integer_tags = [int(f.readline().decode("utf-8")) for _ in range(num_integer_tags)]
+    num_integer_tags = int(f.readline().decode())
+    integer_tags = [int(f.readline().decode()) for _ in range(num_integer_tags)]
     num_components = integer_tags[1]
     num_items = integer_tags[2]
     if is_ascii:
@@ -228,28 +227,28 @@ def _write_physical_names(fh, field_data):
     entries.sort()
     if entries:
         fh.write(b"$PhysicalNames\n")
-        fh.write(f"{len(entries)}\n".encode("utf-8"))
+        fh.write(f"{len(entries)}\n".encode())
         for entry in entries:
-            fh.write('{} {} "{}"\n'.format(*entry).encode("utf-8"))
+            fh.write('{} {} "{}"\n'.format(*entry).encode())
         fh.write(b"$EndPhysicalNames\n")
 
 
 def _write_data(fh, tag, name, data, binary):
-    fh.write(f"${tag}\n".encode("utf-8"))
+    fh.write(f"${tag}\n".encode())
     # <http://gmsh.info/doc/texinfo/gmsh.html>:
     # > Number of string tags.
     # > gives the number of string tags that follow. By default the first
     # > string-tag is interpreted as the name of the post-processing view and
     # > the second as the name of the interpolation scheme. The interpolation
     # > scheme is provided in the $InterpolationScheme section (see below).
-    fh.write(f"{1}\n".encode("utf-8"))
-    fh.write(f'"{name}"\n'.encode("utf-8"))
-    fh.write(f"{1}\n".encode("utf-8"))
-    fh.write(f"{0.0}\n".encode("utf-8"))
+    fh.write(f"{1}\n".encode())
+    fh.write(f'"{name}"\n'.encode())
+    fh.write(f"{1}\n".encode())
+    fh.write(f"{0.0}\n".encode())
     # three integer tags:
-    fh.write(f"{3}\n".encode("utf-8"))
+    fh.write(f"{3}\n".encode())
     # time step
-    fh.write(f"{0}\n".encode("utf-8"))
+    fh.write(f"{0}\n".encode())
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
     if num_components not in [1, 3, 9]:
@@ -260,9 +259,9 @@ def _write_data(fh, tag, name, data, binary):
     if len(data.shape) > 1 and data.shape[1] == 1:
         data = data[:, 0]
 
-    fh.write(f"{num_components}\n".encode("utf-8"))
+    fh.write(f"{num_components}\n".encode())
     # num data items
-    fh.write(f"{data.shape[0]}\n".encode("utf-8"))
+    fh.write(f"{data.shape[0]}\n".encode())
     # actually write the data
     if binary:
         if num_components == 1:
@@ -279,9 +278,9 @@ def _write_data(fh, tag, name, data, binary):
         # TODO unify
         if num_components == 1:
             for k, x in enumerate(data):
-                fh.write(fmt.format(k + 1, x).encode("utf-8"))
+                fh.write(fmt.format(k + 1, x).encode())
         else:
             for k, x in enumerate(data):
-                fh.write(fmt.format(k + 1, *x).encode("utf-8"))
+                fh.write(fmt.format(k + 1, *x).encode())
 
-    fh.write(f"$End{tag}\n".encode("utf-8"))
+    fh.write(f"$End{tag}\n".encode())

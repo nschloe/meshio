@@ -345,7 +345,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
         file_type = 1 if binary else 0
         data_size = c_size_t.itemsize
         fh.write(b"$MeshFormat\n")
-        fh.write(f"4.1 {file_type} {data_size}\n".encode("utf-8"))
+        fh.write(f"4.1 {file_type} {data_size}\n".encode())
         if binary:
             np.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
@@ -435,9 +435,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     if binary:
         num_occ.astype(c_size_t).tofile(fh)
     else:
-        fh.write(
-            f"{num_occ[0]} {num_occ[1]} {num_occ[2]} {num_occ[3]}\n".encode("utf-8")
-        )
+        fh.write(f"{num_occ[0]} {num_occ[1]} {num_occ[2]} {num_occ[3]}\n".encode())
 
     # Array of dimension and entity tag per cell. Will be compared with the
     # similar not array.
@@ -474,7 +472,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
         if binary:
             np.array([tag], dtype=c_int).tofile(fh)
         else:
-            fh.write(f"{tag} ".encode("utf-8"))
+            fh.write(f"{tag} ".encode())
 
         # Min-max coordinates for the entity. For now, simply put zeros here,
         # and hope that gmsh does not complain. To expand this, the point
@@ -504,7 +502,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
                 np.array([1], dtype=c_size_t).tofile(fh)
                 np.array([physical_tag], dtype=c_int).tofile(fh)
             else:
-                fh.write(f"1 {physical_tag} ".encode("utf-8"))
+                fh.write(f"1 {physical_tag} ".encode())
         else:
             # The number of physical tags is zero
             if binary:
@@ -524,9 +522,9 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
                         np.array(num_bounds, dtype=c_size_t).tofile(fh)
                         np.array(bounds, dtype=c_int).tofile(fh)
                     else:
-                        fh.write(f"{num_bounds} ".encode("utf-8"))
+                        fh.write(f"{num_bounds} ".encode())
                         for bi in bounds:
-                            fh.write(f"{bi} ".encode("utf-8"))
+                            fh.write(f"{bi} ".encode())
                         fh.write(b"\n")
                 else:
                     # Register that there are no bounding elements
@@ -628,7 +626,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
             points = points.astype(c_double)
         np.array([num_blocks, n, min_tag, max_tag], dtype=c_size_t).tofile(fh)
     else:
-        fh.write(f"{num_blocks} {n} {min_tag} {max_tag}\n".encode("utf-8"))
+        fh.write(f"{num_blocks} {n} {min_tag} {max_tag}\n".encode())
 
     for j in range(num_blocks):
         dim, tag = node_dim_tags[j]
@@ -642,7 +640,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
             (node_tags + 1).astype(c_size_t).tofile(fh)
             points[node_tags].tofile(fh)
         else:
-            fh.write(f"{dim} {tag} {is_parametric} {num_points_this}\n".encode("utf-8"))
+            fh.write(f"{dim} {tag} {is_parametric} {num_points_this}\n".encode())
             (node_tags + 1).astype(c_size_t).tofile(fh, "\n", "%d")
             fh.write(b"\n")
             np.savetxt(fh, points[node_tags], delimiter=" ", fmt="%" + float_fmt)
@@ -716,7 +714,7 @@ def _write_elements(fh, cells, tag_data, binary):
         fh.write(
             "{} {} {} {}\n".format(
                 num_blocks, total_num_cells, min_element_tag, max_element_tag
-            ).encode("utf-8")
+            ).encode()
         )
 
         tag0 = 1
@@ -732,7 +730,7 @@ def _write_elements(fh, cells, tag_data, binary):
 
             cell_type = _meshio_to_gmsh_type[cell_type]
             n = node_idcs.shape[0]
-            fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode("utf-8"))
+            fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode())
             np.savetxt(
                 fh,
                 # Gmsh indexes from 1 not 0

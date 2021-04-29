@@ -109,7 +109,7 @@ def _read_nodes(f, is_ascii, data_size):
     pos = f.tell()
     num_nodes = 0
     while True:
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if "End Nodes" in line:
             break
         num_nodes += 1
@@ -119,7 +119,7 @@ def _read_nodes(f, is_ascii, data_size):
     # The first number is the index
     points = points[:, 1:]
 
-    line = f.readline().decode("utf-8")
+    line = f.readline().decode()
     if line.strip() != "End Nodes":
         raise ReadError()
     return points
@@ -127,33 +127,33 @@ def _read_nodes(f, is_ascii, data_size):
 
 def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
     if not is_ascii:
-        raise ReadError()
+        raise ReadError("Can only read ASCII cells")
+
     # First we try to identify the entity
     t = None
     if environ is not None:
-        if "Begin Elements" in environ:
-            entity_name = environ.replace("Begin Elements", "")
+        if environ.startswith("Begin Elements "):
+            entity_name = environ[15:]
             for key in _mdpa_to_meshio_type:
                 if key in entity_name:
                     t = _mdpa_to_meshio_type[key]
                     break
-        elif "Begin Conditions" in environ:
-            entity_name = environ.replace("Begin Conditions", "")
+        elif environ.startswith("Begin Conditions "):
+            entity_name = environ[17:]
             for key in _mdpa_to_meshio_type:
                 if key in entity_name:
                     t = _mdpa_to_meshio_type[key]
                     break
 
     while True:
-        line = f.readline().decode("utf-8")
-        if "End Elements" in line or "End Conditions" in line:
+        line = f.readline().decode()
+        if line.startswith("End Elements") or line.startswith("End Conditions"):
             break
         # data[0] gives the entity id
         # data[1] gives the property id
         # The rest are the ids of the nodes
         data = [int(k) for k in filter(None, line.split())]
         num_nodes_per_elem = len(data) - 2
-
         # We use this in case not alternative
         if t is None:
             t = inverse_num_nodes_per_cell[num_nodes_per_elem]
@@ -243,42 +243,42 @@ def _prepare_cells(cells, cell_tags):
     return has_additional_tag_data
 
 
-def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
-    if not is_ascii:
-        raise ReadError()
-    # Read string tags
-    num_string_tags = int(f.readline().decode("utf-8"))
-    string_tags = [
-        f.readline().decode("utf-8").strip().replace('"', "")
-        for _ in range(num_string_tags)
-    ]
-    # The real tags typically only contain one value, the time.
-    # Discard it.
-    num_real_tags = int(f.readline().decode("utf-8"))
-    for _ in range(num_real_tags):
-        f.readline()
-    num_integer_tags = int(f.readline().decode("utf-8"))
-    integer_tags = [int(f.readline().decode("utf-8")) for _ in range(num_integer_tags)]
-    num_components = integer_tags[1]
-    num_items = integer_tags[2]
-
-    # Creating data
-    data = np.fromfile(f, count=num_items * (1 + num_components), sep=" ").reshape(
-        (num_items, 1 + num_components)
-    )
-    # The first number is the index
-    data = data[:, 1:]
-
-    line = f.readline().decode("utf-8")
-    if line.strip() != f"End {tag}":
-        raise ReadError()
-
-    # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
-    # If shape[1] == 1, cut it off.
-    if data.shape[1] == 1:
-        data = data[:, 0]
-
-    data_dict[string_tags[0]] = data
+# def _read_data(f, tag, data_dict, is_ascii):
+#     if not is_ascii:
+#         raise ReadError()
+#     # Read string tags
+#     num_string_tags = int(f.readline().decode())
+#     string_tags = [
+#         f.readline().decode().strip().replace('"', "")
+#         for _ in range(num_string_tags)
+#     ]
+#     # The real tags typically only contain one value, the time.
+#     # Discard it.
+#     num_real_tags = int(f.readline().decode())
+#     for _ in range(num_real_tags):
+#         f.readline()
+#     num_integer_tags = int(f.readline().decode())
+#     integer_tags = [int(f.readline().decode()) for _ in range(num_integer_tags)]
+#     num_components = integer_tags[1]
+#     num_items = integer_tags[2]
+#
+#     # Creating data
+#     data = np.fromfile(f, count=num_items * (1 + num_components), sep=" ").reshape(
+#         (num_items, 1 + num_components)
+#     )
+#     # The first number is the index
+#     data = data[:, 1:]
+#
+#     line = f.readline().decode()
+#     if line.strip() != f"End {tag}":
+#         raise ReadError()
+#
+#     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
+#     # If shape[1] == 1, cut it off.
+#     if data.shape[1] == 1:
+#         data = data[:, 0]
+#
+#     data_dict[string_tags[0]] = data
 
 
 def read_buffer(f):
@@ -304,15 +304,17 @@ def read_buffer(f):
     # pos = f.tell()
     # Read mesh
     while True:
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if not line:
             # EOF
             break
         environ = line.strip()
 
-        if "Begin Nodes" in environ:
+        if environ.startswith("Begin Nodes"):
             points = _read_nodes(f, is_ascii, data_size)
-        elif "Begin Elements" in environ or "Begin Conditions" in environ:
+        elif environ.startswith("Begin Elements") or environ.startswith(
+            "Begin Conditions"
+        ):
             _read_cells(f, cells, is_ascii, cell_tags, environ)
 
     # We finally prepare the cells
@@ -323,7 +325,7 @@ def read_buffer(f):
     # Read data
     # TODO: To implement
     # while False:
-    #     line = f.readline().decode("utf-8")
+    #     line = f.readline().decode()
     #     if not line:
     #         # EOF
     #         break
@@ -371,74 +373,45 @@ def _write_nodes(fh, points, float_fmt, binary=False):
 
     for k, x in enumerate(points):
         fmt = " {} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
-        fh.write(fmt.format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
+        fh.write(fmt.format(k + 1, x[0], x[1], x[2]).encode())
     fh.write(b"End Nodes\n\n")
 
 
 def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=2):
     if binary:
-        raise WriteError()
+        raise WriteError("Can only write ASCII")
     # write elements
     entity = "Elements"
-    dimension_name = str(dimension) + "D"
+    dimension_name = f"{dimension}D"
     wrong_dimension_name = "3D" if dimension == 2 else "2D"
     consecutive_index = 0
-    aux_cell_type = None
     for cell_type, node_idcs in cells:
         # NOTE: The names of the dummy conditions are not regular, require extra work
         # local_dimension = local_dimension_types[cell_type]
         # if (local_dimension < dimension):
         # entity = "Conditions"
-
-        if aux_cell_type is None:
-            aux_cell_type = cell_type
-            fh.write(
-                (
-                    "Begin "
-                    + entity
-                    + " "
-                    + _meshio_to_mdpa_type[cell_type].replace(
-                        wrong_dimension_name, dimension_name
-                    )
-                    + "\n"
-                ).encode("utf-8")
-            )
-        elif aux_cell_type != cell_type:
-            fh.write(("End " + entity + "\n\n").encode("utf-8"))
-            fh.write(
-                (
-                    "Begin "
-                    + entity
-                    + " "
-                    + _meshio_to_mdpa_type[cell_type].replace(
-                        wrong_dimension_name, dimension_name
-                    )
-                    + "\n"
-                ).encode("utf-8")
-            )
+        mdpa_cell_type = _meshio_to_mdpa_type[cell_type].replace(
+            wrong_dimension_name, dimension_name
+        )
+        fh.write(f"Begin {entity} {mdpa_cell_type}\n".encode())
 
         # TODO: Add proper tag recognition in the future
         fcd = np.empty((len(node_idcs), 0), dtype=np.int32)
-
-        form = "{} " + str(fcd.shape[1]) + " {} {}\n"
         for k, c in enumerate(node_idcs):
+            a1 = " ".join([str(val) for val in fcd[k]])
+            a2 = " ".join([str(cc) for cc in c + 1])
             fh.write(
-                form.format(
-                    " " + str(consecutive_index + k + 1),
-                    " ".join([str(val) for val in fcd[k]]),
-                    " ".join([str(cc) for cc in c + 1]),
-                ).encode("utf-8")
+                f" {consecutive_index + k + 1} {fcd.shape[1]} {a1} {a2}\n".encode()
             )
 
         consecutive_index += len(node_idcs)
-
-    fh.write(b"End Elements\n\n")
+        fh.write(f"End {entity}\n\n".encode())
 
 
 def _write_data(fh, tag, name, data, binary):
     if binary:
         raise WriteError()
-    fh.write(("Begin " + tag + " " + name + "\n\n").encode("utf-8"))
+    fh.write(f"Begin {tag} {name}\n\n".encode())
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
 
@@ -452,12 +425,12 @@ def _write_data(fh, tag, name, data, binary):
     # TODO unify
     if num_components == 1:
         for k, x in enumerate(data):
-            fh.write(fmt.format(k + 1, x).encode("utf-8"))
+            fh.write(fmt.format(k + 1, x).encode())
     else:
         for k, x in enumerate(data):
-            fh.write(fmt.format(k + 1, *x).encode("utf-8"))
+            fh.write(fmt.format(k + 1, *x).encode())
 
-    fh.write(("End " + tag + " " + name + "\n\n").encode("utf-8"))
+    fh.write(f"End {tag} {name}\n\n".encode())
 
 
 def write(filename, mesh, float_fmt=".16e", binary=False):

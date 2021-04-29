@@ -528,7 +528,7 @@ class XdmfWriter:
     #         data_item = ET.SubElement(info, "map", key=name, dim=str(data[1]))
     #         data_item.text = str(data[0])
     #     information.text = ET.CDATA(ET.tostring(info))
-    #     information.append(CDATA(ET.tostring(info).decode("utf-8")))
+    #     information.append(CDATA(ET.tostring(info).decode()))
 
 
 def write(*args, **kwargs):

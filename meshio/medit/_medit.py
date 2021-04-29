@@ -306,7 +306,7 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
 
         # vertices
         fh.write(b"\nVertices\n")
-        fh.write(f"{n}\n".encode("utf-8"))
+        fh.write(f"{n}\n".encode())
 
         # pick out point data
         labels_key, other = _pick_first_int_data(mesh.point_data)
@@ -319,7 +319,7 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
 
         fmt = " ".join(["{:" + float_fmt + "}"] * d) + " {:d}\n"
         for x, label in zip(mesh.points, labels):
-            fh.write(fmt.format(*x, label).encode("utf-8"))
+            fh.write(fmt.format(*x, label).encode())
 
         medit_from_meshio = {
             "line": ("Edges", 2),
@@ -349,8 +349,8 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
                 logging.warning(msg)
                 continue
             fh.write(b"\n")
-            fh.write(f"{medit_name}\n".encode("utf-8"))
-            fh.write(f"{len(data)}\n".encode("utf-8"))
+            fh.write(f"{medit_name}\n".encode())
+            fh.write(f"{len(data)}\n".encode())
 
             # pick out cell data
             labels = (
@@ -362,7 +362,7 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
             fmt = " ".join(["{:d}"] * (num + 1)) + "\n"
             # adapt 1-base
             for d, label in zip(data + 1, labels):
-                fh.write(fmt.format(*d, label).encode("utf-8"))
+                fh.write(fmt.format(*d, label).encode())
 
         fh.write(b"\nEnd\n")
 

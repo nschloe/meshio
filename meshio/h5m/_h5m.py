@@ -214,9 +214,9 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     tstt.create_dataset(
         "history",
         data=[
-            __name__.encode("utf-8"),
-            __about__.__version__.encode("utf-8"),
-            str(datetime.now()).encode("utf-8"),
+            __name__.encode(),
+            __about__.__version__.encode(),
+            str(datetime.now()).encode(),
         ],
         compression=compression,
         compression_opts=compression_opts,

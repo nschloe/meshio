@@ -252,11 +252,11 @@ def write(filename, mesh):
 
     with open_file(filename, "wb") as f:
         dim = mesh.points.shape[1]
-        f.write(f"NDIME= {dim}\n".encode("utf-8"))
+        f.write(f"NDIME= {dim}\n".encode())
 
         # Write points
         num_points = mesh.points.shape[0]
-        f.write(f"NPOIN= {num_points}\n".encode("utf-8"))
+        f.write(f"NPOIN= {num_points}\n".encode())
         np.savetxt(f, mesh.points)
 
         # Through warnings about unsupported types
@@ -278,7 +278,7 @@ def write(filename, mesh):
 
         cells = [c for c in mesh.cells if c.type in types]
         total_num_volume_cells = sum(len(c.data) for c in cells)
-        f.write(f"NELEM= {total_num_volume_cells}\n".encode("utf-8"))
+        f.write(f"NELEM= {total_num_volume_cells}\n".encode())
 
         for cell_block in cells:
             cell_type = meshio_to_su2_type[cell_block.type]
@@ -332,13 +332,13 @@ def write(filename, mesh):
                 else:
                     tags_per_cell_block[tag] += count
 
-        f.write(f"NMARK= {len(tags_per_cell_block)}\n".encode("utf-8"))
+        f.write(f"NMARK= {len(tags_per_cell_block)}\n".encode())
 
         # write the blocks you found in previous step
         for tag, count in tags_per_cell_block.items():
 
-            f.write(f"MARKER_TAG= {tag}\n".encode("utf-8"))
-            f.write(f"MARKER_ELEMS= {count}\n".encode("utf-8"))
+            f.write(f"MARKER_TAG= {tag}\n".encode())
+            f.write(f"MARKER_ELEMS= {count}\n".encode())
 
             for index, (cell_type, data) in enumerate(mesh.cells):
 
