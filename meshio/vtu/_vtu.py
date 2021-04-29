@@ -97,7 +97,7 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
                     start_cn[items + 1],
                     _vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
                 )
-                cells.append(CellBlock(meshio_type + str(sz), connectivity[indices]))
+                cells.append(CellBlock(meshio_type, connectivity[indices]))
 
                 # Store cell data for this set of cells
                 for name, d in cell_data_raw.items():
