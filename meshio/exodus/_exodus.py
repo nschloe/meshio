@@ -330,7 +330,7 @@ def write(filename, mesh):
             point_data_names.set_auto_mask(False)
             for k, name in enumerate(mesh.point_data.keys()):
                 for i, letter in enumerate(name):
-                    point_data_names[k, i] = letter.encode("utf-8")
+                    point_data_names[k, i] = letter.encode()
 
             # Set data. ParaView might have some problems here, see
             # <https://gitlab.kitware.com/paraview/paraview/-/issues/18403>.
@@ -358,7 +358,7 @@ def write(filename, mesh):
             for k, name in enumerate(mesh.point_sets.keys()):
                 data[k] = k
                 for i, letter in enumerate(name):
-                    data_names[k, i] = letter.encode("utf-8")
+                    data_names[k, i] = letter.encode()
             for k, (key, values) in enumerate(mesh.point_sets.items()):
                 dim1 = f"num_nod_ns{k + 1}"
                 rootgrp.createDimension(dim1, values.shape[0])

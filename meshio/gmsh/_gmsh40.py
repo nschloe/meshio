@@ -43,7 +43,7 @@ def read_buffer(f, is_ascii, data_size):
     physical_tags = None
     periodic = None
     while True:
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if not line:
             # EOF
             break
@@ -112,7 +112,7 @@ def _read_entities(f, is_ascii, data_size):
 def _read_nodes(f, is_ascii, data_size):
     if is_ascii:
         # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
 
         points = np.empty((total_num_nodes, 3), dtype=float)
@@ -122,11 +122,11 @@ def _read_nodes(f, is_ascii, data_size):
         for k in range(num_entity_blocks):
             # first line in the entity block:
             # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-            line = f.readline().decode("utf-8")
+            line = f.readline().decode()
             tag_entity, dim_entity, type_node, num_nodes = map(int, line.split())
             for i in range(num_nodes):
                 # tag(int) x(double) y(double) z(double)
-                line = f.readline().decode("utf-8")
+                line = f.readline().decode()
                 tag, x, y, z = line.split()
                 points[idx] = [float(x), float(y), float(z)]
                 tags[idx] = tag
@@ -149,7 +149,7 @@ def _read_nodes(f, is_ascii, data_size):
         tags = np.concatenate(tags)
         points = np.concatenate(points)
 
-        line = f.readline().decode("utf-8")
+        line = f.readline().decode()
         if line != "\n":
             raise ReadError()
 
@@ -219,11 +219,11 @@ def _read_periodic(f, is_ascii):
     for _ in range(num_periodic):
         edim, stag, mtag = fromfile(f, c_int, 3)
         if is_ascii:
-            line = f.readline().decode("utf-8").strip()
+            line = f.readline().decode().strip()
             if line.startswith("Affine"):
                 affine = line.replace("Affine", "", 1)
                 affine = np.fromstring(affine, float, sep=" ")
-                num_nodes = int(f.readline().decode("utf-8"))
+                num_nodes = int(f.readline().decode())
             else:
                 affine = None
                 num_nodes = int(line)
@@ -270,7 +270,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
-        fh.write(f"$MeshFormat\n4.0 {mode_idx} {size_of_double}\n".encode("utf-8"))
+        fh.write(f"$MeshFormat\n4.0 {mode_idx} {size_of_double}\n".encode())
         if binary:
             np.array([1], dtype=c_int).tofile(fh)
             fh.write(b"\n")
@@ -314,15 +314,15 @@ def _write_nodes(fh, points, float_fmt, binary):
     else:
         # write all points as one big block
         # numEntityBlocks(unsigned long) numNodes(unsigned long)
-        fh.write(f"{1} {len(points)}\n".encode("utf-8"))
+        fh.write(f"{1} {len(points)}\n".encode())
 
         # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
-        fh.write(f"{1} {dim_entity} {type_node} {len(points)}\n".encode("utf-8"))
+        fh.write(f"{1} {dim_entity} {type_node} {len(points)}\n".encode())
 
         fmt = "{} " + " ".join(3 * ["{:" + float_fmt + "}"]) + "\n"
         for k, x in enumerate(points):
             # tag(int) x(double) y(double) z(double)
-            fh.write(fmt.format(k + 1, x[0], x[1], x[2]).encode("utf-8"))
+            fh.write(fmt.format(k + 1, x[0], x[1], x[2]).encode())
 
     fh.write(b"$EndNodes\n")
 
@@ -365,7 +365,7 @@ def _write_elements(fh, cells, binary):
     else:
         # count all cells
         total_num_cells = sum([data.shape[0] for _, data in cells])
-        fh.write(f"{len(cells)} {total_num_cells}\n".encode("utf-8"))
+        fh.write(f"{len(cells)} {total_num_cells}\n".encode())
 
         consecutive_index = 0
         for cell_type, node_idcs in cells:
@@ -376,14 +376,14 @@ def _write_elements(fh, cells, binary):
                     _topological_dimension[cell_type],
                     _meshio_to_gmsh_type[cell_type],
                     node_idcs.shape[0],
-                ).encode("utf-8")
+                ).encode()
             )
             # increment indices by one to conform with gmsh standard
             idcs = node_idcs + 1
 
             fmt = " ".join(["{}"] * (num_nodes_per_cell[cell_type] + 1)) + "\n"
             for idx in idcs:
-                fh.write(fmt.format(consecutive_index, *idx).encode("utf-8"))
+                fh.write(fmt.format(consecutive_index, *idx).encode())
                 consecutive_index += 1
 
     fh.write(b"$EndElements\n")

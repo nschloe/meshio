@@ -23,12 +23,12 @@ def read(filename):
 def read_buffer(f):
     # The various versions of the format are specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#File-formats>.
-    line = f.readline().decode("utf-8").strip()
+    line = f.readline().decode().strip()
 
     # skip any $Comments/$EndComments sections
     while line == "$Comments":
         _fast_forward_to_end_block(f, "Comments")
-        line = f.readline().decode("utf-8").strip()
+        line = f.readline().decode().strip()
 
     if line != "$MeshFormat":
         raise ReadError()
@@ -63,7 +63,7 @@ def _read_header(f):
 
     # http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format
 
-    line = f.readline().decode("utf-8")
+    line = f.readline().decode()
     # Split the line
     # 4.1 0 8
     # into its components.

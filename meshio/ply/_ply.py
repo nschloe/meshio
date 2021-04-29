@@ -65,7 +65,7 @@ def read(filename):
 def _next_line(f):
     # fast forward to the next significant line
     while True:
-        line = f.readline().decode("utf-8").strip()
+        line = f.readline().decode().strip()
         if line and line[:7] != "comment":
             break
     return line
@@ -73,7 +73,7 @@ def _next_line(f):
 
 def read_buffer(f):
     # assert that the first line reads `ply`
-    line = f.readline().decode("utf-8").strip()
+    line = f.readline().decode().strip()
     if line != "ply":
         raise ReadError("Expected ply")
 
@@ -206,7 +206,7 @@ def _read_ascii(
     cell_blocks = []
 
     for k in range(num_cells):
-        line = f.readline().decode("utf-8").strip()
+        line = f.readline().decode().strip()
         data = line.split()
 
         if k == 0:
@@ -390,18 +390,18 @@ def write(filename, mesh, binary=True):  # noqa: C901
         fh.write(b"ply\n")
 
         if binary:
-            fh.write(f"format binary_{sys.byteorder}_endian 1.0\n".encode("utf-8"))
+            fh.write(f"format binary_{sys.byteorder}_endian 1.0\n".encode())
         else:
             fh.write(b"format ascii 1.0\n")
 
         fh.write(
             "comment Created by meshio v{}, {}\n".format(
                 __version__, datetime.datetime.now().isoformat()
-            ).encode("utf-8")
+            ).encode()
         )
 
         # counts
-        fh.write(f"element vertex {mesh.points.shape[0]:d}\n".encode("utf-8"))
+        fh.write(f"element vertex {mesh.points.shape[0]:d}\n".encode())
         #
         dim_names = ["x", "y", "z"]
         # From <https://en.wikipedia.org/wiki/PLY_(file_format)>:
@@ -424,7 +424,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
         }
         for k in range(mesh.points.shape[1]):
             type_name = type_name_table[mesh.points.dtype]
-            fh.write(f"property {type_name} {dim_names[k]}\n".encode("utf-8"))
+            fh.write(f"property {type_name} {dim_names[k]}\n".encode())
 
         pd = []
         for key, value in mesh.point_data.items():
@@ -436,7 +436,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 )
                 continue
             type_name = type_name_table[value.dtype]
-            fh.write(f"property {type_name} {key}\n".encode("utf-8"))
+            fh.write(f"property {type_name} {key}\n".encode())
             pd.append(value)
 
         num_cells = 0
@@ -446,7 +446,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 num_cells += c.data.shape[0]
 
         if num_cells > 0:
-            fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
+            fh.write(f"element face {num_cells:d}\n".encode())
 
             # possibly cast down to int32
             # TODO don't alter the mesh data
@@ -471,9 +471,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
             if cell_dtype is not None:
                 ply_type = numpy_to_ply_dtype[cell_dtype]
-                fh.write(
-                    f"property list uint8 {ply_type} vertex_indices\n".encode("utf-8")
-                )
+                fh.write(f"property list uint8 {ply_type} vertex_indices\n".encode())
 
         # TODO other cell data
         fh.write(b"end_header\n")
@@ -505,7 +503,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
             out = np.rec.fromarrays([coord for coord in mesh.points.T] + pd)
             fmt = " ".join(["{}"] * len(out[0]))
             out = "\n".join([fmt.format(*row) for row in out]) + "\n"
-            fh.write(out.encode("utf-8"))
+            fh.write(out.encode())
 
             # cells
             for cell_type, data in mesh.cells:
@@ -518,7 +516,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 # np.savetxt(fh, out, "%d  %d %d %d")
                 fmt = " ".join(["{}"] * out.shape[1])
                 out = "\n".join([fmt.format(*row) for row in out]) + "\n"
-                fh.write(out.encode("utf-8"))
+                fh.write(out.encode())
 
 
 register("ply", [".ply"], read, {"ply": write})

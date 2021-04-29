@@ -17,13 +17,13 @@ from .._mesh import Mesh
 def _skip_to(f, char):
     c = None
     while c != char:
-        c = f.read(1).decode("utf-8")
+        c = f.read(1).decode()
     return
 
 
 def _skip_close(f, num_open_brackets):
     while num_open_brackets > 0:
-        char = f.read(1).decode("utf-8")
+        char = f.read(1).decode()
         if char == "(":
             num_open_brackets += 1
         elif char == ")":
@@ -60,7 +60,7 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
     # be the current line already).
     last_char = line.strip()[-1]
     while last_char != "(":
-        last_char = f.read(1).decode("utf-8")
+        last_char = f.read(1).decode()
 
     if out.group(1) == "":
         # ASCII data
@@ -69,7 +69,7 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
             # skip ahead to the first line with data
             line = ""
             while line.strip() == "":
-                line = f.readline().decode("utf-8")
+                line = f.readline().decode()
             dat = line.split()
             if len(dat) != dim:
                 raise ReadError()
@@ -128,7 +128,7 @@ def _read_cells(f, line):
     if line.strip()[-1] != "(":
         c = None
         while True:
-            c = f.read(1).decode("utf-8")
+            c = f.read(1).decode()
             if c == "(":
                 break
             if not re.match("\\s", c):
@@ -153,7 +153,7 @@ def _read_cells(f, line):
             # ASCII cells
             data = np.empty((num_cells, num_nodes_per_cell), dtype=int)
             for k in range(num_cells):
-                line = f.readline().decode("utf-8")
+                line = f.readline().decode()
                 dat = line.split()
                 if len(dat) != num_nodes_per_cell:
                     raise ReadError()
@@ -224,7 +224,7 @@ def _read_faces(f, line):
             for k in range(num_cells):
                 line = ""
                 while line.strip() == "":
-                    line = f.readline().decode("utf-8")
+                    line = f.readline().decode()
                 dat = line.split()
                 type_index = int(dat[0], 16)
                 if type_index == 0:
@@ -248,7 +248,7 @@ def _read_faces(f, line):
             # read cell data
             data = np.empty((num_cells, num_nodes_per_cell), dtype=int)
             for k in range(num_cells):
-                line = f.readline().decode("utf-8")
+                line = f.readline().decode()
                 dat = line.split()
                 # The body of a regular face section contains the grid connectivity, and
                 # each line appears as follows:
@@ -305,7 +305,7 @@ def read(filename):  # noqa: C901
     # read file in binary mode since some data might be binary
     with open_file(filename, "rb") as f:
         while True:
-            line = f.readline().decode("utf-8")
+            line = f.readline().decode()
             if not line:
                 break
 

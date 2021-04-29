@@ -246,12 +246,12 @@ def _read_group(buf_or_line, binary, line=None):
         # Group name
         (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
         (name,) = struct.unpack(f"<{num_chars}s", buf_or_line.read(num_chars))
-        name = name.decode("utf-8")
+        name = name.decode()
 
         # Slot name
         (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
         (slot,) = struct.unpack(f"<{num_chars}s", buf_or_line.read(num_chars))
-        slot = slot.decode("utf-8")
+        slot = slot.decode()
 
         # Zones
         (num_zones,) = struct.unpack("<I", buf_or_line.read(4))
@@ -408,7 +408,7 @@ def _write_groups(f, cells, cell_data, field_data, flag, binary):
                 fmt = f"<H{num_chars}sH7sI{num_zones}I"
                 tmp = [
                     num_chars,
-                    labels[k].encode("utf-8"),
+                    labels[k].encode(),
                     7,
                     slot,
                     num_zones,
