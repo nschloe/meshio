@@ -43,25 +43,17 @@ ply_to_numpy_dtype = {
 numpy_to_ply_dtype = {np.dtype(v): k for k, v in ply_to_numpy_dtype.items()}
 
 
-_cell_type_to_count = {"vertex": 1, "line": 2, "triangle": 3, "quad": 4}
-
-
-def cell_type_to_count(cell_type):
-    if cell_type in _cell_type_to_count:
-        return _cell_type_to_count[cell_type]
-
-    match = re.fullmatch(r"polygon(\d+)", cell_type)
-    if match:
-        return int(match.group(1))
-
-
-_cell_type_from_count = {val: key for (key, val) in _cell_type_to_count.items()}
-
-
 def cell_type_from_count(count):
-    """Reverse of ``cell_type_to_count``, defaults to ``"polygon" + str(counr)``
-    if unknown."""
-    return _cell_type_from_count.get(count) or "polygon" + str(count)
+    if count == 1:
+        return "vertex"
+    elif count == 2:
+        return "line"
+    elif count == 3:
+        return "triangle"
+    elif count == 4:
+        return "quad"
+
+    return "polygon"
 
 
 def read(filename):
@@ -145,7 +137,6 @@ def read_buffer(f):
                 f"got `{line}`"
             )
 
-    # read header
     if is_binary:
         mesh = _read_binary(
             f,
@@ -210,7 +201,7 @@ def _read_ascii(
     }
     cell_data = {}
 
-    # the faces must be read line-by-line
+    # polygons must be read line-by-line
     polygons = collections.defaultdict(list)
     for k in range(num_cells):
         line = f.readline().decode("utf-8").strip()
@@ -445,9 +436,11 @@ def write(filename, mesh, binary=True):  # noqa: C901
             pd.append(value)
 
         num_cells = 0
+        legal_cell_types = ["vertex", "line", "triangle", "quad", "polygon"]
         for cell_type, c in mesh.cells:
-            if cell_type_to_count(cell_type):
+            if cell_type in legal_cell_types:
                 num_cells += c.data.shape[0]
+
         if num_cells > 0:
             fh.write(f"element face {num_cells:d}\n".encode("utf-8"))
 
@@ -474,9 +467,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
             if cell_dtype is not None:
                 ply_type = numpy_to_ply_dtype[cell_dtype]
                 fh.write(
-                    "property list {} {} vertex_indices\n".format(
-                        "uint8", ply_type
-                    ).encode("utf-8")
+                    f"property list uint8 {ply_type} vertex_indices\n".encode("utf-8")
                 )
 
         # TODO other cell data
@@ -489,7 +480,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
             # cells
             for cell_type, data in mesh.cells:
-                if cell_type_to_count(cell_type) is None:
+                if cell_type not in legal_cell_types:
                     warnings.warn(
                         'cell_type "{}" is not supported by ply format - skipping'
                     )

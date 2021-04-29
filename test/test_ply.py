@@ -17,6 +17,7 @@ import meshio
         helpers.add_point_data(helpers.tri_mesh, 1, dtype=int),
         helpers.add_point_data(helpers.tri_mesh, 1, dtype=float),
         helpers.line_mesh,
+        helpers.polygon_mesh,
         # helpers.add_cell_data(helpers.tri_mesh, [("a", (), np.float64)]),
         # helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), np.float64)]),
         # helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), np.float64)]),
