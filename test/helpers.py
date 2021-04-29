@@ -238,6 +238,25 @@ polygon_mesh = meshio.Mesh(
     ],
 )
 
+# Make sure that the polygon cell blocking works.
+# This mesh is identical with tri_quad_mesh.
+polygon2_mesh = meshio.Mesh(
+    [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+        [3.0, 1.0, 0.0],
+        [2.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+    ],
+    [
+        ("polygon", [[0, 1, 5], [0, 5, 6]]),
+        ("polygon", [[1, 2, 4, 5]]),
+        ("polygon", [[2, 3, 4]]),
+    ],
+)
+
 polyhedron_mesh = meshio.Mesh(
     [  # Two layers of a unit square
         [0.0, 0.0, 0.0],
@@ -403,7 +422,7 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     ):
         assert cells0.type == cells1.type, f"{cells0.type} != {cells1.type}"
 
-        if cells0.type[:10] == "polyhedron":
+        if cells0.type.startswith("polyhedron"):
             # Special treatment of polyhedron cells
             # Data is a list (one item per cell) of numpy arrays
             for c_in, c_out in zip(cells0.data, cells1.data):
