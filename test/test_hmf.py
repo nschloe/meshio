@@ -33,6 +33,9 @@ def test_xdmf3(mesh, compression):
 
 
 def test_generic_io():
-    helpers.generic_io("test.hmf")
-    # With additional, insignificant suffix:
-    helpers.generic_io("test.0.hmf")
+    with pytest.warns(UserWarning):
+        helpers.generic_io("test.hmf")
+
+    with pytest.warns(UserWarning):
+        # With additional, insignificant suffix:
+        helpers.generic_io("test.0.hmf")
