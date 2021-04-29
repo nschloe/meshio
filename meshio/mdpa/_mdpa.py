@@ -243,42 +243,42 @@ def _prepare_cells(cells, cell_tags):
     return has_additional_tag_data
 
 
-def _read_data(f, tag, data_dict, data_size, is_ascii, environ=None):
-    if not is_ascii:
-        raise ReadError()
-    # Read string tags
-    num_string_tags = int(f.readline().decode("utf-8"))
-    string_tags = [
-        f.readline().decode("utf-8").strip().replace('"', "")
-        for _ in range(num_string_tags)
-    ]
-    # The real tags typically only contain one value, the time.
-    # Discard it.
-    num_real_tags = int(f.readline().decode("utf-8"))
-    for _ in range(num_real_tags):
-        f.readline()
-    num_integer_tags = int(f.readline().decode("utf-8"))
-    integer_tags = [int(f.readline().decode("utf-8")) for _ in range(num_integer_tags)]
-    num_components = integer_tags[1]
-    num_items = integer_tags[2]
-
-    # Creating data
-    data = np.fromfile(f, count=num_items * (1 + num_components), sep=" ").reshape(
-        (num_items, 1 + num_components)
-    )
-    # The first number is the index
-    data = data[:, 1:]
-
-    line = f.readline().decode("utf-8")
-    if line.strip() != f"End {tag}":
-        raise ReadError()
-
-    # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
-    # If shape[1] == 1, cut it off.
-    if data.shape[1] == 1:
-        data = data[:, 0]
-
-    data_dict[string_tags[0]] = data
+# def _read_data(f, tag, data_dict, is_ascii):
+#     if not is_ascii:
+#         raise ReadError()
+#     # Read string tags
+#     num_string_tags = int(f.readline().decode("utf-8"))
+#     string_tags = [
+#         f.readline().decode("utf-8").strip().replace('"', "")
+#         for _ in range(num_string_tags)
+#     ]
+#     # The real tags typically only contain one value, the time.
+#     # Discard it.
+#     num_real_tags = int(f.readline().decode("utf-8"))
+#     for _ in range(num_real_tags):
+#         f.readline()
+#     num_integer_tags = int(f.readline().decode("utf-8"))
+#     integer_tags = [int(f.readline().decode("utf-8")) for _ in range(num_integer_tags)]
+#     num_components = integer_tags[1]
+#     num_items = integer_tags[2]
+#
+#     # Creating data
+#     data = np.fromfile(f, count=num_items * (1 + num_components), sep=" ").reshape(
+#         (num_items, 1 + num_components)
+#     )
+#     # The first number is the index
+#     data = data[:, 1:]
+#
+#     line = f.readline().decode("utf-8")
+#     if line.strip() != f"End {tag}":
+#         raise ReadError()
+#
+#     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
+#     # If shape[1] == 1, cut it off.
+#     if data.shape[1] == 1:
+#         data = data[:, 0]
+#
+#     data_dict[string_tags[0]] = data
 
 
 def read_buffer(f):
@@ -379,7 +379,7 @@ def _write_nodes(fh, points, float_fmt, binary=False):
 
 def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=2):
     if binary:
-        raise WriteError()
+        raise WriteError("Can only write ASCII")
     # write elements
     entity = "Elements"
     dimension_name = f"{dimension}D"
@@ -397,15 +397,11 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
 
         # TODO: Add proper tag recognition in the future
         fcd = np.empty((len(node_idcs), 0), dtype=np.int32)
-
-        format_string = "{} " + str(fcd.shape[1]) + " {} {}\n"
         for k, c in enumerate(node_idcs):
+            a1 = " ".join([str(val) for val in fcd[k]])
+            a2 = " ".join([str(cc) for cc in c + 1])
             fh.write(
-                format_string.format(
-                    " " + str(consecutive_index + k + 1),
-                    " ".join([str(val) for val in fcd[k]]),
-                    " ".join([str(cc) for cc in c + 1]),
-                ).encode("utf-8")
+                f" {consecutive_index + k + 1} {fcd.shape[1]} {a1} {a2}\n".encode()
             )
 
         consecutive_index += len(node_idcs)
@@ -415,7 +411,7 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
 def _write_data(fh, tag, name, data, binary):
     if binary:
         raise WriteError()
-    fh.write(("Begin " + tag + " " + name + "\n\n").encode("utf-8"))
+    fh.write(f"Begin {tag} {name}\n\n".encode("utf-8"))
     # number of components
     num_components = data.shape[1] if len(data.shape) > 1 else 1
 
@@ -434,7 +430,7 @@ def _write_data(fh, tag, name, data, binary):
         for k, x in enumerate(data):
             fh.write(fmt.format(k + 1, *x).encode("utf-8"))
 
-    fh.write(("End " + tag + " " + name + "\n\n").encode("utf-8"))
+    fh.write(f"End {tag} {name}\n\n".encode("utf-8"))
 
 
 def write(filename, mesh, float_fmt=".16e", binary=False):
