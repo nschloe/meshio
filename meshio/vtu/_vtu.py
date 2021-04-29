@@ -381,10 +381,9 @@ class VtuReader:
             raise ReadError()
 
         if "version" in root.attrib:
-            if root.attrib["version"] not in ["0.1", "1.0"]:
-                raise ReadError(
-                    "Unknown VTU file version '{}'.".format(root.attrib["version"])
-                )
+            version = root.attrib["version"]
+            if version not in ["0.1", "1.0"]:
+                raise ReadError(f"Unknown VTU file version '{version}'.")
 
         # fix empty NumberOfComponents attributes as produced by Firedrake
         for da_tag in root.findall(".//DataArray[@NumberOfComponents='']"):
