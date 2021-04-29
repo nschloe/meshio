@@ -586,12 +586,17 @@ def translate_cells(data, types, cell_data_raw):
             cell = data[cell_idx]
 
             cell_type = vtk_to_meshio_type[vtk_cell_type]
-            if cell_type == "polygon":
-                cell_type += str(data[offsets[idx]])
 
-            if len(cells) > 0 and cells[-1].type == cell_type:
+            if (
+                len(cells) > 0
+                and cells[-1].type == cell_type
+                # the following check if needed for polygons; key can be equal, but
+                # still needs to go into a new block
+                and len(cell) == len(cells[-1].data[-1])
+            ):
                 cells[-1].data.append(cell)
             else:
+                # open up a new cell block
                 cells.append(CellBlock(cell_type, [cell]))
 
         # convert data to numpy arrays
@@ -752,15 +757,14 @@ def _write_cells(f, cells, binary):
     f.write(f"CELL_TYPES {total_num_cells}\n".encode("utf-8"))
     if binary:
         for c in cells:
-            key_ = c.type[:7] if c.type[:7] == "polygon" else c.type
-            vtk_type = meshio_to_vtk_type[key_]
+            vtk_type = meshio_to_vtk_type[c.type]
             np.full(len(c.data), vtk_type, dtype=np.dtype(">i4")).tofile(f, sep="")
         f.write(b"\n")
     else:
         # ascii
         for c in cells:
-            key_ = c.type[:7] if c.type[:7] == "polygon" else c.type
-            np.full(len(c.data), meshio_to_vtk_type[key_]).tofile(f, sep="\n")
+            vtk_type = meshio_to_vtk_type[c.type]
+            np.full(len(c.data), vtk_type).tofile(f, sep="\n")
             f.write(b"\n")
 
 

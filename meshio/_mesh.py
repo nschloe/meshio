@@ -84,8 +84,11 @@ class Mesh:
         lines = ["<meshio mesh object>", f"  Number of points: {len(self.points)}"]
         if len(self.cells) > 0:
             lines.append("  Number of cells:")
-            for tpe, elems in self.cells:
-                lines.append(f"    {tpe}: {len(elems)}")
+            for cell_type, elems in self.cells:
+                string = cell_type
+                if cell_type == "polygon":
+                    string += f"({elems.shape[1]})"
+                lines.append(f"    {string}: {len(elems)}")
         else:
             lines.append("  No cells.")
 
