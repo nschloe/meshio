@@ -4,6 +4,13 @@ This document only describes _breaking_ changes in meshio. If you are interested
 fixes, enhancements etc., best follow [the meshio project on
 GitHub](https://github.com/nschloe/meshio).
 
+## v4.4.0 (Apr 29, 2021)
+
+- Polygons are now stored as `"polygon"` cell blocks, not `"polygonN"` (where `N` is the
+  number of nodes per polygon). One can simply retrieve the number of points via
+  `cellblock.data.shape[1]`.
+
+
 ## v4.0.0 (Feb 18, 2020)
 
 - `mesh.cells` used to be a dictionary of the form
