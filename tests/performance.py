@@ -6,8 +6,8 @@ import tracemalloc
 
 import dufte
 import matplotlib.pyplot as plt
-import numpy as np
 import meshzoo
+import numpy as np
 
 import meshio
 
