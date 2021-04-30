@@ -199,7 +199,7 @@ conda install -c conda-forge meshio
 
 To run the meshio unit tests, check out this repository and type
 ```
-pytest
+tox
 ```
 
 ### License
