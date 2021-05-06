@@ -127,21 +127,7 @@ def write(filename, mesh: Mesh, file_format: Optional[str] = None, **kwargs):
 
     # check cells for sanity
     for key, value in mesh.cells:
-        if key[:7] == "polygon":
-            try:
-                n = int(key[7:])
-            except ValueError:
-                msg = (
-                    f'Key "{key}" malformed. '
-                    'Should be "polygonN", where N is the number of points per polygon.'
-                )
-                raise ValueError(msg)
-            if value.shape[1] != n:
-                raise WriteError(
-                    f"Polygon data array (shape {value.shape}) "
-                    f'doesn\'t match the key "{key}"'
-                )
-        elif key in num_nodes_per_cell:
+        if key in num_nodes_per_cell:
             if value.shape[1] != num_nodes_per_cell[key]:
                 raise WriteError(
                     f"Unexpected cells array shape {value.shape} for {key} cells."
