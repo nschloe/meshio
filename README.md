@@ -70,7 +70,7 @@ meshio-ascii      input.msh              # convert to ASCII format
 with any of the supported formats.
 
 In Python, simply do
-<!--exdown-skip-->
+<!--pytest-codeblocks:skip-->
 ```python
 import meshio
 
@@ -123,7 +123,7 @@ For both input and output, you can optionally specify the exact `file_format`
 
 The [XDMF format](https://www.xdmf.org/index.php/XDMF_Model_and_Format) supports time
 series with a shared mesh. You can write times series data using meshio with
-<!--exdown-skip-->
+<!--pytest-codeblocks:skip-->
 ```python
 with meshio.xdmf.TimeSeriesWriter(filename) as writer:
     writer.write_points_cells(points, cells)
@@ -131,7 +131,7 @@ with meshio.xdmf.TimeSeriesWriter(filename) as writer:
         writer.write_data(t, point_data={"phi": data})
 ```
 and read it with
-<!--exdown-skip-->
+<!--pytest-codeblocks:skip-->
 ```python
 with meshio.xdmf.TimeSeriesReader(filename) as reader:
     points, cells = reader.read_points_cells()
