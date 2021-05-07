@@ -160,12 +160,15 @@ def read_buffer(f):
             cell_ref = chunks[2].strip()
             cell_ref = int(cell_ref) if len(cell_ref) > 0 else None
 
-            if keyword == "CBAR":
-                # A CBAR line can be
+            if keyword in ["CBAR", "CBEAM", "CBUSH", "CBUSH1D", "CGAP"]:
+                # Most Nastran 1D elements contain a third node (in the form of a node id or coordinates) to specify the local coordinate system:
+                # https://docs.plm.automation.siemens.com/data_services/resources/nxnastran/10/help/en_US/tdocExt/pdf/QRG.pdf
+                # For example, a CBAR line can be
                 # ```
                 # CBAR          37               3       11.0     0.0     0.0
                 # ```
-                # No idea what the last three floats are. Just remove them.
+                # where the last three floats specify the orientation vector.
+                # This information is removed.
                 cell = chunks[3:5]
             else:
                 cell = chunks[3:]
