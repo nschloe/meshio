@@ -1,3 +1,4 @@
+import io
 import pathlib
 
 import helpers
@@ -46,3 +47,18 @@ def test_reference_file(filename):
         "tetra": 5309,
     }
     assert {k: v.sum() for k, v in mesh.cells} == ref_num_cells
+
+
+def test_long_format():
+    filename = io.StringIO(
+        "BEGIN BULK\n"
+        "GRID*    43                             1.50000000000000 0.0\n"
+        "*        0.\n"
+        "ENDDATA\n"
+    )
+
+    mesh = meshio.read(filename, "nastran")
+
+    # points
+    assert len(mesh.points) == 1
+    assert np.isclose(mesh.points.sum(), 1.5)
