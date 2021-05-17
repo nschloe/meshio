@@ -87,6 +87,7 @@ abaqus_to_meshio_type = {
     #
     # "PYRAMID": "pyramid",
     "C3D6": "wedge",
+    "C3D15": "wedge15",
     #
     # 4-node bilinear displacement and pore pressure
     "CAX4P": "quad",
