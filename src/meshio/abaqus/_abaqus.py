@@ -10,6 +10,7 @@ from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
+from .._common import num_nodes_per_cell
 
 abaqus_to_meshio_type = {
     # trusses
@@ -249,24 +250,28 @@ def _read_cells(f, params_map, point_ids):
         raise ReadError(f"Element type not available: {etype}")
 
     cell_type = abaqus_to_meshio_type[etype]
+    # ElementID + NodesIDs
+    num_data = num_nodes_per_cell[cell_type] + 1
 
     cells, idx = [], []
     cell_ids = {}
-    counter = 0
     while True:
         line = f.readline()
         if not line or line.startswith("*"):
             break
-        if line.strip() == "":
-            continue
-
         line = line.strip()
+        if line == "":
+            continue
         idx += [int(k) for k in filter(None, line.split(","))]
-        if not line.endswith(","):
-            cell_ids[idx[0]] = counter
-            cells.append([point_ids[k] for k in idx[1:]])
-            idx = []
-            counter += 1
+
+    # Check for expected number of data
+    if len(idx) % num_data != 0:
+        raise ReadError("Expected number of data items does not match element type")
+
+    for counter in range(len(idx) // num_data):
+        start = counter * num_data
+        cell_ids[idx[start]] = counter
+        cells.append([point_ids[k] for k in idx[start + 1:start + num_data]])
 
     cell_sets = (
         {params_map["ELSET"]: np.arange(counter, dtype="int32")}
