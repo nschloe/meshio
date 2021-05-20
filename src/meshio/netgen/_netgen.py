@@ -109,15 +109,19 @@ def _read_cells( f, cells, dim ):
 def _write_cells( f, block ):
     pmap = meshio_to_netgen_pmap[block.type]
     dim = _topological_dimension[block.type]
+    post_data = []
+    if dim==1:
+        pre_data = [1, 0]
+        post_data = [-1, -1, 0, 0, 1, 0, 1, 0]
     if dim==2:
-        pre_data = [1,1,0,0]
+        pre_data = [1,1,0,0, len(pmap)]
     if dim==3:
-        pre_data = [1]
+        pre_data = [1, len(pmap)]
 
     for i in range(len(block)):
         pi = block.data[i]
         pi = [pi[pmap[k]]+1 for k in range(len(pi))]
-        print(*pre_data,len(pi), *pi, file=f)
+        print(*pre_data, *pi, *post_data, file=f)
 
 def _skip_block(f):
     n = int(f.readline())
@@ -215,6 +219,9 @@ geomtype
     print("# surfid  0   p1   p2   trignum1    trignum2   domin/surfnr1    domout/surfnr2   ednr1   dist1   ednr2   dist2", file=f)
     print("edgesegmentsgi2", file=f)
     print(cells_per_dim[1], file=f)
+    for block in mesh.cells:
+        if _topological_dimension[block.type] == 1:
+            _write_cells(f, block)
 
     print("#          X             Y             Z", file=f)
     print("points", file=f)
