@@ -6,10 +6,18 @@ import logging
 import os
 import numpy as np
 
-from collections import OrderedDict
+from collections import OrderedDict as odict
 
 from .._files import open_file
 from .._helpers import register
+
+
+def _foam_props(name: str, props: dict):
+    s = f"{name}\n{{"
+    for key, prop in props.items():
+        s += f"\t{key}\t\t{str(prop)};\n"
+    s += "}\n"
+    return s
 
 
 def _foam_header(class_name: str, object_name: str):
@@ -21,8 +29,6 @@ def _foam_header(class_name: str, object_name: str):
     \\\\  /    A nd           | Version:  8
      \\\\/     M anipulation  |
 \\*---------------------------------------------------------------------------*/
-FoamFile
-{
 """
     props = {
         "version": "2.0",
@@ -31,10 +37,8 @@ FoamFile
         "location": '"constant/polyMesh"',
         "object": object_name,
     }
-    for key, prop in props.items():
-        s += f"\t{key}\t\t{prop};\n"
+    s += _foam_props("FoamFile", props)
     s += """
-}
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 """
@@ -47,6 +51,11 @@ def _foam_footer():
 """
 
 
+# Return a unique id to represent a set of points (ignore order)
+def _face_id(points):
+    return tuple(sorted(points))
+
+
 def write(filename, mesh, binary=False):
     poly_mesh_dir = filename
     try:
@@ -55,8 +64,7 @@ def write(filename, mesh, binary=False):
         logging.warning("Directory already exists. Aborting to be safe.")
         return None
 
-    # Points
-    # with open_file(os.path.join(poly_mesh_dir, 'points')) as f:
+    # Write points file
     with open(os.path.join(poly_mesh_dir, "points"), "w") as f:
         f.write(_foam_header("vectorField", "points"))
         f.write(f"{len(mesh.points)}\n(\n")
@@ -66,15 +74,13 @@ def write(filename, mesh, binary=False):
         f.write(_foam_footer())
 
     # Faces
-
-    # Faces dictionary:
     #  - key is an ordered list of vertices forming face (the 'face_id')
     #    The order of vertices is arbitrary here, so that faces sharing the
     #    same points have the same id.
-    #  - Value is a list: [[ordered points], owner index, neighbour index]
+    #  - Value is a list: [[ordered points], owner index, neighbour index, patch_name]
     #    Ordered points face outwards for owner
     #    Neighbour can be None
-    faces = OrderedDict()
+    faces = odict()
     # Iterate over cell groups, counting cell index i
     i = 0
     for cell_type, cells in mesh.cells:
@@ -95,38 +101,53 @@ def write(filename, mesh, binary=False):
             # Iterate over faces in cell
             for face_order in cell_order:
                 face_ps = [cell[j] for j in face_order]
-                face_id = tuple(set(face_ps))
+                face_id = _face_id(face_ps)
                 face = faces.get(face_id, None)
                 if face is not None:
                     # Face already registered; we are the neighbour
                     face[2] = i
                 else:
                     # Face does not exist; we are the owner
-                    faces[face_id] = [face_ps, i, None]
+                    faces[face_id] = [face_ps, i, None, None]
             i += 1
+
+    # Physical names
+    patch_names = []
+    for patch_name, tags in mesh.cell_sets.items():
+        patch_names.append(patch_name)
+        for idx, elem_tags in enumerate(tags):
+            if elem_tags is None:
+                continue
+            for tag in elem_tags:
+                elem_points = mesh.cells[idx][1][tag]
+                face_id = _face_id(elem_points)
+                face = faces.get(face_id, None)
+                if face is not None:
+                    face[3] = patch_name
+                else:
+                    logging.warning(f"Physical tag not found for: {patch_name}")
 
     # Reorder faces
     # Faces seem to need to be in the following order:
     #  - Internal faces
     #  - Boundary faces (grouped by physical labels)
-    # TODO Physical labels
-
-    faces_old = faces.copy()
-    faces = OrderedDict()
-    for key, value in faces_old.items():
+    internal_faces = odict()
+    named_patches = [odict() for i in range(len(patch_names))]
+    unnamed_boundary_faces = odict()
+    for key, value in faces.items():
         if value[2] is not None:
-            faces[key] = value
-    num_internal = len(faces)
-    for key, value in faces_old.items():
-        if value[2] is None:
-            faces[key] = value
-
-    # Temporary check of face ordering
-    fs = list(faces.values())
-    for i in range(1, len(faces)):
-        if fs[i - 1][2] is None and fs[i][2] is not None:
-            print("WARNING: Faces are incorrectly ordered.")
-            break
+            internal_faces[key] = value
+        else:
+            if value[3] is None:
+                unnamed_boundary_faces[key] = value
+            else:
+                named_patches[patch_names.index(value[3])][key] = value
+    num_internal = len(internal_faces)
+    faces = odict()
+    faces.update(internal_faces)
+    faces.update(unnamed_boundary_faces)
+    for patch in named_patches:
+        faces.update(patch)
 
     # Write faces file
     with open(os.path.join(poly_mesh_dir, "faces"), "w") as f:
@@ -158,22 +179,21 @@ def write(filename, mesh, binary=False):
         f.write(_foam_footer())
 
     # Write boundary file
-    # TODO Divide and name based on physical groups
     with open(os.path.join(poly_mesh_dir, "boundary"), "w") as f:
         f.write(_foam_header("polyBoundaryMesh", "boundary"))
-        f.write(
-            f"""1
-(
-    defaultPatch
-    {{
-        type            patch;
-        physicalType    patch;
-        nFaces          {len(faces)-num_internal};
-        startFace       {num_internal};
-    }}
-)
-"""
-        )
+        f.write(f"{len(patch_names) + 1}\n(\n")
+        patch_dict = {
+            "type": "patch",
+            "physicalType": "patch",
+            "startFace": num_internal,
+            "nFaces": len(unnamed_boundary_faces),
+        }
+        f.write(_foam_props("defaultPatch", patch_dict))
+        patch_dict["startFace"] += len(unnamed_boundary_faces)
+        for i, patch_name in enumerate(patch_names):
+            patch_dict["nFaces"] = len(named_patches[i])
+            f.write(_foam_props(patch_name, patch_dict))
+            patch_dict["startFace"] += len(named_patches[i])
         f.write(_foam_footer())
 
 
