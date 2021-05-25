@@ -96,7 +96,7 @@ for t, pmap in netgen_to_meshio_pmap.items():
 
 
 def read(filename):
-    if filename.endswith(".vol.gz"):
+    if str(filename).endswith(".vol.gz"):
         import gzip
 
         with gzip.open(filename, "rt") as f:
@@ -131,7 +131,7 @@ def _read_cells(f, cells, dim):
 
 
 def _write_cells(f, block):
-    pmap = meshio_to_netgen_pmap[block.type]
+    pmap = np.array(meshio_to_netgen_pmap[block.type])
     dim = _topological_dimension[block.type]
     post_data = []
     if dim == 1:
@@ -143,8 +143,8 @@ def _write_cells(f, block):
         pre_data = [1, len(pmap)]
 
     for i in range(len(block)):
-        pi = block.data[i]
-        pi = [pi[pmap[k]] + 1 for k in range(len(pi))]
+        pi = block.data[i] + 1
+        pi = pi[pmap]
         print(*pre_data, *pi, *post_data, file=f)
 
 
@@ -207,7 +207,7 @@ def read_buffer(f):
 def write(filename, mesh):
     point_format = "fixed-large"
     cell_format = "fixed-small"
-    if filename.endswith(".vol.gz"):
+    if str(filename).endswith(".vol.gz"):
         import gzip
 
         with gzip.open(filename, "wt") as f:
