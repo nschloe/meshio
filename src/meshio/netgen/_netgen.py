@@ -19,9 +19,12 @@ def _fast_forward_over_blank_lines(f):
             break
         elif len(line.strip()) > 0:
             break
-    return line, is_eof
+    return line.strip(), is_eof
 
 
+netgen0d_to_meshio_type = {
+    1: "vertex",
+}
 netgen1d_to_meshio_type = {
     2: "line",
 }
@@ -44,12 +47,14 @@ netgen3d_to_meshio_type = {
 }
 
 netgen_to_meshio_type = {
+    0: netgen0d_to_meshio_type,
     1: netgen1d_to_meshio_type,
     2: netgen2d_to_meshio_type,
     3: netgen3d_to_meshio_type,
 }
 
 netgen_to_meshio_pmap = {
+    "vertex": [0],
     "line": [0, 1],
     "triangle": list(range(3)),
     "triangle6": [0, 1, 2, 5, 3, 4],
@@ -106,23 +111,36 @@ def read(filename):
         return read_buffer(f)
 
 
-def _read_cells(f, cells, dim):
+def _read_cells(f, netgen_cell_type, cells):
+    if netgen_cell_type == "pointelements":
+        dim = 0
+        nump = 1
+        pi0 = 0
+    if netgen_cell_type.startswith("edgesegments"):
+        dim = 1
+        nump = 2
+        pi0 = 1
+    if netgen_cell_type == "surfaceelements":
+        dim = 2
+    if netgen_cell_type == "volumeelements":
+        dim = 3
+
     ncells = int(f.readline())
     tmap = netgen_to_meshio_type[dim]
 
     for i in range(ncells):
-        data = list(map(int, f.readline().strip().split(" ")))
-        if dim == 1:
-            np = 2
-            pi = data[1:3]
-        elif dim == 2:
-            np = data[4]
-            pi = data[5 : 5 + np]
+        line, is_eof = _fast_forward_over_blank_lines(f)
+        data = list(filter(None, line.split(" ")))
+        if dim == 2:
+            nump = int(data[4])
+            pi0 = 5
         elif dim == 3:
-            np = data[1]
-            pi = data[2 : 2 + np]
+            nump = int(data[1])
+            pi0 = 2
 
-        t = tmap[np]
+        pi = list(map(int, data[pi0 : pi0 + nump]))
+
+        t = tmap[nump]
         pmap = netgen_to_meshio_pmap[t]
         pi = [pi[pmap[i]] for i in range(len(pi))]
         if len(cells) == 0 or t != cells[-1][0]:
@@ -131,6 +149,8 @@ def _read_cells(f, cells, dim):
 
 
 def _write_cells(f, block):
+    if len(block) == 0:
+        return
     pmap = np.array(meshio_to_netgen_pmap[block.type])
     dim = _topological_dimension[block.type]
     post_data = []
@@ -142,10 +162,15 @@ def _write_cells(f, block):
     if dim == 3:
         pre_data = [1, len(pmap)]
 
-    for i in range(len(block)):
-        pi = block.data[i] + 1
-        pi = pi[pmap]
-        print(*pre_data, *pi, *post_data, file=f)
+    col1 = len(pre_data)
+    col2 = col1 + len(pmap)
+    col3 = col2 + len(post_data)
+
+    pi = np.zeros((len(block), col3), dtype=np.int32)
+    pi[:, :col1] = np.repeat([pre_data], len(block), axis=0)
+    pi[:, col1:col2] = block.data[:, pmap] + 1
+    pi[:, col2:] = np.repeat([post_data], len(block), axis=0)
+    np.savetxt(f, pi, "%i")
 
 
 def _skip_block(f):
@@ -179,20 +204,34 @@ def read_buffer(f):
                 p = filter(None, f.readline().strip().split(" "))
                 points.append(list(map(float, p)))
 
-        elif line == "edgesegments":
-            _read_cells(f, cells, 1)
-
-        elif line == "surfaceelements":
-            _read_cells(f, cells, 2)
-
-        elif line == "volumeelements":
-            _read_cells(f, cells, 3)
+        elif line in [
+            "pointelements",
+            "edgesegments",
+            "surfaceelements",
+            "volumeelements",
+        ]:
+            _read_cells(f, line, cells)
 
         elif line == "endmesh":
             break
 
-        else:
+        elif line in [
+            "bcnames",
+            "cd2names",
+            "cd3names",
+            "face_colours",
+            "identifications",
+            "identificationtypes",
+            "materials",
+            "singular_edge_left",
+            "singular_edge_right",
+            "singular_face_inside",
+            "singular_face_outside",
+            "singular_points",
+        ]:
             _skip_block(f)
+        else:
+            continue
 
     # convert to numpy arrays
     # Subtract one to account for the fact that python indices are 0-based.
@@ -263,11 +302,14 @@ geomtype
     print("points", file=f)
     print(len(mesh.points), file=f)
 
-    for p in mesh.points:
-        if len(p) == 2:
-            print(*p, 0, file=f)
-        else:
-            print(*p, file=f)
+    points = mesh.points
+    npoints, dim = points.shape
+    if dim == 2:
+        p = np.zeros((points.shape[0], 3), dtype=points.dtype)
+        p[:, :2] = points
+    else:
+        p = points
+    np.savetxt(f, p, "% 20.16f")
 
     print("#          pnum             index", file=f)
     print("pointelements", file=f)
