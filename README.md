@@ -56,7 +56,8 @@ pip install meshio[all]
 ```
 (`[all]` pulls in all optional dependencies. By default, meshio only uses numpy.)
 You can then use the command-line tools
-```bash
+<!--pytest-codeblocks:skip-->
+```sh
 meshio-convert    input.msh output.vtk   # convert between two formats
 
 meshio-info       input.xdmf             # show some info about the mesh
