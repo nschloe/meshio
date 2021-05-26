@@ -271,7 +271,7 @@ def _read_cells(f, params_map, point_ids):
     for counter in range(len(idx) // num_data):
         start = counter * num_data
         cell_ids[idx[start]] = counter
-        cells.append([point_ids[k] for k in idx[start + 1:start + num_data]])
+        cells.append([point_ids[k] for k in idx[start + 1 : start + num_data]])
 
     cell_sets = (
         {params_map["ELSET"]: np.arange(counter, dtype="int32")}
