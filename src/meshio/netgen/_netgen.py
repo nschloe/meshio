@@ -200,9 +200,8 @@ def read_buffer(f):
             continue
         elif line == "points":
             npoints = int(f.readline())
-            for i in range(npoints):
-                p = filter(None, f.readline().strip().split(" "))
-                points.append(list(map(float, p)))
+            if npoints > 0:
+                points = np.fromfile(f, sep=" ", count=3 * npoints).reshape(npoints, 3)
 
         elif line in [
             "pointelements",
@@ -310,6 +309,7 @@ geomtype
     else:
         p = points
     np.savetxt(f, p, "% 20.16f")
+    f.write("\n\n")
 
     print("#          pnum             index", file=f)
     print("pointelements", file=f)
