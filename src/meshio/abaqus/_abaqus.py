@@ -6,11 +6,11 @@ import pathlib
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import num_nodes_per_cell
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
-from .._common import num_nodes_per_cell
 
 abaqus_to_meshio_type = {
     # trusses
