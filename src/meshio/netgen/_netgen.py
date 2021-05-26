@@ -214,10 +214,12 @@ def read_buffer(f):
             continue
         elif line == "points":
             npoints = int(f.readline())
-            if npoints > 0:
-                points = np.fromfile(f, sep=" ", count=3 * npoints).reshape(npoints, 3)
-                if dimension == 2:
-                    points = points[:, :2]
+            for i in range(npoints):
+                p = filter(None, f.readline().strip().split(" "))
+                points.append(list(map(float, p)))
+            points = np.array(points)
+            if dimension == 2:
+                points = points[:, :2]
 
         elif line in [
             "pointelements",
