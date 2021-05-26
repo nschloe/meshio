@@ -356,7 +356,7 @@ def _chunk_line(line):
         chunks = line.split(",")
     else:  # fixed format
         CHUNK_SIZE = 8
-        chunks = [line[i : CHUNK_SIZE + i] for i in range(0, len(line), CHUNK_SIZE)]
+        chunks = [line[i : CHUNK_SIZE + i] for i in range(0, 72, CHUNK_SIZE)]
     # everything after the 9th chunk is ignored
     return chunks[:9]
 
