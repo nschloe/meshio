@@ -23,4 +23,5 @@ test_set = [
 
 @pytest.mark.parametrize("mesh", test_set)
 def test(mesh):
-    helpers.write_read(meshio.netgen.write, meshio.netgen.read, mesh, 1.0e-13)
+    helpers.write_read(meshio.netgen.write, meshio.netgen.read, mesh, 1.0e-13, extension=".vol")
+    helpers.write_read(meshio.netgen.write, meshio.netgen.read, mesh, 1.0e-13, extension=".vol.gz")
