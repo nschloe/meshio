@@ -259,7 +259,7 @@ def read_buffer(f):
         d[:, :] = d[:, pmap] - 1
         cells[k] = (t, d)
 
-    mesh = Mesh(points, cells, cell_data={"index": cells_index})
+    mesh = Mesh(points, cells, cell_data={"netgen:index": cells_index})
     return mesh
 
 
@@ -277,7 +277,11 @@ def write(filename, mesh, float_fmt=".16e"):
 def write_buffer(f, mesh, float_fmt):
     npoints, dimension = mesh.points.shape
     cells_per_dim = [0, 0, 0, 0]
-    cells_index = mesh.cell_data['index'] if 'index' in mesh.cell_data else [None] * len(mesh.cells)
+    cells_index = (
+        mesh.cell_data["netgen:index"]
+        if "netgen:index" in mesh.cell_data
+        else [None] * len(mesh.cells)
+    )
     for block in mesh.cells:
         cells_per_dim[_topological_dimension[block.type]] += len(block)
 
