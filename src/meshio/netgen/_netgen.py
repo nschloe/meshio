@@ -254,7 +254,7 @@ def read_buffer(f):
         ]:
             _skip_block(f)
         else:
-            continue
+            raise RuntimeError(f"Unknown Netgen mesh token: {line}")
 
     # convert to numpy arrays
     # subtract one (netgen counts 1-based)
