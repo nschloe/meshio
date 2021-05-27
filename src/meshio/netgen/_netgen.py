@@ -112,7 +112,7 @@ def read(filename):
         return read_buffer(f)
 
 
-def _read_cells(f, netgen_cell_type, cells, cells_index):
+def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_second_line=False):
     if netgen_cell_type == "pointelements":
         dim = 0
         nump = 1
@@ -123,7 +123,7 @@ def _read_cells(f, netgen_cell_type, cells, cells_index):
         nump = 2
         pi0 = 2
         i_index = 0
-    elif netgen_cell_type == "surfaceelements":
+    elif netgen_cell_type.startswith("surfaceelements"):
         dim = 2
         i_index = 1
     elif netgen_cell_type == "volumeelements":
@@ -154,6 +154,8 @@ def _read_cells(f, netgen_cell_type, cells, cells_index):
             cells_index.append([])
         cells[-1][1].append(pi)
         cells_index[-1].append(index)
+        if skip_every_second_line:
+            line, is_eof = _fast_forward_over_blank_lines(f)
 
 
 def _write_cells(f, block, index=None):
@@ -191,7 +193,7 @@ def _write_cells(f, block, index=None):
 
 def _skip_block(f):
     n = int(f.readline())
-    for i in range(n):
+    for _ in range(n):
         f.readline()
 
 
@@ -200,14 +202,27 @@ def read_buffer(f):
     cells = []
     cells_index = []
 
+    have_edgesegmentsgi2_in_two_lines = False
+
+    # check if "mesh3d" is the first non-empty, non-comment line
+    while True:
+        line, is_eof = _fast_forward_over_blank_lines(f)
+        if line == "":
+            continue
+        elif line.startswith("#"):
+            continue
+        elif line == "mesh3d":
+            break
+        else:
+            raise RuntimeError("Not a valid Netgen mesh")
+
     while True:
         line, is_eof = _fast_forward_over_blank_lines(f)
         if is_eof:
             break
-
-        line = line.strip()
         if line.startswith("#"):
             continue
+
         elif line == "dimension":
             dimension = int(f.readline())
         elif line == "geomtype":
@@ -231,12 +246,22 @@ def read_buffer(f):
             "edgesegmentsgi",
             "edgesegmentsgi2",
             "surfaceelements",
+            "surfaceelementsgi",
+            "surfaceelementsuv",
             "volumeelements",
         ]:
-            _read_cells(f, line, cells, cells_index)
-
+            _read_cells(f, line, cells, cells_index, have_edgesegmentsgi2_in_two_lines)
         elif line == "endmesh":
             break
+
+        elif line == "identificationtypes":
+            _ = int(f.readline())  # num_identifiactions
+            _ = f.readline()  # identifications in one line
+
+        elif line == "surf1   surf2      p1      p2":
+            # if this line is present, the edgesegmentsgi2 info is split in two lines per data set
+            have_edgesegmentsgi2_in_two_lines = True
+            continue
 
         elif line in [
             "bcnames",
@@ -244,7 +269,6 @@ def read_buffer(f):
             "cd3names",
             "face_colours",
             "identifications",
-            "identificationtypes",
             "materials",
             "singular_edge_left",
             "singular_edge_right",
