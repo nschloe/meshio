@@ -229,16 +229,13 @@ def read_buffer(f):
             geomtype = int(f.readline())
             if geomtype not in [0, 1, 10, 11, 12, 13]:
                 logging.warning(f"Unkown geomtype in Netgen mesh: {geomtype}")
-        elif line == "mesh3d":
-            continue
+
         elif line == "points":
             npoints = int(f.readline())
-            for i in range(npoints):
-                p = filter(None, f.readline().strip().split(" "))
-                points.append(list(map(float, p)))
-            points = np.array(points)
-            if dimension == 2:
-                points = points[:, :2]
+            if npoints > 0:
+                points = np.loadtxt(f, max_rows=npoints)
+                if dimension == 2:
+                    points = points[:, :2]
 
         elif line in [
             "pointelements",
