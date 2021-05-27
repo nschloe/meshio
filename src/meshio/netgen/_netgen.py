@@ -2,7 +2,7 @@
 I/O for Netgen mesh files.
 """
 import numpy as np
-import logging
+import warnings
 
 from ..__about__ import __version__
 from .._common import _topological_dimension
@@ -226,7 +226,7 @@ def read_buffer(f):
         elif line == "geomtype":
             geomtype = int(f.readline())
             if geomtype not in [0, 1, 10, 11, 12, 13]:
-                logging.warning(f"Unkown geomtype in Netgen mesh: {geomtype}")
+                warnings.warn(f"Unkown geomtype in Netgen mesh: {geomtype}")
 
         elif line == "points":
             npoints = int(f.readline())
