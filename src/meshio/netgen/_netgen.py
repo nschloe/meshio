@@ -118,22 +118,24 @@ def _read_cells(f, netgen_cell_type, cells, cells_index):
         nump = 1
         pi0 = 0
         i_index = 1
-    if netgen_cell_type.startswith("edgesegments"):
+    elif netgen_cell_type.startswith("edgesegments"):
         dim = 1
         nump = 2
         pi0 = 2
         i_index = 0
-    if netgen_cell_type == "surfaceelements":
+    elif netgen_cell_type == "surfaceelements":
         dim = 2
         i_index = 1
-    if netgen_cell_type == "volumeelements":
+    elif netgen_cell_type == "volumeelements":
         dim = 3
         i_index = 0
+    else:
+        raise ValueError("Unknown Netgen cell section: {}".format(netgen_cell_type))
 
     ncells = int(f.readline())
     tmap = netgen_to_meshio_type[dim]
 
-    for i in range(ncells):
+    for _ in range(ncells):
         line, is_eof = _fast_forward_over_blank_lines(f)
         data = list(filter(None, line.split(" ")))
         index = int(data[i_index])
@@ -165,13 +167,13 @@ def _write_cells(f, block, index=None):
     if dim == 0:
         post_data = [1]
         i_index = 1
-    if dim == 1:
+    elif dim == 1:
         pre_data = [1, 0]
         post_data = [-1, -1, 0, 0, 1, 0, 1, 0]
-    if dim == 2:
+    elif dim == 2:
         pre_data = [1, 1, 0, 0, len(pmap)]
         i_index = 1
-    if dim == 3:
+    elif dim == 3:
         pre_data = [1, len(pmap)]
 
     col1 = len(pre_data)
@@ -199,7 +201,6 @@ def read_buffer(f):
     cells_index = []
 
     while True:
-        # fast-forward over blank lines
         line, is_eof = _fast_forward_over_blank_lines(f)
         if is_eof:
             break
