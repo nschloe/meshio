@@ -252,7 +252,6 @@ def read_buffer(f):
         elif line.split() == ["surf1", "surf2", "p1", "p2"]:
             # if this line is present, the edgesegmentsgi2 info is split in two lines per data set
             have_edgesegmentsgi2_in_two_lines = True
-            continue
 
         elif line in [
             "bcnames",
@@ -344,11 +343,8 @@ def write_buffer(f, mesh, float_fmt):
 
     points = mesh.points
     if dimension == 2:
-        p = np.zeros((points.shape[0], 3), dtype=points.dtype)
-        p[:, :2] = points
-    else:
-        p = points
-    np.savetxt(f, p, "%" + float_fmt)
+        points = np.column_stack((points, np.zeros(points.shape[0], dtype=points.dtype)))
+    np.savetxt(f, points, "%" + float_fmt)
 
     f.write("\n#          pnum             index\n")
     f.write("pointelements\n")
