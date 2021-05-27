@@ -18,11 +18,11 @@ def _fast_forward_over_blank_lines(f):
         if not line:
             is_eof = True
             break
-        elif line.startswith("#"):
-            continue
-        elif len(line.strip()) > 0:
+
+        line = line.strip()
+        if len(line) > 0 and not line.startswith("#"):
             break
-    return line.strip(), is_eof
+    return line, is_eof
 
 
 netgen0d_to_meshio_type = {
