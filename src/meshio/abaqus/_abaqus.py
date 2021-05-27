@@ -253,8 +253,7 @@ def _read_cells(f, params_map, point_ids):
     # ElementID + NodesIDs
     num_data = num_nodes_per_cell[cell_type] + 1
 
-    cells, idx = [], []
-    cell_ids = {}
+    idx = []
     while True:
         line = f.readline()
         if not line or line.startswith("*"):
@@ -268,18 +267,17 @@ def _read_cells(f, params_map, point_ids):
     if len(idx) % num_data != 0:
         raise ReadError("Expected number of data items does not match element type")
 
-    for counter in range(len(idx) // num_data):
-        start = counter * num_data
-        cell_ids[idx[start]] = counter
-        cells.append([point_ids[k] for k in idx[start + 1 : start + num_data]])
+    idx = np.array(idx).reshape((-1, num_data))
+    cell_ids = {eid: i for i, eid in enumerate(idx[:, 0])}
+    cells = np.array([[point_ids[node] for node in elem] for elem in idx[:, 1:]])
 
     cell_sets = (
-        {params_map["ELSET"]: np.arange(counter, dtype="int32")}
+        {params_map["ELSET"]: np.arange(len(cells), dtype="int32")}
         if "ELSET" in params_map.keys()
         else {}
     )
 
-    return cell_type, np.array(cells), cell_ids, cell_sets, line
+    return cell_type, cells, cell_ids, cell_sets, line
 
 
 def merge(
