@@ -114,7 +114,7 @@ def read(filename):
         return read_buffer(f)
 
 
-def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_second_line=False):
+def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_other_line=False):
     if netgen_cell_type == "pointelements":
         dim = 0
         nump = 1
@@ -134,10 +134,10 @@ def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_second_line=
     else:
         raise ValueError("Unknown Netgen cell section: {}".format(netgen_cell_type))
 
-    ncells = int(f.readline())
+    num_cells = int(f.readline())
     tmap = netgen_to_meshio_type[dim]
 
-    for _ in range(ncells):
+    for _ in range(num_cells):
         line, is_eof = _fast_forward_over_blank_lines(f)
         data = list(filter(None, line.split(" ")))
         index = int(data[i_index])
@@ -156,7 +156,7 @@ def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_second_line=
             cells_index.append([])
         cells[-1][1].append(pi)
         cells_index[-1].append(index)
-        if skip_every_second_line:
+        if skip_every_other_line:
             line, is_eof = _fast_forward_over_blank_lines(f)
 
 
@@ -223,9 +223,9 @@ def read_buffer(f):
                 warnings.warn(f"Unkown geomtype in Netgen mesh: {geomtype}")
 
         elif line == "points":
-            npoints = int(f.readline())
-            if npoints > 0:
-                points = np.loadtxt(f, max_rows=npoints)
+            num_points = int(f.readline())
+            if num_points > 0:
+                points = np.loadtxt(f, max_rows=num_points)
                 if dimension == 2:
                     points = points[:, :2]
 
@@ -294,7 +294,7 @@ def write(filename, mesh, float_fmt=".16e"):
 
 
 def write_buffer(f, mesh, float_fmt):
-    npoints, dimension = mesh.points.shape
+    num_points, dimension = mesh.points.shape
     cells_per_dim = [0, 0, 0, 0]
     cells_index = (
         mesh.cell_data["netgen:index"]
