@@ -325,22 +325,22 @@ geomtype
             __version__
         )
     )
-    f.write("\n# surfnr    bcnr   domin  domout      np      p1      p2      p3")
-    f.write("surfaceelements")
+    f.write("\n# surfnr    bcnr   domin  domout      np      p1      p2      p3\n")
+    f.write("surfaceelements\n")
     f.write(f"{cells_per_dim[2]}\n")
     for block, index in zip(mesh.cells, cells_index):
         if _topological_dimension[block.type] == 2:
             _write_cells(f, block, index)
 
-    f.write("\n#  matnr      np      p1      p2      p3      p4")
-    f.write("volumeelements")
+    f.write("\n#  matnr      np      p1      p2      p3      p4\n")
+    f.write("volumeelements\n")
     f.write(f"{cells_per_dim[3]}\n")
     for block, index in zip(mesh.cells, cells_index):
         if _topological_dimension[block.type] == 3:
             _write_cells(f, block, index)
 
     f.write(
-        "\n# surfid  0   p1   p2   trignum1    trignum2   domin/surfnr1    domout/surfnr2   ednr1   dist1   ednr2   dist2",
+        "\n# surfid  0   p1   p2   trignum1    trignum2   domin/surfnr1    domout/surfnr2   ednr1   dist1   ednr2   dist2\n",
     )
     f.write("edgesegmentsgi2\n")
     f.write(f"{cells_per_dim[1]}\n")
@@ -360,14 +360,14 @@ geomtype
         p = points
     np.savetxt(f, p, "%" + float_fmt)
 
-    f.write("\n#          pnum             index")
-    f.write("pointelements")
-    f.write(str(cells_per_dim[0]))
+    f.write("\n#          pnum             index\n")
+    f.write("pointelements\n")
+    f.write(f"{cells_per_dim[0]}\n")
     for block, index in zip(mesh.cells, cells_index):
         if _topological_dimension[block.type] == 0:
             _write_cells(f, block, index)
 
-    f.write("endmesh")
+    f.write("\nendmesh\n")
 
 
 register("netgen", [".vol", ".vol.gz"], read, {"netgen": write})
