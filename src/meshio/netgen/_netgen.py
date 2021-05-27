@@ -127,9 +127,11 @@ def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_other_line=F
         i_index = 0
     elif netgen_cell_type.startswith("surfaceelements"):
         dim = 2
+        pi0 = 5
         i_index = 1
     elif netgen_cell_type == "volumeelements":
         dim = 3
+        pi0 = 2
         i_index = 0
     else:
         raise ValueError("Unknown Netgen cell section: {}".format(netgen_cell_type))
@@ -143,10 +145,8 @@ def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_other_line=F
         index = int(data[i_index])
         if dim == 2:
             nump = int(data[4])
-            pi0 = 5
         elif dim == 3:
             nump = int(data[1])
-            pi0 = 2
 
         pi = list(map(int, data[pi0 : pi0 + nump]))
 
