@@ -1,5 +1,5 @@
 """
-I/O for Netgen mesh files.
+I/O for Netgen mesh files <https://github.com/NGSolve/netgen/blob/master/libsrc/meshing/meshclass.cpp>.
 """
 import numpy as np
 import warnings
@@ -343,7 +343,9 @@ def write_buffer(f, mesh, float_fmt):
 
     points = mesh.points
     if dimension == 2:
-        points = np.column_stack((points, np.zeros(points.shape[0], dtype=points.dtype)))
+        points = np.column_stack(
+            (points, np.zeros(points.shape[0], dtype=points.dtype))
+        )
     np.savetxt(f, points, "%" + float_fmt)
 
     f.write("\n#          pnum             index\n")
