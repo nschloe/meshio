@@ -206,15 +206,9 @@ def read_buffer(f):
 
     have_edgesegmentsgi2_in_two_lines = False
 
-    # check if "mesh3d" is the first non-empty, non-comment line
-    while True:
-        line, is_eof = _fast_forward_over_blank_lines(f)
-        if line == "":
-            continue
-        elif line == "mesh3d":
-            break
-        else:
-            raise RuntimeError("Not a valid Netgen mesh")
+    line, is_eof = _fast_forward_over_blank_lines(f)
+    if line != "mesh3d":
+        raise RuntimeError("Not a valid Netgen mesh")
 
     while True:
         line, is_eof = _fast_forward_over_blank_lines(f)
@@ -253,7 +247,7 @@ def read_buffer(f):
             _ = int(f.readline())  # num_identifiactions
             _ = f.readline()  # identifications in one line
 
-        elif line == "surf1   surf2      p1      p2":
+        elif line.split() == ["surf1", "surf2", "p1", "p2"]:
             # if this line is present, the edgesegmentsgi2 info is split in two lines per data set
             have_edgesegmentsgi2_in_two_lines = True
             continue
