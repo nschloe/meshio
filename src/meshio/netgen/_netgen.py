@@ -179,6 +179,8 @@ def _write_cells(f, block, index=None):
         i_index = 1
     elif dim == 3:
         pre_data = [1, len(pmap)]
+    else:
+        raise ValueError(f"Invalid cell dimension: {dim}")
 
     col1 = len(pre_data)
     col2 = col1 + len(pmap)
