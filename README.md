@@ -33,6 +33,7 @@ meshio can read and write all of the following and smoothly converts between the
  [Medit](https://people.sc.fsu.edu/~jburkardt/data/medit/medit.html) (`.mesh`, `.meshb`),
  [MED/Salome](https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html) (`.med`),
  [Nastran](https://help.autodesk.com/view/NSTRN/2019/ENU/?guid=GUID-42B54ACB-FBE3-47CA-B8FE-475E7AD91A00) (bulk data, `.bdf`, `.fem`, `.nas`),
+ [Netgen](https://github.com/ngsolve/netgen) (`.vol`, `.vol.gz`),
  [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed#mesh-representation-of-segmented-object-surfaces),
  [Gmsh](https://gmsh.info/doc/texinfo/gmsh.html#File-formats) (format versions 2.2, 4.0, and 4.1, `.msh`),
  [OBJ](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (`.obj`),
@@ -56,7 +57,8 @@ pip install meshio[all]
 ```
 (`[all]` pulls in all optional dependencies. By default, meshio only uses numpy.)
 You can then use the command-line tools
-```bash
+<!--pytest-codeblocks:skip-->
+```sh
 meshio-convert    input.msh output.vtk   # convert between two formats
 
 meshio-info       input.xdmf             # show some info about the mesh
@@ -76,7 +78,8 @@ import meshio
 
 mesh = meshio.read(
     filename,  # string, os.PathLike, or a buffer/open file
-    file_format="stl",  # optional if filename is a path; inferred from extension
+    # file_format="stl",  # optional if filename is a path; inferred from extension
+                          # see meshio-convert -h for all possible formats
 )
 # mesh.points, mesh.cells, mesh.cells_dict, ...
 
