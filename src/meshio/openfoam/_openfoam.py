@@ -6,9 +6,10 @@ import logging
 import os
 import numpy as np
 
+from enum import Enum
+
 from collections import OrderedDict as odict
 
-from .._files import open_file
 from .._helpers import register
 
 
@@ -59,8 +60,8 @@ def _face_id(points):
 def write(filename, mesh, binary=False):
     poly_mesh_dir = filename
     try:
-        os.mkdir(poly_mesh_dir)
-    except OSError:
+        os.makedirs(poly_mesh_dir)
+    except FileExistsError:
         logging.warning("Directory already exists. Aborting to be safe.")
         return None
 
@@ -194,7 +195,153 @@ def write(filename, mesh, binary=False):
             patch_dict["nFaces"] = len(named_patches[i])
             f.write(_foam_props(patch_name, patch_dict))
             patch_dict["startFace"] += len(named_patches[i])
+        f.write(")\n")
         f.write(_foam_footer())
+
+
+class ParsedType(Enum):
+    NONE = 0
+    STRING = 1
+    LIST = 2
+    DICT = 3
+
+
+# Parse the next object in a text stream, recursing into children
+# Possible outputs:
+#  - (NONE,): Nothing parsed (end of object)
+#  - (STRING, String, end_char): Simple value (string), along with the closing character
+#  - (LIST, List): A list of other objects
+#  - (DICT, (dict_name, Dict)): A dictionary of objects, along with a name for it
+def _parse_object(f, end_on_blank=False):
+    BLANKS = [" ", "\t", "\n"]
+    ENDS = [")", "}", ";", ","]
+    stack = ""
+
+    c = None
+    while True:
+        c = f.read(1)  # Current character to parse
+        if c == "":
+            # Reached EOF
+            break
+        if c in ENDS:
+            # Reached end of object
+            if stack:
+                # Return a string
+                return (ParsedType.STRING, stack, c)
+            else:
+                break
+
+        if c in BLANKS:
+            if stack == "":
+                # Nothing found yet; ignore
+                continue
+            if end_on_blank:
+                # Reached end of string
+                return (ParsedType.STRING, stack, " ")
+            if stack[-1] != " ":
+                # Add space if there isn't one already
+                stack += " "
+
+        if c == "/":
+            # Check next character for comment
+            cur = f.tell()  # Store position in case we need to go back
+            c = f.read(1)
+            if c == "/":
+                # Single line comment; skip to end of line
+                while True:
+                    c = f.read(1)
+                    if c == "\n" or c == "":
+                        break
+                continue
+            if c == "*":
+                # Multiline comment; skip until '*/'
+                while True:
+                    c = f.read(2)
+                    if c == "*/" or len(c) < 2:
+                        break
+                continue
+            # Not a comment; go back one and move on
+            f.seek(cur)
+            c = f.read(1)
+
+        if c == "(":
+            # Parse a list
+            lis = []
+            # Recursively parse all array elements
+            while True:
+                obj = _parse_object(f, end_on_blank=True)
+                if obj[0] == ParsedType.NONE:
+                    # End of list
+                    break
+                if obj[0] == ParsedType.DICT and obj[1][0] == "" and lis:
+                    # Edge case:
+                    # Dict name was read as a lone string element and dict is nameless
+                    # Fix by replacing the string element with named dict
+                    lis[-1] = (lis[-1], obj[1][1])
+                    continue
+                lis.append(obj[1])
+                if obj[0] == ParsedType.STRING and obj[2] == ")":
+                    # End of list
+                    break
+            return (ParsedType.LIST, lis)
+        if c == "{":
+            # Parsing a new odict; stack should contain dict name
+            dic = odict()
+            dic_name = stack.strip()
+            while True:
+                key = _parse_object(f, end_on_blank=True)
+                if key[0] == ParsedType.NONE:
+                    # End of dict (empty key)
+                    break
+                value = _parse_object(f)
+                if value[0] == ParsedType.NONE:
+                    # Empty value
+                    dic[key[1]] = None
+                    continue
+                dic[key[1]] = value[1]
+                if value[0] == ParsedType.STRING and value[2] == "}":
+                    # End of dict (ignore missing ';')
+                    break
+            return (ParsedType.DICT, (dic_name, dic))
+
+        # Nothing came up; stack character and continue
+        stack += c
+
+    # Didn't parse anything of interest
+    return (ParsedType.NONE,)
+
+
+def _read_file(filepath: str):
+    with open(filepath, "r") as f:
+        objs = []
+        while True:
+            obj = _parse_object(f)
+            if obj[0] == ParsedType.NONE:
+                break
+            else:
+                objs.append(obj[1])
+    return objs
+
+
+def read(dirpath: str):
+    points_obj = _read_file(os.path.join(dirpath, "points"))
+    points = np.array(points_obj[1], dtype=np.float64)
+
+    faces_obj = _read_file(os.path.join(dirpath, "faces"))
+    # faces = [np.array(vec, dtype=np.float64) for vec in faces_obj[1]]
+    faces = [[float(c) for c in p] for p in faces_obj[1]]
+
+    owner_obj = _read_file(os.path.join(dirpath, "owner"))
+    owner = np.array(owner_obj[1], dtype=np.int64)
+
+    neighbour_obj = _read_file(os.path.join(dirpath, "neighbour"))
+    neighbour = np.array(neighbour_obj[1], dtype=np.int64)
+
+    boundary_obj = _read_file(os.path.join(dirpath, "boundary"))
+    for patch_name, patch in boundary_obj[1]:
+        print(patch_name, patch)
+
+    return None  # TODO Create mesh object from read data
 
 
 register("openfoam", [], None, {"openfoam": write})
