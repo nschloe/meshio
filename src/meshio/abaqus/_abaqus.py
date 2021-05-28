@@ -2,6 +2,7 @@
 I/O for Abaqus inp files.
 """
 import pathlib
+from itertools import count
 
 import numpy as np
 
@@ -268,7 +269,7 @@ def _read_cells(f, params_map, point_ids):
         raise ReadError("Expected number of data items does not match element type")
 
     idx = np.array(idx).reshape((-1, num_data))
-    cell_ids = {eid: i for i, eid in enumerate(idx[:, 0])}
+    cell_ids = dict(zip(idx[:, 0], count(0)))
     cells = np.array([[point_ids[node] for node in elem] for elem in idx[:, 1:]])
 
     cell_sets = (
