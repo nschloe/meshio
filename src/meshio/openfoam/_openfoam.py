@@ -11,6 +11,7 @@ from enum import Enum
 from collections import OrderedDict as odict
 
 from .._helpers import register
+from .._mesh import CellBlock, Mesh
 
 
 def _foam_props(name: str, props: dict):
@@ -94,6 +95,7 @@ def write(filename, mesh, binary=False):
             ]
         elif cell_type == "pyramid":
             cell_order = [[0, 3, 2, 1], [0, 1, 4], [1, 2, 4], [2, 3, 4], [0, 4, 3]]
+        # TODO Hexahedra and wedge
         else:
             print(f"WARNING: Unknown type {cell_type}")
             continue
@@ -329,19 +331,61 @@ def read(dirpath: str):
 
     faces_obj = _read_file(os.path.join(dirpath, "faces"))
     # faces = [np.array(vec, dtype=np.float64) for vec in faces_obj[1]]
-    faces = [[float(c) for c in p] for p in faces_obj[1]]
+    faces = [[int(c) for c in p] for p in faces_obj[1]]
 
     owner_obj = _read_file(os.path.join(dirpath, "owner"))
-    owner = np.array(owner_obj[1], dtype=np.int64)
+    owners = np.array(owner_obj[1], dtype=np.int64)
 
     neighbour_obj = _read_file(os.path.join(dirpath, "neighbour"))
-    neighbour = np.array(neighbour_obj[1], dtype=np.int64)
+    neighbours = np.array(neighbour_obj[1], dtype=np.int64)
 
     boundary_obj = _read_file(os.path.join(dirpath, "boundary"))
     for patch_name, patch in boundary_obj[1]:
         print(patch_name, patch)
 
-    return None  # TODO Create mesh object from read data
+    cells_data = {
+        "tetra": [],
+        "pyramid": [],
+        # TODO Hexahedra and wedge
+    }
+
+    cells_faces = {}
+    # Cell-indexed tuples: (face, is_inverted)
+    for face, owner in enumerate(owners):
+        if owner in cells_faces:
+            cells_faces[owner].append((face, False))
+        else:
+            cells_faces[owner] = [(face, False)]
+    # Negative face index means invert point order
+    for face, neighbour in enumerate(neighbours):
+        if neighbour in cells_faces:
+            cells_faces[neighbour].append((face, True))
+        else:
+            cells_faces[neighbour] = [(face, True)]
+
+    face_types = {4: "tetra", 5: "pyramid"}
+    for fs in cells_faces.values():
+        # fs = [faces[f] for f in fs]
+        ps = []
+        for f, inverted in fs:
+            face = faces[f]
+            if inverted:
+                face.reverse()
+            for p in face:
+                if p not in ps:
+                    ps.append(p)
+        # TODO Ensure 'ps' has the correct vertex order
+        if len(ps) not in face_types:
+            logging.warning("Unsupported cell type. Skipping.")
+            continue
+        cells_data[face_types[len(ps)]].append(np.array(ps, dtype=np.int64))
+
+    # Convert to Numpy
+    cells = []
+    for cell_type, block in cells_data.items():
+        cells.append(CellBlock(cell_type, np.array(block)))
+
+    return Mesh(points, cells)
 
 
-register("openfoam", [], None, {"openfoam": write})
+register("openfoam", [], read, {"openfoam": write})

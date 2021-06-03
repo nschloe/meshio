@@ -1,3 +1,3 @@
-from ._openfoam import write
+from ._openfoam import read, write
 
-__all__ = ["write"]
+__all__ = ["read", "write"]
