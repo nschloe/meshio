@@ -7,16 +7,17 @@ from functools import reduce
 import numpy as np
 
 from ..__about__ import __version__
-from .._common import (
-    _meshio_to_vtk_order,
-    _vtk_to_meshio_order,
-    meshio_to_vtk_type,
-    vtk_to_meshio_type,
-)
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
+from .._vtk_common import (
+    _meshio_to_vtk_order,
+    _vtk_cells_from_data,
+    _vtk_to_meshio_order,
+    meshio_to_vtk_type,
+    vtk_to_meshio_type,
+)
 
 vtk_type_to_numnodes = np.array(
     [
@@ -130,8 +131,9 @@ class Info:
         self.cell_data_raw = {}
         self.point_data = {}
         self.dataset = {}
-        self.c = None
-        self.ct = None
+        self.connectivity = None
+        self.offsets = None
+        self.types = None
         self.active = None
         self.is_ascii = False
         self.split = []
@@ -183,7 +185,15 @@ def read_buffer(f):
             _read_subsection(f, info)
 
     _check_mesh(info)
-    cells, cell_data = translate_cells(info.c, info.ct, info.cell_data_raw)
+
+    if info.offsets is not None:
+        cells, cell_data = _vtk_cells_from_data(
+            info.connectivity, info.offsets, info.types, info.cell_data_raw
+        )
+    else:
+        cells, cell_data = translate_cells(
+            info.connectivity, info.types, info.cell_data_raw
+        )
 
     return Mesh(
         info.points,
@@ -225,7 +235,7 @@ def _read_section(f, info):
             # vtk DataFile Version 5.1 - appearing in Paraview 5.8.1 outputs
             # No specification found for this file format.
             # See the question on ParaView Discourse Forum:
-            # <https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127>.
+            # https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127
             info.num_offsets = int(info.split[1])
             info.num_items = int(info.split[2])
             dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
@@ -234,16 +244,19 @@ def _read_section(f, info):
             assert "CONNECTIVITY" in line
             dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
             connectivity = _read_cells(f, info.is_ascii, info.num_items, dtype)
-            info.c = (offsets, connectivity)
+            info.connectivity = connectivity
+            assert offsets[-1] == len(connectivity)
+            # The last offset just points to the array end, so drop it
+            info.offsets = offsets[:-1]
         else:
             f.seek(last_pos)
             info.num_items = int(info.split[2])
-            info.c = _read_cells(f, info.is_ascii, info.num_items)
+            info.connectivity = _read_cells(f, info.is_ascii, info.num_items)
 
     elif info.section == "CELL_TYPES":
         info.active = "CELL_TYPES"
         info.num_items = int(info.split[1])
-        info.ct = _read_cell_types(f, info.is_ascii, info.num_items)
+        info.types = _read_cell_types(f, info.is_ascii, info.num_items)
 
     elif info.section == "POINT_DATA":
         info.active = "POINT_DATA"
@@ -308,9 +321,9 @@ def _read_subsection(f, info):
 
 def _check_mesh(info):
     if info.dataset["type"] == "UNSTRUCTURED_GRID":
-        if info.c is None:
+        if info.connectivity is None:
             raise ReadError("Required section CELLS not found.")
-        if info.ct is None:
+        if info.types is None:
             raise ReadError("Required section CELL_TYPES not found.")
     elif info.dataset["type"] == "STRUCTURED_POINTS":
         dim = info.dataset["DIMENSIONS"]
@@ -325,7 +338,7 @@ def _check_mesh(info):
             for i in range(3)
         ]
         info.points = _generate_points(axis)
-        info.c, info.ct = _generate_cells(dim=info.dataset["DIMENSIONS"])
+        info.connectivity, info.types = _generate_cells(dim=info.dataset["DIMENSIONS"])
     elif info.dataset["type"] == "RECTILINEAR_GRID":
         axis = [
             info.dataset["X_COORDINATES"],
@@ -333,9 +346,9 @@ def _check_mesh(info):
             info.dataset["Z_COORDINATES"],
         ]
         info.points = _generate_points(axis)
-        info.c, info.ct = _generate_cells(dim=info.dataset["DIMENSIONS"])
+        info.connectivity, info.types = _generate_cells(dim=info.dataset["DIMENSIONS"])
     elif info.dataset["type"] == "STRUCTURED_GRID":
-        info.c, info.ct = _generate_cells(dim=info.dataset["DIMENSIONS"])
+        info.connectivity, info.types = _generate_cells(dim=info.dataset["DIMENSIONS"])
 
 
 def _generate_cells(dim):
@@ -603,7 +616,7 @@ def translate_cells(data, types, cell_data_raw):
         for k, c in enumerate(cells):
             cells[k] = CellBlock(c.type, np.array(c.data))
     else:
-        # Deduct offsets from the cell types. This is much faster than manually going
+        # Infer offsets from the cell types. This is much faster than manually going
         # through the data array. Slight disadvantage: This doesn't work for cells with
         # a custom number of points.
         numnodes = vtk_type_to_numnodes[types]

@@ -7,23 +7,16 @@ import base64
 import logging
 import re
 import sys
-import warnings
 import zlib
 
 import numpy as np
 
 from ..__about__ import __version__
-from .._common import (
-    _meshio_to_vtk_order,
-    _vtk_to_meshio_order,
-    meshio_to_vtk_type,
-    num_nodes_per_cell,
-    raw_from_cell_data,
-    vtk_to_meshio_type,
-)
+from .._common import raw_from_cell_data
 from .._exceptions import ReadError
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
+from .._vtk_common import _meshio_to_vtk_order, _vtk_cells_from_data, meshio_to_vtk_type
 
 # Paraview 5.8.1's built-in Python doesn't have lzma.
 try:
@@ -36,86 +29,6 @@ def num_bytes_to_num_base64_chars(num_bytes):
     # Rounding up in integer division works by double negation since Python
     # always rounds down.
     return -(-num_bytes // 3) * 4
-
-
-def _cells_from_data(connectivity, offsets, types, cell_data_raw):
-    # Translate it into the cells array.
-    # `connectivity` is a one-dimensional vector with
-    # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
-    if len(offsets) != len(types):
-        raise ReadError()
-
-    b = np.concatenate([[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]])
-
-    cells = []
-    cell_data = {}
-
-    for start, end in zip(b[:-1], b[1:]):
-        try:
-            meshio_type = vtk_to_meshio_type[types[start]]
-        except KeyError:
-            warnings.warn(
-                f"File contains cells that meshio cannot handle (type {types[start]})."
-            )
-            continue
-
-        # cells with varying number of points
-        special_cells = [
-            "polygon",
-            "VTK_LAGRANGE_CURVE",
-            "VTK_LAGRANGE_TRIANGLE",
-            "VTK_LAGRANGE_QUADRILATERAL",
-            "VTK_LAGRANGE_TETRAHEDRON",
-            "VTK_LAGRANGE_HEXAHEDRON",
-            "VTK_LAGRANGE_WEDGE",
-            "VTK_LAGRANGE_PYRAMID",
-        ]
-        if meshio_type in special_cells:
-            # Polygons have unknown and varying number of nodes per cell.
-
-            # Index where the previous block of cells stopped. Needed to know the number
-            # of nodes for the first cell in the block.
-            first_node = 0 if start == 0 else offsets[start - 1]
-
-            # Start off the cell-node relation for each cell in this block
-            start_cn = np.hstack((first_node, offsets[start:end]))
-            # Find the size of each cell
-            sizes = np.diff(start_cn)
-
-            # find where the cell blocks start and end
-            b = np.diff(sizes)
-            c = np.concatenate([[0], np.where(b != 0)[0] + 1, [len(sizes)]])
-
-            # Loop over all cell sizes, find all cells with this size, and assign
-            # connectivity
-            for cell_block_start, cell_block_end in zip(c, c[1:]):
-                items = np.arange(cell_block_start, cell_block_end)
-                sz = sizes[cell_block_start]
-                indices = np.add.outer(
-                    start_cn[items + 1],
-                    _vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
-                )
-                cells.append(CellBlock(meshio_type, connectivity[indices]))
-
-                # Store cell data for this set of cells
-                for name, d in cell_data_raw.items():
-                    if name not in cell_data:
-                        cell_data[name] = []
-                    cell_data[name].append(d[start + items])
-        else:
-            # Non-polygonal cell. Same number of nodes per cell makes everything easier.
-            n = num_nodes_per_cell[meshio_type]
-            indices = np.add.outer(
-                offsets[start:end],
-                _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype) - n,
-            )
-            cells.append(CellBlock(meshio_type, connectivity[indices]))
-            for name, d in cell_data_raw.items():
-                if name not in cell_data:
-                    cell_data[name] = []
-                cell_data[name].append(d[start:end])
-
-    return cells, cell_data
 
 
 def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
@@ -232,7 +145,7 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
 
     else:
         for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
-            cls, cell_data = _cells_from_data(
+            cls, cell_data = _vtk_cells_from_data(
                 cls["connectivity"].ravel(),
                 cls["offsets"].ravel(),
                 cls["types"].ravel(),
