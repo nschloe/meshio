@@ -23,6 +23,7 @@ test_set = [
     helpers.polygon_mesh,
     helpers.pyramid_mesh,
     helpers.wedge_mesh,
+    helpers.lagrange_high_order_mesh,
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),
     helpers.add_point_data(helpers.tri_mesh, 3),

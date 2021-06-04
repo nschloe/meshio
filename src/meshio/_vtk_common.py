@@ -3,8 +3,8 @@ import warnings
 import numpy as np
 
 from ._common import num_nodes_per_cell
-from ._mesh import CellBlock
 from ._exceptions import ReadError
+from ._mesh import CellBlock
 
 # https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
 vtk_to_meshio_type = {
@@ -70,7 +70,7 @@ vtk_to_meshio_type = {
 meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
 
-def _vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
+def vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
     # meshio uses the same node ordering as VTK for most cell types. However, for the
     # linear wedge, the ordering of the gmsh Prism [1] is adopted since this is found in
     # most codes (Abaqus, Ansys, Nastran,...). In the vtkWedge [2], the normal of the
@@ -83,18 +83,22 @@ def _vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
         return np.arange(0, numnodes, dtype=dtype)
 
 
-def _meshio_to_vtk_order(meshio_type, numnodes, dtype=int):
+def meshio_to_vtk_order(meshio_type, numnodes, dtype=int):
     if meshio_type == "wedge":
         return np.array([0, 2, 1, 3, 5, 4], dtype=dtype)
     else:
         return np.arange(0, numnodes, dtype=dtype)
 
 
-def _vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
+def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
     # Translate it into the cells array.
     # `connectivity` is a one-dimensional vector with
     # (p00, p01, ... ,p0k, p10, p11, ..., p1k, ...
     # `offsets` is a pointer array that points to the first position of p0, p1, etc.
+    print()
+    print(connectivity.tolist())
+    print(offsets)
+    print(types)
     if len(offsets) != len(types):
         raise ReadError(f"len(offsets) != len(types) ({len(offsets)} != {len(types)})")
 
@@ -125,16 +129,21 @@ def _vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
             "VTK_LAGRANGE_PYRAMID",
         ]
         if meshio_type in special_cells:
+            print("is special")
             # Polygons have unknown and varying number of nodes per cell.
 
             # Index where the previous block of cells stopped. Needed to know the number
             # of nodes for the first cell in the block.
             first_node = 0 if start == 0 else offsets[start - 1]
+            print(first_node)
 
             # Start off the cell-node relation for each cell in this block
             start_cn = np.hstack((first_node, offsets[start:end]))
+            print(start_cn)
             # Find the size of each cell
             sizes = np.diff(start_cn)
+
+            print(sizes)
 
             # find where the cell blocks start and end
             b = np.diff(sizes)
@@ -147,7 +156,7 @@ def _vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
                 sz = sizes[cell_block_start]
                 indices = np.add.outer(
                     start_cn[items + 1],
-                    _vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
+                    vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
                 )
                 cells.append(CellBlock(meshio_type, connectivity[indices]))
 
@@ -161,7 +170,7 @@ def _vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
             n = num_nodes_per_cell[meshio_type]
             indices = np.add.outer(
                 offsets[start:end],
-                _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype) - n,
+                vtk_to_meshio_order(types[start], n, dtype=offsets.dtype) - n,
             )
             cells.append(CellBlock(meshio_type, connectivity[indices]))
             for name, d in cell_data_raw.items():
@@ -169,4 +178,5 @@ def _vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
                     cell_data[name] = []
                 cell_data[name].append(d[start:end])
 
+    print()
     return cells, cell_data

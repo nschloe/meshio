@@ -12,9 +12,9 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
 from .._vtk_common import (
-    _meshio_to_vtk_order,
-    _vtk_cells_from_data,
-    _vtk_to_meshio_order,
+    meshio_to_vtk_order,
+    vtk_cells_from_data,
+    vtk_to_meshio_order,
     meshio_to_vtk_type,
     vtk_to_meshio_type,
 )
@@ -187,7 +187,7 @@ def read_buffer(f):
     _check_mesh(info)
 
     if info.offsets is not None:
-        cells, cell_data = _vtk_cells_from_data(
+        cells, cell_data = vtk_cells_from_data(
             info.connectivity, info.offsets, info.types, info.cell_data_raw
         )
     else:
@@ -593,7 +593,7 @@ def translate_cells(data, types, cell_data_raw):
         # TODO: cell_data
         for idx, vtk_cell_type in enumerate(types):
             start = offsets[idx] + 1
-            cell_idx = start + _vtk_to_meshio_order(
+            cell_idx = start + vtk_to_meshio_order(
                 vtk_cell_type, numnodes[idx], offsets.dtype
             )
             cell = data[cell_idx]
@@ -643,7 +643,7 @@ def translate_cells(data, types, cell_data_raw):
                 continue
             meshio_type = vtk_to_meshio_type[types[start]]
             n = numnodes[start]
-            cell_idx = idx0 + _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)
+            cell_idx = idx0 + vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)
             indices = np.add.outer(offsets[start:end], cell_idx)
             cells.append(CellBlock(meshio_type, conn[indices]))
             for name, d in cell_data_raw.items():
@@ -741,7 +741,7 @@ def _write_cells(f, cells, binary):
     if binary:
         for c in cells:
             n = c.data.shape[1]
-            cell_idx = _meshio_to_vtk_order(c.type, n)
+            cell_idx = meshio_to_vtk_order(c.type, n)
             dtype = np.dtype(">i4")
             # One must force endianness here:
             # <https://github.com/numpy/numpy/issues/15088>
@@ -756,7 +756,7 @@ def _write_cells(f, cells, binary):
         # ascii
         for c in cells:
             n = c.data.shape[1]
-            cell_idx = _meshio_to_vtk_order(c.type, n)
+            cell_idx = meshio_to_vtk_order(c.type, n)
             # prepend a column with the value n
             np.column_stack(
                 [

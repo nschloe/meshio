@@ -16,7 +16,7 @@ from .._common import raw_from_cell_data
 from .._exceptions import ReadError
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
-from .._vtk_common import _meshio_to_vtk_order, _vtk_cells_from_data, meshio_to_vtk_type
+from .._vtk_common import meshio_to_vtk_order, vtk_cells_from_data, meshio_to_vtk_type
 
 # Paraview 5.8.1's built-in Python doesn't have lzma.
 try:
@@ -145,7 +145,7 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
 
     else:
         for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
-            cls, cell_data = _vtk_cells_from_data(
+            cls, cell_data = vtk_cells_from_data(
                 cls["connectivity"].ravel(),
                 cls["offsets"].ravel(),
                 cls["types"].ravel(),
@@ -802,7 +802,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             # create connectivity, offset, type arrays
             connectivity = np.concatenate(
                 [
-                    v.data[:, _meshio_to_vtk_order(v.type, v.data.shape[1])].reshape(-1)
+                    v.data[:, meshio_to_vtk_order(v.type, v.data.shape[1])].reshape(-1)
                     for v in mesh.cells
                 ]
             )
