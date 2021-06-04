@@ -101,10 +101,12 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
     # identify cell blocks
     breaks = np.where(types[:-1] != types[1:])[0] + 1
     # all cells with indices between start[k] and end[k] have the same type
-    start_end = list(zip(
-        np.concatenate([[0], breaks]),
-        np.concatenate([breaks, [len(types)]]),
-    ))
+    start_end = list(
+        zip(
+            np.concatenate([[0], breaks]),
+            np.concatenate([breaks, [len(types)]]),
+        )
+    )
 
     cells = []
     cell_data = {}
