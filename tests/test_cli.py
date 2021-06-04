@@ -1,10 +1,11 @@
 import tempfile
 from pathlib import Path
 
-import helpers
 import numpy as np
 
 import meshio
+
+from . import helpers
 
 
 def is_same_mesh(mesh0, mesh1, atol):

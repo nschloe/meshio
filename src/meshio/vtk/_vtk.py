@@ -7,16 +7,17 @@ from functools import reduce
 import numpy as np
 
 from ..__about__ import __version__
-from .._common import (
-    _meshio_to_vtk_order,
-    _vtk_to_meshio_order,
-    meshio_to_vtk_type,
-    vtk_to_meshio_type,
-)
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
+from .._vtk_common import (
+    meshio_to_vtk_order,
+    meshio_to_vtk_type,
+    vtk_cells_from_data,
+    vtk_to_meshio_order,
+    vtk_to_meshio_type,
+)
 
 vtk_type_to_numnodes = np.array(
     [
@@ -130,8 +131,9 @@ class Info:
         self.cell_data_raw = {}
         self.point_data = {}
         self.dataset = {}
-        self.c = None
-        self.ct = None
+        self.connectivity = None
+        self.offsets = None
+        self.types = None
         self.active = None
         self.is_ascii = False
         self.split = []
@@ -183,7 +185,15 @@ def read_buffer(f):
             _read_subsection(f, info)
 
     _check_mesh(info)
-    cells, cell_data = translate_cells(info.c, info.ct, info.cell_data_raw)
+
+    if info.offsets is not None:
+        cells, cell_data = vtk_cells_from_data(
+            info.connectivity, info.offsets, info.types, info.cell_data_raw
+        )
+    else:
+        cells, cell_data = translate_cells(
+            info.connectivity, info.types, info.cell_data_raw
+        )
 
     return Mesh(
         info.points,
@@ -225,7 +235,7 @@ def _read_section(f, info):
             # vtk DataFile Version 5.1 - appearing in Paraview 5.8.1 outputs
             # No specification found for this file format.
             # See the question on ParaView Discourse Forum:
-            # <https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127>.
+            # https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127
             info.num_offsets = int(info.split[1])
             info.num_items = int(info.split[2])
             dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
@@ -234,16 +244,19 @@ def _read_section(f, info):
             assert "CONNECTIVITY" in line
             dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
             connectivity = _read_cells(f, info.is_ascii, info.num_items, dtype)
-            info.c = (offsets, connectivity)
+            info.connectivity = connectivity
+            assert offsets[0] == 0
+            assert offsets[-1] == len(connectivity)
+            info.offsets = offsets[1:]
         else:
             f.seek(last_pos)
             info.num_items = int(info.split[2])
-            info.c = _read_cells(f, info.is_ascii, info.num_items)
+            info.connectivity = _read_cells(f, info.is_ascii, info.num_items)
 
     elif info.section == "CELL_TYPES":
         info.active = "CELL_TYPES"
         info.num_items = int(info.split[1])
-        info.ct = _read_cell_types(f, info.is_ascii, info.num_items)
+        info.types = _read_cell_types(f, info.is_ascii, info.num_items)
 
     elif info.section == "POINT_DATA":
         info.active = "POINT_DATA"
@@ -308,9 +321,9 @@ def _read_subsection(f, info):
 
 def _check_mesh(info):
     if info.dataset["type"] == "UNSTRUCTURED_GRID":
-        if info.c is None:
+        if info.connectivity is None:
             raise ReadError("Required section CELLS not found.")
-        if info.ct is None:
+        if info.types is None:
             raise ReadError("Required section CELL_TYPES not found.")
     elif info.dataset["type"] == "STRUCTURED_POINTS":
         dim = info.dataset["DIMENSIONS"]
@@ -325,7 +338,7 @@ def _check_mesh(info):
             for i in range(3)
         ]
         info.points = _generate_points(axis)
-        info.c, info.ct = _generate_cells(dim=info.dataset["DIMENSIONS"])
+        info.connectivity, info.types = _generate_cells(dim=info.dataset["DIMENSIONS"])
     elif info.dataset["type"] == "RECTILINEAR_GRID":
         axis = [
             info.dataset["X_COORDINATES"],
@@ -333,9 +346,9 @@ def _check_mesh(info):
             info.dataset["Z_COORDINATES"],
         ]
         info.points = _generate_points(axis)
-        info.c, info.ct = _generate_cells(dim=info.dataset["DIMENSIONS"])
+        info.connectivity, info.types = _generate_cells(dim=info.dataset["DIMENSIONS"])
     elif info.dataset["type"] == "STRUCTURED_GRID":
-        info.c, info.ct = _generate_cells(dim=info.dataset["DIMENSIONS"])
+        info.connectivity, info.types = _generate_cells(dim=info.dataset["DIMENSIONS"])
 
 
 def _generate_cells(dim):
@@ -552,7 +565,7 @@ def _skip_meta(f):
             break
 
 
-def translate_cells(data, types, cell_data_raw):
+def translate_cells(connectivity, types, cell_data_raw):
     # https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
     # Translate it into the cells array.
     # `data` is a one-dimensional vector with
@@ -569,21 +582,21 @@ def translate_cells(data, types, cell_data_raw):
         offsets = np.empty(len(types), dtype=int)
         offsets[0] = 0
         for idx in range(numcells - 1):
-            numnodes[idx] = data[offsets[idx]]
+            numnodes[idx] = connectivity[offsets[idx]]
             offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
 
         idx = numcells - 1
-        numnodes[idx] = data[offsets[idx]]
-        if not np.all(numnodes == data[offsets]):
+        numnodes[idx] = connectivity[offsets[idx]]
+        if not np.all(numnodes == connectivity[offsets]):
             raise ReadError()
 
         # TODO: cell_data
         for idx, vtk_cell_type in enumerate(types):
             start = offsets[idx] + 1
-            cell_idx = start + _vtk_to_meshio_order(
+            cell_idx = start + vtk_to_meshio_order(
                 vtk_cell_type, numnodes[idx], offsets.dtype
             )
-            cell = data[cell_idx]
+            cell = connectivity[cell_idx]
 
             cell_type = vtk_to_meshio_type[vtk_cell_type]
 
@@ -603,24 +616,21 @@ def translate_cells(data, types, cell_data_raw):
         for k, c in enumerate(cells):
             cells[k] = CellBlock(c.type, np.array(c.data))
     else:
-        # Deduct offsets from the cell types. This is much faster than manually going
+        # Infer offsets from the cell types. This is much faster than manually going
         # through the data array. Slight disadvantage: This doesn't work for cells with
         # a custom number of points.
+        if np.any(types >= len(vtk_type_to_numnodes)):
+            raise ReadError("File contains cells that meshio cannot handle.")
+
         numnodes = vtk_type_to_numnodes[types]
         if not np.all(numnodes > 0):
             raise ReadError("File contains cells that meshio cannot handle.")
-        if isinstance(data, tuple):
-            offsets, conn = data
-            if not np.all(numnodes == np.diff(offsets)):
-                raise ReadError()
-            idx0 = 0
-        else:
-            offsets = np.cumsum(numnodes + 1) - (numnodes + 1)
 
-            if not np.all(numnodes == data[offsets]):
-                raise ReadError()
-            idx0 = 1
-            conn = data
+        offsets = np.cumsum(numnodes + 1) - (numnodes + 1)
+
+        if not np.all(numnodes == connectivity[offsets]):
+            raise ReadError()
+        idx0 = 1
 
         b = np.concatenate(
             [[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
@@ -630,9 +640,9 @@ def translate_cells(data, types, cell_data_raw):
                 continue
             meshio_type = vtk_to_meshio_type[types[start]]
             n = numnodes[start]
-            cell_idx = idx0 + _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)
+            cell_idx = idx0 + vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)
             indices = np.add.outer(offsets[start:end], cell_idx)
-            cells.append(CellBlock(meshio_type, conn[indices]))
+            cells.append(CellBlock(meshio_type, connectivity[indices]))
             for name, d in cell_data_raw.items():
                 if name not in cell_data:
                     cell_data[name] = []
@@ -728,7 +738,7 @@ def _write_cells(f, cells, binary):
     if binary:
         for c in cells:
             n = c.data.shape[1]
-            cell_idx = _meshio_to_vtk_order(c.type, n)
+            cell_idx = meshio_to_vtk_order(c.type, n)
             dtype = np.dtype(">i4")
             # One must force endianness here:
             # <https://github.com/numpy/numpy/issues/15088>
@@ -743,7 +753,7 @@ def _write_cells(f, cells, binary):
         # ascii
         for c in cells:
             n = c.data.shape[1]
-            cell_idx = _meshio_to_vtk_order(c.type, n)
+            cell_idx = meshio_to_vtk_order(c.type, n)
             # prepend a column with the value n
             np.column_stack(
                 [

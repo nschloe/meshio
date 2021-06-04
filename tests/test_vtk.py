@@ -1,17 +1,19 @@
 import pathlib
 from functools import partial
 
-import helpers
 import numpy as np
 import pytest
 
 import meshio
+
+from . import helpers
 
 test_set = [
     helpers.empty_mesh,
     helpers.line_mesh,
     helpers.tri_mesh_2d,
     helpers.tri_mesh,
+    helpers.tri_mesh_one_cell,
     helpers.triangle6_mesh,
     helpers.quad_mesh,
     helpers.quad8_mesh,
@@ -23,6 +25,7 @@ test_set = [
     helpers.polygon_mesh,
     helpers.pyramid_mesh,
     helpers.wedge_mesh,
+    # helpers.lagrange_high_order_mesh,
     helpers.add_point_data(helpers.tri_mesh, 1),
     helpers.add_point_data(helpers.tri_mesh, 2),
     helpers.add_point_data(helpers.tri_mesh, 3),

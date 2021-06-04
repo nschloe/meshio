@@ -1,8 +1,9 @@
-import helpers
 import numpy as np
 import pytest
 
 import meshio
+
+from . import helpers
 
 test_set_full = [
     helpers.empty_mesh,
