@@ -2,10 +2,12 @@
 I/O for Abaqus inp files.
 """
 import pathlib
+from itertools import count
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import num_nodes_per_cell
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
@@ -249,32 +251,34 @@ def _read_cells(f, params_map, point_ids):
         raise ReadError(f"Element type not available: {etype}")
 
     cell_type = abaqus_to_meshio_type[etype]
+    # ElementID + NodesIDs
+    num_data = num_nodes_per_cell[cell_type] + 1
 
-    cells, idx = [], []
-    cell_ids = {}
-    counter = 0
+    idx = []
     while True:
         line = f.readline()
         if not line or line.startswith("*"):
             break
-        if line.strip() == "":
-            continue
-
         line = line.strip()
+        if line == "":
+            continue
         idx += [int(k) for k in filter(None, line.split(","))]
-        if not line.endswith(","):
-            cell_ids[idx[0]] = counter
-            cells.append([point_ids[k] for k in idx[1:]])
-            idx = []
-            counter += 1
+
+    # Check for expected number of data
+    if len(idx) % num_data != 0:
+        raise ReadError("Expected number of data items does not match element type")
+
+    idx = np.array(idx).reshape((-1, num_data))
+    cell_ids = dict(zip(idx[:, 0], count(0)))
+    cells = np.array([[point_ids[node] for node in elem] for elem in idx[:, 1:]])
 
     cell_sets = (
-        {params_map["ELSET"]: np.arange(counter, dtype="int32")}
+        {params_map["ELSET"]: np.arange(len(cells), dtype="int32")}
         if "ELSET" in params_map.keys()
         else {}
     )
 
-    return cell_type, np.array(cells), cell_ids, cell_sets, line
+    return cell_type, cells, cell_ids, cell_sets, line
 
 
 def merge(
