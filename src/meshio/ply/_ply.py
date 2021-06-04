@@ -485,7 +485,8 @@ def write(filename, mesh, binary=True):  # noqa: C901
             for cell_type, data in mesh.cells:
                 if cell_type not in legal_cell_types:
                     warnings.warn(
-                        'cell_type "{}" is not supported by ply format - skipping'
+                        f'cell_type "{cell_type}" is not supported by ply format - '
+                        "skipping"
                     )
                     continue
                 # prepend with count
