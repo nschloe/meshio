@@ -565,7 +565,7 @@ def _skip_meta(f):
             break
 
 
-def translate_cells(data, types, cell_data_raw):
+def translate_cells(connectivity, types, cell_data_raw):
     # https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
     # Translate it into the cells array.
     # `data` is a one-dimensional vector with
@@ -582,12 +582,12 @@ def translate_cells(data, types, cell_data_raw):
         offsets = np.empty(len(types), dtype=int)
         offsets[0] = 0
         for idx in range(numcells - 1):
-            numnodes[idx] = data[offsets[idx]]
+            numnodes[idx] = connectivity[offsets[idx]]
             offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
 
         idx = numcells - 1
-        numnodes[idx] = data[offsets[idx]]
-        if not np.all(numnodes == data[offsets]):
+        numnodes[idx] = connectivity[offsets[idx]]
+        if not np.all(numnodes == connectivity[offsets]):
             raise ReadError()
 
         # TODO: cell_data
@@ -596,7 +596,7 @@ def translate_cells(data, types, cell_data_raw):
             cell_idx = start + vtk_to_meshio_order(
                 vtk_cell_type, numnodes[idx], offsets.dtype
             )
-            cell = data[cell_idx]
+            cell = connectivity[cell_idx]
 
             cell_type = vtk_to_meshio_type[vtk_cell_type]
 
@@ -619,21 +619,18 @@ def translate_cells(data, types, cell_data_raw):
         # Infer offsets from the cell types. This is much faster than manually going
         # through the data array. Slight disadvantage: This doesn't work for cells with
         # a custom number of points.
+        if np.any(types >= len(vtk_type_to_numnodes)):
+            raise ReadError("File contains cells that meshio cannot handle.")
+
         numnodes = vtk_type_to_numnodes[types]
         if not np.all(numnodes > 0):
             raise ReadError("File contains cells that meshio cannot handle.")
-        if isinstance(data, tuple):
-            offsets, conn = data
-            if not np.all(numnodes == np.diff(offsets)):
-                raise ReadError()
-            idx0 = 0
-        else:
-            offsets = np.cumsum(numnodes + 1) - (numnodes + 1)
 
-            if not np.all(numnodes == data[offsets]):
-                raise ReadError()
-            idx0 = 1
-            conn = data
+        offsets = np.cumsum(numnodes + 1) - (numnodes + 1)
+
+        if not np.all(numnodes == connectivity[offsets]):
+            raise ReadError()
+        idx0 = 1
 
         b = np.concatenate(
             [[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
@@ -645,7 +642,7 @@ def translate_cells(data, types, cell_data_raw):
             n = numnodes[start]
             cell_idx = idx0 + vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)
             indices = np.add.outer(offsets[start:end], cell_idx)
-            cells.append(CellBlock(meshio_type, conn[indices]))
+            cells.append(CellBlock(meshio_type, connectivity[indices]))
             for name, d in cell_data_raw.items():
                 if name not in cell_data:
                     cell_data[name] = []

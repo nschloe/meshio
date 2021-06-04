@@ -17,6 +17,7 @@ test_set = [
     helpers.quad8_mesh,
     helpers.tri_quad_mesh,
     helpers.polygon_mesh,
+    helpers.polygon_mesh_one_cell,
     helpers.polygon2_mesh,
     helpers.tet_mesh,
     helpers.tet10_mesh,

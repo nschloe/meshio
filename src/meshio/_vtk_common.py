@@ -95,20 +95,21 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
     # `connectivity` is a one-dimensional vector with
     # (p00, p01, ... ,p0k, p10, p11, ..., p1k, ...
     # `offsets` is a pointer array that points to the first position of p0, p1, etc.
-    print()
-    print(connectivity.tolist())
-    print(offsets)
-    print(types)
     if len(offsets) != len(types):
         raise ReadError(f"len(offsets) != len(types) ({len(offsets)} != {len(types)})")
 
     # identify cell blocks
-    b = np.concatenate([[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]])
+    breaks = np.where(types[:-1] != types[1:])[0] + 1
+    # all cells with indices between start[k] and end[k] have the same type
+    start_end = list(zip(
+        np.concatenate([[0], breaks]),
+        np.concatenate([breaks, [len(types)]]),
+    ))
 
     cells = []
     cell_data = {}
 
-    for start, end in zip(b[:-1], b[1:]):
+    for start, end in start_end:
         try:
             meshio_type = vtk_to_meshio_type[types[start]]
         except KeyError:
@@ -129,21 +130,16 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
             "VTK_LAGRANGE_PYRAMID",
         ]
         if meshio_type in special_cells:
-            print("is special")
             # Polygons have unknown and varying number of nodes per cell.
 
             # Index where the previous block of cells stopped. Needed to know the number
             # of nodes for the first cell in the block.
             first_node = 0 if start == 0 else offsets[start - 1]
-            print(first_node)
 
             # Start off the cell-node relation for each cell in this block
             start_cn = np.hstack((first_node, offsets[start:end]))
-            print(start_cn)
-            # Find the size of each cell
+            # Find the size of each cell except the last
             sizes = np.diff(start_cn)
-
-            print(sizes)
 
             # find where the cell blocks start and end
             b = np.diff(sizes)
@@ -178,5 +174,4 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
                     cell_data[name] = []
                 cell_data[name].append(d[start:end])
 
-    print()
     return cells, cell_data

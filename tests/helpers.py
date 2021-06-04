@@ -243,6 +243,19 @@ polygon_mesh = meshio.Mesh(
     ],
 )
 
+polygon_mesh_one_cell = meshio.Mesh(
+    [
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [1.5, 0.0, 0.0],
+        [1.7, 0.5, 0.0],
+        [1.5, 1.2, 0.0]
+    ],
+    [
+        ("polygon", [[0, 2, 3, 4, 1]]),
+    ],
+)
+
 # Make sure that the polygon cell blocking works.
 # This mesh is identical with tri_quad_mesh.
 polygon2_mesh = meshio.Mesh(
