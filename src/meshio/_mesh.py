@@ -57,7 +57,7 @@ class Mesh:
         # assert point data consistency and convert to numpy arrays
         for key, item in self.point_data.items():
             self.point_data[key] = np.asarray(item)
-            if self.point_data[key].shape[0] != self.points.shape[0]:
+            if len(self.point_data[key]) != len(self.points):
                 raise ValueError(
                     f"len(points) = {len(points)}, "
                     f'but len(point_data["{key}"]) = {len(point_data[key])}'
