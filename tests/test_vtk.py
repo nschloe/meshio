@@ -13,6 +13,7 @@ test_set = [
     helpers.line_mesh,
     helpers.tri_mesh_2d,
     helpers.tri_mesh,
+    helpers.tri_mesh_one_cell,
     helpers.triangle6_mesh,
     helpers.quad_mesh,
     helpers.quad8_mesh,
