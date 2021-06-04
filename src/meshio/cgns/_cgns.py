@@ -15,6 +15,12 @@ def read(filename):
 
     f = h5py.File(filename, "r")
 
+    if "Base" not in f:
+        raise ReadError("Expected \"Base\" in file. Malformed CGNS?")
+
+    if "Zone1" not in f["Base"]:
+        raise ReadError("Expected \"Zone1\" in \"Base\". Malformed CGNS?")
+
     x = f["Base"]["Zone1"]["GridCoordinates"]["CoordinateX"][" data"]
     y = f["Base"]["Zone1"]["GridCoordinates"]["CoordinateY"][" data"]
     z = f["Base"]["Zone1"]["GridCoordinates"]["CoordinateZ"][" data"]
