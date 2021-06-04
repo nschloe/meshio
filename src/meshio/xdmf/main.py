@@ -160,9 +160,14 @@ class XdmfReader:
 
         for c in grid:
             if c.tag == "Topology":
+                print(c)
                 data_items = list(c)
+                print(data_items)
                 if len(data_items) != 1:
-                    raise ReadError()
+                    raise ReadError(
+                        "Need exactly 1 data item in <Topology>, "
+                        f"found {len(data_items)}."
+                    )
                 topology_type = c.get("TopologyType")
                 if topology_type == "Mixed":
                     cells = translate_mixed_cells(
