@@ -1,10 +1,11 @@
 import pathlib
 
-import helpers
 import numpy as np
 import pytest
 
 import meshio
+
+from . import helpers
 
 h5py = pytest.importorskip("h5py")
 

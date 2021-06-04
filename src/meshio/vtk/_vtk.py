@@ -13,9 +13,9 @@ from .._helpers import register
 from .._mesh import CellBlock, Mesh
 from .._vtk_common import (
     meshio_to_vtk_order,
+    meshio_to_vtk_type,
     vtk_cells_from_data,
     vtk_to_meshio_order,
-    meshio_to_vtk_type,
     vtk_to_meshio_type,
 )
 

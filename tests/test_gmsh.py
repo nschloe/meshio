@@ -2,11 +2,12 @@ import copy
 import pathlib
 from functools import partial
 
-import helpers
 import numpy as np
 import pytest
 
 import meshio
+
+from . import helpers
 
 
 def gmsh_periodic():

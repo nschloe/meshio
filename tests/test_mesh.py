@@ -1,10 +1,11 @@
 import copy
 
-import helpers
 import numpy as np
 import pytest
 
 import meshio
+
+from . import helpers
 
 
 def test_public_attributes():

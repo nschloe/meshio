@@ -1,11 +1,12 @@
 import pathlib
 from functools import partial
 
-import helpers
 import numpy as np
 import pytest
 
 import meshio
+
+from . import helpers
 
 test_set = [
     helpers.empty_mesh,
