@@ -7,6 +7,7 @@ import base64
 import logging
 import re
 import sys
+import warnings
 import zlib
 
 import numpy as np
@@ -53,7 +54,10 @@ def _cells_from_data(connectivity, offsets, types, cell_data_raw):
         try:
             meshio_type = vtk_to_meshio_type[types[start]]
         except KeyError:
-            raise ReadError("File contains cells that meshio cannot handle.")
+            warnings.warn(
+                f"File contains cells that meshio cannot handle (type {types[start]})."
+            )
+            continue
 
         # cells with varying number of points
         special_cells = [
