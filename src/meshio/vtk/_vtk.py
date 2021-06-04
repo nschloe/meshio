@@ -245,9 +245,9 @@ def _read_section(f, info):
             dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
             connectivity = _read_cells(f, info.is_ascii, info.num_items, dtype)
             info.connectivity = connectivity
+            assert offsets[0] == 0
             assert offsets[-1] == len(connectivity)
-            # The last offset just points to the array end, so drop it
-            info.offsets = offsets[:-1]
+            info.offsets = offsets[1:]
         else:
             f.seek(last_pos)
             info.num_items = int(info.split[2])
