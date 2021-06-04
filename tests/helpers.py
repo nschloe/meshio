@@ -18,7 +18,7 @@ line_mesh = meshio.Mesh(
 )
 
 tri_mesh_one_cell = meshio.Mesh(
-    [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+    [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
     [("triangle", [[0, 1, 2]])],
 )
 
@@ -449,7 +449,7 @@ lagrange_high_order_mesh = meshio.Mesh(
     ],
     [
         (
-            "triangle",
+            "VTK_LAGRANGE_TETRAHEDRON",
             [
                 [
                     0,
