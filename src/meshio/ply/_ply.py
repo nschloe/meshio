@@ -508,6 +508,11 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
             # cells
             for cell_type, data in mesh.cells:
+                if cell_type not in legal_cell_types:
+                    warnings.warn(
+                        'cell_type "{}" is not supported by ply format - skipping'
+                    )
+                    continue
                 #                if cell_type not in cell_type_to_count.keys():
                 #                    continue
                 out = np.column_stack(
