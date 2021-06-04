@@ -239,11 +239,11 @@ def _read_section(f, info):
             info.num_offsets = int(info.split[1])
             info.num_items = int(info.split[2])
             dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
-            offsets = _read_cells(f, info.is_ascii, info.num_offsets, dtype)
+            offsets = _read_int_data(f, info.is_ascii, info.num_offsets, dtype)
             line = f.readline().decode()
             assert "CONNECTIVITY" in line
             dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
-            connectivity = _read_cells(f, info.is_ascii, info.num_items, dtype)
+            connectivity = _read_int_data(f, info.is_ascii, info.num_items, dtype)
             info.connectivity = connectivity
             assert offsets[0] == 0
             assert offsets[-1] == len(connectivity)
@@ -251,7 +251,7 @@ def _read_section(f, info):
         else:
             f.seek(last_pos)
             info.num_items = int(info.split[2])
-            info.connectivity = _read_cells(f, info.is_ascii, info.num_items)
+            info.connectivity = _read_int_data(f, info.is_ascii, info.num_items)
 
     elif info.section == "CELL_TYPES":
         info.active = "CELL_TYPES"
@@ -440,7 +440,7 @@ def _read_points(f, data_type, is_ascii, num_points):
     return points.reshape((num_points, 3))
 
 
-def _read_cells(f, is_ascii, num_items, dtype=np.dtype("int32")):
+def _read_int_data(f, is_ascii, num_items, dtype=np.dtype("int32")):
     if is_ascii:
         c = np.fromfile(f, count=num_items, sep=" ", dtype=dtype)
     else:
