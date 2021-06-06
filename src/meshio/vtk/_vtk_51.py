@@ -594,13 +594,12 @@ def _write_cells(f, cells, binary):
     offsets = np.concatenate(offsets)
 
     if binary:
-        vtk_dtype = numpy_to_vtk_dtype[offsets.dtype.name]
-        f.write(f"OFFSETS {vtk_dtype}\n".encode())
+        f.write(f"OFFSETS vtktypeint64\n".encode())
         # force big-endian and int64
         offsets.astype(">i8").tofile(f, sep="")
         f.write(b"\n")
 
-        f.write(f"CONNECTIVITY {vtk_dtype}\n".encode())
+        f.write(f"CONNECTIVITY vtktypeint64\n".encode())
         for cell_block in cells:
             d = cell_block.data
             cell_idx = meshio_to_vtk_order(cell_block.type)
@@ -611,16 +610,17 @@ def _write_cells(f, cells, binary):
         f.write(b"\n")
     else:
         # ascii
-        for c in cells:
-            n = c.data.shape[1]
-            cell_idx = meshio_to_vtk_order(c.type, n)
-            # prepend a column with the value n
-            np.column_stack(
-                [
-                    np.full(c.data.shape[0], n, dtype=c.data.dtype),
-                    c.data[:, cell_idx],
-                ]
-            ).tofile(f, sep="\n")
+        f.write(f"OFFSETS vtktypeint64\n".encode())
+        offsets.tofile(f, sep="\n")
+        f.write(b"\n")
+
+        f.write(f"CONNECTIVITY vtktypeint64\n".encode())
+        for cell_block in cells:
+            d = cell_block.data
+            cell_idx = meshio_to_vtk_order(cell_block.type)
+            if cell_idx is not None:
+                d = d[:, cell_idx]
+            d.tofile(f, sep="\n")
             f.write(b"\n")
 
     # write cell types
