@@ -661,64 +661,59 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         da = ET.SubElement(parent, "DataArray", type=vtu_type, Name=name)
         if len(data.shape) == 2:
             da.set("NumberOfComponents", f"{data.shape[1]}")
+
+        def text_writer_compressed(f):
+            max_block_size = 32768
+            data_bytes = data.tobytes()
+
+            # round up
+            num_blocks = -int(-len(data_bytes) // max_block_size)
+            last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
+
+            # It's too bad that we have to keep all blocks in memory. This is
+            # necessary because the header, written first, needs to know the
+            # lengths of all blocks. Also, the blocks are encoded _after_ having
+            # been concatenated.
+            c = {"lzma": lzma, "zlib": zlib}[compression]
+            compressed_blocks = [
+                # This compress is the slowest part of the writer
+                c.compress(block)
+                for block in _chunk_it(data_bytes, max_block_size)
+            ]
+
+            # collect header
+            header = np.array(
+                [num_blocks, max_block_size, last_block_size]
+                + [len(b) for b in compressed_blocks],
+                dtype=vtu_to_numpy_type[header_type],
+            )
+            f.write(base64.b64encode(header.tobytes()).decode())
+            f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
+
+        def text_writer_uncompressed(f):
+            data_bytes = data.tobytes()
+            # collect header
+            header = np.array(len(data_bytes), dtype=vtu_to_numpy_type[header_type])
+            f.write(base64.b64encode(header.tobytes() + data_bytes).decode())
+
+        def text_writer_ascii(f):
+            # This write() loop is the bottleneck for the write. Alternatives:
+            # savetxt is super slow:
+            #   np.savetxt(f, data.reshape(-1), fmt=fmt)
+            # joining and writing is a bit faster, but consumes huge amounts of
+            # memory:
+            #   f.write("\n".join(map(fmt.format, data.reshape(-1))))
+            for item in data.reshape(-1):
+                f.write((fmt + "\n").format(item))
+
         if binary:
             da.set("format", "binary")
-            if compression:
-                # compressed write
-                def text_writer(f):
-                    max_block_size = 32768
-                    data_bytes = data.tobytes()
-
-                    # round up
-                    num_blocks = -int(-len(data_bytes) // max_block_size)
-                    last_block_size = (
-                        len(data_bytes) - (num_blocks - 1) * max_block_size
-                    )
-
-                    # It's too bad that we have to keep all blocks in memory. This is
-                    # necessary because the header, written first, needs to know the
-                    # lengths of all blocks. Also, the blocks are encoded _after_ having
-                    # been concatenated.
-                    c = {"lzma": lzma, "zlib": zlib}[compression]
-                    compressed_blocks = [
-                        # This compress is the slowest part of the writer
-                        c.compress(block)
-                        for block in _chunk_it(data_bytes, max_block_size)
-                    ]
-
-                    # collect header
-                    header = np.array(
-                        [num_blocks, max_block_size, last_block_size]
-                        + [len(b) for b in compressed_blocks],
-                        dtype=vtu_to_numpy_type[header_type],
-                    )
-                    f.write(base64.b64encode(header.tobytes()).decode())
-                    f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
-
-            else:
-                # uncompressed write
-                def text_writer(f):
-                    data_bytes = data.tobytes()
-                    # collect header
-                    header = np.array(
-                        len(data_bytes), dtype=vtu_to_numpy_type[header_type]
-                    )
-                    f.write(base64.b64encode(header.tobytes() + data_bytes).decode())
-
+            da.text_writer = (
+                text_writer_compressed if compression else text_writer_uncompressed
+            )
         else:
             da.set("format", "ascii")
-
-            def text_writer(f):
-                # This write() loop is the bottleneck for the write. Alternatives:
-                # savetxt is super slow:
-                #   np.savetxt(f, data.reshape(-1), fmt=fmt)
-                # joining and writing is a bit faster, but consumes huge amounts of
-                # memory:
-                #   f.write("\n".join(map(fmt.format, data.reshape(-1))))
-                for item in data.reshape(-1):
-                    f.write((fmt + "\n").format(item))
-
-        da.text_writer = text_writer
+            da.text_writer = text_writer_ascii
 
     def _polyhedron_face_cells(face_cells):
         # Define the faces of each cell on the format specfied for VTU Polyhedron cells.
