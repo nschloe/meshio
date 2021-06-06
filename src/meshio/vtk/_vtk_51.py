@@ -1,6 +1,3 @@
-"""
-I/O for VTK <https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
-"""
 import logging
 from functools import reduce
 
@@ -9,79 +6,28 @@ import numpy as np
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._helpers import register
-from .._mesh import CellBlock, Mesh
+from .._mesh import Mesh
 from .._vtk_common import (
     meshio_to_vtk_order,
     meshio_to_vtk_type,
     vtk_cells_from_data,
-    vtk_to_meshio_order,
-    vtk_to_meshio_type,
-)
-
-vtk_type_to_numnodes = np.array(
-    [
-        0,  # empty
-        1,  # vertex
-        -1,  # poly_vertex
-        2,  # line
-        -1,  # poly_line
-        3,  # triangle
-        -1,  # triangle_strip
-        -1,  # polygon
-        -1,  # pixel
-        4,  # quad
-        4,  # tetra
-        -1,  # voxel
-        8,  # hexahedron
-        6,  # wedge
-        5,  # pyramid
-        10,  # penta_prism
-        12,  # hexa_prism
-        -1,
-        -1,
-        -1,
-        -1,
-        3,  # line3
-        6,  # triangle6
-        8,  # quad8
-        10,  # tetra10
-        20,  # hexahedron20
-        15,  # wedge15
-        13,  # pyramid13
-        9,  # quad9
-        27,  # hexahedron27
-        6,  # quad6
-        12,  # wedge12
-        18,  # wedge18
-        24,  # hexahedron24
-        7,  # triangle7
-        4,  # line4
-    ]
 )
 
 
-# These are all VTK data types.
+# VTK 5.1 data types
 vtk_to_numpy_dtype_name = {
-    "bit": "bool",
-    "unsigned_char": "uint8",
-    "char": "int8",
-    "unsigned_short": "uint16",
-    "short": "int16",
-    "unsigned_int": "uint32",
-    "int": "int32",
-    "unsigned_long": "uint64",
-    "long": "int64",
     "float": "float32",
     "double": "float64",
-    "vtktypeint32": "int32",  # vtk DataFile Version 5.1
-    "vtktypeint64": "int64",  # vtk DataFile Version 5.1
-    "vtkidtype": "int32",  # may be either 32-bit or 64-bit (VTK_USE_64BIT_IDS)
+    "vtktypeint8": "int8",
+    "vtktypeint16": "int16",
+    "vtktypeint32": "int32",
+    "vtktypeint64": "int64",
+    "vtktypeuint8": "uint8",
+    "vtktypeuint16": "uint16",
+    "vtktypeuint32": "uint32",
+    "vtktypeuint64": "uint64",
 }
-
-numpy_to_vtk_dtype = {
-    v: k for k, v in vtk_to_numpy_dtype_name.items() if "vtk" not in k
-}
+numpy_to_vtk_dtype = {v: k for k, v in vtk_to_numpy_dtype_name.items()}
 
 # supported vtk dataset types
 vtk_dataset_types = [
@@ -147,7 +93,6 @@ class Info:
 
 
 def read(filename):
-    """Reads a VTK vtk file."""
     with open_file(filename, "rb") as f:
         out = read_buffer(f)
     return out
@@ -157,8 +102,7 @@ def read_buffer(f):
     # initialize output data
     info = Info()
 
-    # skip header and title
-    f.readline()
+    # skip title comment
     f.readline()
 
     data_type = f.readline().decode().strip().upper()
@@ -186,14 +130,9 @@ def read_buffer(f):
 
     _check_mesh(info)
 
-    if info.offsets is not None:
-        cells, cell_data = vtk_cells_from_data(
-            info.connectivity, info.offsets, info.types, info.cell_data_raw
-        )
-    else:
-        cells, cell_data = translate_cells(
-            info.connectivity, info.types, info.cell_data_raw
-        )
+    cells, cell_data = vtk_cells_from_data(
+        info.connectivity, info.offsets, info.types, info.cell_data_raw
+    )
 
     return Mesh(
         info.points,
@@ -226,32 +165,31 @@ def _read_section(f, info):
 
     elif info.section == "CELLS":
         info.active = "CELLS"
-        last_pos = f.tell()
         try:
             line = f.readline().decode()
         except UnicodeDecodeError:
             line = ""
-        if "OFFSETS" in line:
-            # vtk DataFile Version 5.1 - appearing in Paraview 5.8.1 outputs
-            # No specification found for this file format.
-            # See the question on ParaView Discourse Forum:
-            # https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127
-            info.num_offsets = int(info.split[1])
-            info.num_items = int(info.split[2])
-            dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
-            offsets = _read_int_data(f, info.is_ascii, info.num_offsets, dtype)
-            line = f.readline().decode()
-            assert "CONNECTIVITY" in line
-            dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
-            connectivity = _read_int_data(f, info.is_ascii, info.num_items, dtype)
-            info.connectivity = connectivity
-            assert offsets[0] == 0
-            assert offsets[-1] == len(connectivity)
-            info.offsets = offsets[1:]
-        else:
-            f.seek(last_pos)
-            info.num_items = int(info.split[2])
-            info.connectivity = _read_int_data(f, info.is_ascii, info.num_items)
+
+        assert line.startswith("OFFSETS")
+        # vtk DataFile Version 5.1 - appearing in Paraview 5.8.1 outputs
+        # No specification found for this file format.
+        # See the question on ParaView Discourse Forum:
+        # https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127
+        info.num_offsets = int(info.split[1])
+        info.num_items = int(info.split[2])
+        dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
+        print("offi")
+        offsets = _read_int_data(f, info.is_ascii, info.num_offsets, dtype)
+
+        line = f.readline().decode()
+        assert line.startswith("CONNECTIVITY")
+        dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
+        print("conni")
+        connectivity = _read_int_data(f, info.is_ascii, info.num_items, dtype)
+        info.connectivity = connectivity
+        assert offsets[0] == 0
+        assert offsets[-1] == len(connectivity)
+        info.offsets = offsets[1:]
 
     elif info.section == "CELL_TYPES":
         info.active = "CELL_TYPES"
@@ -440,15 +378,16 @@ def _read_points(f, data_type, is_ascii, num_points):
     return points.reshape((num_points, 3))
 
 
-def _read_int_data(f, is_ascii, num_items, dtype=np.dtype("int32")):
+def _read_int_data(f, is_ascii, num_items, dtype):
     if is_ascii:
         c = np.fromfile(f, count=num_items, sep=" ", dtype=dtype)
     else:
         dtype = dtype.newbyteorder(">")
         c = np.fromfile(f, count=num_items, dtype=dtype)
+        print("c", c)
         line = f.readline().decode()
         if line != "\n":
-            raise ReadError()
+            raise ReadError("Expected newline")
     return c
 
 
@@ -564,103 +503,17 @@ def _skip_meta(f):
             # end of metadata is a blank line
             break
 
-
-def translate_cells(connectivity, types, cell_data_raw):
-    # https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
-    # Translate it into the cells array.
-    # `data` is a one-dimensional vector with
-    # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    # or a tuple with (offsets, connectivity)
-    has_polygon = np.any(types == meshio_to_vtk_type["polygon"])
-
-    cells = []
-    cell_data = {}
-    if has_polygon:
-        numnodes = np.empty(len(types), dtype=int)
-        # If some polygons are in the VTK file, loop over the cells
-        numcells = len(types)
-        offsets = np.empty(len(types), dtype=int)
-        offsets[0] = 0
-        for idx in range(numcells - 1):
-            numnodes[idx] = connectivity[offsets[idx]]
-            offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
-
-        idx = numcells - 1
-        numnodes[idx] = connectivity[offsets[idx]]
-        if not np.all(numnodes == connectivity[offsets]):
-            raise ReadError()
-
-        # TODO: cell_data
-        for idx, vtk_cell_type in enumerate(types):
-            start = offsets[idx] + 1
-            cell_idx = start + vtk_to_meshio_order(
-                vtk_cell_type, numnodes[idx], offsets.dtype
-            )
-            cell = connectivity[cell_idx]
-
-            cell_type = vtk_to_meshio_type[vtk_cell_type]
-
-            if (
-                len(cells) > 0
-                and cells[-1].type == cell_type
-                # the following check if needed for polygons; key can be equal, but
-                # still needs to go into a new block
-                and len(cell) == len(cells[-1].data[-1])
-            ):
-                cells[-1].data.append(cell)
-            else:
-                # open up a new cell block
-                cells.append(CellBlock(cell_type, [cell]))
-
-        # convert data to numpy arrays
-        for k, c in enumerate(cells):
-            cells[k] = CellBlock(c.type, np.array(c.data))
-    else:
-        # Infer offsets from the cell types. This is much faster than manually going
-        # through the data array. Slight disadvantage: This doesn't work for cells with
-        # a custom number of points.
-        if np.any(types >= len(vtk_type_to_numnodes)):
-            raise ReadError("File contains cells that meshio cannot handle.")
-
-        numnodes = vtk_type_to_numnodes[types]
-        if not np.all(numnodes > 0):
-            raise ReadError("File contains cells that meshio cannot handle.")
-
-        offsets = np.cumsum(numnodes + 1) - (numnodes + 1)
-
-        if not np.all(numnodes == connectivity[offsets]):
-            raise ReadError()
-        idx0 = 1
-
-        b = np.concatenate(
-            [[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
-        )
-        for start, end in zip(b[:-1], b[1:]):
-            if start == end:
-                continue
-            meshio_type = vtk_to_meshio_type[types[start]]
-            n = numnodes[start]
-            cell_idx = idx0 + vtk_to_meshio_order(types[start], n, dtype=offsets.dtype)
-            indices = np.add.outer(offsets[start:end], cell_idx)
-            cells.append(CellBlock(meshio_type, connectivity[indices]))
-            for name, d in cell_data_raw.items():
-                if name not in cell_data:
-                    cell_data[name] = []
-                cell_data[name].append(d[start:end])
-
-    return cells, cell_data
+def _pad(array):
+    return np.pad(array, ((0, 0), (0, 1)), "constant")
 
 
 def write(filename, mesh, binary=True):
-    def pad(array):
-        return np.pad(array, ((0, 0), (0, 1)), "constant")
-
     if mesh.points.shape[1] == 2:
         logging.warning(
             "VTK requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        points = pad(mesh.points)
+        points = _pad(mesh.points)
     else:
         points = mesh.points
 
@@ -669,24 +522,24 @@ def write(filename, mesh, binary=True):
             if len(values.shape) == 2 and values.shape[1] == 2:
                 logging.warning(
                     "VTK requires 3D vectors, but 2D vectors given. "
-                    "Appending 0 third component to {}.".format(name)
+                    f"Appending 0 third component to {name}."
                 )
-                mesh.point_data[name] = pad(values)
+                mesh.point_data[name] = _pad(values)
 
     for name, data in mesh.cell_data.items():
         for k, values in enumerate(data):
             if len(values.shape) == 2 and values.shape[1] == 2:
                 logging.warning(
                     "VTK requires 3D vectors, but 2D vectors given. "
-                    "Appending 0 third component to {}.".format(name)
+                    f"Appending 0 third component to {name}."
                 )
-                data[k] = pad(data[k])
+                data[k] = _pad(data[k])
 
     if not binary:
         logging.warning("VTK ASCII files are only meant for debugging.")
 
     with open_file(filename, "wb") as f:
-        f.write(b"# vtk DataFile Version 4.2\n")
+        f.write(b"# vtk DataFile Version 5.1\n")
         f.write(f"written by meshio v{__version__}\n".encode())
         f.write(("BINARY\n" if binary else "ASCII\n").encode())
         f.write(b"DATASET UNSTRUCTURED_GRID\n")
@@ -709,11 +562,8 @@ def write(filename, mesh, binary=True):
 
 
 def _write_points(f, points, binary):
-    f.write(
-        "POINTS {} {}\n".format(
-            len(points), numpy_to_vtk_dtype[points.dtype.name]
-        ).encode()
-    )
+    dtype = numpy_to_vtk_dtype[points.dtype.name]
+    f.write(f"POINTS {len(points)} {dtype}\n".encode())
 
     if binary:
         # Binary data must be big endian, see
@@ -735,19 +585,38 @@ def _write_cells(f, cells, binary):
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
     f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode())
+
+    print(cells)
+
+    # offsets
+    offsets = [[0]]
+    k = 0
+    for cell_block in cells:
+        m, n = cell_block.data.shape
+        offsets.append(np.arange(k + n, k + (m + 1) * n, n))
+        k = offsets[-1][-1]
+    offsets = np.concatenate(offsets)
+
     if binary:
-        for c in cells:
-            n = c.data.shape[1]
-            cell_idx = meshio_to_vtk_order(c.type, n)
-            dtype = np.dtype(">i4")
-            # One must force endianness here:
-            # <https://github.com/numpy/numpy/issues/15088>
-            np.column_stack(
-                [
-                    np.full(c.data.shape[0], n, dtype=dtype),
-                    c.data[:, cell_idx].astype(dtype),
-                ],
-            ).astype(dtype).tofile(f, sep="")
+        vtk_dtype = numpy_to_vtk_dtype[offsets.dtype.name]
+        f.write(f"OFFSETS {vtk_dtype}\n".encode())
+        # force big-endian
+        big_endian_dtype = offsets.dtype.newbyteorder(">")
+        offsets.astype(big_endian_dtype).tofile(f, sep="")
+        f.write(b"\n")
+
+        # assuming that all cell blocks have the same dtype
+        vtk_dtype = numpy_to_vtk_dtype[cells[0].data.dtype.name]
+        # force big-endian
+        big_endian_dtype = cells[0].data.dtype.newbyteorder(">")
+        #
+        f.write(f"CONNECTIVITY {vtk_dtype}\n".encode())
+        for cell_block in cells:
+            d = cell_block.data
+            cell_idx = meshio_to_vtk_order(cell_block.type)
+            if cell_idx is not None:
+                d = d[:, cell_idx]
+            d.astype(big_endian_dtype).tofile(f, sep="")
         f.write(b"\n")
     else:
         # ascii
@@ -810,6 +679,3 @@ def _write_field_data(f, data, binary):
             values.tofile(f, sep=" ")
             # np.savetxt(f, points)
         f.write(b"\n")
-
-
-register("vtk", [".vtk"], read, {"vtk": write})

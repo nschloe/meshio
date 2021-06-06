@@ -70,7 +70,7 @@ vtk_to_meshio_type = {
 meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
 
-def vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
+def vtk_to_meshio_order(vtk_type, dtype=int):
     # meshio uses the same node ordering as VTK for most cell types. However, for the
     # linear wedge, the ordering of the gmsh Prism [1] is adopted since this is found in
     # most codes (Abaqus, Ansys, Nastran,...). In the vtkWedge [2], the normal of the
@@ -79,15 +79,13 @@ def vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
     # [2] https://vtk.org/doc/nightly/html/classvtkWedge.html
     if vtk_type == 13:
         return np.array([0, 2, 1, 3, 5, 4], dtype=dtype)
-    else:
-        return np.arange(0, numnodes, dtype=dtype)
+    return None
 
 
-def meshio_to_vtk_order(meshio_type, numnodes, dtype=int):
+def meshio_to_vtk_order(meshio_type, dtype=int):
     if meshio_type == "wedge":
         return np.array([0, 2, 1, 3, 5, 4], dtype=dtype)
-    else:
-        return np.arange(0, numnodes, dtype=dtype)
+    return None
 
 
 def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
