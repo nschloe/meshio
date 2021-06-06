@@ -143,18 +143,21 @@ def read_buffer(f):
             # , VARLOCATION = ([1-2] = NODAL, [3-7] = CELLCENTERED)
             # ```
             # is valid (and understood by ParaView and VisIt).
-            lines = [line]
+            info_lines = [line]
             i = f.tell()
             line = readline(f).upper()
             while True:
-                if line and not line[0].isdigit():
-                    lines += [line]
+                # check if the first entry can be converted to a float
+                try:
+                    float(line.split()[0])
+                except ValueError:
+                    info_lines += [line]
                     i = f.tell()
                     line = readline(f).upper()
                 else:
                     f.seek(i)
                     break
-            line = " ".join(lines)
+            line = " ".join(info_lines)
 
             zone = _read_zone(line)
             (
