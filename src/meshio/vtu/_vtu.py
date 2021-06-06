@@ -800,12 +800,14 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
         else:
             # create connectivity, offset, type arrays
-            connectivity = np.concatenate(
-                [
-                    v.data[:, meshio_to_vtk_order(v.type, v.data.shape[1])].reshape(-1)
-                    for v in mesh.cells
-                ]
-            )
+            connectivity = []
+            for v in mesh.cells:
+                d = v.data
+                new_order = meshio_to_vtk_order(v.type)
+                if new_order is not None:
+                    d = d[:, new_order]
+                connectivity.append(d.flatten())
+            connectivity = np.concatenate(connectivity)
 
             # offset (points to the first element of the next cell)
             offsets = [

@@ -70,7 +70,7 @@ vtk_to_meshio_type = {
 meshio_to_vtk_type = {v: k for k, v in vtk_to_meshio_type.items()}
 
 
-def vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
+def vtk_to_meshio_order(vtk_type, dtype=int):
     # meshio uses the same node ordering as VTK for most cell types. However, for the
     # linear wedge, the ordering of the gmsh Prism [1] is adopted since this is found in
     # most codes (Abaqus, Ansys, Nastran,...). In the vtkWedge [2], the normal of the
@@ -79,15 +79,13 @@ def vtk_to_meshio_order(vtk_type, numnodes, dtype=int):
     # [2] https://vtk.org/doc/nightly/html/classvtkWedge.html
     if vtk_type == 13:
         return np.array([0, 2, 1, 3, 5, 4], dtype=dtype)
-    else:
-        return np.arange(0, numnodes, dtype=dtype)
+    return None
 
 
-def meshio_to_vtk_order(meshio_type, numnodes, dtype=int):
+def meshio_to_vtk_order(meshio_type, dtype=int):
     if meshio_type == "wedge":
         return np.array([0, 2, 1, 3, 5, 4], dtype=dtype)
-    else:
-        return np.arange(0, numnodes, dtype=dtype)
+    return None
 
 
 def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
@@ -152,10 +150,13 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
             for cell_block_start, cell_block_end in zip(c, c[1:]):
                 items = np.arange(cell_block_start, cell_block_end)
                 sz = sizes[cell_block_start]
-                indices = np.add.outer(
-                    start_cn[items + 1],
-                    vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
-                )
+
+                new_order = vtk_to_meshio_order(types[start], dtype=offsets.dtype)
+                if new_order is None:
+                    new_order = np.arange(sz, dtype=offsets.dtype)
+                new_order -= sz
+
+                indices = np.add.outer(start_cn[items + 1], new_order)
                 cells.append(CellBlock(meshio_type, connectivity[indices]))
 
                 # Store cell data for this set of cells
@@ -166,10 +167,13 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
         else:
             # Non-polygonal cell. Same number of nodes per cell makes everything easier.
             n = num_nodes_per_cell[meshio_type]
-            indices = np.add.outer(
-                offsets[start:end],
-                vtk_to_meshio_order(types[start], n, dtype=offsets.dtype) - n,
-            )
+
+            new_order = vtk_to_meshio_order(types[start], dtype=offsets.dtype)
+            if new_order is None:
+                new_order = np.arange(n, dtype=offsets.dtype)
+            new_order -= n
+
+            indices = np.add.outer(offsets[start:end], new_order)
             cells.append(CellBlock(meshio_type, connectivity[indices]))
             for name, d in cell_data_raw.items():
                 if name not in cell_data:
@@ -177,3 +181,27 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
                 cell_data[name].append(d[start:end])
 
     return cells, cell_data
+
+
+class Info:
+    """Info Container for the VTK reader."""
+
+    def __init__(self):
+        self.points = None
+        self.field_data = {}
+        self.cell_data_raw = {}
+        self.point_data = {}
+        self.dataset = {}
+        self.connectivity = None
+        self.offsets = None
+        self.types = None
+        self.active = None
+        self.is_ascii = False
+        self.split = []
+        self.num_items = 0
+        # One of the problem in reading VTK files are POINT_DATA and CELL_DATA fields.
+        # They can contain a number of SCALARS+LOOKUP_TABLE tables, without giving and
+        # indication of how many there are. Hence, SCALARS must be treated like a
+        # first-class section.  To associate it with POINT/CELL_DATA, we store the
+        # `active` section in this variable.
+        self.section = None
