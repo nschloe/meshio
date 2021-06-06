@@ -7,12 +7,7 @@ from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import Mesh
-from .._vtk_common import (
-    meshio_to_vtk_order,
-    meshio_to_vtk_type,
-    vtk_cells_from_data,
-)
-
+from .._vtk_common import meshio_to_vtk_order, meshio_to_vtk_type, vtk_cells_from_data
 
 # VTK 5.1 data types
 vtk_to_numpy_dtype_name = {
@@ -499,6 +494,7 @@ def _skip_meta(f):
         if not line:
             # end of metadata is a blank line
             break
+
 
 def _pad(array):
     return np.pad(array, ((0, 0), (0, 1)), "constant")

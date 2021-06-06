@@ -150,10 +150,13 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
             for cell_block_start, cell_block_end in zip(c, c[1:]):
                 items = np.arange(cell_block_start, cell_block_end)
                 sz = sizes[cell_block_start]
-                indices = np.add.outer(
-                    start_cn[items + 1],
-                    vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
-                )
+
+                new_order = vtk_to_meshio_order(types[start], dtype=offsets.dtype)
+                if new_order is None:
+                    new_order = np.arange(sz, dtype=offsets.dtype)
+                new_order -= sz
+
+                indices = np.add.outer(start_cn[items + 1], new_order)
                 cells.append(CellBlock(meshio_type, connectivity[indices]))
 
                 # Store cell data for this set of cells
@@ -164,10 +167,13 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
         else:
             # Non-polygonal cell. Same number of nodes per cell makes everything easier.
             n = num_nodes_per_cell[meshio_type]
-            indices = np.add.outer(
-                offsets[start:end],
-                vtk_to_meshio_order(types[start], n, dtype=offsets.dtype) - n,
-            )
+
+            new_order = vtk_to_meshio_order(types[start], dtype=offsets.dtype)
+            if new_order is None:
+                new_order = np.arange(n, dtype=offsets.dtype)
+            new_order -= n
+
+            indices = np.add.outer(offsets[start:end], new_order)
             cells.append(CellBlock(meshio_type, connectivity[indices]))
             for name, d in cell_data_raw.items():
                 if name not in cell_data:
