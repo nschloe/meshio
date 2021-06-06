@@ -147,7 +147,7 @@ def read_buffer(f):
             i = f.tell()
             line = readline(f).upper()
             while True:
-                if line and not line[0].isdigit():
+                if line and not (line[0].isdigit() or line[0] == "-"):
                     lines += [line]
                     i = f.tell()
                     line = readline(f).upper()
