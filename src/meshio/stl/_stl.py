@@ -8,7 +8,7 @@ import os
 import numpy as np
 
 from ..__about__ import __version__
-from .._exceptions import ReadError
+from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
@@ -159,6 +159,8 @@ def _read_binary(f, num_triangles):
 
 
 def write(filename, mesh, binary=False):
+    if "triangle" not in {block.type for block in mesh.cells}:
+        raise WriteError("STL can only write triangle cells.  No triangle cells found.")
     if len(mesh.cells) > 1:
         invalid = {block.type for block in mesh.cells if block.type != "triangle"}
         logging.warning(
