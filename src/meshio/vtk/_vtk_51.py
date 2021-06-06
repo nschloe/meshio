@@ -588,12 +588,12 @@ def _write_cells(f, cells, binary):
     offsets = np.concatenate(offsets)
 
     if binary:
-        f.write(f"OFFSETS vtktypeint64\n".encode())
+        f.write("OFFSETS vtktypeint64\n".encode())
         # force big-endian and int64
         offsets.astype(">i8").tofile(f, sep="")
         f.write(b"\n")
 
-        f.write(f"CONNECTIVITY vtktypeint64\n".encode())
+        f.write("CONNECTIVITY vtktypeint64\n".encode())
         for cell_block in cells:
             d = cell_block.data
             cell_idx = meshio_to_vtk_order(cell_block.type)
@@ -604,11 +604,11 @@ def _write_cells(f, cells, binary):
         f.write(b"\n")
     else:
         # ascii
-        f.write(f"OFFSETS vtktypeint64\n".encode())
+        f.write("OFFSETS vtktypeint64\n".encode())
         offsets.tofile(f, sep="\n")
         f.write(b"\n")
 
-        f.write(f"CONNECTIVITY vtktypeint64\n".encode())
+        f.write("CONNECTIVITY vtktypeint64\n".encode())
         for cell_block in cells:
             d = cell_block.data
             cell_idx = meshio_to_vtk_order(cell_block.type)
