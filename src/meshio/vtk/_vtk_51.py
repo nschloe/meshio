@@ -13,6 +13,7 @@ from .._vtk_common import meshio_to_vtk_order, meshio_to_vtk_type, vtk_cells_fro
 vtk_to_numpy_dtype_name = {
     "float": "float32",
     "double": "float64",
+    "int": "int",
     "vtktypeint8": "int8",
     "vtktypeint16": "int16",
     "vtktypeint32": "int32",
