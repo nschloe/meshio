@@ -7,7 +7,12 @@ from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import Mesh
-from .._vtk_common import meshio_to_vtk_order, meshio_to_vtk_type, vtk_cells_from_data
+from .._vtk_common import (
+    Info,
+    meshio_to_vtk_order,
+    meshio_to_vtk_type,
+    vtk_cells_from_data,
+)
 
 # VTK 5.1 data types
 vtk_to_numpy_dtype_name = {
@@ -62,30 +67,6 @@ vtk_sections = [
     "LOOKUP_TABLE",
     "COLOR_SCALARS",
 ]
-
-
-class Info:
-    """Info Container for the VTK reader."""
-
-    def __init__(self):
-        self.points = None
-        self.field_data = {}
-        self.cell_data_raw = {}
-        self.point_data = {}
-        self.dataset = {}
-        self.connectivity = None
-        self.offsets = None
-        self.types = None
-        self.active = None
-        self.is_ascii = False
-        self.split = []
-        self.num_items = 0
-        # One of the problem in reading VTK files are POINT_DATA and CELL_DATA fields.
-        # They can contain a number of SCALARS+LOOKUP_TABLE tables, without giving and
-        # indication of how many there are. Hence, SCALARS must be treated like a
-        # first-class section.  To associate it with POINT/CELL_DATA, we store the
-        # `active` section in this variable.
-        self.section = None
 
 
 def read(filename):

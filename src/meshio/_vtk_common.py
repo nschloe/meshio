@@ -181,3 +181,27 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
                 cell_data[name].append(d[start:end])
 
     return cells, cell_data
+
+
+class Info:
+    """Info Container for the VTK reader."""
+
+    def __init__(self):
+        self.points = None
+        self.field_data = {}
+        self.cell_data_raw = {}
+        self.point_data = {}
+        self.dataset = {}
+        self.connectivity = None
+        self.offsets = None
+        self.types = None
+        self.active = None
+        self.is_ascii = False
+        self.split = []
+        self.num_items = 0
+        # One of the problem in reading VTK files are POINT_DATA and CELL_DATA fields.
+        # They can contain a number of SCALARS+LOOKUP_TABLE tables, without giving and
+        # indication of how many there are. Hence, SCALARS must be treated like a
+        # first-class section.  To associate it with POINT/CELL_DATA, we store the
+        # `active` section in this variable.
+        self.section = None
