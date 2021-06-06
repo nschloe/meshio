@@ -28,7 +28,7 @@ def read_buffer(f):
 
 def write(filename, mesh, fmt_version: str = "5.1", **kwargs):
     if fmt_version == "4.2":
-        _vtk_51.write(filename, mesh, **kwargs)
+        return _vtk_42.write(filename, mesh, **kwargs)
 
     assert fmt_version == "5.1"
     _vtk_51.write(filename, mesh, **kwargs)
