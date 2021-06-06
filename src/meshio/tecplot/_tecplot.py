@@ -114,6 +114,14 @@ def readline(f):
 
 
 def read_buffer(f):
+    variables = None
+    num_data = None
+    zone_format = None
+    zone_type = None
+    is_cell_centered = None
+    data = None
+    cells = None
+
     while True:
         line = readline(f)
 
@@ -132,7 +140,6 @@ def read_buffer(f):
                     f.seek(i)
                     break
             line = " ".join(lines)
-
             variables = _read_variables(line)
 
         elif line.upper().startswith("ZONE"):
@@ -159,6 +166,8 @@ def read_buffer(f):
                     break
             line = " ".join(info_lines)
 
+            assert variables is not None
+
             zone = _read_zone(line)
             (
                 num_nodes,
@@ -180,6 +189,14 @@ def read_buffer(f):
 
         elif not line:
             break
+
+    assert num_data is not None
+    assert zone_format is not None
+    assert zone_type is not None
+    assert variables is not None
+    assert is_cell_centered is not None
+    assert data is not None
+    assert cells is not None
 
     data = (
         np.split(np.concatenate(data), np.cumsum(num_data[:-1]))

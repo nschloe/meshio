@@ -180,7 +180,6 @@ def read_write(plot=False):
         "MOAB": (meshio.h5m.write, meshio.h5m.read, ["out.h5m"]),
         "Nastran": (meshio.nastran.write, meshio.nastran.read, ["out.bdf"]),
         "Netgen": (meshio.netgen.write, meshio.netgen.read, ["out.vol"]),
-        "OBJ": (meshio.obj.write, meshio.obj.read, ["out.obj"]),
         "OFF": (meshio.off.write, meshio.off.read, ["out.off"]),
         "Permas": (meshio.permas.write, meshio.permas.read, ["out.dato"]),
         "PLY (binary)": (

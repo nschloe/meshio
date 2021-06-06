@@ -310,7 +310,7 @@ def _read_binary(
     for (name, dt) in zip(cell_data_names, dts):
         if isinstance(dt, tuple):
             buffer_increment, cell_data[name] = _read_binary_list(
-                buffer[buffer_position:], *dt, num_cells, endianness
+                buffer[buffer_position:], dt[0], dt[1], num_cells, endianness
             )
         else:
             buffer_increment = np.dtype(dt).itemsize
@@ -394,11 +394,8 @@ def write(filename, mesh, binary=True):  # noqa: C901
         else:
             fh.write(b"format ascii 1.0\n")
 
-        fh.write(
-            "comment Created by meshio v{}, {}\n".format(
-                __version__, datetime.datetime.now().isoformat()
-            ).encode()
-        )
+        now = datetime.datetime.now().isoformat()
+        fh.write(f"comment Created by meshio v{__version__}, {now}\n".encode())
 
         # counts
         fh.write(f"element vertex {mesh.points.shape[0]:d}\n".encode())
@@ -430,9 +427,8 @@ def write(filename, mesh, binary=True):  # noqa: C901
         for key, value in mesh.point_data.items():
             if len(value.shape) > 1:
                 warnings.warn(
-                    "PLY writer doesn't support multidimensional point data yet. Skipping {}.".format(
-                        key
-                    )
+                    "PLY writer doesn't support multidimensional point data yet. "
+                    f"Skipping {key}."
                 )
                 continue
             type_name = type_name_table[value.dtype]
