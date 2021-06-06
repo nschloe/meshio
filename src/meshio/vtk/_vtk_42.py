@@ -704,28 +704,32 @@ def _write_cells(f, cells, binary):
     if binary:
         for c in cells:
             n = c.data.shape[1]
-            cell_idx = meshio_to_vtk_order(c.type, n)
+            d = c.data
+
+            new_order = meshio_to_vtk_order(c.type)
+            if new_order is not None:
+                d = d[:new_order]
+
             dtype = np.dtype(">i4")
             # One must force endianness here:
             # <https://github.com/numpy/numpy/issues/15088>
             np.column_stack(
-                [
-                    np.full(c.data.shape[0], n, dtype=dtype),
-                    c.data[:, cell_idx].astype(dtype),
-                ],
+                [np.full(d.shape[0], n, dtype=dtype), d.astype(dtype)],
             ).astype(dtype).tofile(f, sep="")
         f.write(b"\n")
     else:
         # ascii
         for c in cells:
             n = c.data.shape[1]
-            cell_idx = meshio_to_vtk_order(c.type, n)
+
+            d = c.data
+            new_order = meshio_to_vtk_order(c.type)
+            if new_order is not None:
+                d = d[:new_order]
+
             # prepend a column with the value n
             np.column_stack(
-                [
-                    np.full(c.data.shape[0], n, dtype=c.data.dtype),
-                    c.data[:, cell_idx],
-                ]
+                [np.full(c.data.shape[0], n, dtype=c.data.dtype), d]
             ).tofile(f, sep="\n")
             f.write(b"\n")
 
