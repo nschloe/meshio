@@ -555,9 +555,13 @@ def translate_cells(connectivity, types, cell_data_raw):
         # TODO: cell_data
         for idx, vtk_cell_type in enumerate(types):
             start = offsets[idx] + 1
-            cell_idx = start + vtk_to_meshio_order(
-                vtk_cell_type, numnodes[idx], offsets.dtype
-            )
+
+            new_order = vtk_to_meshio_order(vtk_cell_type, offsets.dtype)
+            if new_order is None:
+                new_order = np.arange(numnodes[idx], dtype=offsets.dtype)
+
+            cell_idx = start + new_order
+
             cell = connectivity[cell_idx]
 
             cell_type = vtk_to_meshio_type[vtk_cell_type]
@@ -582,7 +586,12 @@ def translate_cells(connectivity, types, cell_data_raw):
         # through the data array. Slight disadvantage: This doesn't work for cells with
         # a custom number of points.
         if np.any(types >= len(vtk_type_to_numnodes)):
-            raise ReadError("File contains cells that meshio cannot handle.")
+            illegal_types = ", ".join(
+                str(item) for item in set(types[types >= len(vtk_type_to_numnodes)])
+            )
+            raise ReadError(
+                f"File contains cells that meshio cannot handle (types {illegal_types})"
+            )
 
         numnodes = vtk_type_to_numnodes[types]
         if not np.all(numnodes > 0):
@@ -708,7 +717,7 @@ def _write_cells(f, cells, binary):
 
             new_order = meshio_to_vtk_order(c.type)
             if new_order is not None:
-                d = d[:new_order]
+                d = d[:, new_order]
 
             dtype = np.dtype(">i4")
             # One must force endianness here:
@@ -725,7 +734,7 @@ def _write_cells(f, cells, binary):
             d = c.data
             new_order = meshio_to_vtk_order(c.type)
             if new_order is not None:
-                d = d[:new_order]
+                d = d[:, new_order]
 
             # prepend a column with the value n
             np.column_stack(
