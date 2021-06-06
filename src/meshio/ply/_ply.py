@@ -310,7 +310,7 @@ def _read_binary(
     for (name, dt) in zip(cell_data_names, dts):
         if isinstance(dt, tuple):
             buffer_increment, cell_data[name] = _read_binary_list(
-                buffer[buffer_position:], *dt, num_cells, endianness
+                buffer[buffer_position:], dt[0], dt[1], num_cells, endianness
             )
         else:
             buffer_increment = np.dtype(dt).itemsize
@@ -386,7 +386,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
 
 def write(filename, mesh, binary=True):  # noqa: C901
 
-    with open_file(filename, "wb") as fh:
+    with open(filename, "wb") as fh:
         fh.write(b"ply\n")
 
         if binary:
@@ -430,9 +430,8 @@ def write(filename, mesh, binary=True):  # noqa: C901
         for key, value in mesh.point_data.items():
             if len(value.shape) > 1:
                 warnings.warn(
-                    "PLY writer doesn't support multidimensional point data yet. Skipping {}.".format(
-                        key
-                    )
+                    "PLY writer doesn't support multidimensional point data yet. "
+                    f"Skipping {key}."
                 )
                 continue
             type_name = type_name_table[value.dtype]
