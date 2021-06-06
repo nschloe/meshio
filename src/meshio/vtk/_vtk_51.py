@@ -178,13 +178,11 @@ def _read_section(f, info):
         info.num_offsets = int(info.split[1])
         info.num_items = int(info.split[2])
         dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
-        print("offi")
         offsets = _read_int_data(f, info.is_ascii, info.num_offsets, dtype)
 
         line = f.readline().decode()
         assert line.startswith("CONNECTIVITY")
         dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
-        print("conni")
         connectivity = _read_int_data(f, info.is_ascii, info.num_items, dtype)
         info.connectivity = connectivity
         assert offsets[0] == 0
@@ -384,7 +382,6 @@ def _read_int_data(f, is_ascii, num_items, dtype):
     else:
         dtype = dtype.newbyteorder(">")
         c = np.fromfile(f, count=num_items, dtype=dtype)
-        print("c", c)
         line = f.readline().decode()
         if line != "\n":
             raise ReadError("Expected newline")
