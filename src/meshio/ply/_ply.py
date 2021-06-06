@@ -386,7 +386,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
 
 def write(filename, mesh, binary=True):  # noqa: C901
 
-    with open(filename, "wb") as fh:
+    with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")
 
         if binary:
@@ -394,11 +394,8 @@ def write(filename, mesh, binary=True):  # noqa: C901
         else:
             fh.write(b"format ascii 1.0\n")
 
-        fh.write(
-            "comment Created by meshio v{}, {}\n".format(
-                __version__, datetime.datetime.now().isoformat()
-            ).encode()
-        )
+        now = datetime.datetime.now().isoformat()
+        fh.write(f"comment Created by meshio v{__version__}, {now}\n".encode())
 
         # counts
         fh.write(f"element vertex {mesh.points.shape[0]:d}\n".encode())

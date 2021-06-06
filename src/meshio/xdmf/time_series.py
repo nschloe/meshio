@@ -23,7 +23,7 @@ from .common import (
 
 class TimeSeriesReader:
     def __init__(self, filename):  # noqa: C901
-        self.filename = filename
+        self.filename = pathlib.Path(filename)
 
         parser = ET.XMLParser()
         tree = ET.parse(self.filename, parser)
@@ -192,24 +192,27 @@ class TimeSeriesReader:
         except KeyError:
             precision = "4"
 
-        if data_item.get("Format") == "XML":
+        data_format = data_item.get("Format")
+
+        if data_format == "XML":
             return np.fromstring(
                 data_item.text,
                 dtype=xdmf_to_numpy_type[(data_type, precision)],
                 sep=" ",
             ).reshape(dims)
-        elif data_item.get("Format") == "Binary":
+        elif data_format == "Binary":
             return np.fromfile(
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
-        elif data_item.get("Format") != "HDF":
-            raise ReadError("Unknown XDMF Format '{}'.".format(data_item.get("Format")))
+
+        if data_format != "HDF":
+            raise ReadError(f"Unknown XDMF Format '{data_format}'.")
 
         info = data_item.text.strip()
         filename, h5path = info.split(":")
 
         # The HDF5 file path is given with respect to the XDMF (XML) file.
-        dirpath = pathlib.Path(self.filename).resolve().parent
+        dirpath = self.filename.resolve().parent
         full_hdf5_path = dirpath / filename
 
         if full_hdf5_path in self.hdf5_files:
@@ -234,10 +237,10 @@ class TimeSeriesWriter:
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
-                "'{}' (use 'XML', 'Binary', or 'HDF'.)".format(data_format)
+                f"'{data_format}' (use 'XML', 'Binary', or 'HDF'.)"
             )
 
-        self.filename = filename
+        self.filename = pathlib.Path(filename)
         self.data_format = data_format
         self.data_counter = 0
 
@@ -261,11 +264,11 @@ class TimeSeriesWriter:
         if self.data_format == "HDF":
             import h5py
 
-            self.h5_filename = os.path.splitext(self.filename)[0] + ".h5"
+            self.h5_filename = self.filename.stem + ".h5"
             self.h5_file = h5py.File(self.h5_filename, "w")
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *_):
         write_xml(self.filename, self.xdmf_file)
         if self.data_format == "HDF":
             self.h5_file.close()
@@ -301,9 +304,7 @@ class TimeSeriesWriter:
         grid = ET.SubElement(self.collection, "Grid")
         if not self.has_mesh:
             raise WriteError()
-        ptr = 'xpointer(//Grid[@Name="{}"]/*[self::Topology or self::Geometry])'.format(
-            self.mesh_name
-        )
+        ptr = f'xpointer(//Grid[@Name="{self.mesh_name}"]/*[self::Topology or self::Geometry])'
         ET.SubElement(grid, "{http://www.w3.org/2003/XInclude}include", xpointer=ptr)
         ET.SubElement(grid, "Time", Value=str(t))
 
@@ -324,9 +325,7 @@ class TimeSeriesWriter:
             np.savetxt(s, data.flatten(), fmt)
             return s.getvalue().decode()
         elif self.data_format == "Binary":
-            bin_filename = "{}{}.bin".format(
-                os.path.splitext(self.filename)[0], self.data_counter
-            )
+            bin_filename = f"{self.filename.stem}{self.data_counter}.bin"
             self.data_counter += 1
             # write binary data to file
             with open(bin_filename, "wb") as f:

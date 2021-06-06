@@ -128,10 +128,9 @@ def _read_section(f, info):
         info.active = "DATASET"
         info.dataset["type"] = info.split[1].upper()
         if info.dataset["type"] not in vtk_dataset_types:
+            legal = ", ".join(vtk_dataset_types)
             raise ReadError(
-                "Only VTK '{}' supported (not {}).".format(
-                    "', '".join(vtk_dataset_types), info.dataset["type"]
-                )
+                f"Only VTK '{legal}' supported (not {info.dataset['type']})."
             )
 
     elif info.section == "POINTS":
