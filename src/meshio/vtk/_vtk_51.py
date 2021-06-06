@@ -582,11 +582,7 @@ def _write_points(f, points, binary):
 def _write_cells(f, cells, binary):
     total_num_cells = sum([len(c.data) for c in cells])
     total_num_idx = sum([c.data.size for c in cells])
-    # For each cell, the number of nodes is stored
-    total_num_idx += total_num_cells
-    f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode())
-
-    print(cells)
+    f.write(f"CELLS {total_num_cells + 1} {total_num_idx}\n".encode())
 
     # offsets
     offsets = [[0]]
@@ -600,23 +596,18 @@ def _write_cells(f, cells, binary):
     if binary:
         vtk_dtype = numpy_to_vtk_dtype[offsets.dtype.name]
         f.write(f"OFFSETS {vtk_dtype}\n".encode())
-        # force big-endian
-        big_endian_dtype = offsets.dtype.newbyteorder(">")
-        offsets.astype(big_endian_dtype).tofile(f, sep="")
+        # force big-endian and int64
+        offsets.astype(">i8").tofile(f, sep="")
         f.write(b"\n")
 
-        # assuming that all cell blocks have the same dtype
-        vtk_dtype = numpy_to_vtk_dtype[cells[0].data.dtype.name]
-        # force big-endian
-        big_endian_dtype = cells[0].data.dtype.newbyteorder(">")
-        #
         f.write(f"CONNECTIVITY {vtk_dtype}\n".encode())
         for cell_block in cells:
             d = cell_block.data
             cell_idx = meshio_to_vtk_order(cell_block.type)
             if cell_idx is not None:
                 d = d[:, cell_idx]
-            d.astype(big_endian_dtype).tofile(f, sep="")
+            # force big-endian and int64
+            d.astype(">i8").tofile(f, sep="")
         f.write(b"\n")
     else:
         # ascii
