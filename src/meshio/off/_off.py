@@ -65,7 +65,7 @@ def write(filename, mesh):
     skip = [c for c in mesh.cells if c.type != "triangle"]
     if skip:
         string = ", ".join(item.type for item in skip)
-        logging.warning(f'OFF only supports triangle cells. Skipping {string}.')
+        logging.warning(f"OFF only supports triangle cells. Skipping {string}.")
 
     tri = mesh.get_cells_type("triangle")
 
