@@ -166,9 +166,10 @@ def write(filename, mesh):
         # Try to find an appropriate materials array
         key, other = _pick_first_int_data(mesh.cell_data)
         if key and other:
+            other_string = ", ".join(other)
             logging.warning(
                 "AVS-UCD can only write one cell data array. "
-                "Picking {}, skipping {}.".format(key, ", ".join(other))
+                f"Picking {key}, skipping {other_string}."
             )
         material = (
             np.concatenate(mesh.cell_data[key])
@@ -186,11 +187,7 @@ def write(filename, mesh):
         ]
         num_node_data_sum = sum(num_node_data)
         num_cell_data_sum = sum(num_cell_data)
-        f.write(
-            "{} {} {} {} 0\n".format(
-                num_nodes, num_cells, num_node_data_sum, num_cell_data_sum
-            )
-        )
+        f.write(f"{num_nodes} {num_cells} {num_node_data_sum} {num_cell_data_sum} 0\n")
 
         # Write nodes
         _write_nodes(f, mesh.points)
@@ -228,9 +225,7 @@ def _write_cells(f, cells, material):
         for cell in v[:, meshio_to_avsucd_order[cell_type]]:
             cell_str = " ".join(str(c + 1) for c in cell)
             f.write(
-                "{} {} {} {}\n".format(
-                    i + 1, material[i], meshio_to_avsucd_type[cell_type], cell_str
-                )
+                f"{i + 1} {material[i]} {meshio_to_avsucd_type[cell_type]} {cell_str}\n"
             )
             i += 1
 
