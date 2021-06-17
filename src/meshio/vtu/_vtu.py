@@ -191,7 +191,9 @@ def _parse_raw_binary(filename):
         raw = f.read()
 
     try:
-        i_start = re.search(re.compile(b'<AppendedData[^>]+(?:">)'), raw).end()
+        res = re.search(re.compile(b'<AppendedData[^>]+(?:">)'), raw)
+        assert res is not None
+        i_start = res.end()
         i_stop = raw.find(b"</AppendedData>")
     except Exception:
         raise ReadError()
@@ -209,10 +211,30 @@ def _parse_raw_binary(filename):
         )
 
     appended_data_tag = root.find("AppendedData")
+    assert appended_data_tag is not None
     appended_data_tag.set("encoding", "base64")
 
     compressor = root.get("compressor")
-    if compressor is not None:
+    if compressor is None:
+        arrays = ""
+        i = 0
+        while i < len(data):
+            # The following find() runs into issues if offset is padded with spaces, see
+            # <https://github.com/nschloe/meshio/issues/1135>. It works in ParaView.
+            # Unfortunately, Python's built-in XML tree can't handle regexes, see
+            # <https://stackoverflow.com/a/38810731/353337>.
+            da_tag = root.find(f".//DataArray[@offset='{i}']")
+            if da_tag is None:
+                raise RuntimeError(f"Could not find .//DataArray[@offset='{i}']")
+            da_tag.set("offset", str(len(arrays)))
+
+            block_size = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
+            arrays += base64.b64encode(
+                data[i : i + block_size + dtype.itemsize]
+            ).decode()
+            i += block_size + dtype.itemsize
+
+    else:
         c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[compressor]
         root.attrib.pop("compressor")
 
@@ -220,8 +242,9 @@ def _parse_raw_binary(filename):
         arrays = ""
         i = 0
         while i < len(data):
-            da_tag = root.find(".//DataArray[@offset='%d']" % i)
-            da_tag.set("offset", "%d" % len(arrays))
+            da_tag = root.find(f".//DataArray[@offset='{i}']")
+            assert da_tag is not None
+            da_tag.set("offset", str(len(arrays)))
 
             num_blocks = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
             num_header_items = 3 + num_blocks
@@ -243,19 +266,6 @@ def _parse_raw_binary(filename):
             arrays += base64.b64encode(block_size + block_data).decode()
 
             i += j + num_header_bytes
-
-    else:
-        arrays = ""
-        i = 0
-        while i < len(data):
-            da_tag = root.find(".//DataArray[@offset='%d']" % i)
-            da_tag.set("offset", "%d" % len(arrays))
-
-            block_size = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
-            arrays += base64.b64encode(
-                data[i : i + block_size + dtype.itemsize]
-            ).decode()
-            i += block_size + dtype.itemsize
 
     appended_data_tag.text = "_" + arrays
     return root
@@ -293,9 +303,10 @@ class VtuReader:
             root = _parse_raw_binary(str(filename))
 
         if root.tag != "VTKFile":
-            raise ReadError()
+            raise ReadError(f"Expected tag 'VTKFile', found {root.tag}")
         if root.attrib["type"] != "UnstructuredGrid":
-            raise ReadError()
+            tpe = root.attrib["type"]
+            raise ReadError(f"Expected type UnstructuredGrid, found {tpe}")
 
         if "version" in root.attrib:
             version = root.attrib["version"]
