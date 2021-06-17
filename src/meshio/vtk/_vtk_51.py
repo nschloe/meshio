@@ -215,9 +215,8 @@ def _read_subsection(f, info):
                 d[info.section] = list(map(float, info.split[1:]))
             if len(d[info.section]) != 3:
                 raise ReadError(
-                    "Wrong number of info in section '{}'. Need 3, got {}.".format(
-                        info.section, len(d[info.section])
-                    )
+                    f"Wrong number of info in section '{info.section}'. "
+                    f"Need 3, got {len(d[info.section])}."
                 )
     elif info.section == "SCALARS":
         d.update(_read_scalar_field(f, info.num_items, info.split, info.is_ascii))
@@ -627,16 +626,8 @@ def _write_field_data(f, data, binary):
         if " " in name:
             raise WriteError(f"VTK doesn't support spaces in field names ('{name}').")
 
-        f.write(
-            (
-                "{} {} {} {}\n".format(
-                    name,
-                    num_components,
-                    num_tuples,
-                    numpy_to_vtk_dtype[values.dtype.name],
-                )
-            ).encode()
-        )
+        vtk_dtype = numpy_to_vtk_dtype[values.dtype.name]
+        f.write(f"{name} {num_components} {num_tuples} {vtk_dtype}\n".encode())
         if binary:
             values.astype(values.dtype.newbyteorder(">")).tofile(f, sep="")
         else:

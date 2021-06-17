@@ -552,6 +552,7 @@ class VtuReader:
                 if self.compression is None
                 else self.read_compressed_binary
             )
+            assert self.appended_data is not None
             data = reader(self.appended_data[offset:], dtype)
         else:
             raise ReadError(f"Unknown data format '{fmt}'.")

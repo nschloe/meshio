@@ -151,8 +151,7 @@ def read_binary_buffer(f):
         dtype = np.dtype(_produce_dtype(field_template, dim, itype, ftype))
         out = np.asarray(np.fromfile(f, count=nitems, dtype=dtype))
         if field_code[0] not in meshio_from_medit.keys():
-            msg = ("meshio doesn't know {} type. Skipping.").format(field_code[0])
-            logging.warning(msg)
+            logging.warning(f"meshio doesn't know {field_code[0]} type. Skipping.")
             continue
 
         elif field_code[0] == "GmfVertices":
@@ -298,11 +297,11 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
     with open_file(filename, "wb") as fh:
         version = {np.dtype(c_float): 1, np.dtype(c_double): 2}[mesh.points.dtype]
         # N. B.: PEP 461 Adding % formatting to bytes and bytearray
-        fh.write(b"MeshVersionFormatted %d\n" % version)
+        fh.write(f"MeshVersionFormatted {version}\n".encode())
 
         n, d = mesh.points.shape
 
-        fh.write(b"Dimension %d\n" % d)
+        fh.write(f"Dimension {d}\n".encode())
 
         # vertices
         fh.write(b"\nVertices\n")
@@ -311,9 +310,10 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
         # pick out point data
         labels_key, other = _pick_first_int_data(mesh.point_data)
         if labels_key and other:
+            string = ", ".join(other)
             logging.warning(
                 "Medit can only write one point data array. "
-                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+                f"Picking {labels_key}, skipping {string}."
             )
         labels = mesh.point_data[labels_key] if labels_key else np.ones(n, dtype=int)
 
@@ -334,18 +334,17 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
         # pick out cell_data
         labels_key, other = _pick_first_int_data(mesh.cell_data)
         if labels_key and other:
+            string = ", ".join(other)
             logging.warning(
                 "Medit can only write one cell data array. "
-                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+                f"Picking {labels_key}, skipping {string}."
             )
 
         for k, (cell_type, data) in enumerate(mesh.cells):
             try:
                 medit_name, num = medit_from_meshio[cell_type]
             except KeyError:
-                msg = ("MEDIT's mesh format doesn't know {} cells. Skipping.").format(
-                    cell_type
-                )
+                msg = f"MEDIT's mesh format doesn't know {cell_type} cells. Skipping."
                 logging.warning(msg)
                 continue
             fh.write(b"\n")
@@ -428,9 +427,10 @@ def write_binary_file(f, mesh):
 
         labels_key, other = _pick_first_int_data(mesh.point_data)
         if labels_key and other:
+            other_string = ", ".join(other)
             logging.warning(
                 "Medit can only write one point data array. "
-                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+                f"Picking {labels_key}, skipping {other_string}."
             )
         labels = (
             mesh.point_data[labels_key]
@@ -445,9 +445,10 @@ def write_binary_file(f, mesh):
 
         labels_key, other = _pick_first_int_data(mesh.cell_data)
         if labels_key and other:
+            string = ", ".join(other)
             logging.warning(
                 "Medit can only write one cell data array. "
-                "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
+                f"Picking {labels_key}, skipping {string}."
             )
 
         # first component is medit keyword id see _medit_internal.py
@@ -464,10 +465,9 @@ def write_binary_file(f, mesh):
             try:
                 medit_key = medit_from_meshio[cell_type]
             except KeyError:
-                msg = ("MEDIT's mesh format doesn't know {} cells. Skipping.").format(
-                    cell_type
+                logging.warning(
+                    f"MEDIT's mesh format doesn't know {cell_type} cells. Skipping."
                 )
-                logging.warning(msg)
                 continue
 
             num_cells, num_verts = data.shape
