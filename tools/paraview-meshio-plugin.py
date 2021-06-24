@@ -12,8 +12,8 @@ from vtkmodules.vtkCommonDataModel import vtkUnstructuredGrid
 import meshio
 
 paraview_plugin_version = meshio.__version__
-vtk_to_meshio_type = meshio.vtk._vtk.vtk_to_meshio_type
-meshio_to_vtk_type = meshio.vtk._vtk.meshio_to_vtk_type
+vtk_to_meshio_type = meshio.vtk_42._vtk.vtk_to_meshio_type
+meshio_to_vtk_type = meshio.vtk_42._vtk.meshio_to_vtk_type
 meshio_input_filetypes = list(meshio._helpers.reader_map.keys())
 meshio_extensions = [ext[1:] for ext in meshio.extension_to_filetype.keys()]
 meshio_input_filetypes = ["automatic"] + meshio_input_filetypes
