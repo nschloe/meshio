@@ -303,6 +303,7 @@ def write_buffer(f, mesh, float_fmt):
         if "netgen:index" in mesh.cell_data
         else [None] * len(mesh.cells)
     )
+
     for block in mesh.cells:
         cells_per_dim[_topological_dimension[block.type]] += len(block)
 
@@ -355,6 +356,78 @@ def write_buffer(f, mesh, float_fmt):
     for block, index in zip(mesh.cells, cells_index):
         if _topological_dimension[block.type] == 0:
             _write_cells(f, block, index)
+
+    f.write("\nmaterials\n")
+    for material_dim, ncells in enumerate(reversed(cells_per_dim)):
+        if ncells > 0:
+            break
+    material_dim = len(cells_per_dim) - material_dim - 1
+
+    # assume format as read from gmsh 4.1 files
+    material_data = {}
+    for name, val in mesh.field_data.items():
+        if val[1] == material_dim:
+            material_data[name] = val[0]
+
+    if len(material_data) == 0:
+        material_cell_indices = set()
+        for block, index in zip(mesh.cells, cells_index):
+            if _topological_dimension[block.type] == material_dim:
+                material_cell_indices = material_cell_indices.union(set(index))
+
+        material_cell_indices = set(material_cell_indices)
+        for idx in material_cell_indices:
+            material_data["material_{:d}".format(idx)] = idx
+
+    f.write("{:d}\n".format(len(material_data)))
+    for name, idx in material_data.items():
+        f.write("{:d} {:s}\n".format(idx, name))
+
+
+    f.write("\nbcnames\n")
+    # assume format as read from gmsh 4.1 files
+    bc_data = {}
+    for name, val in mesh.field_data.items():
+        if val[1] == material_dim - 1:
+            bc_data[val[0]] = name
+
+    if len(bc_data) == 0:
+        bc_cell_indices = set()
+        for block, index in zip(mesh.cells, cells_index):
+            if _topological_dimension[block.type] == material_dim - 1:
+                bc_cell_indices = bc_cell_indices.union(set(index))
+
+        bc_cell_indices = set(bc_cell_indices)
+        for idx in bc_cell_indices:
+            bc_data[idx] = "bc_{:d}".format(idx)
+
+    nbc = max(bc_data.keys()) + 1 if len(bc_data) > 0 else 0
+    f.write("{:d}\n".format(nbc))
+    for idx in range(nbc):
+        f.write("{:d} {:s}\n".format(idx, bc_data.get(idx, "")))
+
+
+    f.write("\ncd2names\n")
+    # assume format as read from gmsh 4.1 files
+    cd2_data = {}
+    for name, val in mesh.field_data.items():
+        if val[1] == material_dim - 2:
+            cd2_data[val[0]] = name
+
+    if len(cd2_data) == 0:
+        cd2_cell_indices = set()
+        for block, index in zip(mesh.cells, cells_index):
+            if _topological_dimension[block.type] == material_dim - 2:
+                cd2_cell_indices = cd2_cell_indices.union(set(index))
+
+        cd2_cell_indices = set(cd2_cell_indices)
+        for idx in cd2_cell_indices:
+            cd2_data[idx] = "cd2_{:d}".format(idx)
+
+    ncd2 = max(cd2_data.keys()) + 1 if len(cd2_data) > 0 else 0
+    f.write("{:d}\n".format(ncd2))
+    for idx in range(ncd2):
+        f.write("{:d} {:s}\n".format(idx, cd2_data.get(idx, "")))
 
     f.write("\nendmesh\n")
 
