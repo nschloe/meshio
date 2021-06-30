@@ -221,6 +221,8 @@ def _write_codim_domain_data(f, mesh, cells_index, dim, codim):
     if len(data) == 0:
         indices = set()
         for block, index in zip(mesh.cells, cells_index):
+            if index is None:
+                continue
             if _topological_dimension[block.type] == dim - codim:
                 indices = indices.union(set(index))
 
@@ -339,7 +341,7 @@ def read_buffer(f):
         kwargs["info"] = {"netgen:identifications": identifications,
                           "netgen:identificationtypes": identificationtypes}
 
-    mesh = Mesh(points, cells, cell_data={"netgen:index": cells_index}, **kwargs)
+    mesh = Mesh(points, cells, cell_data={"netgen:index": cells_index}, field_data=field_data, **kwargs)
     return mesh
 
 
