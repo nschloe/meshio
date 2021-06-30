@@ -26,6 +26,14 @@ def _fast_forward_over_blank_lines(f):
     return line, is_eof
 
 
+netgen_codims = {
+    "materials": 0,
+    "bcnames": 1,
+    "cd2names": 2,
+    "cd3names": 3
+}
+
+
 netgen0d_to_meshio_type = {
     1: "vertex",
 }
@@ -202,10 +210,42 @@ def _skip_block(f):
         f.readline()
 
 
+def _write_codim_domain_data(f, mesh, cells_index, dim, codim):
+    # assume format as read from gmsh 4.1 files
+    data = {}
+    for name, val in mesh.field_data.items():
+        if val[1] == dim - codim:
+            data[val[0]] = name
+
+    # set generic default names (is this appropriate/useful?)
+    if len(data) == 0:
+        indices = set()
+        for block, index in zip(mesh.cells, cells_index):
+            if _topological_dimension[block.type] == dim - codim:
+                indices = indices.union(set(index))
+
+        for idx in indices:
+            data[idx] = "cd{:d}_{:d}".format(codim, idx)
+
+    if len(data) == 0:
+        return
+
+    codim_tag = [kk for kk, vv in netgen_codims.items() if vv == codim][0]
+    f.write("\n{:s}\n".format(codim_tag))
+
+    ncd = max(data.keys())
+    f.write("{:d}\n".format(ncd))
+    for idx in range(1, ncd+1):
+        f.write("{:d} {:s}\n".format(idx, data.get(idx, "")))
+
+
 def read_buffer(f):
     points = []
     cells = []
     cells_index = []
+    field_data = {}
+    identifications = None
+    identificationtypes = None
 
     have_edgesegmentsgi2_in_two_lines = False
 
@@ -229,8 +269,8 @@ def read_buffer(f):
             num_points = int(f.readline())
             if num_points > 0:
                 points = np.loadtxt(f, max_rows=num_points)
-                if dimension == 2:
-                    points = points[:, :2]
+                if dimension != 3:
+                    points = points[:, :dimension]
 
         elif line in [
             "pointelements",
@@ -246,21 +286,32 @@ def read_buffer(f):
         elif line == "endmesh":
             break
 
-        elif line == "identificationtypes":
-            _ = int(f.readline())  # num_identifiactions
-            _ = f.readline()  # identifications in one line
-
         elif line.split() == ["surf1", "surf2", "p1", "p2"]:
             # if this line is present, the edgesegmentsgi2 info is split in two lines per data set
             have_edgesegmentsgi2_in_two_lines = True
 
+        elif line in netgen_codims.keys():
+            edim = dimension - netgen_codims[line]
+            num_entries = int(f.readline())
+            for ii in range(num_entries):
+                line = f.readline().split()
+                if len(line) != 2:
+                    continue
+                idx, name = line
+                field_data[name] = [int(idx), edim]
+
+        elif line == "identifications":
+            num_entries = int(f.readline())
+            if num_entries > 0:
+                identifications = np.loadtxt(f, max_rows=num_entries, dtype=np.int).reshape(num_entries, 3)
+
+        elif line == "identificationtypes":
+            num_entries = int(f.readline())
+            if num_entries > 0:
+                identificationtypes = np.loadtxt(f, max_rows=1, dtype=np.int).reshape(1, num_entries)
+
         elif line in [
-            "bcnames",
-            "cd2names",
-            "cd3names",
             "face_colours",
-            "identifications",
-            "materials",
             "singular_edge_left",
             "singular_edge_right",
             "singular_face_inside",
@@ -280,7 +331,15 @@ def read_buffer(f):
         d[:, :] = d[:, pmap] - 1
         cells[k] = (t, d)
 
-    mesh = Mesh(points, cells, cell_data={"netgen:index": cells_index})
+    cell_data = {"netgen:index": cells_index}
+
+    # currently, there is no better place for identification data
+    kwargs = {}
+    if identifications is not None:
+        kwargs["info"] = {"netgen:identifications": identifications,
+                          "netgen:identificationtypes": identificationtypes}
+
+    mesh = Mesh(points, cells, cell_data={"netgen:index": cells_index}, **kwargs)
     return mesh
 
 
@@ -344,9 +403,9 @@ def write_buffer(f, mesh, float_fmt):
     f.write(f"{len(mesh.points)}\n")
 
     points = mesh.points
-    if dimension == 2:
-        points = np.column_stack(
-            (points, np.zeros(points.shape[0], dtype=points.dtype))
+    if dimension != 3:
+        points = np.hstack(
+            (points, np.zeros((points.shape[0], 3-dimension), dtype=points.dtype))
         )
     np.savetxt(f, points, "%" + float_fmt)
 
@@ -357,77 +416,20 @@ def write_buffer(f, mesh, float_fmt):
         if _topological_dimension[block.type] == 0:
             _write_cells(f, block, index)
 
-    f.write("\nmaterials\n")
-    for material_dim, ncells in enumerate(reversed(cells_per_dim)):
-        if ncells > 0:
-            break
-    material_dim = len(cells_per_dim) - material_dim - 1
+    # currently, there is no better place for identification data
+    if isinstance(mesh.info, dict):
+        identifications = mesh.info.get("netgen:identifications")
+        identificationtypes = mesh.info.get("netgen:identificationtypes")
+        if identifications is not None and identificationtypes is not None:
+            f.write("\nidentifications\n")
+            f.write(f"{identifications.shape[0]}\n")
+            np.savetxt(f, identifications, "%d")
+            f.write("\nidentificationtypes\n")
+            f.write(f"{identificationtypes.size}\n")
+            np.savetxt(f, identificationtypes.reshape(1, identificationtypes.size), "%d")
 
-    # assume format as read from gmsh 4.1 files
-    material_data = {}
-    for name, val in mesh.field_data.items():
-        if val[1] == material_dim:
-            material_data[name] = val[0]
-
-    if len(material_data) == 0:
-        material_cell_indices = set()
-        for block, index in zip(mesh.cells, cells_index):
-            if _topological_dimension[block.type] == material_dim:
-                material_cell_indices = material_cell_indices.union(set(index))
-
-        material_cell_indices = set(material_cell_indices)
-        for idx in material_cell_indices:
-            material_data["material_{:d}".format(idx)] = idx
-
-    f.write("{:d}\n".format(len(material_data)))
-    for name, idx in material_data.items():
-        f.write("{:d} {:s}\n".format(idx, name))
-
-
-    f.write("\nbcnames\n")
-    # assume format as read from gmsh 4.1 files
-    bc_data = {}
-    for name, val in mesh.field_data.items():
-        if val[1] == material_dim - 1:
-            bc_data[val[0]] = name
-
-    if len(bc_data) == 0:
-        bc_cell_indices = set()
-        for block, index in zip(mesh.cells, cells_index):
-            if _topological_dimension[block.type] == material_dim - 1:
-                bc_cell_indices = bc_cell_indices.union(set(index))
-
-        bc_cell_indices = set(bc_cell_indices)
-        for idx in bc_cell_indices:
-            bc_data[idx] = "bc_{:d}".format(idx)
-
-    nbc = max(bc_data.keys()) + 1 if len(bc_data) > 0 else 0
-    f.write("{:d}\n".format(nbc))
-    for idx in range(nbc):
-        f.write("{:d} {:s}\n".format(idx, bc_data.get(idx, "")))
-
-
-    f.write("\ncd2names\n")
-    # assume format as read from gmsh 4.1 files
-    cd2_data = {}
-    for name, val in mesh.field_data.items():
-        if val[1] == material_dim - 2:
-            cd2_data[val[0]] = name
-
-    if len(cd2_data) == 0:
-        cd2_cell_indices = set()
-        for block, index in zip(mesh.cells, cells_index):
-            if _topological_dimension[block.type] == material_dim - 2:
-                cd2_cell_indices = cd2_cell_indices.union(set(index))
-
-        cd2_cell_indices = set(cd2_cell_indices)
-        for idx in cd2_cell_indices:
-            cd2_data[idx] = "cd2_{:d}".format(idx)
-
-    ncd2 = max(cd2_data.keys()) + 1 if len(cd2_data) > 0 else 0
-    f.write("{:d}\n".format(ncd2))
-    for idx in range(ncd2):
-        f.write("{:d} {:s}\n".format(idx, cd2_data.get(idx, "")))
+    for codim in range(dimension+1):
+        _write_codim_domain_data(f, mesh, cells_index, dimension, codim)
 
     f.write("\nendmesh\n")
 
