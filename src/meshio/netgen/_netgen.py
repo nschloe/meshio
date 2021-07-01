@@ -26,12 +26,7 @@ def _fast_forward_over_blank_lines(f):
     return line, is_eof
 
 
-netgen_codims = {
-    "materials": 0,
-    "bcnames": 1,
-    "cd2names": 2,
-    "cd3names": 3
-}
+netgen_codims = {"materials": 0, "bcnames": 1, "cd2names": 2, "cd3names": 3}
 
 
 netgen0d_to_meshio_type = {
@@ -237,7 +232,7 @@ def _write_codim_domain_data(f, mesh, cells_index, dim, codim):
 
     ncd = max(data.keys())
     f.write("{:d}\n".format(ncd))
-    for idx in range(1, ncd+1):
+    for idx in range(1, ncd + 1):
         f.write("{:d} {:s}\n".format(idx, data.get(idx, "")))
 
 
@@ -305,12 +300,16 @@ def read_buffer(f):
         elif line == "identifications":
             num_entries = int(f.readline())
             if num_entries > 0:
-                identifications = np.loadtxt(f, max_rows=num_entries, dtype=np.int).reshape(num_entries, 3)
+                identifications = np.loadtxt(
+                    f, max_rows=num_entries, dtype=np.int
+                ).reshape(num_entries, 3)
 
         elif line == "identificationtypes":
             num_entries = int(f.readline())
             if num_entries > 0:
-                identificationtypes = np.loadtxt(f, max_rows=1, dtype=np.int).reshape(1, num_entries)
+                identificationtypes = np.loadtxt(f, max_rows=1, dtype=np.int).reshape(
+                    1, num_entries
+                )
 
         elif line in [
             "face_colours",
@@ -333,15 +332,21 @@ def read_buffer(f):
         d[:, :] = d[:, pmap] - 1
         cells[k] = (t, d)
 
-    cell_data = {"netgen:index": cells_index}
-
     # currently, there is no better place for identification data
     kwargs = {}
     if identifications is not None:
-        kwargs["info"] = {"netgen:identifications": identifications,
-                          "netgen:identificationtypes": identificationtypes}
+        kwargs["info"] = {
+            "netgen:identifications": identifications,
+            "netgen:identificationtypes": identificationtypes,
+        }
 
-    mesh = Mesh(points, cells, cell_data={"netgen:index": cells_index}, field_data=field_data, **kwargs)
+    mesh = Mesh(
+        points,
+        cells,
+        cell_data={"netgen:index": cells_index},
+        field_data=field_data,
+        **kwargs,
+    )
     return mesh
 
 
@@ -407,7 +412,7 @@ def write_buffer(f, mesh, float_fmt):
     points = mesh.points
     if dimension != 3:
         points = np.hstack(
-            (points, np.zeros((points.shape[0], 3-dimension), dtype=points.dtype))
+            (points, np.zeros((points.shape[0], 3 - dimension), dtype=points.dtype))
         )
     np.savetxt(f, points, "%" + float_fmt)
 
@@ -428,9 +433,11 @@ def write_buffer(f, mesh, float_fmt):
             np.savetxt(f, identifications, "%d")
             f.write("\nidentificationtypes\n")
             f.write(f"{identificationtypes.size}\n")
-            np.savetxt(f, identificationtypes.reshape(1, identificationtypes.size), "%d")
+            np.savetxt(
+                f, identificationtypes.reshape(1, identificationtypes.size), "%d"
+            )
 
-    for codim in range(dimension+1):
+    for codim in range(dimension + 1):
         _write_codim_domain_data(f, mesh, cells_index, dimension, codim)
 
     f.write("\nendmesh\n")
