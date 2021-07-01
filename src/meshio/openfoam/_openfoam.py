@@ -86,16 +86,26 @@ def write(filename, mesh, binary=False):
     # Iterate over cell groups, counting cell index i
     i = 0
     for cell_type, cells in mesh.cells:
+        # Define a vertex order for each face which follows right-hand rule
         if cell_type == "tetra":
-            cell_order = [
-                [0, 2, 1],
-                [1, 2, 3],
-                [0, 1, 3],
-                [0, 3, 2],
-            ]
+            cell_order = [[0, 2, 1],
+                          [1, 2, 3],
+                          [0, 1, 3],
+                          [0, 3, 2]]
         elif cell_type == "pyramid":
-            cell_order = [[0, 3, 2, 1], [0, 1, 4], [1, 2, 4], [2, 3, 4], [0, 4, 3]]
-        # TODO Hexahedra and wedge
+            cell_order = [[0, 3, 2, 1],
+                          [0, 1, 4],
+                          [1, 2, 4],
+                          [2, 3, 4],
+                          [0, 4, 3]]
+        elif cell_type == "hexahedron":
+            cell_order = [[0, 3, 2, 1],
+                          [0, 1, 5, 4],
+                          [4, 5, 6, 7],
+                          [2, 3, 7, 6],
+                          [1, 2, 6, 5],
+                          [0, 4, 7, 3]]
+        # TODO Wedge etc.
         else:
             print(f"WARNING: Unknown type {cell_type}")
             continue
@@ -182,16 +192,18 @@ def write(filename, mesh, binary=False):
         f.write(_foam_footer())
 
     # Write boundary file
+    include_default_patch = len(unnamed_boundary_faces) > 0
     with open(os.path.join(poly_mesh_dir, "boundary"), "w") as f:
         f.write(_foam_header("polyBoundaryMesh", "boundary"))
-        f.write(f"{len(patch_names) + 1}\n(\n")
+        f.write(f"{len(patch_names) + int(include_default_patch)}\n(\n")
         patch_dict = {
             "type": "patch",
             "physicalType": "patch",
             "startFace": num_internal,
             "nFaces": len(unnamed_boundary_faces),
         }
-        f.write(_foam_props("defaultPatch", patch_dict))
+        if include_default_patch:
+            f.write(_foam_props("defaultPatch", patch_dict))
         patch_dict["startFace"] += len(unnamed_boundary_faces)
         for i, patch_name in enumerate(patch_names):
             patch_dict["nFaces"] = len(named_patches[i])
