@@ -1,5 +1,3 @@
-import tempfile
-
 import helpers
 import pytest
 
