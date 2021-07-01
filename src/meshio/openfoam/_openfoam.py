@@ -88,26 +88,21 @@ def write(filename, mesh, binary=False):
     for cell_type, cells in mesh.cells:
         # Define a vertex order for each face which follows right-hand rule
         if cell_type == "tetra":
-            cell_order = [[0, 2, 1],
-                          [1, 2, 3],
-                          [0, 1, 3],
-                          [0, 3, 2]]
+            cell_order = [[0, 2, 1], [1, 2, 3], [0, 1, 3], [0, 3, 2]]
         elif cell_type == "pyramid":
-            cell_order = [[0, 3, 2, 1],
-                          [0, 1, 4],
-                          [1, 2, 4],
-                          [2, 3, 4],
-                          [0, 4, 3]]
+            cell_order = [[0, 3, 2, 1], [0, 1, 4], [1, 2, 4], [2, 3, 4], [0, 4, 3]]
         elif cell_type == "hexahedron":
-            cell_order = [[0, 3, 2, 1],
-                          [0, 1, 5, 4],
-                          [4, 5, 6, 7],
-                          [2, 3, 7, 6],
-                          [1, 2, 6, 5],
-                          [0, 4, 7, 3]]
+            cell_order = [
+                [0, 3, 2, 1],
+                [0, 1, 5, 4],
+                [4, 5, 6, 7],
+                [2, 3, 7, 6],
+                [1, 2, 6, 5],
+                [0, 4, 7, 3],
+            ]
         # TODO Wedge etc.
         else:
-            print(f"WARNING: Unknown type {cell_type}")
+            logging.warning(f"Unknown type {cell_type}")
             continue
         # Iterate over cells in cell type
         for cell in cells:
@@ -355,11 +350,7 @@ def read(dirpath: str):
     for patch_name, patch in boundary_obj[1]:
         print(patch_name, patch)
 
-    cells_data = {
-        "tetra": [],
-        "pyramid": [],
-        # TODO Hexahedra and wedge
-    }
+    cells_data = {}
 
     cells_faces = {}
     # Cell-indexed tuples: (face, is_inverted)
@@ -375,9 +366,8 @@ def read(dirpath: str):
         else:
             cells_faces[neighbour] = [(face, True)]
 
-    face_types = {4: "tetra", 5: "pyramid"}
+    face_types = {4: "tetra", 5: "pyramid", 6: "hexahedron"}
     for fs in cells_faces.values():
-        # fs = [faces[f] for f in fs]
         ps = []
         for f, inverted in fs:
             face = faces[f]
@@ -390,7 +380,12 @@ def read(dirpath: str):
         if len(ps) not in face_types:
             logging.warning("Unsupported cell type. Skipping.")
             continue
-        cells_data[face_types[len(ps)]].append(np.array(ps, dtype=np.int64))
+        type_ = face_types[len(ps)]
+        cell = np.array(ps, dtype=np.int64)
+        if type_ not in cells_data:
+            cells_data[type_] = [cell]
+        else:
+            cells_data[type_].append(cell)
 
     # Convert to Numpy
     cells = []
