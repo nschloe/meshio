@@ -1,7 +1,8 @@
-import helpers
 import pytest
 
 import meshio
+
+from . import helpers
 
 
 @pytest.mark.parametrize(

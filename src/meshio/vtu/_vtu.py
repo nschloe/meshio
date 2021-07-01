@@ -12,17 +12,11 @@ import zlib
 import numpy as np
 
 from ..__about__ import __version__
-from .._common import (
-    _meshio_to_vtk_order,
-    _vtk_to_meshio_order,
-    meshio_to_vtk_type,
-    num_nodes_per_cell,
-    raw_from_cell_data,
-    vtk_to_meshio_type,
-)
+from .._common import raw_from_cell_data
 from .._exceptions import ReadError
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
+from .._vtk_common import meshio_to_vtk_order, meshio_to_vtk_type, vtk_cells_from_data
 
 # Paraview 5.8.1's built-in Python doesn't have lzma.
 try:
@@ -35,83 +29,6 @@ def num_bytes_to_num_base64_chars(num_bytes):
     # Rounding up in integer division works by double negation since Python
     # always rounds down.
     return -(-num_bytes // 3) * 4
-
-
-def _cells_from_data(connectivity, offsets, types, cell_data_raw):
-    # Translate it into the cells array.
-    # `connectivity` is a one-dimensional vector with
-    # (p0, p1, ... ,pk, p10, p11, ..., p1k, ...
-    if len(offsets) != len(types):
-        raise ReadError()
-
-    b = np.concatenate([[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]])
-
-    cells = []
-    cell_data = {}
-
-    for start, end in zip(b[:-1], b[1:]):
-        try:
-            meshio_type = vtk_to_meshio_type[types[start]]
-        except KeyError:
-            raise ReadError("File contains cells that meshio cannot handle.")
-
-        # cells with varying number of points
-        special_cells = [
-            "polygon",
-            "VTK_LAGRANGE_CURVE",
-            "VTK_LAGRANGE_TRIANGLE",
-            "VTK_LAGRANGE_QUADRILATERAL",
-            "VTK_LAGRANGE_TETRAHEDRON",
-            "VTK_LAGRANGE_HEXAHEDRON",
-            "VTK_LAGRANGE_WEDGE",
-            "VTK_LAGRANGE_PYRAMID",
-        ]
-        if meshio_type in special_cells:
-            # Polygons have unknown and varying number of nodes per cell.
-
-            # Index where the previous block of cells stopped. Needed to know the number
-            # of nodes for the first cell in the block.
-            first_node = 0 if start == 0 else offsets[start - 1]
-
-            # Start off the cell-node relation for each cell in this block
-            start_cn = np.hstack((first_node, offsets[start:end]))
-            # Find the size of each cell
-            sizes = np.diff(start_cn)
-
-            # find where the cell blocks start and end
-            b = np.diff(sizes)
-            c = np.concatenate([[0], np.where(b != 0)[0] + 1, [len(sizes)]])
-
-            # Loop over all cell sizes, find all cells with this size, and assign
-            # connectivity
-            for cell_block_start, cell_block_end in zip(c, c[1:]):
-                items = np.arange(cell_block_start, cell_block_end)
-                sz = sizes[cell_block_start]
-                indices = np.add.outer(
-                    start_cn[items + 1],
-                    _vtk_to_meshio_order(types[start], sz, dtype=offsets.dtype) - sz,
-                )
-                cells.append(CellBlock(meshio_type, connectivity[indices]))
-
-                # Store cell data for this set of cells
-                for name, d in cell_data_raw.items():
-                    if name not in cell_data:
-                        cell_data[name] = []
-                    cell_data[name].append(d[start + items])
-        else:
-            # Non-polygonal cell. Same number of nodes per cell makes everything easier.
-            n = num_nodes_per_cell[meshio_type]
-            indices = np.add.outer(
-                offsets[start:end],
-                _vtk_to_meshio_order(types[start], n, dtype=offsets.dtype) - n,
-            )
-            cells.append(CellBlock(meshio_type, connectivity[indices]))
-            for name, d in cell_data_raw.items():
-                if name not in cell_data:
-                    cell_data[name] = []
-                cell_data[name].append(d[start:end])
-
-    return cells, cell_data
 
 
 def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
@@ -228,7 +145,7 @@ def _organize_cells(point_offsets, cells, cell_data_raw):
 
     else:
         for offset, cls, cdr in zip(point_offsets, cells, cell_data_raw):
-            cls, cell_data = _cells_from_data(
+            cls, cell_data = vtk_cells_from_data(
                 cls["connectivity"].ravel(),
                 cls["offsets"].ravel(),
                 cls["types"].ravel(),
@@ -274,7 +191,9 @@ def _parse_raw_binary(filename):
         raw = f.read()
 
     try:
-        i_start = re.search(re.compile(b'<AppendedData[^>]+(?:">)'), raw).end()
+        res = re.search(re.compile(b'<AppendedData[^>]+(?:">)'), raw)
+        assert res is not None
+        i_start = res.end()
         i_stop = raw.find(b"</AppendedData>")
     except Exception:
         raise ReadError()
@@ -292,10 +211,30 @@ def _parse_raw_binary(filename):
         )
 
     appended_data_tag = root.find("AppendedData")
+    assert appended_data_tag is not None
     appended_data_tag.set("encoding", "base64")
 
     compressor = root.get("compressor")
-    if compressor is not None:
+    if compressor is None:
+        arrays = ""
+        i = 0
+        while i < len(data):
+            # The following find() runs into issues if offset is padded with spaces, see
+            # <https://github.com/nschloe/meshio/issues/1135>. It works in ParaView.
+            # Unfortunately, Python's built-in XML tree can't handle regexes, see
+            # <https://stackoverflow.com/a/38810731/353337>.
+            da_tag = root.find(f".//DataArray[@offset='{i}']")
+            if da_tag is None:
+                raise RuntimeError(f"Could not find .//DataArray[@offset='{i}']")
+            da_tag.set("offset", str(len(arrays)))
+
+            block_size = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
+            arrays += base64.b64encode(
+                data[i : i + block_size + dtype.itemsize]
+            ).decode()
+            i += block_size + dtype.itemsize
+
+    else:
         c = {"vtkLZMADataCompressor": lzma, "vtkZLibDataCompressor": zlib}[compressor]
         root.attrib.pop("compressor")
 
@@ -303,8 +242,9 @@ def _parse_raw_binary(filename):
         arrays = ""
         i = 0
         while i < len(data):
-            da_tag = root.find(".//DataArray[@offset='%d']" % i)
-            da_tag.set("offset", "%d" % len(arrays))
+            da_tag = root.find(f".//DataArray[@offset='{i}']")
+            assert da_tag is not None
+            da_tag.set("offset", str(len(arrays)))
 
             num_blocks = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
             num_header_items = 3 + num_blocks
@@ -326,19 +266,6 @@ def _parse_raw_binary(filename):
             arrays += base64.b64encode(block_size + block_data).decode()
 
             i += j + num_header_bytes
-
-    else:
-        arrays = ""
-        i = 0
-        while i < len(data):
-            da_tag = root.find(".//DataArray[@offset='%d']" % i)
-            da_tag.set("offset", "%d" % len(arrays))
-
-            block_size = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
-            arrays += base64.b64encode(
-                data[i : i + block_size + dtype.itemsize]
-            ).decode()
-            i += block_size + dtype.itemsize
 
     appended_data_tag.text = "_" + arrays
     return root
@@ -376,9 +303,10 @@ class VtuReader:
             root = _parse_raw_binary(str(filename))
 
         if root.tag != "VTKFile":
-            raise ReadError()
+            raise ReadError(f"Expected tag 'VTKFile', found {root.tag}")
         if root.attrib["type"] != "UnstructuredGrid":
-            raise ReadError()
+            tpe = root.attrib["type"]
+            raise ReadError(f"Expected type UnstructuredGrid, found {tpe}")
 
         if "version" in root.attrib:
             version = root.attrib["version"]
@@ -624,6 +552,7 @@ class VtuReader:
                 if self.compression is None
                 else self.read_compressed_binary
             )
+            assert self.appended_data is not None
             data = reader(self.appended_data[offset:], dtype)
         else:
             raise ReadError(f"Unknown data format '{fmt}'.")
@@ -744,64 +673,59 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         da = ET.SubElement(parent, "DataArray", type=vtu_type, Name=name)
         if len(data.shape) == 2:
             da.set("NumberOfComponents", f"{data.shape[1]}")
+
+        def text_writer_compressed(f):
+            max_block_size = 32768
+            data_bytes = data.tobytes()
+
+            # round up
+            num_blocks = -int(-len(data_bytes) // max_block_size)
+            last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
+
+            # It's too bad that we have to keep all blocks in memory. This is
+            # necessary because the header, written first, needs to know the
+            # lengths of all blocks. Also, the blocks are encoded _after_ having
+            # been concatenated.
+            c = {"lzma": lzma, "zlib": zlib}[compression]
+            compressed_blocks = [
+                # This compress is the slowest part of the writer
+                c.compress(block)
+                for block in _chunk_it(data_bytes, max_block_size)
+            ]
+
+            # collect header
+            header = np.array(
+                [num_blocks, max_block_size, last_block_size]
+                + [len(b) for b in compressed_blocks],
+                dtype=vtu_to_numpy_type[header_type],
+            )
+            f.write(base64.b64encode(header.tobytes()).decode())
+            f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
+
+        def text_writer_uncompressed(f):
+            data_bytes = data.tobytes()
+            # collect header
+            header = np.array(len(data_bytes), dtype=vtu_to_numpy_type[header_type])
+            f.write(base64.b64encode(header.tobytes() + data_bytes).decode())
+
+        def text_writer_ascii(f):
+            # This write() loop is the bottleneck for the write. Alternatives:
+            # savetxt is super slow:
+            #   np.savetxt(f, data.reshape(-1), fmt=fmt)
+            # joining and writing is a bit faster, but consumes huge amounts of
+            # memory:
+            #   f.write("\n".join(map(fmt.format, data.reshape(-1))))
+            for item in data.reshape(-1):
+                f.write((fmt + "\n").format(item))
+
         if binary:
             da.set("format", "binary")
-            if compression:
-                # compressed write
-                def text_writer(f):
-                    max_block_size = 32768
-                    data_bytes = data.tobytes()
-
-                    # round up
-                    num_blocks = -int(-len(data_bytes) // max_block_size)
-                    last_block_size = (
-                        len(data_bytes) - (num_blocks - 1) * max_block_size
-                    )
-
-                    # It's too bad that we have to keep all blocks in memory. This is
-                    # necessary because the header, written first, needs to know the
-                    # lengths of all blocks. Also, the blocks are encoded _after_ having
-                    # been concatenated.
-                    c = {"lzma": lzma, "zlib": zlib}[compression]
-                    compressed_blocks = [
-                        # This compress is the slowest part of the writer
-                        c.compress(block)
-                        for block in _chunk_it(data_bytes, max_block_size)
-                    ]
-
-                    # collect header
-                    header = np.array(
-                        [num_blocks, max_block_size, last_block_size]
-                        + [len(b) for b in compressed_blocks],
-                        dtype=vtu_to_numpy_type[header_type],
-                    )
-                    f.write(base64.b64encode(header.tobytes()).decode())
-                    f.write(base64.b64encode(b"".join(compressed_blocks)).decode())
-
-            else:
-                # uncompressed write
-                def text_writer(f):
-                    data_bytes = data.tobytes()
-                    # collect header
-                    header = np.array(
-                        len(data_bytes), dtype=vtu_to_numpy_type[header_type]
-                    )
-                    f.write(base64.b64encode(header.tobytes() + data_bytes).decode())
-
+            da.text_writer = (
+                text_writer_compressed if compression else text_writer_uncompressed
+            )
         else:
             da.set("format", "ascii")
-
-            def text_writer(f):
-                # This write() loop is the bottleneck for the write. Alternatives:
-                # savetxt is super slow:
-                #   np.savetxt(f, data.reshape(-1), fmt=fmt)
-                # joining and writing is a bit faster, but consumes huge amounts of
-                # memory:
-                #   f.write("\n".join(map(fmt.format, data.reshape(-1))))
-                for item in data.reshape(-1):
-                    f.write((fmt + "\n").format(item))
-
-        da.text_writer = text_writer
+            da.text_writer = text_writer_ascii
 
     def _polyhedron_face_cells(face_cells):
         # Define the faces of each cell on the format specfied for VTU Polyhedron cells.
@@ -883,12 +807,14 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
         else:
             # create connectivity, offset, type arrays
-            connectivity = np.concatenate(
-                [
-                    v.data[:, _meshio_to_vtk_order(v.type, v.data.shape[1])].reshape(-1)
-                    for v in mesh.cells
-                ]
-            )
+            connectivity = []
+            for v in mesh.cells:
+                d = v.data
+                new_order = meshio_to_vtk_order(v.type)
+                if new_order is not None:
+                    d = d[:, new_order]
+                connectivity.append(d.flatten())
+            connectivity = np.concatenate(connectivity)
 
             # offset (points to the first element of the next cell)
             offsets = [

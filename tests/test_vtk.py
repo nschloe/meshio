@@ -1,17 +1,19 @@
 import pathlib
 from functools import partial
 
-import helpers
 import numpy as np
 import pytest
 
 import meshio
 
-test_set = [
-    helpers.empty_mesh,
+from . import helpers
+
+test_set = {
+    # helpers.empty_mesh,
     helpers.line_mesh,
     helpers.tri_mesh_2d,
     helpers.tri_mesh,
+    helpers.tri_mesh_one_cell,
     helpers.triangle6_mesh,
     helpers.quad_mesh,
     helpers.quad8_mesh,
@@ -33,14 +35,23 @@ test_set = [
     helpers.add_cell_data(
         helpers.add_point_data(helpers.tri_mesh_2d, 2), [("a", (2,), ">f8")]
     ),
-]
+}
 
 
-@pytest.mark.parametrize("mesh", test_set)
+@pytest.mark.parametrize("mesh", test_set.union({helpers.lagrange_high_order_mesh}))
 @pytest.mark.parametrize("binary", [True, False])
 def test(mesh, binary):
     def writer(*args, **kwargs):
         return meshio.vtk.write(*args, binary=binary, **kwargs)
+
+    helpers.write_read(writer, meshio.vtk.read, mesh, 1.0e-15)
+
+
+@pytest.mark.parametrize("mesh", test_set)
+@pytest.mark.parametrize("binary", [True, False])
+def test_vtk42(mesh, binary):
+    def writer(*args, **kwargs):
+        return meshio.vtk.write(*args, binary=binary, fmt_version="4.2", **kwargs)
 
     helpers.write_read(writer, meshio.vtk.read, mesh, 1.0e-15)
 

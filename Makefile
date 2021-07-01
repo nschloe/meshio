@@ -33,5 +33,6 @@ format:
 	blacken-docs README.md
 
 lint:
+	isort --check .
 	black --check .
 	flake8 .

@@ -162,7 +162,17 @@ class XdmfReader:
             if c.tag == "Topology":
                 data_items = list(c)
                 if len(data_items) != 1:
-                    raise ReadError()
+                    message = (
+                        "Need exactly 1 data item in <Topology>, "
+                        f"found {len(data_items)}."
+                    )
+                    if len(data_items) == 0:
+                        message += (
+                            "\nStructured meshes are not supported, see "
+                            "<https://github.com/nschloe/meshio/issues/404>."
+                        )
+                    raise ReadError(message)
+
                 topology_type = c.get("TopologyType")
                 if topology_type == "Mixed":
                     cells = translate_mixed_cells(
@@ -178,8 +188,9 @@ class XdmfReader:
                     cells.append(CellBlock(xdmf_to_meshio_type[topology_type], data))
 
             elif c.tag == "Geometry":
-                if c.get("GeometryType") not in (None, "XYZ"):
-                    raise ReadError()
+                geo_type = c.get("GeometryType")
+                if geo_type not in (None, "XYZ"):
+                    raise ReadError(f'Expected GeometryType "XYZ", not {geo_type}.')
                 data_items = list(c)
                 if len(data_items) != 1:
                     raise ReadError()

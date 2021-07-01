@@ -135,7 +135,7 @@ def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_other_line=F
         pi0 = 2
         i_index = 0
     else:
-        raise ValueError("Unknown Netgen cell section: {}".format(netgen_cell_type))
+        raise ValueError(f"Unknown Netgen cell section '{netgen_cell_type}'")
 
     num_cells = int(f.readline())
     tmap = netgen_to_meshio_type[dim]

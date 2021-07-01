@@ -114,6 +114,14 @@ def readline(f):
 
 
 def read_buffer(f):
+    variables = None
+    num_data = None
+    zone_format = None
+    zone_type = None
+    is_cell_centered = None
+    data = None
+    cells = None
+
     while True:
         line = readline(f)
 
@@ -132,7 +140,6 @@ def read_buffer(f):
                     f.seek(i)
                     break
             line = " ".join(lines)
-
             variables = _read_variables(line)
 
         elif line.upper().startswith("ZONE"):
@@ -143,18 +150,23 @@ def read_buffer(f):
             # , VARLOCATION = ([1-2] = NODAL, [3-7] = CELLCENTERED)
             # ```
             # is valid (and understood by ParaView and VisIt).
-            lines = [line]
+            info_lines = [line]
             i = f.tell()
             line = readline(f).upper()
             while True:
-                if line and not line[0].isdigit():
-                    lines += [line]
+                # check if the first entry can be converted to a float
+                try:
+                    float(line.split()[0])
+                except ValueError:
+                    info_lines += [line]
                     i = f.tell()
                     line = readline(f).upper()
                 else:
                     f.seek(i)
                     break
-            line = " ".join(lines)
+            line = " ".join(info_lines)
+
+            assert variables is not None
 
             zone = _read_zone(line)
             (
@@ -177,6 +189,14 @@ def read_buffer(f):
 
         elif not line:
             break
+
+    assert num_data is not None
+    assert zone_format is not None
+    assert zone_type is not None
+    assert variables is not None
+    assert is_cell_centered is not None
+    assert data is not None
+    assert cells is not None
 
     data = (
         np.split(np.concatenate(data), np.cumsum(num_data[:-1]))

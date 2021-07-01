@@ -47,7 +47,7 @@ def write(
         pts *= scaling_factor
 
     if stroke_width is None:
-        stroke_width = width / 100
+        stroke_width = str(width / 100)
 
     fmt = " ".join(4 * [f"{{:{float_fmt}}}"])
     svg = ET.Element(

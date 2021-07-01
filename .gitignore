@@ -22,3 +22,5 @@ doc/_build/
 .pytest_cache/
 .coverage
 .tox/
+foo.vtk
+.vscode/

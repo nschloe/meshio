@@ -1,11 +1,12 @@
 import pathlib
 import tempfile
 
-import helpers
 import numpy as np
 import pytest
 
 import meshio
+
+from . import helpers
 
 
 @pytest.mark.parametrize(
