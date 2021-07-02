@@ -4,11 +4,10 @@ I/O for OpenFOAM polyMesh format
 """
 import logging
 import os
-import numpy as np
-
+from collections import OrderedDict as odict
 from enum import Enum
 
-from collections import OrderedDict as odict
+import numpy as np
 
 from .._helpers import register
 from .._mesh import CellBlock, Mesh

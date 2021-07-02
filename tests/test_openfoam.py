@@ -1,7 +1,8 @@
-import helpers
 import pytest
 
 import meshio
+
+from . import helpers
 
 test_set = [
     helpers.tet_mesh,
