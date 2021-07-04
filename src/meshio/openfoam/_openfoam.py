@@ -365,21 +365,49 @@ def read(dirpath: str):
         else:
             cells_faces[neighbour] = [(face, True)]
 
+    # Identify cell type by number of faces
     face_types = {4: "tetra", 5: "pyramid", 6: "hexahedron"}
     for fs in cells_faces.values():
-        ps = []
-        for f, inverted in fs:
-            face = faces[f]
-            if inverted:
-                face.reverse()
-            for p in face:
-                if p not in ps:
-                    ps.append(p)
-        # TODO Ensure 'ps' has the correct vertex order
-        if len(ps) not in face_types:
+        if len(fs) not in face_types:
             logging.warning("Unsupported cell type. Skipping.")
             continue
-        type_ = face_types[len(ps)]
+        type_ = face_types[len(fs)]
+
+        # Faces with left-hand-rule pointing outwards
+        faces_lh = []
+        for f, inverted in fs:
+            face = faces[f]
+            if not inverted:
+                face.reverse()
+            faces_lh.append(face)
+        ps = []
+        if type_ == "tetra":
+            for face in faces_lh:
+                for p in face:
+                    if p not in ps:
+                        ps.append(p)
+        elif type_ == "hexahedron":
+            for face in faces_lh:
+                if not np.isin(face, ps).any():
+                    if ps:
+                        face.reverse()
+                    ps += face
+        elif type_ == "pyramid":
+            for face in faces_lh:
+                if len(face) != 4:
+                    continue
+                ps += face
+                break
+            assert ps
+            for face in faces_lh:
+                if len(face) == 4:
+                    continue
+                for p in face:
+                    if p not in ps:
+                        ps.append(p)
+                        break
+                break
+
         cell = np.array(ps, dtype=np.int64)
         if type_ not in cells_data:
             cells_data[type_] = [cell]
