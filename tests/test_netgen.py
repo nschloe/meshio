@@ -26,7 +26,7 @@ test_set = [
 ]
 
 
-netgetn_mesh_directory = pathlib.Path("meshes/netgen")
+netgen_mesh_directory = pathlib.Path("meshes/netgen")
 
 PERIODIC_1D = "periodic_1d.vol"
 PERIODIC_2D = "periodic_2d.vol"
@@ -86,7 +86,7 @@ expected_field_data = {
 
 @pytest.mark.parametrize("netgen_mesh", [PERIODIC_1D, PERIODIC_2D, PERIODIC_3D])
 def test_advanced(netgen_mesh):
-    mesh = meshio.read(str(netgetn_mesh_directory / netgen_mesh))
+    mesh = meshio.read(str(netgen_mesh_directory / netgen_mesh))
     with tempfile.TemporaryDirectory() as temp_dir:
         p = pathlib.Path(temp_dir) / ("{:s}_out.vol".format(netgen_mesh))
         mesh.write(p)
