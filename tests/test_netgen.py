@@ -26,7 +26,8 @@ test_set = [
 ]
 
 
-netgen_mesh_directory = pathlib.Path("meshes/netgen")
+this_dir = pathlib.Path(__file__).resolve().parent
+netgen_mesh_directory = this_dir / "meshes" / "netgen"
 
 PERIODIC_1D = "periodic_1d.vol"
 PERIODIC_2D = "periodic_2d.vol"
