@@ -15,3 +15,4 @@
 *.su2 filter=lfs diff=lfs merge=lfs -text
 *.ele filter=lfs diff=lfs merge=lfs -text
 *.node filter=lfs diff=lfs merge=lfs -text
+*.vol filter=lfs diff=lfs merge=lfs -text
