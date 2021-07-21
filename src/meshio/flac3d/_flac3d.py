@@ -265,7 +265,7 @@ def _read_group(buf_or_line, binary, line=None):
         line = buf_or_line.readline()
         while True:
             line = line.rstrip().split()
-            if line and (line[0] not in {"*", "ZGROUP"}):
+            if line and (line[0] not in {"*", "ZGROUP", "FGROUP"}):
                 data += [int(l) for l in line]
             else:
                 buf_or_line.seek(i)
