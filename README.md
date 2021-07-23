@@ -56,18 +56,18 @@ Install with
 pip install meshio[all]
 ```
 (`[all]` pulls in all optional dependencies. By default, meshio only uses numpy.)
-You can then use the command-line tools
+You can then use the command-line tool
 <!--pytest-codeblocks:skip-->
 ```sh
-meshio-convert    input.msh output.vtk   # convert between two formats
+meshio convert    input.msh output.vtk   # convert between two formats
 
-meshio-info       input.xdmf             # show some info about the mesh
+meshio info       input.xdmf             # show some info about the mesh
 
-meshio-compress   input.vtu              # compress the mesh file
-meshio-decompress input.vtu              # decompress the mesh file
+meshio compress   input.vtu              # compress the mesh file
+meshio decompress input.vtu              # decompress the mesh file
 
-meshio-binary     input.msh              # convert to binary format
-meshio-ascii      input.msh              # convert to ASCII format
+meshio binary     input.msh              # convert to binary format
+meshio ascii      input.msh              # convert to ASCII format
 ```
 with any of the supported formats.
 
@@ -179,7 +179,7 @@ triangles. The red lines mark the size of the mesh in memory.
 ### Installation
 
 meshio is [available from the Python Package Index](https://pypi.org/project/meshio/),
-so simply do
+so simply run
 ```
 pip install meshio
 ```
