@@ -46,7 +46,7 @@ def main(argv=None):
 
     parser = subparsers.add_parser("binary", help="Convert to binary", aliases=["b"])
     _binary.add_args(parser)
-    parser.set_defaults(func=_binary)
+    parser.set_defaults(func=_binary.binary)
 
     args = parent_parser.parse_args(argv)
 
