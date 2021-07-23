@@ -47,7 +47,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, ref_num_cell_sets):
     mesh = meshio.read(filename)
 
     assert np.isclose(np.sum(mesh.points), ref_sum)
-    assert sum([len(cells.data) for cells in mesh.cells]) == ref_num_cells
+    assert sum(len(cells.data) for cells in mesh.cells) == ref_num_cells
     assert len(mesh.cell_sets) == ref_num_cell_sets
 
 

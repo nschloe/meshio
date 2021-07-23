@@ -1,17 +1,24 @@
-import argparse
 import os
 import pathlib
 
 from .. import ansys, flac3d, gmsh, mdpa, ply, stl, vtk, vtu, xdmf
 from .._helpers import _filetype_from_path, read, reader_map
-from ._helpers import _get_version_text
 
 
-def binary(argv=None):
-    # Parse command line arguments.
-    parser = _get_parser()
-    args = parser.parse_args(argv)
+def add_args(parser):
+    parser.add_argument("infile", type=str, help="mesh file to convert")
 
+    parser.add_argument(
+        "--input-format",
+        "-i",
+        type=str,
+        choices=sorted(list(reader_map.keys())),
+        help="input file format",
+        default=None,
+    )
+
+
+def binary(args):
     # read mesh data
     fmt = args.input_format or _filetype_from_path(pathlib.Path(args.infile))
 
@@ -47,30 +54,3 @@ def binary(argv=None):
 
     size = os.stat(args.infile).st_size
     print(f"File size after: {size / 1024 ** 2:.2f} MB")
-
-
-def _get_parser():
-    parser = argparse.ArgumentParser(
-        description=("Covert mesh file to binary format."),
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-
-    parser.add_argument("infile", type=str, help="mesh file to convert")
-
-    parser.add_argument(
-        "--input-format",
-        "-i",
-        type=str,
-        choices=sorted(list(reader_map.keys())),
-        help="input file format",
-        default=None,
-    )
-
-    parser.add_argument(
-        "--version",
-        "-v",
-        action="version",
-        version=_get_version_text(),
-        help="display version information",
-    )
-    return parser

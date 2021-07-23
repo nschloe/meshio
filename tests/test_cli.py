@@ -23,7 +23,7 @@ def test_info():
         tmpdir = Path(tmpdir)
         infile = tmpdir / "out.msh"
         meshio.write(infile, input_mesh, file_format="gmsh")
-        meshio._cli.info([str(infile), "--input-format", "gmsh"])
+        meshio._cli.main(["info", str(infile), "--input-format", "gmsh"])
 
 
 def test_convert():
@@ -35,8 +35,9 @@ def test_convert():
         meshio.write(infile, input_mesh, file_format="gmsh")
 
         outfile = tmpdir / "out.msh"
-        meshio._cli.convert(
+        meshio._cli.main(
             [
+                "convert",
                 str(infile),
                 str(outfile),
                 "--input-format",
@@ -64,11 +65,11 @@ def test_compress():
         infile = tmpdir / "in.vtu"
         meshio.write(infile, input_mesh)
 
-        meshio._cli.decompress([str(infile)])
+        meshio._cli.main(["decompress", str(infile)])
         mesh = meshio.read(infile)
         assert is_same_mesh(input_mesh, mesh, atol=1.0e-15)
 
-        meshio._cli.compress([str(infile)])
+        meshio._cli.main(["compress", str(infile)])
         mesh = meshio.read(infile)
         assert is_same_mesh(input_mesh, mesh, atol=1.0e-15)
 
@@ -81,10 +82,10 @@ def test_ascii_binary():
         infile = tmpdir / "in.vtu"
         meshio.write(infile, input_mesh)
 
-        meshio._cli.ascii([str(infile)])
+        meshio._cli.main(["ascii", str(infile)])
         mesh = meshio.read(infile)
         assert is_same_mesh(input_mesh, mesh, atol=1.0e-12)
 
-        meshio._cli.binary([str(infile)])
+        meshio._cli.main(["binary", str(infile)])
         mesh = meshio.read(infile)
         assert is_same_mesh(input_mesh, mesh, atol=1.0e-12)
