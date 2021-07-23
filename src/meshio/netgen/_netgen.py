@@ -301,13 +301,13 @@ def read_buffer(f):
             num_entries = int(f.readline())
             if num_entries > 0:
                 identifications = np.loadtxt(
-                    f, max_rows=num_entries, dtype=np.int
+                    f, max_rows=num_entries, dtype=int
                 ).reshape(num_entries, 3)
 
         elif line == "identificationtypes":
             num_entries = int(f.readline())
             if num_entries > 0:
-                identificationtypes = np.loadtxt(f, max_rows=1, dtype=np.int).reshape(
+                identificationtypes = np.loadtxt(f, max_rows=1, dtype=int).reshape(
                     1, num_entries
                 )
 
