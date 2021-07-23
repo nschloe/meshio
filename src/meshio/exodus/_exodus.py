@@ -269,7 +269,7 @@ def write(filename, mesh):
         rootgrp.floating_point_word_size = 8
 
         # set dimensions
-        total_num_elems = sum([c.data.shape[0] for c in mesh.cells])
+        total_num_elems = sum(c.data.shape[0] for c in mesh.cells)
         rootgrp.createDimension("num_nodes", len(mesh.points))
         rootgrp.createDimension("num_dim", mesh.points.shape[1])
         rootgrp.createDimension("num_elem", total_num_elems)

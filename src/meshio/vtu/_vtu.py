@@ -760,7 +760,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
     grid = ET.SubElement(vtk_file, "UnstructuredGrid")
 
-    total_num_cells = sum([len(c.data) for c in mesh.cells])
+    total_num_cells = sum(len(c.data) for c in mesh.cells)
     piece = ET.SubElement(
         grid,
         "Piece",

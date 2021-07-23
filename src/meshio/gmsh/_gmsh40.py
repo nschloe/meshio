@@ -113,7 +113,7 @@ def _read_nodes(f, is_ascii, data_size):
     if is_ascii:
         # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
         line = f.readline().decode()
-        num_entity_blocks, total_num_nodes = [int(k) for k in line.split()]
+        num_entity_blocks, total_num_nodes = (int(k) for k in line.split())
 
         points = np.empty((total_num_nodes, 3), dtype=float)
         tags = np.empty(total_num_nodes, dtype=int)
@@ -333,7 +333,7 @@ def _write_elements(fh, cells, binary):
     fh.write(b"$Elements\n")
 
     if binary:
-        total_num_cells = sum([data.shape[0] for _, data in cells])
+        total_num_cells = sum(data.shape[0] for _, data in cells)
         np.array([len(cells), total_num_cells], dtype=c_ulong).tofile(fh)
 
         consecutive_index = 0
@@ -364,7 +364,7 @@ def _write_elements(fh, cells, binary):
         fh.write(b"\n")
     else:
         # count all cells
-        total_num_cells = sum([data.shape[0] for _, data in cells])
+        total_num_cells = sum(data.shape[0] for _, data in cells)
         fh.write(f"{len(cells)} {total_num_cells}\n".encode())
 
         consecutive_index = 0

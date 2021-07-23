@@ -222,16 +222,16 @@ def _write_codim_domain_data(f, mesh, cells_index, dim, codim):
                 indices = indices.union(set(index))
 
         for idx in indices:
-            data[idx] = "cd{:d}_{:d}".format(codim, idx)
+            data[idx] = f"cd{codim:d}_{idx:d}"
 
     if len(data) == 0:
         return
 
     codim_tag = [kk for kk, vv in netgen_codims.items() if vv == codim][0]
-    f.write("\n{:s}\n".format(codim_tag))
+    f.write(f"\n{codim_tag:s}\n")
 
     ncd = max(data.keys())
-    f.write("{:d}\n".format(ncd))
+    f.write(f"{ncd:d}\n")
     for idx in range(1, ncd + 1):
         f.write("{:d} {:s}\n".format(idx, data.get(idx, "")))
 

@@ -89,7 +89,7 @@ expected_field_data = {
 def test_advanced(netgen_mesh):
     mesh = meshio.read(str(netgen_mesh_directory / netgen_mesh))
     with tempfile.TemporaryDirectory() as temp_dir:
-        p = pathlib.Path(temp_dir) / ("{:s}_out.vol".format(netgen_mesh))
+        p = pathlib.Path(temp_dir) / f"{netgen_mesh}_out.vol"
         mesh.write(p)
         mesh_out = meshio.read(p)
 

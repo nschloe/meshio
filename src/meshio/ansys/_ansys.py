@@ -387,28 +387,26 @@ def read(filename):  # noqa: C901
 def write(filename, mesh, binary=True):
     with open_file(filename, "wb") as fh:
         # header
-        fh.write(f'(1 "meshio {__version__}")\n'.encode("utf8"))
+        fh.write(f'(1 "meshio {__version__}")\n'.encode())
 
         # dimension
         num_points, dim = mesh.points.shape
         if dim not in [2, 3]:
             raise WriteError(f"Can only write dimension 2, 3, got {dim}.")
-        fh.write((f"(2 {dim})\n").encode("utf8"))
+        fh.write((f"(2 {dim})\n").encode())
 
         # total number of nodes
         first_node_index = 1
-        fh.write((f"(10 (0 {first_node_index:x} {num_points:x} 0))\n").encode("utf8"))
+        fh.write((f"(10 (0 {first_node_index:x} {num_points:x} 0))\n").encode())
 
         # total number of cells
-        total_num_cells = sum([len(c) for c in mesh.cells])
-        fh.write((f"(12 (0 1 {total_num_cells:x} 0))\n").encode("utf8"))
+        total_num_cells = sum(len(c) for c in mesh.cells)
+        fh.write((f"(12 (0 1 {total_num_cells:x} 0))\n").encode())
 
         # Write nodes
         key = "3010" if binary else "10"
         fh.write(
-            f"({key} (1 {first_node_index:x} {num_points:x} 1 {dim:x})(\n".encode(
-                "utf8"
-            )
+            f"({key} (1 {first_node_index:x} {num_points:x} 1 {dim:x})(\n".encode()
         )
         if binary:
             mesh.points.tofile(fh)
@@ -446,14 +444,12 @@ def write(filename, mesh, binary=True):
                     f"Illegal ANSYS cell type '{cell_type}'. (legal: {legal_keys})"
                 )
             fh.write(
-                f"({key} (1 {first_index:x} {last_index:x} 1 {ansys_cell_type})(\n".encode(
-                    "utf8"
-                )
+                f"({key} (1 {first_index:x} {last_index:x} 1 {ansys_cell_type})(\n".encode()
             )
             if binary:
                 (values + first_node_index).tofile(fh)
                 fh.write(b"\n)")
-                fh.write((f"End of Binary Section {key})\n").encode("utf8"))
+                fh.write((f"End of Binary Section {key})\n").encode())
             else:
                 np.savetxt(fh, values + first_node_index, fmt="%x")
                 fh.write(b"))\n")
