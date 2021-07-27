@@ -277,8 +277,12 @@ def read_ascii_buffer(f):
             ).reshape(num_edge_on_geometric_edge, 2)
         elif items[0] == "Identifier" or items[0] == "Geometry":
             f.readline()
-        elif items[0] in ["RequiredVertices", "TangentAtVertices",
-                          "Tangents", "Ridges"]:
+        elif items[0] in [
+            "RequiredVertices",
+            "TangentAtVertices",
+            "Tangents",
+            "Ridges",
+        ]:
             msg = f"Meshio doesn't know keyword {items[0]}. Skipping."
             logging.warning(msg)
             num_to_pass = int(f.readline())
