@@ -681,8 +681,8 @@ def _write_points(f, points, binary):
 
 
 def _write_cells(f, cells, binary):
-    total_num_cells = sum([len(c.data) for c in cells])
-    total_num_idx = sum([c.data.size for c in cells])
+    total_num_cells = sum(len(c.data) for c in cells)
+    total_num_idx = sum(c.data.size for c in cells)
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
     f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode())

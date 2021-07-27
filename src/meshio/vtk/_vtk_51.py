@@ -553,8 +553,8 @@ def _write_points(f, points, binary):
 
 
 def _write_cells(f, cells, binary):
-    total_num_cells = sum([len(c.data) for c in cells])
-    total_num_idx = sum([c.data.size for c in cells])
+    total_num_cells = sum(len(c.data) for c in cells)
+    total_num_idx = sum(c.data.size for c in cells)
     f.write(f"CELLS {total_num_cells + 1} {total_num_idx}\n".encode())
 
     # offsets
@@ -567,12 +567,12 @@ def _write_cells(f, cells, binary):
     offsets = np.concatenate(offsets)
 
     if binary:
-        f.write("OFFSETS vtktypeint64\n".encode())
+        f.write(b"OFFSETS vtktypeint64\n")
         # force big-endian and int64
         offsets.astype(">i8").tofile(f, sep="")
         f.write(b"\n")
 
-        f.write("CONNECTIVITY vtktypeint64\n".encode())
+        f.write(b"CONNECTIVITY vtktypeint64\n")
         for cell_block in cells:
             d = cell_block.data
             cell_idx = meshio_to_vtk_order(cell_block.type)
@@ -583,11 +583,11 @@ def _write_cells(f, cells, binary):
         f.write(b"\n")
     else:
         # ascii
-        f.write("OFFSETS vtktypeint64\n".encode())
+        f.write(b"OFFSETS vtktypeint64\n")
         offsets.tofile(f, sep="\n")
         f.write(b"\n")
 
-        f.write("CONNECTIVITY vtktypeint64\n".encode())
+        f.write(b"CONNECTIVITY vtktypeint64\n")
         for cell_block in cells:
             d = cell_block.data
             cell_idx = meshio_to_vtk_order(cell_block.type)

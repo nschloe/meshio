@@ -33,9 +33,9 @@ def read(filename):
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
 
-        num_points, dim, num_attrs, num_bmarkers = [
+        num_points, dim, num_attrs, num_bmarkers = (
             int(item) for item in line.split(" ") if item != ""
-        ]
+        )
         if dim != 3:
             raise ReadError("Need 3D points.")
 
@@ -66,9 +66,9 @@ def read(filename):
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
 
-        num_tets, num_points_per_tet, num_attrs = [
+        num_tets, num_points_per_tet, num_attrs = (
             int(item) for item in line.strip().split(" ") if item != ""
-        ]
+        )
         if num_points_per_tet != 4:
             raise ReadError()
         cells = np.fromfile(
