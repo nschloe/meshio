@@ -1,0 +1,11 @@
+# YAML 1.2
+---
+cff-version: "1.1.0"
+message: "If you use this software, please cite it using these metadata."
+title: meshio
+authors:
+  - family-names: Schlömer
+    given-names: Nico
+    orcid: "https://orcid.org/0000-0001-5228-0946"
+doi: 10.5281/zenodo.1173115
+license: MIT
