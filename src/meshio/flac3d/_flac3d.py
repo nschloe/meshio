@@ -257,7 +257,9 @@ def _read_group(buf_or_line, binary, line=None):
         (num_zones,) = struct.unpack("<I", buf_or_line.read(4))
         data = struct.unpack(f"<{num_zones}I", buf_or_line.read(4 * num_zones))
     else:
-        name = line[1].replace('"', "")
+        line = " ".join(line).replace("'", '"')
+        line = [l.strip() for l in line.split('"') if l]
+        name = line[1]
         data = []
         slot = "" if "SLOT" not in line else line[-1]
 
@@ -265,7 +267,7 @@ def _read_group(buf_or_line, binary, line=None):
         line = buf_or_line.readline()
         while True:
             line = line.rstrip().split()
-            if line and (line[0] not in {"*", "ZGROUP"}):
+            if line and (line[0] not in {"*", "ZGROUP", "FGROUP"}):
                 data += [int(l) for l in line]
             else:
                 buf_or_line.seek(i)

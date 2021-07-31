@@ -236,7 +236,7 @@ def _read_periodic(f):
     num_periodic = int(f.readline().decode())
     for _ in range(num_periodic):
         line = f.readline().decode()
-        edim, stag, mtag = [int(s) for s in line.split()]
+        edim, stag, mtag = (int(s) for s in line.split())
         line = f.readline().decode().strip()
         if line.startswith("Affine"):
             affine = line.replace("Affine", "", 1)
@@ -248,7 +248,7 @@ def _read_periodic(f):
         slave_master = []
         for _ in range(num_nodes):
             line = f.readline().decode()
-            snode, mnode = [int(s) for s in line.split()]
+            snode, mnode = (int(s) for s in line.split())
             slave_master.append([snode, mnode])
         slave_master = np.array(slave_master, dtype=c_int).reshape(-1, 2)
         slave_master -= 1  # Subtract one, Python is 0-based
@@ -351,7 +351,7 @@ def _write_elements(fh, cells, tag_data, binary):
     # write elements
     fh.write(b"$Elements\n")
     # count all cells
-    total_num_cells = sum([c.shape[0] for _, c in cells])
+    total_num_cells = sum(c.shape[0] for _, c in cells)
     fh.write(f"{total_num_cells}\n".encode())
 
     consecutive_index = 0

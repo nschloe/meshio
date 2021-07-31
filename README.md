@@ -56,18 +56,18 @@ Install with
 pip install meshio[all]
 ```
 (`[all]` pulls in all optional dependencies. By default, meshio only uses numpy.)
-You can then use the command-line tools
+You can then use the command-line tool
 <!--pytest-codeblocks:skip-->
 ```sh
-meshio-convert    input.msh output.vtk   # convert between two formats
+meshio convert    input.msh output.vtk   # convert between two formats
 
-meshio-info       input.xdmf             # show some info about the mesh
+meshio info       input.xdmf             # show some info about the mesh
 
-meshio-compress   input.vtu              # compress the mesh file
-meshio-decompress input.vtu              # decompress the mesh file
+meshio compress   input.vtu              # compress the mesh file
+meshio decompress input.vtu              # decompress the mesh file
 
-meshio-binary     input.msh              # convert to binary format
-meshio-ascii      input.msh              # convert to ASCII format
+meshio binary     input.msh              # convert to binary format
+meshio ascii      input.msh              # convert to ASCII format
 ```
 with any of the supported formats.
 
@@ -149,12 +149,10 @@ with meshio.xdmf.TimeSeriesReader(filename) as reader:
 
 If you have downloaded a binary version of ParaView, you may proceed as follows.
 
- * Make sure that ParaView uses a Python version that supports meshio. (That is at least
-   Python 3.)
- * Install meshio
+ * Install meshio for the Python major version that ParaView uses (check `pvpython --version`)
  * Open ParaView
  * Find the file `paraview-meshio-plugin.py` of your meshio installation (on Linux:
-   `~/.local/share/paraview/plugins/`) and load it under _Tools / Manage Plugins / Load New_
+   `~/.local/share/paraview-5.9/plugins/`) and load it under _Tools / Manage Plugins / Load New_
  * _Optional:_ Activate _Auto Load_
 
 You can now open all meshio-supported files in ParaView.
@@ -181,7 +179,7 @@ triangles. The red lines mark the size of the mesh in memory.
 ### Installation
 
 meshio is [available from the Python Package Index](https://pypi.org/project/meshio/),
-so simply do
+so simply run
 ```
 pip install meshio
 ```
