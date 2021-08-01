@@ -4,7 +4,7 @@ I/O for OpenFOAM polyMesh format
 """
 import logging
 import os
-from collections import OrderedDict as odict
+from collections import OrderedDict as Odict
 from enum import Enum
 
 import numpy as np
@@ -81,7 +81,7 @@ def write(filename, mesh, binary=False):
     #  - Value is a list: [[ordered points], owner index, neighbour index, patch_name]
     #    Ordered points face outwards for owner
     #    Neighbour can be None
-    faces = odict()
+    faces = Odict()
     # Iterate over cell groups, counting cell index i
     i = 0
     for cell_type, cells in mesh.cells:
@@ -138,9 +138,9 @@ def write(filename, mesh, binary=False):
     # Faces seem to need to be in the following order:
     #  - Internal faces
     #  - Boundary faces (grouped by physical labels)
-    internal_faces = odict()
-    named_patches = [odict() for i in range(len(patch_names))]
-    unnamed_boundary_faces = odict()
+    internal_faces = Odict()
+    named_patches = [Odict() for i in range(len(patch_names))]
+    unnamed_boundary_faces = Odict()
     for key, value in faces.items():
         if value[2] is not None:
             internal_faces[key] = value
@@ -150,7 +150,7 @@ def write(filename, mesh, binary=False):
             else:
                 named_patches[patch_names.index(value[3])][key] = value
     num_internal = len(internal_faces)
-    faces = odict()
+    faces = Odict()
     faces.update(internal_faces)
     faces.update(unnamed_boundary_faces)
     for patch in named_patches:
@@ -293,8 +293,8 @@ def _parse_object(f, end_on_blank=False):
                     break
             return (ParsedType.LIST, lis)
         if c == "{":
-            # Parsing a new odict; stack should contain dict name
-            dic = odict()
+            # Parsing a new Odict; stack should contain dict name
+            dic = Odict()
             dic_name = stack.strip()
             while True:
                 key = _parse_object(f, end_on_blank=True)
@@ -372,6 +372,7 @@ def read(dirpath: str):
             logging.warning("Unsupported cell type. Skipping.")
             continue
         type_ = face_types[len(fs)]
+        print(type_)
 
         # Faces with left-hand-rule pointing outwards
         faces_lh = []
@@ -380,6 +381,7 @@ def read(dirpath: str):
             if not inverted:
                 face.reverse()
             faces_lh.append(face)
+
         ps = []
         if type_ == "tetra":
             for face in faces_lh:
@@ -387,11 +389,19 @@ def read(dirpath: str):
                     if p not in ps:
                         ps.append(p)
         elif type_ == "hexahedron":
-            for face in faces_lh:
-                if not np.isin(face, ps).any():
-                    if ps:
-                        face.reverse()
-                    ps += face
+            # Pick an arbitrary starting face, reverse and add it
+            face_0 = faces_lh.pop(0)
+            ps += face_0
+            # Find the face opposite
+            face_1 = [f for f in faces_lh if not np.isin(f, face_0).any()][0]
+            faces_lh.remove(face_1)
+            # Find the point in face_1 which connects to the first index in face_0
+            fs = [f for f in faces_lh if face_0[0] in f]
+            p = [p for p in fs[0] if p in fs[1] and p in face_1][0]
+            # Roll face_1 such that this point comes first
+            index = face_1.index(p)
+            face_1 = face_1[index:] + face_1[:index]
+            ps += reversed(face_1)
         elif type_ == "pyramid":
             for face in faces_lh:
                 if len(face) != 4:
