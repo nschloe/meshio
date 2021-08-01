@@ -15,6 +15,7 @@ test_set = [
     helpers.pyramid_mesh,
 ]
 
+
 # Takes a triangle face as 3 points ('face'), and a fourth point ('point')
 # Returns True if the face's right-hand normal points *towards* the point
 def point_is_above_face(face, point):
