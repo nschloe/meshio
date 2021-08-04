@@ -297,29 +297,31 @@ class Mesh:
     def sets_to_int_data(self):
         # If possible, convert cell sets to integer cell data. This is possible if all
         # cells appear exactly in one group.
-        intfun = []
-        for k, c in enumerate(zip(*self.cell_sets.values())):
-            # Go for -1 as the default value. (NaN is not int.)
-            arr = np.full(len(self.cells[k]), -1, dtype=int)
-            for i, cc in enumerate(c):
-                if cc is None:
-                    continue
-                arr[cc] = i
-            intfun.append(arr)
+        if len(self.cell_sets) > 0:
+            intfun = []
+            for k, c in enumerate(zip(*self.cell_sets.values())):
+                # Go for -1 as the default value. (NaN is not int.)
+                arr = np.full(len(self.cells[k]), -1, dtype=int)
+                for i, cc in enumerate(c):
+                    if cc is None:
+                        continue
+                    arr[cc] = i
+                intfun.append(arr)
 
-        data_name = "-".join(self.cell_sets.keys())
-        self.cell_data = {data_name: intfun}
-        self.cell_sets = {}
+            data_name = "-".join(self.cell_sets.keys())
+            self.cell_data = {data_name: intfun}
+            self.cell_sets = {}
 
         # now for the point sets
         # Go for -1 as the default value. (NaN is not int.)
-        intfun = np.full(len(self.points), -1, dtype=int)
-        for i, cc in enumerate(self.point_sets.values()):
-            intfun[cc] = i
+        if len(self.point_sets) > 0:
+            intfun = np.full(len(self.points), -1, dtype=int)
+            for i, cc in enumerate(self.point_sets.values()):
+                intfun[cc] = i
 
-        data_name = "-".join(self.point_sets.keys())
-        self.point_data = {data_name: intfun}
-        self.point_sets = {}
+            data_name = "-".join(self.point_sets.keys())
+            self.point_data = {data_name: intfun}
+            self.point_sets = {}
 
     def int_data_to_sets(self):
         """Convert all int data to {point,cell}_sets, where possible."""
