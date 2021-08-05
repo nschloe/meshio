@@ -328,13 +328,11 @@ class Mesh:
             for i, cc in enumerate(self.point_sets.values()):
                 intfun[cc] = i
 
-            for item in intfun:
-                if np.any(item == default_value):
-                    warnings.warn(
-                        "Not all points are part of a point set. "
-                        f"Using default value {default_value}."
-                    )
-                    break
+            if np.any(intfun == default_value):
+                warnings.warn(
+                    "Not all points are part of a point set. "
+                    f"Using default value {default_value}."
+                )
 
             data_name = "-".join(self.point_sets.keys())
             self.point_data = {data_name: intfun}
