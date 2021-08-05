@@ -623,9 +623,11 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         # a bit.
         byte_order=("LittleEndian" if sys.byteorder == "little" else "BigEndian"),
     )
-    header_type = (
-        "UInt32" if header_type is None else vtk_file.set("header_type", header_type)
-    )
+
+    if header_type is None:
+        header_type = "UInt32"
+    else:
+        vtk_file.set("header_type", header_type)
     assert header_type is not None
 
     if binary and compression:
