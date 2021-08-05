@@ -98,6 +98,27 @@ def test_sets_to_int_data():
     assert np.all(mesh.point_sets["loose"] == [3, 4, 5, 6])
 
 
+def test_sets_to_int_data_warning():
+    mesh = meshio.Mesh(
+        [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]],
+        {"triangle": [[0, 1, 2], [1, 2, 3]]},
+        cell_sets={"tag": [[0]]},
+    )
+    with pytest.warns(UserWarning):
+        mesh.sets_to_int_data()
+    assert np.all(mesh.cell_data["tag"] == np.array([[0, -1]]))
+
+    mesh = meshio.Mesh(
+        [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]],
+        {"triangle": [[0, 1, 2], [1, 2, 3]]},
+        point_sets={"tag": [[0, 1, 3]]},
+    )
+    with pytest.warns(UserWarning):
+        mesh.sets_to_int_data()
+
+    assert np.all(mesh.point_data["tag"] == np.array([[0, 0, -1, 0]]))
+
+
 def test_int_data_to_sets():
     mesh = helpers.tri_mesh
     mesh.cell_data = {"grain0-grain1": [np.array([0, 1])]}
