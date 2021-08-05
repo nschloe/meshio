@@ -352,8 +352,11 @@ class Mesh:
             tags = np.unique(np.concatenate(data))
 
             # try and get the names by splitting the key along "-" (this is how
-            # sets_to_int_data() forms the key
-            names = sorted(list(set(key.split("-"))))
+            # sets_to_int_data() forms the key)
+            names = key.split("-")
+            # remove duplicates and preserve order
+            # <https://stackoverflow.com/a/7961390/353337>:
+            names = list(dict.fromkeys(names))
             if len(names) != len(tags):
                 # alternative names
                 names = [f"set{tag}" for tag in tags]
@@ -381,7 +384,10 @@ class Mesh:
 
             # try and get the names by splitting the key along "-" (this is how
             # sets_to_int_data() forms the key
-            names = sorted(list(set(key.split("-"))))
+            names = key.split("-")
+            # remove duplicates and preserve order
+            # <https://stackoverflow.com/a/7961390/353337>:
+            names = list(dict.fromkeys(names))
             if len(names) != len(tags):
                 # alternative names
                 names = [f"set{tag}" for tag in tags]

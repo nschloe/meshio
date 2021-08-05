@@ -76,7 +76,7 @@ def test_sets_to_int_data():
 
     assert mesh.cell_sets == {}
     assert "grain0-grain1" in mesh.cell_data
-    assert np.all(mesh.cell_data["grain0-grain1"][0] == [0, 0, 1, 1, 1])
+    assert np.all(mesh.cell_data["grain0-grain1"] == np.array([[0, 0, 1, 1, 1]]))
 
     assert mesh.point_sets == {}
     assert "fixed-loose" in mesh.point_data
@@ -124,10 +124,32 @@ def test_int_data_to_sets():
     mesh.cell_data = {"grain0-grain1": [np.array([0, 1])]}
 
     mesh.int_data_to_sets()
+
     assert "grain0" in mesh.cell_sets
     assert np.all(mesh.cell_sets["grain0"][0] == [0])
     assert "grain1" in mesh.cell_sets
     assert np.all(mesh.cell_sets["grain1"][0] == [1])
+
+
+def test_gh_1165():
+    mesh = meshio.Mesh(
+        [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
+        {
+            "triangle": [[0, 1, 2], [1, 2, 3]],
+            "line": [[0, 1], [0, 2], [1, 3], [2, 3]],
+        },
+        cell_sets={
+            "test": [[], [1]],
+            "sets": [[0, 1], [0, 2, 3]],
+        },
+    )
+
+    mesh.sets_to_int_data()
+    mesh.int_data_to_sets()
+
+    np.testing.assert_equal(
+        mesh.cell_sets, {"test": [[], [1]], "sets": [[0, 1], [0, 2, 3]]}
+    )
 
 
 if __name__ == "__main__":
