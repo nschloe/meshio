@@ -4,6 +4,11 @@ This document only describes _breaking_ changes in meshio. If you are interested
 fixes, enhancements etc., best follow [the meshio project on
 GitHub](https://github.com/nschloe/meshio).
 
+## v5.0.0 (Aug 06, 2021)
+
+- meshio now only provides one command-line tool, `meshio`, with subcommands like
+  `info`, `convert`, etc. This replaces the former `meshio-info`, `meshio-convert` etc.
+
 ## v4.4.0 (Apr 29, 2021)
 
 - Polygons are now stored as `"polygon"` cell blocks, not `"polygonN"` (where `N` is the
