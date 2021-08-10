@@ -11,7 +11,7 @@ def read(filename):
     import h5py
 
     with h5py.File(filename, "r") as f:
-        assert f.attrs["type"] == "hmf"
+        assert f.attrs["type"] ==    "hmf"
         assert f.attrs["version"] == "0.1-alpha"
 
         assert len(f) == 1, "only one domain supported for now"
