@@ -56,6 +56,7 @@ abaqus_to_meshio_type = {
     "S3": "triangle",
     "S3R": "triangle",
     "S3RS": "triangle",
+    "R3D3": "triangle",
     # "TRI7": "triangle7",
     # 'TRISHELL': 'triangle',
     # 'TRISHELL3': 'triangle',
