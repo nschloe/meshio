@@ -160,14 +160,11 @@ def _read_binary(f, num_triangles):
 
 def write(filename, mesh, binary=False):
     if "triangle" not in {block.type for block in mesh.cells}:
-        raise WriteError("STL can only write triangle cells.  No triangle cells found.")
+        raise WriteError("STL can only write triangle cells. No triangle cells found.")
     if len(mesh.cells) > 1:
         invalid = {block.type for block in mesh.cells if block.type != "triangle"}
-        logging.warning(
-            "STL can only write triangle cells. Discarding {}.".format(
-                ", ".join(invalid)
-            )
-        )
+        invalid = ", ".join(invalid)
+        logging.warning(f"STL can only write triangle cells. Discarding {invalid}.")
 
     if mesh.points.shape[1] == 2:
         logging.warning(
