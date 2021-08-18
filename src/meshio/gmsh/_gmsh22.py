@@ -7,8 +7,8 @@ import logging
 import numpy as np
 
 from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
-from .._exceptions import ReadError, WriteError
-from .._mesh import CellBlock, Mesh
+from .._exceptions import ReadError
+from .._mesh import Mesh
 from .common import (
     _fast_forward_over_blank_lines,
     _fast_forward_to_end_block,
@@ -261,24 +261,6 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
-    if mesh.points.shape[1] == 2:
-        logging.warning(
-            "msh2 requires 3D points, but 2D points given. "
-            "Appending 0 third component."
-        )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
-
-    if binary:
-        for k, (key, value) in enumerate(mesh.cells):
-            if value.dtype != c_int:
-                logging.warning(
-                    "Binary Gmsh needs 32-bit integers (got %s). Converting.",
-                    value.dtype,
-                )
-                mesh.cells[k] = CellBlock(key, np.array(value, dtype=c_int))
-
     cells = _meshio_to_gmsh_order(mesh.cells)
 
     # Filter the point data: gmsh:dim_tags are tags, the rest is actual point data.
@@ -331,6 +313,11 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
 
 
 def _write_nodes(fh, points, float_fmt, binary):
+    if points.shape[1] == 2:
+        # msh2 requires 3D points, but 2D points given. Appending 0 third component.
+        points = np.column_stack(
+            [points[:, 0], points[:, 1], np.zeros(points.shape[0])]
+        )
     fh.write(b"$Nodes\n")
     fh.write(f"{len(points)}\n".encode())
     if binary:
@@ -374,7 +361,7 @@ def _write_elements(fh, cells, tag_data, binary):
             a += 1 + consecutive_index
             array = np.hstack([a, fcd, node_idcs + 1])
             if array.dtype != c_int:
-                raise WriteError(f"Wrong dtype (require c_int, got {array.dtype})")
+                array = array.astype(c_int)
             array.tofile(fh)
         else:
             form = (

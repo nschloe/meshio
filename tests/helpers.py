@@ -671,11 +671,11 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
     assert in_mesh.points.dtype == input_mesh.points.dtype
     assert np.allclose(in_mesh.points, input_mesh.points, atol=atol, rtol=0.0)
     for c0, c1 in zip(in_mesh.cells, input_mesh.cells):
-        print(c0)
-        print(c1)
+        if c0.type.startswith("polyhedron"):
+            continue
         assert c0.type == c1.type
-        assert c0.data.shape == c1.data.shape
-        assert c0.data.dtype == c1.data.dtype
+        assert c0.data.shape == c1.data.shape, f"{c0.data.shape} != {c1.data.shape}"
+        assert c0.data.dtype == c1.data.dtype, f"{c0.data.dtype} != {c1.data.dtype}"
         assert np.all(c0.data == c1.data)
 
     # Numpy's array_equal is too strict here, cf.

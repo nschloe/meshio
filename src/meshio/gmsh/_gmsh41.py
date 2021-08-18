@@ -306,23 +306,6 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
     """
-    if mesh.points.shape[1] == 2:
-        logging.warning(
-            "msh4 requires 3D points, but 2D points given. "
-            "Appending 0 third component."
-        )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
-
-    if binary:
-        for k, (key, value) in enumerate(mesh.cells):
-            if value.dtype != c_size_t:
-                logging.warning(
-                    "Binary Gmsh needs c_size_t (got %s). Converting.", value.dtype
-                )
-                mesh.cells[k] = CellBlock(key, value.astype(c_size_t))
-
     cells = _meshio_to_gmsh_order(mesh.cells)
 
     # Filter the point data: gmsh:dim_tags are tags, the rest is actual point data.
@@ -420,6 +403,12 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     if "gmsh:dim_tags" not in point_data:
         return
 
+    if binary:
+        for k, (key, value) in enumerate(cells):
+            if value.dtype != c_size_t:
+                # Binary Gmsh needs c_size_t. Converting."
+                cells[k] = CellBlock(key, value.astype(c_size_t))
+
     fh.write(b"$Entities\n")
 
     # Array of entity tag (first row) and dimension (second row) per node.
@@ -453,7 +442,6 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     # based on nodes, supplement with cell information when there is a matcihng
     # cell block.
     for dim, tag in node_dim_tags:
-
         # Find the matching cell block, if it exists
         matching_cell_block = np.where(
             np.logical_and(cell_dim_tags[:, 0] == dim, cell_dim_tags[:, 1] == tag)
@@ -548,7 +536,6 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
         fh.write(b"\n")
     # raise NotImplementedError
     fh.write(b"$EndEntities\n")
-    return
 
 
 def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
@@ -565,6 +552,13 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     raised if len(cells) > 1.
 
     """
+    if points.shape[1] == 2:
+        # msh4 requires 3D points, but 2D points given.
+        # Appending 0 third component.
+        points = np.column_stack(
+            [points[:, 0], points[:, 1], np.zeros(points.shape[0])]
+        )
+
     fh.write(b"$Nodes\n")
 
     # The format for the nodes section is
