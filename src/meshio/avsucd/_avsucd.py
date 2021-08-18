@@ -223,7 +223,7 @@ def _write_cells(f, cells, material):
     i = 0
     for cell_type, v in cells:
         for cell in v[:, meshio_to_avsucd_order[cell_type]]:
-            cell_str = " ".join(str(c + 1) for c in cell)
+            cell_str = " ".join(str(c) for c in cell + 1)
             f.write(
                 f"{i + 1} {material[i]} {meshio_to_avsucd_type[cell_type]} {cell_str}\n"
             )

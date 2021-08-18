@@ -494,7 +494,7 @@ def write(filename, mesh):
 
         # CellBlock
         for cell in cells:
-            f.write("{}\n".format(" ".join(str(c + 1) for c in cell)))
+            f.write(" ".join(str(c) for c in cell + 1) + "\n")
 
 
 def _write_table(f, data, ncol=20):
@@ -502,7 +502,7 @@ def _write_table(f, data, ncol=20):
     lines = np.split(data, np.full(nrow, ncol).cumsum())
     for line in lines:
         if len(line):
-            f.write("{}\n".format(" ".join(str(l) for l in line)))
+            f.write(" ".join(str(l) for l in line) + "\n")
 
 
 register("tecplot", [".dat", ".tec"], read, {"tecplot": write})

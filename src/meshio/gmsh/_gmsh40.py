@@ -2,7 +2,6 @@
 I/O for Gmsh's msh format (version 4.0, as used by Gmsh 4.1.5), cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
-import logging
 from functools import partial
 
 import numpy as np
@@ -13,8 +12,8 @@ from .._common import (
     num_nodes_per_cell,
     raw_from_cell_data,
 )
-from .._exceptions import ReadError, WriteError
-from .._mesh import CellBlock, Mesh
+from .._exceptions import ReadError
+from .._mesh import Mesh
 from .common import (
     _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
@@ -246,25 +245,6 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
-    if mesh.points.shape[1] == 2:
-        logging.warning(
-            "msh4 requires 3D points, but 2D points given. "
-            "Appending 0 third component."
-        )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
-
-    if binary:
-        for k, (key, value) in enumerate(mesh.cells):
-            if value.dtype != c_int:
-                logging.warning(
-                    "Binary Gmsh needs c_int (typically np.int32) integers "
-                    "(got %s). Converting.",
-                    value.dtype,
-                )
-                mesh.cells[k] = CellBlock(key, np.array(value, dtype=c_int))
-
     cells = _meshio_to_gmsh_order(mesh.cells)
 
     with open(filename, "wb") as fh:
@@ -291,6 +271,11 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
 
 
 def _write_nodes(fh, points, float_fmt, binary):
+    if points.shape[1] == 2:
+        points = np.column_stack(
+            [points[:, 0], points[:, 1], np.zeros(points.shape[0])]
+        )
+
     fh.write(b"$Nodes\n")
 
     # TODO not sure what dimEntity is supposed to say
@@ -346,7 +331,9 @@ def _write_elements(fh, cells, binary):
             np.array([node_idcs.shape[0]], dtype=c_ulong).tofile(fh)
 
             if node_idcs.dtype != c_int:
-                raise WriteError()
+                # Binary Gmsh needs c_int (typically np.int32) integers Converting.
+                node_idcs = node_idcs.astype(c_int)
+
             data = np.column_stack(
                 [
                     np.arange(
