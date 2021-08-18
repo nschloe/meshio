@@ -39,6 +39,7 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
 
     # (3010 (zone-id first-index last-index type ND)
     out = re.match("\\s*\\(\\s*(|20|30)10\\s*\\(([^\\)]*)\\).*", line)
+    assert out is not None
     a = [int(num, 16) for num in out.group(2).split()]
 
     if len(a) <= 4:
@@ -100,6 +101,7 @@ def _read_cells(f, line):
         return None, None
 
     out = re.match("\\s*\\(\\s*(|20|30)12\\s*\\(([^\\)]+)\\).*", line)
+    assert out is not None
     a = [int(num, 16) for num in out.group(2).split()]
     if len(a) <= 4:
         raise ReadError()
@@ -187,6 +189,7 @@ def _read_faces(f, line):
         return {}
 
     out = re.match("\\s*\\(\\s*(|20|30)13\\s*\\(([^\\)]+)\\).*", line)
+    assert out is not None
     a = [int(num, 16) for num in out.group(2).split()]
 
     if len(a) <= 4:
