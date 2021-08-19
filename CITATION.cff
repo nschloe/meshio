@@ -6,5 +6,4 @@ authors:
   orcid: "https://orcid.org/0000-0001-5228-0946"
 title: "meshio"
 doi: 10.5281/zenodo.1173115
-version: 5.0.0
 url: "https://github.com/nschloe/meshio"
