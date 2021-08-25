@@ -3,7 +3,6 @@ I/O for the Wavefront .obj file format, cf.
 <https://en.wikipedia.org/wiki/Wavefront_.obj_file>.
 """
 import datetime
-import logging
 
 import numpy as np
 
@@ -84,18 +83,14 @@ def read_buffer(f):
         elif f.shape[1] == 4:
             cells.append(CellBlock("quad", f - 1))
         else:
-            # Only triangles or quads supported for now
-            logging.warning(
-                "meshio::obj only supports triangles and quads. "
-                f"Skipping {f.shape[0]} polygons with {f.shape[1]} nodes"
-            )
+            cells.append(CellBlock("polygon", f - 1))
 
     return Mesh(points, cells, point_data=point_data)
 
 
 def write(filename, mesh):
     for c in mesh.cells:
-        if c.type not in ["triangle", "quad"]:
+        if c.type not in ["triangle", "quad", "polygon"]:
             raise WriteError(
                 "Wavefront .obj files can only contain triangle or quad cells."
             )
