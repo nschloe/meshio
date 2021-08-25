@@ -24,6 +24,8 @@ def read_buffer(f):
     vertex_normals = []
     texture_coords = []
     face_groups = []
+    face_group_ids = []
+    face_group_id = -1
     while True:
         line = f.readline()
 
@@ -53,10 +55,15 @@ def read_buffer(f):
                 len(face_groups[-1]) > 0 and len(face_groups[-1][-1]) != len(dat)
             ):
                 face_groups.append([])
+                face_group_ids.append([])
+
             face_groups[-1].append(dat)
+            face_group_ids[-1].append(face_group_id)
         elif split[0] == "g":
             # new group
             face_groups.append([])
+            face_group_ids.append([])
+            face_group_id+=1
         else:
             # who knows
             pass
@@ -64,6 +71,7 @@ def read_buffer(f):
     # There may be empty groups, too. <https://github.com/nschloe/meshio/issues/770>
     # Remove them.
     face_groups = [f for f in face_groups if len(f) > 0]
+    face_group_ids = [g for g in face_group_ids if len(g) > 0]
 
     points = np.array(points)
     texture_coords = np.array(texture_coords)
@@ -76,16 +84,18 @@ def read_buffer(f):
 
     # convert to numpy arrays
     face_groups = [np.array(f) for f in face_groups]
+    cell_data = {"obj:group_ids": []}
     cells = []
-    for f in face_groups:
+    for f,gid in zip(face_groups,face_group_ids):
         if f.shape[1] == 3:
             cells.append(CellBlock("triangle", f - 1))
         elif f.shape[1] == 4:
             cells.append(CellBlock("quad", f - 1))
         else:
             cells.append(CellBlock("polygon", f - 1))
+        cell_data["obj:group_ids"].append(gid)
 
-    return Mesh(points, cells, point_data=point_data)
+    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
 def write(filename, mesh):
