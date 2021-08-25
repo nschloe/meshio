@@ -63,7 +63,7 @@ def read_buffer(f):
             # new group
             face_groups.append([])
             face_group_ids.append([])
-            face_group_id+=1
+            face_group_id += 1
         else:
             # who knows
             pass
@@ -86,7 +86,7 @@ def read_buffer(f):
     face_groups = [np.array(f) for f in face_groups]
     cell_data = {"obj:group_ids": []}
     cells = []
-    for f,gid in zip(face_groups,face_group_ids):
+    for f, gid in zip(face_groups, face_group_ids):
         if f.shape[1] == 3:
             cells.append(CellBlock("triangle", f - 1))
         elif f.shape[1] == 4:
