@@ -10,7 +10,13 @@ from . import helpers
 
 @pytest.mark.parametrize(
     "mesh",
-    [helpers.empty_mesh, helpers.tri_mesh, helpers.quad_mesh, helpers.tri_quad_mesh],
+    [
+        helpers.empty_mesh,
+        helpers.tri_mesh,
+        helpers.quad_mesh,
+        helpers.tri_quad_mesh,
+        helpers.polygon_mesh,
+    ],
 )
 def test_obj(mesh):
     def writer(*args, **kwargs):
