@@ -16,7 +16,8 @@ from .._common import raw_from_cell_data
 from .._exceptions import ReadError
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
-from .._vtk_common import meshio_to_vtk_order, meshio_to_vtk_type, vtk_cells_from_data
+from .._vtk_common import (meshio_to_vtk_order, meshio_to_vtk_type,
+                           vtk_cells_from_data)
 
 # Paraview 5.8.1's built-in Python doesn't have lzma.
 try:
