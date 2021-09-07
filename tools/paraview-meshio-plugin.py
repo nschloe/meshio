@@ -1,6 +1,11 @@
 import numpy as np
-from paraview.util.vtkAlgorithm import (VTKPythonAlgorithmBase, smdomain,
-                                        smhint, smproperty, smproxy)
+from paraview.util.vtkAlgorithm import (
+    VTKPythonAlgorithmBase,
+    smdomain,
+    smhint,
+    smproperty,
+    smproxy,
+)
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from vtkmodules.vtkCommonDataModel import vtkUnstructuredGrid
 

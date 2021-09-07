@@ -6,14 +6,25 @@ from functools import partial
 
 import numpy as np
 
-from .._common import (_topological_dimension, cell_data_from_raw,
-                       num_nodes_per_cell, raw_from_cell_data)
+from .._common import (
+    _topological_dimension,
+    cell_data_from_raw,
+    num_nodes_per_cell,
+    raw_from_cell_data,
+)
 from .._exceptions import ReadError
 from .._mesh import Mesh
-from .common import (_fast_forward_to_end_block, _gmsh_to_meshio_order,
-                     _gmsh_to_meshio_type, _meshio_to_gmsh_order,
-                     _meshio_to_gmsh_type, _read_data, _read_physical_names,
-                     _write_data, _write_physical_names)
+from .common import (
+    _fast_forward_to_end_block,
+    _gmsh_to_meshio_order,
+    _gmsh_to_meshio_type,
+    _meshio_to_gmsh_order,
+    _meshio_to_gmsh_type,
+    _read_data,
+    _read_physical_names,
+    _write_data,
+    _write_physical_names,
+)
 
 c_int = np.dtype("i")
 c_long = np.dtype("l")

@@ -7,8 +7,12 @@ from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import Mesh
-from .._vtk_common import (Info, meshio_to_vtk_order, meshio_to_vtk_type,
-                           vtk_cells_from_data)
+from .._vtk_common import (
+    Info,
+    meshio_to_vtk_order,
+    meshio_to_vtk_type,
+    vtk_cells_from_data,
+)
 
 # VTK 5.1 data types
 vtk_to_numpy_dtype_name = {

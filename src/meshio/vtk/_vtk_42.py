@@ -10,8 +10,13 @@ from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import CellBlock, Mesh
-from .._vtk_common import (Info, meshio_to_vtk_order, meshio_to_vtk_type,
-                           vtk_to_meshio_order, vtk_to_meshio_type)
+from .._vtk_common import (
+    Info,
+    meshio_to_vtk_order,
+    meshio_to_vtk_type,
+    vtk_to_meshio_order,
+    vtk_to_meshio_type,
+)
 
 vtk_type_to_numnodes = np.array(
     [
