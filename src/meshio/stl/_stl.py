@@ -27,7 +27,14 @@ def read(filename):
         # num_triangles and see if it matches the file size
         # (https://stackoverflow.com/a/7394842/353337).
         f.read(80)
-        num_triangles = np.fromfile(f, count=1, dtype=np.uint32)[0]
+        values = np.fromfile(f, count=1, dtype=np.uint32)
+        if values.size == 0:
+            return Mesh(np.empty((0, 3)), [])
+
+        num_triangles = values[0]
+        if num_triangles == 0:
+            return Mesh(np.empty((0, 3)), [])
+
         # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet), and 1
         # int16 (attribute count), 50 bytes in total
         is_binary = 84 + num_triangles * 50 == os.path.getsize(filename)
@@ -159,7 +166,7 @@ def _read_binary(f, num_triangles):
 
 
 def write(filename, mesh, binary=False):
-    if "triangle" not in {block.type for block in mesh.cells}:
+    if len(mesh.cells) > 0 and "triangle" not in {block.type for block in mesh.cells}:
         raise WriteError("STL can only write triangle cells. No triangle cells found.")
     if len(mesh.cells) > 1:
         invalid = {block.type for block in mesh.cells if block.type != "triangle"}
@@ -179,9 +186,18 @@ def write(filename, mesh, binary=False):
     if "facet_normals" in mesh.cell_data:
         normals = mesh.get_cell_data("facet_normals", "triangle")
     else:
-        normals = np.cross(pts[:, 1] - pts[:, 0], pts[:, 2] - pts[:, 0])
-        nrm = np.sqrt(np.einsum("ij,ij->i", normals, normals))
-        normals = (normals.T / nrm).T
+        if len(pts) > 0:
+            normals = np.cross(pts[:, 1] - pts[:, 0], pts[:, 2] - pts[:, 0])
+            nrm = np.sqrt(np.einsum("ij,ij->i", normals, normals))
+            normals = (normals.T / nrm).T
+        else:
+            normals = np.empty(
+                shape=(
+                    0,
+                    3,
+                )
+            )
+            pts = np.empty(shape=(0, 3, 3))
 
     fun = _write_binary if binary else _write_ascii
     fun(filename, pts, normals)
