@@ -27,7 +27,7 @@ def read(filename):
         # num_triangles and see if it matches the file size
         # (https://stackoverflow.com/a/7394842/353337).
         f.read(80)
-        num_triangles = np.fromfile(f, count=1, dtype=np.uint32)[0]
+        num_triangles = np.fromfile(f, count=1, dtype="<u4")[0]
         # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet), and 1
         # int16 (attribute count), 50 bytes in total
         is_binary = 84 + num_triangles * 50 == os.path.getsize(filename)
@@ -145,7 +145,7 @@ def _read_binary(f, num_triangles):
         f,
         count=num_triangles,
         dtype=np.dtype(
-            [("normal", "f4", (3,)), ("facet", "f4", (3, 3)), ("attr count", "i2")]
+            [("normal", "<f4", (3,)), ("facet", "<f4", (3, 3)), ("attr count", "<i2")]
         ),
     )
     # discard normals, attribute count
