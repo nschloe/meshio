@@ -13,7 +13,7 @@ import numpy as np
 
 from ..__about__ import __version__
 from .._common import raw_from_cell_data
-from .._exceptions import ReadError
+from .._exceptions import CorruptionError, ReadError
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
 from .._vtk_common import meshio_to_vtk_order, meshio_to_vtk_type, vtk_cells_from_data
@@ -401,7 +401,10 @@ class VtuReader:
                     for c in child:
                         if c.tag != "DataArray":
                             raise ReadError()
-                        piece_point_data[c.attrib["Name"]] = self.read_data(c)
+                        try:
+                            piece_point_data[c.attrib["Name"]] = self.read_data(c)
+                        except CorruptionError as e:
+                            logging.warning(e.args[0] + " Skipping.")
 
                     point_data.append(piece_point_data)
 
@@ -444,23 +447,22 @@ class VtuReader:
     def read_uncompressed_binary(self, data, dtype):
         byte_string = base64.b64decode(data)
 
+        # the first item is the total_num_bytes, given in header_dtype
         header_dtype = vtu_to_numpy_type[self.header_type]
         if self.byte_order is not None:
             header_dtype = header_dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
-        num_bytes_per_item = np.dtype(header_dtype).itemsize
-        total_num_bytes = int(
-            np.frombuffer(byte_string[:num_bytes_per_item], header_dtype)[0]
-        )
+        num_header_bytes = np.dtype(header_dtype).itemsize
+        total_num_bytes = np.frombuffer(byte_string[:num_header_bytes], header_dtype)[0]
 
         # Check if block size was decoded separately
         # (so decoding stopped after block size due to padding)
-        if len(byte_string) == num_bytes_per_item:
+        if len(byte_string) == num_header_bytes:
             header_len = len(base64.b64encode(byte_string))
             byte_string = base64.b64decode(data[header_len:])
         else:
-            byte_string = byte_string[num_bytes_per_item:]
+            byte_string = byte_string[num_header_bytes:]
 
         # Read the block data; multiple blocks possible here?
         if self.byte_order is not None:
@@ -558,7 +560,16 @@ class VtuReader:
             raise ReadError(f"Unknown data format '{fmt}'.")
 
         if "NumberOfComponents" in c.attrib:
-            data = data.reshape(-1, int(c.attrib["NumberOfComponents"]))
+            nc = int(c.attrib["NumberOfComponents"])
+            try:
+                data = data.reshape(-1, nc)
+            except ValueError:
+                name = c.attrib["Name"]
+                raise CorruptionError(
+                    "VTU file corrupt. "
+                    + f"The size of the data array '{name}' is {data.size} "
+                    + f"which doesn't fit the number of components {nc}."
+                )
         return data
 
 

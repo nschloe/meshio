@@ -27,7 +27,7 @@ def read(filename):
         # num_triangles and see if it matches the file size
         # (https://stackoverflow.com/a/7394842/353337).
         f.read(80)
-        values = np.fromfile(f, count=1, dtype=np.uint32)
+        values = np.fromfile(f, count=1, dtype="<u4")
         if values.size == 0:
             return Mesh(np.empty((0, 3)), [])
 
@@ -152,7 +152,7 @@ def _read_binary(f, num_triangles):
         f,
         count=num_triangles,
         dtype=np.dtype(
-            [("normal", "f4", (3,)), ("facet", "f4", (3, 3)), ("attr count", "i2")]
+            [("normal", "<f4", (3,)), ("facet", "<f4", (3, 3)), ("attr count", "<i2")]
         ),
     )
     # discard normals, attribute count
