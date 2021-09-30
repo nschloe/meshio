@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import collections
 import warnings
-from typing import Optional
 
 import numpy as np
 
@@ -59,8 +60,8 @@ class Mesh:
             self.point_data[key] = np.asarray(item)
             if len(self.point_data[key]) != len(self.points):
                 raise ValueError(
-                    f"len(points) = {len(points)}, "
-                    f'but len(point_data["{key}"]) = {len(point_data[key])}'
+                    f"len(points) = {len(self.points)}, "
+                    f'but len(point_data["{key}"]) = {len(self.point_data[key])}'
                 )
 
         # assert cell data consistency and convert to numpy arrays
@@ -212,7 +213,7 @@ class Mesh:
         if self.points.shape[1] == 3 and np.all(np.abs(self.points[:, 2]) < tol):
             self.points = self.points[:, :2]
 
-    def write(self, path_or_buf, file_format: Optional[str] = None, **kwargs):
+    def write(self, path_or_buf, file_format: str | None = None, **kwargs):
         # avoid circular import
         from ._helpers import write
 

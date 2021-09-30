@@ -1,4 +1,5 @@
-from typing import Optional, Union
+from __future__ import annotations
+
 from xml.etree import ElementTree as ET
 
 import numpy as np
@@ -11,11 +12,11 @@ def write(
     filename,
     mesh,
     float_fmt: str = ".3f",
-    stroke_width: Optional[str] = None,
+    stroke_width: str | None = None,
     # Use a default image_width (not None). If set to None, images will come out at the
     # width of the mesh (which is okay). Some viewers (e.g., eog) have problems
     # displaying SVGs of width around 1 since they interpret it as the width in pixels.
-    image_width: Optional[Union[int, float]] = 100,
+    image_width: int | float | None = 100,
     # ParaView's default colors
     fill: str = "#c8c5bd",
     stroke: str = "#000080",
