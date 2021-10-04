@@ -5,7 +5,7 @@ import warnings
 
 import numpy as np
 
-from ._common import _topological_dimension
+from ._common import _topological_dimension, num_nodes_per_cell
 
 
 class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
@@ -221,7 +221,7 @@ class Mesh:
 
     def get_cells_type(self, cell_type: str):
         if not any(c.type == cell_type for c in self.cells):
-            return np.array([], dtype=int)
+            return np.empty((0, num_nodes_per_cell[cell_type]), dtype=int)
         return np.concatenate([c.data for c in self.cells if c.type == cell_type])
 
     def get_cell_data(self, name: str, cell_type: str):

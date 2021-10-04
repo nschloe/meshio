@@ -7,10 +7,7 @@ from . import helpers
 
 @pytest.mark.parametrize(
     "mesh",
-    [
-        # helpers.empty_mesh,
-        helpers.tri_mesh
-    ],
+    [helpers.empty_mesh, helpers.tri_mesh],
 )
 @pytest.mark.parametrize(
     "binary, tol",
