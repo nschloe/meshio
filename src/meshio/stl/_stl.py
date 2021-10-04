@@ -2,13 +2,15 @@
 I/O for the STL format, cf.
 <https://en.wikipedia.org/wiki/STL_(file_format)>.
 """
+from __future__ import annotations
+
 import logging
 import os
 
 import numpy as np
 
 from ..__about__ import __version__
-from .._exceptions import ReadError, WriteError
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
@@ -23,15 +25,22 @@ def read(filename):
         # ```
         # Unfortunately, there are mesh files out there which are binary and still put
         # "solid" there.
-        # A suggested alternative is to do as if the file is binary, read the
+        # A suggested alternative is to pretend the file is binary, read the
         # num_triangles and see if it matches the file size
         # (https://stackoverflow.com/a/7394842/353337).
-        f.read(80)
-        num_triangles = np.fromfile(f, count=1, dtype="<u4")[0]
-        # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet), and 1
-        # int16 (attribute count), 50 bytes in total
-        is_binary = 84 + num_triangles * 50 == os.path.getsize(filename)
+        filesize_bytes = os.path.getsize(filename)
+        if filesize_bytes < 80:
+            is_binary = False
+            num_triangles = None
+        else:
+            f.read(80)
+            num_triangles = np.fromfile(f, count=1, dtype="<u4")[0]
+            # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet),
+            # and 1 int16 (attribute count), 50 bytes in total
+            is_binary = 84 + num_triangles * 50 == filesize_bytes
+
         if is_binary:
+            assert num_triangles is not None
             out = _read_binary(f, num_triangles)
         else:
             # skip header
@@ -43,7 +52,13 @@ def read(filename):
 
 # np.loadtxt is super slow
 # Code adapted from <https://stackoverflow.com/a/8964779/353337>.
-def iter_loadtxt(infile, skiprows=0, comments=["#"], dtype=float, usecols=None):
+def iter_loadtxt(
+    infile,
+    skiprows: int = 0,
+    comments: tuple[str] = ("#"),
+    dtype=float,
+    usecols: tuple | None = None,
+):
     def iter_func():
         items = None
         for _ in range(skiprows):
@@ -63,7 +78,7 @@ def iter_loadtxt(infile, skiprows=0, comments=["#"], dtype=float, usecols=None):
                 yield dtype(items[idx])
 
         if items is None:
-            raise ReadError()
+            raise ReadError("Found no facets")
         iter_loadtxt.rowlength = len(items) if usecols is None else len(usecols)
 
     data = np.fromiter(iter_func(), dtype=dtype)
@@ -125,20 +140,23 @@ def _read_ascii(f):
 def data_from_facets(facets):
     # Now, all facets contain the point coordinate. Try to identify individual
     # points and build the data arrays.
-    pts = np.concatenate(facets)
-
-    # TODO equip `unique()` with a tolerance
-    # Use return_index so we can use sort on `idx` such that the order is
-    # preserved; see <https://stackoverflow.com/a/15637512/353337>.
-    _, idx, inv = np.unique(pts, axis=0, return_index=True, return_inverse=True)
-    k = np.argsort(idx)
-    points = pts[idx[k]]
-    inv_k = np.argsort(k)
-    cells = [CellBlock("triangle", inv_k[inv].reshape(-1, 3))]
+    if len(facets) == 0:
+        points = np.empty((0, 3), dtype=float)
+        cells = []
+    else:
+        pts = np.concatenate(facets)
+        # TODO equip `unique()` with a tolerance
+        # Use return_index so we can use sort on `idx` such that the order is
+        # preserved; see <https://stackoverflow.com/a/15637512/353337>.
+        _, idx, inv = np.unique(pts, axis=0, return_index=True, return_inverse=True)
+        k = np.argsort(idx)
+        points = pts[idx[k]]
+        inv_k = np.argsort(k)
+        cells = [CellBlock("triangle", inv_k[inv].reshape(-1, 3))]
     return points, cells
 
 
-def _read_binary(f, num_triangles):
+def _read_binary(f, num_triangles: int):
     # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet), and 1
     # int16 (attribute count)
     out = np.fromfile(
@@ -160,7 +178,7 @@ def _read_binary(f, num_triangles):
 
 def write(filename, mesh, binary=False):
     if "triangle" not in {block.type for block in mesh.cells}:
-        raise WriteError("STL can only write triangle cells. No triangle cells found.")
+        logging.warning("STL can only write triangle cells. No triangle cells found.")
     if len(mesh.cells) > 1:
         invalid = {block.type for block in mesh.cells if block.type != "triangle"}
         invalid = ", ".join(invalid)
@@ -168,11 +186,10 @@ def write(filename, mesh, binary=False):
 
     if mesh.points.shape[1] == 2:
         logging.warning(
-            "STL requires 3D points, but 2D points given. "
-            "Appending 0 third component."
+            "STL requires 3D points, but 2D points given. Appending 0 third component."
         )
         mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
+            [mesh.points[:, 0], mesh.points[:, 1], np.zeros_like(mesh.points[:, 1])]
         )
 
     pts = mesh.points[mesh.get_cells_type("triangle")]
@@ -188,6 +205,7 @@ def write(filename, mesh, binary=False):
 
 
 def _write_ascii(filename, pts, normals):
+    print("ASC")
     with open_file(filename, "w") as fh:
         fh.write("solid\n")
         for local_pts, normal in zip(pts, normals):
@@ -210,6 +228,7 @@ def _write_ascii(filename, pts, normals):
 
 
 def _write_binary(filename, pts, normals):
+    print("BIN")
     with open_file(filename, "wb") as fh:
         # 80 character header data
         msg = f"This file was generated by meshio v{__version__}."
