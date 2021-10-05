@@ -45,7 +45,13 @@ class Mesh:
             ]
         else:
             self.cells = [
-                CellBlock(cell_type, np.asarray(data)) for cell_type, data in cells
+                CellBlock(
+                    cell_type,
+                    # polyhedron data cannot be convert to numpy arrays because the
+                    # sublists don't all have the same length
+                    data if cell_type.startswith("polyhedron") else np.asarray(data),
+                )
+                for cell_type, data in cells
             ]
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
