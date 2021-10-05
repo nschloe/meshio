@@ -555,9 +555,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     if points.shape[1] == 2:
         # msh4 requires 3D points, but 2D points given.
         # Appending 0 third component.
-        points = np.column_stack(
-            [points[:, 0], points[:, 1], np.zeros(points.shape[0])]
-        )
+        points = np.column_stack([points, np.zeros_like(points[:, 0])])
 
     fh.write(b"$Nodes\n")
 

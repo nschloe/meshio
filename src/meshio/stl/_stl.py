@@ -197,11 +197,11 @@ def write(filename, mesh, binary=False):
         logging.warning(
             "STL requires 3D points, but 2D points given. Appending 0 third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros_like(mesh.points[:, 1])]
-        )
+        points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
+    else:
+        points = mesh.points
 
-    pts = mesh.points[mesh.get_cells_type("triangle")]
+    pts = points[mesh.get_cells_type("triangle")]
     if "facet_normals" in mesh.cell_data:
         normals = mesh.get_cell_data("facet_normals", "triangle")
     else:

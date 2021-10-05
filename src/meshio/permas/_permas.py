@@ -226,9 +226,9 @@ def write(filename, mesh):
             "PERMAS requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
+        points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
+    else:
+        points = mesh.points
 
     with open_file(filename, "wt") as f:
         f.write("!PERMAS DataFile Version 18.0\n")
@@ -236,7 +236,7 @@ def write(filename, mesh):
         f.write("$ENTER COMPONENT NAME=DFLT_COMP\n")
         f.write("$STRUCTURE\n")
         f.write("$COOR\n")
-        for k, x in enumerate(mesh.points):
+        for k, x in enumerate(points):
             f.write(f"{k + 1} {x[0]} {x[1]} {x[2]}\n")
         eid = 0
         tria6_order = [0, 3, 1, 4, 2, 5]

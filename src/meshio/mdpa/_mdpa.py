@@ -444,9 +444,9 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
             "mdpa requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
+        points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
+    else:
+        points = mesh.points
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -515,7 +515,7 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
                 break
 
         # identify entities
-        _write_nodes(fh, mesh.points, float_fmt, binary)
+        _write_nodes(fh, points, float_fmt, binary)
         _write_elements_and_conditions(fh, cells, tag_data, binary, dimension)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodalData", name, dat, binary)
