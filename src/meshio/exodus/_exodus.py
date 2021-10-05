@@ -1,8 +1,9 @@
 """
 I/O for Exodus II.
 
-See <https://prod.sandia.gov/techlib/access-control.cgi/1992/922137.pdf>, in particular
-Appendix A (page 171, Implementation of EXODUS II with netCDF).
+See
+<https://src.fedoraproject.org/repo/pkgs/exodusii/922137.pdf/a45d67f4a1a8762bcf66af2ec6eb35f9/922137.pdf>,
+in particular Appendix A (page 171, Implementation of EXODUS II with netCDF).
 """
 import datetime
 import re
@@ -33,16 +34,16 @@ exodus_to_meshio_type = {
     "QUAD8": "quad8",
     "QUAD9": "quad9",
     #
+    "TRI": "triangle",
     "TRIANGLE": "triangle",
-    # 'TRI': 'triangle',
     "TRI3": "triangle",
+    "TRI6": "triangle6",
     "TRI7": "triangle7",
     # 'TRISHELL': 'triangle',
     # 'TRISHELL3': 'triangle',
+    # 'TRISHELL6': 'triangle6',
     # 'TRISHELL7': 'triangle',
     #
-    "TRI6": "triangle6",
-    # 'TRISHELL6': 'triangle6',
     # volumes
     "HEX": "hexahedron",
     "HEXAHEDRON": "hexahedron",
