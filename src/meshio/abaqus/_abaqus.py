@@ -94,6 +94,8 @@ abaqus_to_meshio_type = {
     #
     # 4-node bilinear displacement and pore pressure
     "CAX4P": "quad",
+    # 6-node quadratic
+    "CPE6": "triangle6",
 }
 meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
