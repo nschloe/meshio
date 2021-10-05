@@ -622,9 +622,9 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             "VTU requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
+        points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
+    else:
+        points = mesh.points
 
     vtk_file = ET.Element(
         "VTKFile",
@@ -653,7 +653,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     # swap the data to match the system byteorder
     # Don't use byteswap to make sure that the dtype is changed; see
     # <https://github.com/numpy/numpy/issues/10372>.
-    points = mesh.points.astype(mesh.points.dtype.newbyteorder("="), copy=False)
+    points = points.astype(points.dtype.newbyteorder("="), copy=False)
     for k, (cell_type, data) in enumerate(mesh.cells):
         # Treatment of polyhedra is different from other types
         if is_polyhedron_grid:

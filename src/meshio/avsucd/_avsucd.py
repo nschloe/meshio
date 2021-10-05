@@ -151,9 +151,7 @@ def write(filename, mesh):
             "AVS-UCD requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
+        mesh.points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
 
     with open_file(filename, "w") as f:
         # Write meshio version

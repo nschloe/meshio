@@ -246,7 +246,7 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
             "Nastran requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        points = np.column_stack([mesh.points, np.zeros(mesh.points.shape[0])])
+        points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
     else:
         points = mesh.points
 

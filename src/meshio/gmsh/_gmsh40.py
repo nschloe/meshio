@@ -272,9 +272,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
 
 def _write_nodes(fh, points, float_fmt, binary):
     if points.shape[1] == 2:
-        points = np.column_stack(
-            [points[:, 0], points[:, 1], np.zeros(points.shape[0])]
-        )
+        points = np.column_stack([points, np.zeros_like(points[:, 0])])
 
     fh.write(b"$Nodes\n")
 
