@@ -1,5 +1,4 @@
 import pathlib
-import tempfile
 
 import numpy as np
 import pytest
@@ -51,7 +50,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, ref_num_cell_sets):
     assert len(mesh.cell_sets) == ref_num_cell_sets
 
 
-def test_elset():
+def test_elset(tmp_path):
     points = np.array(
         [[1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [2.0, 0.5, 0.0], [0.0, 0.5, 0.0]]
     )
@@ -65,10 +64,9 @@ def test_elset():
     }
     mesh_ref = meshio.Mesh(points, cells, cell_sets=cell_sets)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = pathlib.Path(temp_dir) / "test.inp"
-        meshio.abaqus.write(filepath, mesh_ref)
-        mesh = meshio.abaqus.read(filepath)
+    filepath = tmp_path / "test.inp"
+    meshio.abaqus.write(filepath, mesh_ref)
+    mesh = meshio.abaqus.read(filepath)
 
     assert np.allclose(mesh_ref.points, mesh.points)
 

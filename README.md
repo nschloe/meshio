@@ -51,6 +51,9 @@ meshio can read and write all of the following and smoothly converts between the
  [WKT](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry) ([TIN](https://en.wikipedia.org/wiki/Triangulated_irregular_network)) (`.wkt`),
  [XDMF](https://www.xdmf.org/index.php/XDMF_Model_and_Format) (`.xdmf`, `.xmf`).
 
+([Here's a little survey](https://forms.gle/PSeNb3N3gv3wbEus8) on which formats are actually
+used.)
+
 Install with
 ```
 pip install meshio[all]
