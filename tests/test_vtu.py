@@ -43,7 +43,7 @@ test_set = [
 @pytest.mark.parametrize(
     "data_type", [(False, None), (True, None), (True, "lzma"), (True, "zlib")]
 )
-def test(mesh, data_type):
+def test(mesh, data_type, tmp_path):
     binary, compression = data_type
 
     def writer(*args, **kwargs):
@@ -52,7 +52,7 @@ def test(mesh, data_type):
     # ASCII files are only meant for debugging, VTK stores only 11 digits
     # <https://gitlab.kitware.com/vtk/vtk/issues/17038#note_264052>
     tol = 1.0e-15 if binary else 1.0e-10
-    helpers.write_read(writer, meshio.vtu.read, mesh, tol)
+    helpers.write_read(tmp_path, writer, meshio.vtu.read, mesh, tol)
 
 
 def test_generic_io():

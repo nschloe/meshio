@@ -21,8 +21,8 @@ from . import helpers
         helpers.hex20_mesh,
     ],
 )
-def test_io(mesh):
-    helpers.write_read(meshio.permas.write, meshio.permas.read, mesh, 1.0e-15)
+def test_io(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.permas.write, meshio.permas.read, mesh, 1.0e-15)
 
 
 def test_generic_io():

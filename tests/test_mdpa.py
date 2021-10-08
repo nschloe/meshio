@@ -30,8 +30,8 @@ from . import helpers
         # helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
     ],
 )
-def test_io(mesh):
-    helpers.write_read(meshio.mdpa.write, meshio.mdpa.read, mesh, 1.0e-15)
+def test_io(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.mdpa.write, meshio.mdpa.read, mesh, 1.0e-15)
 
 
 def test_generic_io():

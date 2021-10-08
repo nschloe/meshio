@@ -23,11 +23,8 @@ from . import helpers
         helpers.hex20_mesh,
     ],
 )
-def test(mesh):
-    def writer(*args, **kwargs):
-        return meshio.abaqus.write(*args, **kwargs)
-
-    helpers.write_read(writer, meshio.abaqus.read, mesh, 1.0e-15)
+def test(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.abaqus.write, meshio.abaqus.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(

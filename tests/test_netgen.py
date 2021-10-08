@@ -36,12 +36,15 @@ netgen_meshes = [PERIODIC_1D, PERIODIC_2D, PERIODIC_3D]
 
 
 @pytest.mark.parametrize("mesh", test_set)
-def test(mesh):
+@pytest.mark.parametrize("suffix", [".vol", ".vol.gz"])
+def test(mesh, suffix, tmp_path):
     helpers.write_read(
-        meshio.netgen.write, meshio.netgen.read, mesh, 1.0e-13, extension=".vol"
-    )
-    helpers.write_read(
-        meshio.netgen.write, meshio.netgen.read, mesh, 1.0e-13, extension=".vol.gz"
+        tmp_path,
+        meshio.netgen.write,
+        meshio.netgen.read,
+        mesh,
+        1.0e-13,
+        extension=suffix,
     )
 
 

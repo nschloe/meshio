@@ -25,8 +25,10 @@ from . import helpers
         helpers.hex20_mesh,
     ],
 )
-def test(mesh):
-    helpers.write_read(meshio.nastran.write, meshio.nastran.read, mesh, 1.0e-13)
+def test(mesh, tmp_path):
+    helpers.write_read(
+        tmp_path, meshio.nastran.write, meshio.nastran.read, mesh, 1.0e-13
+    )
 
 
 @pytest.mark.parametrize("filename", ["cylinder.fem", "cylinder_cells_first.fem"])

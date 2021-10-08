@@ -22,8 +22,8 @@ from . import helpers
         helpers.add_cell_data(helpers.tri_mesh, [("medit:ref", (), int)]),
     ],
 )
-def test_io(mesh):
-    helpers.write_read(meshio.medit.write, meshio.medit.read, mesh, 1.0e-15)
+def test_io(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.medit.write, meshio.medit.read, mesh, 1.0e-15)
 
 
 def test_generic_io():

@@ -647,14 +647,13 @@ def add_cell_sets(mesh):
     return mesh2
 
 
-def write_read(writer, reader, input_mesh, atol, extension=".dat"):
+def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat"):
     """Write and read a file, and make sure the data is the same as before."""
     in_mesh = copy.deepcopy(input_mesh)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        p = Path(temp_dir) / ("test" + extension)
-        writer(p, input_mesh)
-        mesh = reader(p)
+    p = tmp_path / ("test" + extension)
+    writer(p, input_mesh)
+    mesh = reader(p)
 
     # Make sure the output is writeable
     assert mesh.points.flags["WRITEABLE"]

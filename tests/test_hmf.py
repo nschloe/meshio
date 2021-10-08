@@ -26,11 +26,11 @@ test_set_full = [
 
 @pytest.mark.parametrize("mesh", test_set_full)
 @pytest.mark.parametrize("compression", [None, "gzip"])
-def test_xdmf3(mesh, compression):
+def test_xdmf3(mesh, compression, tmp_path):
     def write(*args, **kwargs):
         return meshio.xdmf.write(*args, compression=compression, **kwargs)
 
-    helpers.write_read(write, meshio.xdmf.read, mesh, 1.0e-14)
+    helpers.write_read(tmp_path, write, meshio.xdmf.read, mesh, 1.0e-14)
 
 
 def test_generic_io():

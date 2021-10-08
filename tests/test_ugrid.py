@@ -36,8 +36,10 @@ this_dir = pathlib.Path(__file__).resolve().parent
         (1.0e-7, ".lr4.ugrid"),
     ],
 )
-def test_io(mesh, accuracy, ext):
-    helpers.write_read(meshio.ugrid.write, meshio.ugrid.read, mesh, accuracy, ext)
+def test_io(mesh, accuracy, ext, tmp_path):
+    helpers.write_read(
+        tmp_path, meshio.ugrid.write, meshio.ugrid.read, mesh, accuracy, ext
+    )
 
 
 def test_generic_io():

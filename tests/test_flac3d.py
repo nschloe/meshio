@@ -20,11 +20,12 @@ from . import helpers
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test(mesh, data, binary):
+def test(mesh, data, binary, tmp_path):
     if data:
         mesh = copy.deepcopy(mesh)
         mesh.cell_data["flac3d:group"] = [np.array(data)]
     helpers.write_read(
+        tmp_path,
         lambda f, m: meshio.flac3d.write(f, m, binary=binary),
         meshio.flac3d.read,
         mesh,

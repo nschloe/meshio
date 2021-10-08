@@ -48,9 +48,9 @@ def gmsh_periodic():
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test_gmsh22(mesh, binary):
+def test_gmsh22(mesh, binary, tmp_path):
     writer = partial(meshio.gmsh.write, fmt_version="2.2", binary=binary)
-    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(
@@ -77,10 +77,10 @@ def test_gmsh22(mesh, binary):
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test_gmsh40(mesh, binary):
+def test_gmsh40(mesh, binary, tmp_path):
     writer = partial(meshio.gmsh.write, fmt_version="4.0", binary=binary)
 
-    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(
@@ -108,9 +108,9 @@ def test_gmsh40(mesh, binary):
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test_gmsh41(mesh, binary):
+def test_gmsh41(mesh, binary, tmp_path):
     writer = partial(meshio.gmsh.write, fmt_version="4.1", binary=binary)
-    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
 def test_generic_io():
@@ -124,7 +124,7 @@ def test_generic_io():
     [("insulated-2.2.msh", 2.001762136876221, [21, 111])],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test_reference_file(filename, ref_sum, ref_num_cells, binary):
+def test_reference_file(filename, ref_sum, ref_num_cells, binary, tmp_path):
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "msh" / filename
     mesh = meshio.read(filename)
@@ -137,7 +137,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     assert list(map(len, mesh.cell_data["gmsh:physical"])) == ref_num_cells
 
     writer = partial(meshio.gmsh.write, fmt_version="2.2", binary=binary)
-    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(
@@ -156,7 +156,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test_reference_file_with_entities(
-    filename, ref_sum, ref_num_cells, ref_num_cells_in_cell_sets, binary
+    filename, ref_sum, ref_num_cells, ref_num_cells_in_cell_sets, binary, tmp_path
 ):
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "msh" / filename
@@ -178,4 +178,4 @@ def test_reference_file_with_entities(
             num_cells[k] += len(v)
     assert num_cells == ref_num_cells_in_cell_sets
 
-    helpers.write_read(writer, meshio.gmsh.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, writer, meshio.gmsh.read, mesh, 1.0e-15)

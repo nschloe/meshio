@@ -12,8 +12,5 @@ from . import helpers
         helpers.tet_mesh
     ],
 )
-def test(mesh):
-    def writer(*args, **kwargs):
-        return meshio.cgns.write(*args, **kwargs)
-
-    helpers.write_read(writer, meshio.cgns.read, mesh, 1.0e-15)
+def test(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.cgns.write, meshio.cgns.read, mesh, 1.0e-15)

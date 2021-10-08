@@ -40,20 +40,20 @@ test_set = {
 
 @pytest.mark.parametrize("mesh", test_set.union({helpers.lagrange_high_order_mesh}))
 @pytest.mark.parametrize("binary", [True, False])
-def test(mesh, binary):
+def test(mesh, binary, tmp_path):
     def writer(*args, **kwargs):
         return meshio.vtk.write(*args, binary=binary, **kwargs)
 
-    helpers.write_read(writer, meshio.vtk.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, writer, meshio.vtk.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize("mesh", test_set)
 @pytest.mark.parametrize("binary", [True, False])
-def test_vtk42(mesh, binary):
+def test_vtk42(mesh, binary, tmp_path):
     def writer(*args, **kwargs):
         return meshio.vtk.write(*args, binary=binary, fmt_version="4.2", **kwargs)
 
-    helpers.write_read(writer, meshio.vtk.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, writer, meshio.vtk.read, mesh, 1.0e-15)
 
 
 def test_generic_io():
@@ -66,7 +66,7 @@ def test_generic_io():
     "filename, ref_sum, ref_num_cells", [("rbc_001.vtk", 0.00031280518, 996)]
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test_reference_file(filename, ref_sum, ref_num_cells, binary):
+def test_reference_file(filename, ref_sum, ref_num_cells, binary, tmp_path):
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "vtk" / filename
 
@@ -77,7 +77,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary):
     assert mesh.cells[0].type == "triangle"
     assert len(mesh.cells[0].data) == ref_num_cells
     writer = partial(meshio.vtk.write, binary=binary)
-    helpers.write_read(writer, meshio.vtk.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, writer, meshio.vtk.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(

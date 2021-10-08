@@ -17,8 +17,8 @@ h5py = pytest.importorskip("h5py")
         helpers.tet_mesh,
     ],
 )
-def test_io(mesh):
-    helpers.write_read(meshio.h5m.write, meshio.h5m.read, mesh, 1.0e-15)
+def test_io(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.h5m.write, meshio.h5m.read, mesh, 1.0e-15)
 
 
 def test_generic_io():

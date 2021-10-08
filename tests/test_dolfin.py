@@ -18,8 +18,8 @@ from . import helpers
         ),
     ],
 )
-def test_dolfin(mesh):
-    helpers.write_read(meshio.dolfin.write, meshio.dolfin.read, mesh, 1.0e-15)
+def test_dolfin(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.dolfin.write, meshio.dolfin.read, mesh, 1.0e-15)
 
 
 def test_generic_io():

@@ -13,9 +13,14 @@ test_set = [
 
 
 @pytest.mark.parametrize("mesh", test_set)
-def test(mesh):
+def test(mesh, tmp_path):
     helpers.write_read(
-        meshio.tetgen.write, meshio.tetgen.read, mesh, 1.0e-15, extension=".node"
+        tmp_path,
+        meshio.tetgen.write,
+        meshio.tetgen.read,
+        mesh,
+        1.0e-15,
+        extension=".node",
     )
 
 
