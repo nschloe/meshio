@@ -1,7 +1,5 @@
 import copy
 import string
-import tempfile
-from pathlib import Path
 
 import numpy as np
 
@@ -744,12 +742,10 @@ def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat"):
             assert np.allclose(var1, var2, atol=atol, rtol=0.0)
 
 
-def generic_io(filename):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = Path(temp_dir) / filename
-        meshio.write_points_cells(filepath, tri_mesh.points, tri_mesh.cells)
-        out_mesh = meshio.read(filepath)
-        assert (abs(out_mesh.points - tri_mesh.points) < 1.0e-15).all()
-        for c0, c1 in zip(tri_mesh.cells, out_mesh.cells):
-            assert c0.type == c1.type
-            assert (c0.data == c1.data).all()
+def generic_io(filepath):
+    meshio.write_points_cells(filepath, tri_mesh.points, tri_mesh.cells)
+    out_mesh = meshio.read(filepath)
+    assert (abs(out_mesh.points - tri_mesh.points) < 1.0e-15).all()
+    for c0, c1 in zip(tri_mesh.cells, out_mesh.cells):
+        assert c0.type == c1.type
+        assert (c0.data == c1.data).all()

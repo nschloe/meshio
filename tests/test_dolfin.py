@@ -22,7 +22,7 @@ def test_dolfin(mesh, tmp_path):
     helpers.write_read(tmp_path, meshio.dolfin.write, meshio.dolfin.read, mesh, 1.0e-15)
 
 
-def test_generic_io():
-    helpers.generic_io("test.xml")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.xml")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.xml")
+    helpers.generic_io(tmp_path / "test.0.xml")

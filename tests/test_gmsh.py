@@ -113,10 +113,10 @@ def test_gmsh41(mesh, binary, tmp_path):
     helpers.write_read(tmp_path, writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
-def test_generic_io():
-    helpers.generic_io("test.msh")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.msh")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.msh")
+    helpers.generic_io(tmp_path / "test.0.msh")
 
 
 @pytest.mark.parametrize(

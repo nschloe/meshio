@@ -56,10 +56,10 @@ def test_vtk42(mesh, binary, tmp_path):
     helpers.write_read(tmp_path, writer, meshio.vtk.read, mesh, 1.0e-15)
 
 
-def test_generic_io():
-    helpers.generic_io("test.vtk")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.vtk")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.vtk")
+    helpers.generic_io(tmp_path / "test.0.vtk")
 
 
 @pytest.mark.parametrize(

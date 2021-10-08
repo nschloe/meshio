@@ -42,10 +42,10 @@ def test_io(mesh, accuracy, ext, tmp_path):
     )
 
 
-def test_generic_io():
-    helpers.generic_io("test.lb8.ugrid")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.lb8.ugrid")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.lb8.ugrid")
+    helpers.generic_io(tmp_path / "test.0.lb8.ugrid")
 
 
 # sphere_mixed.1.lb8.ugrid and hch_strct.4.lb8.ugrid created

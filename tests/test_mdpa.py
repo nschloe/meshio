@@ -34,7 +34,7 @@ def test_io(mesh, tmp_path):
     helpers.write_read(tmp_path, meshio.mdpa.write, meshio.mdpa.read, mesh, 1.0e-15)
 
 
-def test_generic_io():
-    helpers.generic_io("test.mesh")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.mesh")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.mesh")
+    helpers.generic_io(tmp_path / "test.0.mesh")

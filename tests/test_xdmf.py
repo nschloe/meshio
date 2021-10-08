@@ -54,10 +54,10 @@ def test_xdmf3(mesh, kwargs0, tmp_path):
     helpers.write_read(tmp_path, write, meshio.xdmf.read, mesh, 1.0e-14)
 
 
-def test_generic_io():
-    helpers.generic_io("test.xdmf")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.xdmf")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.xdmf")
+    helpers.generic_io(tmp_path / "test.0.xdmf")
 
 
 def test_time_series():

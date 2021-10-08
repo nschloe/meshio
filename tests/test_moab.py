@@ -21,7 +21,7 @@ def test_io(mesh, tmp_path):
     helpers.write_read(tmp_path, meshio.h5m.write, meshio.h5m.read, mesh, 1.0e-15)
 
 
-def test_generic_io():
-    helpers.generic_io("test.h5m")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.h5m")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.h5m")
+    helpers.generic_io(tmp_path / "test.0.h5m")

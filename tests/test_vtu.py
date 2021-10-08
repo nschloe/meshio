@@ -55,10 +55,10 @@ def test(mesh, data_type, tmp_path):
     helpers.write_read(tmp_path, writer, meshio.vtu.read, mesh, tol)
 
 
-def test_generic_io():
-    helpers.generic_io("test.vtu")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.vtu")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.vtu")
+    helpers.generic_io(tmp_path / "test.0.vtu")
 
 
 @pytest.mark.parametrize(

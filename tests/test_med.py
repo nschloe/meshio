@@ -38,10 +38,10 @@ def test_io(mesh, tmp_path):
     helpers.write_read(tmp_path, meshio.med.write, meshio.med.read, mesh, 1.0e-15)
 
 
-def test_generic_io():
-    helpers.generic_io("test.med")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.med")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.med")
+    helpers.generic_io(tmp_path / "test.0.med")
 
 
 def test_reference_file_with_mixed_cells(tmp_path):
