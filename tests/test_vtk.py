@@ -119,7 +119,3 @@ def test_color_scalars(filename, ref_num_points, ref_num_cells):
     mesh = meshio.read(filename)
     assert len(mesh.points) == ref_num_points
     assert len(mesh.cells) == ref_num_cells
-
-
-if __name__ == "__main__":
-    test(helpers.tri_mesh, binary=True)

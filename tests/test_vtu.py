@@ -78,7 +78,3 @@ def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
     assert ref_cells == mesh.cells[0].type
     assert len(mesh.cells[0].data) == ref_num_cells
     assert len(mesh.points) == ref_num_pnt
-
-
-if __name__ == "__main__":
-    test(helpers.tet10_mesh, (True, None))

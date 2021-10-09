@@ -591,11 +591,12 @@ lagrange_high_order_mesh = meshio.Mesh(
 
 
 def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=float):
-    np.random.seed(seed)
+    rng = np.random.default_rng(seed)
+
     mesh2 = copy.deepcopy(mesh)
 
     shape = (len(mesh.points),) if dim == 1 else (len(mesh.points), dim)
-    data = [(100 * np.random.rand(*shape)).astype(dtype) for _ in range(num_tags)]
+    data = [(100 * rng.random(shape)).astype(dtype) for _ in range(num_tags)]
 
     mesh2.point_data = {string.ascii_lowercase[k]: d for k, d in enumerate(data)}
     return mesh2
@@ -603,10 +604,12 @@ def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=float):
 
 def add_cell_data(mesh, specs):
     mesh2 = copy.deepcopy(mesh)
-    np.random.seed(0)
+
+    rng = np.random.default_rng(0)
+
     mesh2.cell_data = {
         name: [
-            (100 * np.random.rand(*((len(cells),) + shape))).astype(dtype)
+            (100 * rng.random((len(cells),) + shape)).astype(dtype)
             for _, cells in mesh.cells
         ]
         for name, shape, dtype in specs

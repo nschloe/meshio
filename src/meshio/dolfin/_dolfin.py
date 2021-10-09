@@ -26,6 +26,8 @@ def _read_mesh(filename):
     keys = None
     cell_type = None
     num_nodes_per_cell = None
+    cells = None
+    cell_tags = None
     for event, elem in ET.iterparse(filename, events=("start", "end")):
         if event == "end":
             continue
@@ -65,6 +67,8 @@ def _read_mesh(filename):
             ]
         elif elem.tag in ["triangle", "tetrahedron"]:
             k = int(elem.attrib["index"])
+            assert cells is not None
+            assert cell_tags is not None
             cells[0][1][k] = [elem.attrib[t] for t in cell_tags]
         else:
             logging.warning("Unknown entry %s. Ignoring.", elem.tag)
