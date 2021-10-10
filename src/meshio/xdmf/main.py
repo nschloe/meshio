@@ -343,14 +343,14 @@ class XdmfWriter:
                 f"'{data_format}' (use 'XML', 'Binary', or 'HDF'.)"
             )
 
-        self.filename = filename
+        self.filename = pathlib.Path(filename)
         self.data_format = data_format
         self.data_counter = 0
         self.compression = compression
         self.compression_opts = None if compression is None else compression_opts
 
         if data_format == "HDF":
-            self.h5_filename = os.path.splitext(self.filename)[0] + ".h5"
+            self.h5_filename = self.filename.with_suffix(".h5")
             self.h5_file = h5py.File(self.h5_filename, "w")
 
         xdmf_file = ET.Element("Xdmf", Version="3.0")
