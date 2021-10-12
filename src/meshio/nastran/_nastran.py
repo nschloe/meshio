@@ -264,6 +264,8 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
         # CellBlock
         cell_id = 0
         cell_refs = mesh.cell_data.get("nastran:ref", None)
+        cell_ref = None
+        nipl1 = None
         for ict, (cell_type, cells) in enumerate(mesh.cells):
             nastran_type = meshio_to_nastran_type[cell_type].replace("_", "")
             if cell_format.endswith("-large"):
@@ -279,6 +281,7 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
                 cell_info = cell_info_fmt.format(nastran_type, cell_id, cell_ref)
                 cell1 = cell + 1
                 cell1 = _convert_to_nastran_ordering(cell1, nastran_type)
+                assert nipl1 is not None
                 conn = sjoin.join(int_fmt.format(nid) for nid in cell1[:nipl1])
                 if len(cell1) > nipl1:
                     if cell_format == "free":
