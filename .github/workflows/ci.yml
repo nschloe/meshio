@@ -23,21 +23,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10-dev"]
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
     steps:
-    - uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - uses: actions/checkout@v2
-      with:
-        lfs: true
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libhdf5-dev libnetcdf-dev
-    - name: Test with tox
-      run: |
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Checkout code
+        uses: nschloe/action-checkout-with-lfs-cache@v1
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev
+      - name: Test with tox
+        run: |
           pip install tox
           tox -- --cov meshio --cov-report xml --cov-report term
-    - uses: codecov/codecov-action@v1
-      if: ${{ matrix.python-version == '3.9' }}
+      - uses: codecov/codecov-action@v1
+        if: ${{ matrix.python-version == '3.9' }}

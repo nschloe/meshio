@@ -25,14 +25,14 @@ from . import helpers
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test_ply(mesh, binary):
+def test_ply(mesh, binary, tmp_path):
     def writer(*args, **kwargs):
         return meshio.ply.write(*args, binary=binary, **kwargs)
 
     for k, c in enumerate(mesh.cells):
         mesh.cells[k] = meshio.CellBlock(c.type, c.data.astype(np.int32))
 
-    helpers.write_read(writer, meshio.ply.read, mesh, 1.0e-12)
+    helpers.write_read(tmp_path, writer, meshio.ply.read, mesh, 1.0e-12)
 
 
 @pytest.mark.parametrize(

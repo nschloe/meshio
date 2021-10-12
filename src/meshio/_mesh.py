@@ -179,7 +179,7 @@ class Mesh:
         if flat:
             all_cells_flat = np.concatenate([c.data.flat for c in self.cells])
         else:
-            all_cells_flat = []
+            all_cells_flat = np.array([], dtype=int)
         orphaned_nodes = np.setdiff1d(np.arange(len(self.points)), all_cells_flat)
 
         if len(orphaned_nodes) == 0:
@@ -350,7 +350,7 @@ class Mesh:
         keys = []
         for key, data in self.cell_data.items():
             # handle all int and uint data
-            if not np.all(v.dtype.kind in ["i", "u"] for v in data):
+            if not all(v.dtype.kind in ["i", "u"] for v in data):
                 continue
 
             keys.append(key)
@@ -381,7 +381,7 @@ class Mesh:
         keys = []
         for key, data in self.point_data.items():
             # handle all int and uint data
-            if not np.all(v.dtype.kind in ["i", "u"] for v in data):
+            if not all(v.dtype.kind in ["i", "u"] for v in data):
                 continue
 
             keys.append(key)

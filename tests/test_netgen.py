@@ -1,5 +1,4 @@
 import pathlib
-import tempfile
 
 import numpy as np
 import pytest
@@ -37,12 +36,15 @@ netgen_meshes = [PERIODIC_1D, PERIODIC_2D, PERIODIC_3D]
 
 
 @pytest.mark.parametrize("mesh", test_set)
-def test(mesh):
+@pytest.mark.parametrize("suffix", [".vol", ".vol.gz"])
+def test(mesh, suffix, tmp_path):
     helpers.write_read(
-        meshio.netgen.write, meshio.netgen.read, mesh, 1.0e-13, extension=".vol"
-    )
-    helpers.write_read(
-        meshio.netgen.write, meshio.netgen.read, mesh, 1.0e-13, extension=".vol.gz"
+        tmp_path,
+        meshio.netgen.write,
+        meshio.netgen.read,
+        mesh,
+        1.0e-13,
+        extension=suffix,
     )
 
 
@@ -86,12 +88,12 @@ expected_field_data = {
 
 
 @pytest.mark.parametrize("netgen_mesh", [PERIODIC_1D, PERIODIC_2D, PERIODIC_3D])
-def test_advanced(netgen_mesh):
+def test_advanced(netgen_mesh, tmp_path):
     mesh = meshio.read(str(netgen_mesh_directory / netgen_mesh))
-    with tempfile.TemporaryDirectory() as temp_dir:
-        p = pathlib.Path(temp_dir) / f"{netgen_mesh}_out.vol"
-        mesh.write(p)
-        mesh_out = meshio.read(p)
+
+    p = tmp_path / f"{netgen_mesh}_out.vol"
+    mesh.write(p)
+    mesh_out = meshio.read(p)
 
     assert np.all(
         mesh.info["netgen:identifications"] == expected_identifications[netgen_mesh]

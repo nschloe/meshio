@@ -110,6 +110,7 @@ def read_buffer(f):
             line = _next_line(f)
             while line[:8] == "property":
                 m = re.match("property (.+) (.+)", line)
+                assert m is not None
                 point_data_formats.append(m.groups()[0])
                 point_data_names.append(m.groups()[1])
                 line = _next_line(f)
@@ -125,9 +126,11 @@ def read_buffer(f):
             while line[:8] == "property":
                 if line[:13] == "property list":
                     m = re.match("property list (.+) (.+) (.+)", line)
+                    assert m is not None
                     cell_data_dtypes.append(tuple(m.groups()[:-1]))
                 else:
                     m = re.match("property (.+) (.+)", line)
+                    assert m is not None
                     cell_data_dtypes.append(m.groups()[0])
                 cell_data_names.append(m.groups()[-1])
                 line = _next_line(f)
@@ -224,6 +227,7 @@ def _read_ascii(
 
         # go over the line
         i = 0
+        n = None
         for name, dtype in zip(cell_data_names, cell_dtypes):
             if name == "vertex_indices":
                 idx_dtype, value_dtype = dtype
@@ -238,6 +242,7 @@ def _read_ascii(
             else:
                 dtype = ply_to_numpy_dtype[dtype]
                 # use n from vertex_indices
+                assert n is not None
                 cell_data[name][n] += [dtype(data[j]) for j in range(i, i + 1)]
                 i += 1
 
@@ -384,7 +389,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
     return byte_starts_ends[-1], blocks
 
 
-def write(filename, mesh, binary=True):  # noqa: C901
+def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
 
     with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")

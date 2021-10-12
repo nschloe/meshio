@@ -36,14 +36,16 @@ this_dir = pathlib.Path(__file__).resolve().parent
         (1.0e-7, ".lr4.ugrid"),
     ],
 )
-def test_io(mesh, accuracy, ext):
-    helpers.write_read(meshio.ugrid.write, meshio.ugrid.read, mesh, accuracy, ext)
+def test_io(mesh, accuracy, ext, tmp_path):
+    helpers.write_read(
+        tmp_path, meshio.ugrid.write, meshio.ugrid.read, mesh, accuracy, ext
+    )
 
 
-def test_generic_io():
-    helpers.generic_io("test.lb8.ugrid")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.lb8.ugrid")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.lb8.ugrid")
+    helpers.generic_io(tmp_path / "test.0.lb8.ugrid")
 
 
 # sphere_mixed.1.lb8.ugrid and hch_strct.4.lb8.ugrid created

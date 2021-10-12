@@ -137,7 +137,7 @@ def read_buffer(f):
             cell_array = " ".join([line.rstrip("\n") for line in gen])
             cell_array = np.fromiter(cell_array.split(), dtype=itype)
 
-            cells_, cell_data_ = _translate_cells(cell_array, has_extra_column)
+            cells_, _ = _translate_cells(cell_array, has_extra_column)
 
             for eltype, data in cells_.items():
                 cells.append(CellBlock(eltype, data))

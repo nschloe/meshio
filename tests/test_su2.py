@@ -17,11 +17,8 @@ this_dir = pathlib.Path(__file__).resolve().parent
 
 
 @pytest.mark.parametrize("mesh", test_set)
-def test(mesh):
-    def writer(*args, **kwargs):
-        return meshio.su2.write(*args, **kwargs)
-
-    helpers.write_read(writer, meshio.su2.read, mesh, 1.0e-15)
+def test(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.su2.write, meshio.su2.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,3 @@
-import pathlib
-import tempfile
-
 import pytest
 
 import meshio
@@ -17,7 +14,6 @@ test_set = [
 
 
 @pytest.mark.parametrize("mesh", test_set)
-def test(mesh):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = pathlib.Path(temp_dir) / "out.svg"
-        meshio.write_points_cells(filepath, mesh.points, mesh.cells)
+def test(mesh, tmp_path):
+    filepath = tmp_path / "out.svg"
+    meshio.write_points_cells(filepath, mesh.points, mesh.cells)

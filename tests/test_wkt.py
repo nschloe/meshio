@@ -15,11 +15,8 @@ from . import helpers
         helpers.tri_mesh
     ],
 )
-def test_wkt(mesh):
-    def writer(*args, **kwargs):
-        return meshio.wkt.write(*args, **kwargs)
-
-    helpers.write_read(writer, meshio.wkt.read, mesh, 1.0e-12)
+def test_wkt(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.wkt.write, meshio.wkt.read, mesh, 1.0e-12)
 
 
 @pytest.mark.parametrize(

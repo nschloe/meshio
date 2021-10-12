@@ -32,7 +32,7 @@ class TimeSeriesReader:
         if root.tag != "Xdmf":
             raise ReadError()
 
-        version = root.get("Version")
+        version = root.attrib["Version"]
         if version.split(".")[0] != "3":
             raise ReadError(f"Unknown XDMF version {version}.")
 
@@ -82,18 +82,16 @@ class TimeSeriesReader:
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *_):
         # Those files are opened in _read_data_item()
         for f in self.hdf5_files.values():
             f.close()
 
     def read_points_cells(self):
-        grid = self.mesh_grid
-
         points = None
         cells = []
 
-        for c in grid:
+        for c in self.mesh_grid:
             if c.tag == "Topology":
                 data_items = list(c)
                 if len(data_items) != 1:
@@ -104,12 +102,12 @@ class TimeSeriesReader:
 
                 # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
                 # Allow both.
-                if c.get("Type"):
-                    if c.get("TopologyType"):
-                        raise ReadError()
-                    cell_type = c.get("Type")
+                if "Type" in c.attrib:
+                    if "TopologyType" in c.attrib:
+                        raise ReadError("Both 'Type' and 'TopologyType' keys present")
+                    cell_type = c.attrib["Type"]
                 else:
-                    cell_type = c.get("TopologyType")
+                    cell_type = c.attrib["TopologyType"]
 
                 if cell_type == "Mixed":
                     cells = translate_mixed_cells(data)
@@ -117,13 +115,10 @@ class TimeSeriesReader:
                     cells.append(CellBlock(xdmf_to_meshio_type[cell_type], data))
 
             elif c.tag == "Geometry":
-                try:
-                    geometry_type = c.get("GeometryType")
-                except KeyError:
-                    pass
-                else:
-                    if geometry_type not in ["XY", "XYZ"]:
-                        raise ReadError()
+                if "GeometryType" in c.attrib:
+                    geo_type = c.attrib["GeometryType"]
+                    if geo_type not in ["XY", "XYZ"]:
+                        raise ReadError(f"Unknown geometry_type '{geo_type}'")
 
                 data_items = list(c)
                 if len(data_items) != 1:
@@ -142,7 +137,7 @@ class TimeSeriesReader:
 
         for c in list(self.collection[k]):
             if c.tag == "Time":
-                t = float(c.get("Value"))
+                t = float(c.attrib["Value"])
             elif c.tag == "Attribute":
                 name = c.get("Name")
 
@@ -192,7 +187,7 @@ class TimeSeriesReader:
         except KeyError:
             precision = "4"
 
-        data_format = data_item.get("Format")
+        data_format = data_item.attrib["Format"]
 
         if data_format == "XML":
             return np.fromstring(

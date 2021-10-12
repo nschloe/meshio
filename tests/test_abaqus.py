@@ -1,5 +1,4 @@
 import pathlib
-import tempfile
 
 import numpy as np
 import pytest
@@ -24,11 +23,8 @@ from . import helpers
         helpers.hex20_mesh,
     ],
 )
-def test(mesh):
-    def writer(*args, **kwargs):
-        return meshio.abaqus.write(*args, **kwargs)
-
-    helpers.write_read(writer, meshio.abaqus.read, mesh, 1.0e-15)
+def test(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.abaqus.write, meshio.abaqus.read, mesh, 1.0e-15)
 
 
 @pytest.mark.parametrize(
@@ -51,7 +47,7 @@ def test_reference_file(filename, ref_sum, ref_num_cells, ref_num_cell_sets):
     assert len(mesh.cell_sets) == ref_num_cell_sets
 
 
-def test_elset():
+def test_elset(tmp_path):
     points = np.array(
         [[1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [2.0, 0.5, 0.0], [0.0, 0.5, 0.0]]
     )
@@ -65,10 +61,9 @@ def test_elset():
     }
     mesh_ref = meshio.Mesh(points, cells, cell_sets=cell_sets)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = pathlib.Path(temp_dir) / "test.inp"
-        meshio.abaqus.write(filepath, mesh_ref)
-        mesh = meshio.abaqus.read(filepath)
+    filepath = tmp_path / "test.inp"
+    meshio.abaqus.write(filepath, mesh_ref)
+    mesh = meshio.abaqus.read(filepath)
 
     assert np.allclose(mesh_ref.points, mesh.points)
 

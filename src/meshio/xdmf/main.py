@@ -41,7 +41,7 @@ class XdmfReader:
         if root.tag != "Xdmf":
             raise ReadError()
 
-        version = root.get("Version")
+        version = root.attrib["Version"]
 
         if version.split(".")[0] == "2":
             return self.read_xdmf2(root)
@@ -54,8 +54,8 @@ class XdmfReader:
     def _read_data_item(self, data_item, root=None):
         import h5py
 
-        reference = data_item.get("Reference")
-        if reference:
+        if "Reference" in data_item.attrib:
+            reference = data_item.attrib["Reference"]
             xpath = (data_item.text if reference == "XML" else reference).strip()
             if xpath.startswith("/"):
                 return self._read_data_item(
@@ -67,25 +67,21 @@ class XdmfReader:
 
         # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files
         # out there use both keys interchangeably.
-        if data_item.get("DataType"):
-            if data_item.get("NumberType"):
-                raise ReadError()
-            data_type = data_item.get("DataType")
-        elif data_item.get("NumberType"):
-            if data_item.get("DataType"):
-                raise ReadError()
-            data_type = data_item.get("NumberType")
+        if "DataType" in data_item.attrib and "NumberType" in data_item.attrib:
+            raise ReadError()
+        elif "DataType" in data_item.attrib:
+            data_type = data_item.attrib["DataType"]
+        elif "NumberType" in data_item.attrib:
+            data_type = data_item.attrib["NumberType"]
         else:
             # Default, see
             # <https://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
             data_type = "Float"
 
-        try:
-            precision = data_item.attrib["Precision"]
-        except KeyError:
-            precision = "4"
+        precision = data_item.get("Precision", default="4")
+        fmt = data_item.attrib["Format"]
 
-        if data_item.get("Format") == "XML":
+        if fmt == "XML":
             dtype = xdmf_to_numpy_type[(data_type, precision)]
             if data_item.text.strip() == "":
                 # https://github.com/numpy/numpy/issues/18435
@@ -93,12 +89,13 @@ class XdmfReader:
             else:
                 data = np.fromstring(data_item.text, dtype=dtype, sep=" ")
             return data.reshape(dims)
-        elif data_item.get("Format") == "Binary":
+
+        elif fmt == "Binary":
             return np.fromfile(
                 data_item.text.strip(), dtype=xdmf_to_numpy_type[(data_type, precision)]
             ).reshape(dims)
-        elif data_item.get("Format") != "HDF":
-            fmt = data_item.get("Format")
+
+        if fmt != "HDF":
             raise ReadError(f"Unknown XDMF Format '{fmt}'.")
 
         info = data_item.text.strip()
@@ -123,11 +120,8 @@ class XdmfReader:
         field_data = {}
         root = ET.fromstring(c_data)
         for child in root:
-            str_tag = child.get("key")
-            dim = child.get("dim")
-            if dim is None:
-                raise ReadError()
-            dim = int(dim)
+            str_tag = child.attrib["key"]
+            dim = int(child.attrib["dim"])
             if child.text is None:
                 raise ReadError()
             num_tag = int(child.text)
@@ -149,7 +143,7 @@ class XdmfReader:
         if grid.tag != "Grid":
             raise ReadError()
 
-        if grid.get("GridType") not in (None, "Uniform"):
+        if "GridType" in grid.attrib and grid.attrib["GridType"] != "Uniform":
             raise ReadError()
 
         points = None
@@ -173,7 +167,7 @@ class XdmfReader:
                         )
                     raise ReadError(message)
 
-                topology_type = c.get("TopologyType")
+                topology_type = c.attrib["TopologyType"]
                 if topology_type == "Mixed":
                     cells = translate_mixed_cells(
                         np.fromstring(
@@ -188,9 +182,10 @@ class XdmfReader:
                     cells.append(CellBlock(xdmf_to_meshio_type[topology_type], data))
 
             elif c.tag == "Geometry":
-                geo_type = c.get("GeometryType")
-                if geo_type not in (None, "XYZ"):
-                    raise ReadError(f'Expected GeometryType "XYZ", not {geo_type}.')
+                if "GeometryType" in c.attrib:
+                    geo_type = c.attrib["GeometryType"]
+                    if geo_type != "XYZ":
+                        raise ReadError(f'Expected GeometryType "XYZ", not {geo_type}.')
                 data_items = list(c)
                 if len(data_items) != 1:
                     raise ReadError()
@@ -212,14 +207,14 @@ class XdmfReader:
 
                 data = self._read_data_item(data_items[0])
 
-                name = c.get("Name")
-                if c.get("Center") == "Node":
+                name = c.attrib["Name"]
+                if c.attrib["Center"] == "Node":
                     point_data[name] = data
-                elif c.get("Center") == "Cell":
+                elif c.attrib["Center"] == "Cell":
                     cell_data_raw[name] = data
                 else:
                     # TODO field data?
-                    if c.get("Center") != "Grid":
+                    if c.attrib["Center"] != "Grid":
                         raise ReadError()
             else:
                 raise ReadError(f"Unknown section '{c.tag}'.")
@@ -264,14 +259,14 @@ class XdmfReader:
 
                 data = self._read_data_item(data_item)
 
-                # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
-                # Allow both.
-                if c.get("Type"):
-                    if c.get("TopologyType"):
-                        raise ReadError()
-                    cell_type = c.get("Type")
+                # The XDMF2 key is `TopologyType`, just `Type` for XDMF3. Allow either
+                # one.
+                if "Type" in c.attrib and "TopologyType" in c.attrib:
+                    raise ReadError()
+                elif "Type" in c.attrib:
+                    cell_type = c.attrib["Type"]
                 else:
-                    cell_type = c.get("TopologyType")
+                    cell_type = c.attrib["TopologyType"]
 
                 if cell_type == "Mixed":
                     cells = translate_mixed_cells(data)
@@ -279,12 +274,12 @@ class XdmfReader:
                     cells.append(CellBlock(xdmf_to_meshio_type[cell_type], data))
 
             elif c.tag == "Geometry":
-                if c.get("Type"):
-                    if c.get("GeometryType"):
-                        raise ReadError()
-                    geometry_type = c.get("Type")
+                if "Type" in c.attrib and "GeometryType" in c.attrib:
+                    raise ReadError()
+                elif "Type" in c.attrib:
+                    geometry_type = c.attrib["Type"]
                 else:
-                    geometry_type = c.get("GeometryType")
+                    geometry_type = c.attrib["GeometryType"]
 
                 if geometry_type not in ["XY", "XYZ"]:
                     raise ReadError(f'Illegal geometry type "{geometry_type}".')
@@ -313,13 +308,15 @@ class XdmfReader:
 
                 data = self._read_data_item(data_item)
 
-                name = c.get("Name")
-                if c.get("Center") == "Node":
+                if c.attrib["Center"] not in ["Node", "Cell"]:
+                    ReadError()
+
+                name = c.attrib["Name"]
+                if c.attrib["Center"] == "Node":
                     point_data[name] = data
                 else:
-                    if c.get("Center") != "Cell":
-                        raise ReadError()
                     cell_data_raw[name] = data
+
             else:
                 raise ReadError(f"Unknown section '{c.tag}'.")
 
@@ -346,14 +343,14 @@ class XdmfWriter:
                 f"'{data_format}' (use 'XML', 'Binary', or 'HDF'.)"
             )
 
-        self.filename = filename
+        self.filename = pathlib.Path(filename)
         self.data_format = data_format
         self.data_counter = 0
         self.compression = compression
         self.compression_opts = None if compression is None else compression_opts
 
         if data_format == "HDF":
-            self.h5_filename = os.path.splitext(self.filename)[0] + ".h5"
+            self.h5_filename = self.filename.with_suffix(".h5")
             self.h5_file = h5py.File(self.h5_filename, "w")
 
         xdmf_file = ET.Element("Xdmf", Version="3.0")
