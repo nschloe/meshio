@@ -286,7 +286,7 @@ def read_ascii_buffer(f):
             msg = f"Meshio doesn't know keyword {items[0]}. Skipping."
             logging.warning(msg)
             num_to_pass = int(f.readline())
-            for i in range(num_to_pass):
+            for _ in range(num_to_pass):
                 f.readline()
         else:
             if items[0] != "End":

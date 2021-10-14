@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import string
 
@@ -602,7 +604,7 @@ def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=float):
     return mesh2
 
 
-def add_cell_data(mesh, specs):
+def add_cell_data(mesh, specs: list[tuple[str, tuple[int, ...], type]]):
     mesh2 = copy.deepcopy(mesh)
 
     rng = np.random.default_rng(0)

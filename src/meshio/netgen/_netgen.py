@@ -1,5 +1,6 @@
 """
-I/O for Netgen mesh files <https://github.com/NGSolve/netgen/blob/master/libsrc/meshing/meshclass.cpp>.
+I/O for Netgen mesh files
+<https://github.com/NGSolve/netgen/blob/master/libsrc/meshing/meshclass.cpp>.
 """
 import warnings
 
@@ -144,7 +145,7 @@ def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_other_line=F
     tmap = netgen_to_meshio_type[dim]
 
     for _ in range(num_cells):
-        line, is_eof = _fast_forward_over_blank_lines(f)
+        line, _ = _fast_forward_over_blank_lines(f)
         data = list(filter(None, line.split(" ")))
         index = int(data[i_index])
         if dim == 2:
@@ -161,7 +162,7 @@ def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_other_line=F
         cells[-1][1].append(pi)
         cells_index[-1].append(index)
         if skip_every_other_line:
-            line, is_eof = _fast_forward_over_blank_lines(f)
+            line, _ = _fast_forward_over_blank_lines(f)
 
 
 def _write_cells(f, block, index=None):
@@ -290,7 +291,7 @@ def read_buffer(f):
         elif line in netgen_codims.keys():
             edim = dimension - netgen_codims[line]
             num_entries = int(f.readline())
-            for ii in range(num_entries):
+            for _ in range(num_entries):
                 line = f.readline().split()
                 if len(line) != 2:
                     continue
@@ -362,13 +363,25 @@ def write(filename, mesh, float_fmt=".16e"):
 
 
 def write_buffer(f, mesh, float_fmt):
-    num_points, dimension = mesh.points.shape
+    _, dimension = mesh.points.shape
     cells_per_dim = [0, 0, 0, 0]
-    cells_index = (
-        mesh.cell_data["netgen:index"]
-        if "netgen:index" in mesh.cell_data
-        else [None] * len(mesh.cells)
-    )
+
+    # Netgen can store one cell_index, i.e., integer cell data. Pick one in
+    # mesh.cell_data, and prefer "netgen:index" if present. Unfortunately, netgen cannot
+    # store the name of the data; when reading, it will always be "netgen:index".
+    # See also <https://github.com/nschloe/meshio/issues/1199>.
+    if "netgen:index" in mesh.cell_data:
+        cells_index = mesh.cell_data["netgen:index"]
+    else:
+        # any other integer cell data?
+        cells_index = None
+        for values in mesh.cell_data.values():
+            if np.issubdtype(values[0].dtype, np.integer):
+                cells_index = values
+                break
+
+        if cells_index is None:
+            cells_index = [None] * len(mesh.cells)
 
     for block in mesh.cells:
         cells_per_dim[_topological_dimension[block.type]] += len(block)

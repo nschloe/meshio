@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Checkout code
-        uses: nschloe/action-checkout-with-lfs-cache@v1
+        uses: nschloe/action-cached-lfs-checkout@v1
       - name: Install system dependencies
         run: |
           sudo apt-get update
