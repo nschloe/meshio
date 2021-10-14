@@ -22,6 +22,7 @@ test_set = [
     helpers.hex20_mesh,
     helpers.pyramid_mesh,
     helpers.wedge_mesh,
+    helpers.add_cell_data(helpers.tri_mesh, [("netgen:index", (), int)]),
 ]
 
 
