@@ -30,24 +30,19 @@ def read(filename):
         # (https://stackoverflow.com/a/7394842/353337).
         filesize_bytes = os.path.getsize(filename)
         if filesize_bytes < 80:
-            is_binary = False
-            num_triangles = None
-        else:
-            f.read(80)
-            num_triangles = np.fromfile(f, count=1, dtype="<u4")[0]
-            # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet),
-            # and 1 int16 (attribute count), 50 bytes in total
-            is_binary = 84 + num_triangles * 50 == filesize_bytes
+            return _read_ascii(f)
 
-        if is_binary:
-            assert num_triangles is not None
-            out = _read_binary(f, num_triangles)
-        else:
-            # skip header
-            f.seek(0)
-            f.readline()
-            out = _read_ascii(f)
-    return out
+        f.read(80)
+        num_triangles = np.fromfile(f, count=1, dtype="<u4")[0]
+        # for each triangle, one has 3 float32 (facet normal), 9 float32 (facet),
+        # and 1 int16 (attribute count), 50 bytes in total
+        if 84 + num_triangles * 50 == filesize_bytes:
+            return _read_binary(f, num_triangles)
+
+        # rewind and skip header
+        f.seek(0)
+        f.readline()
+        return _read_ascii(f)
 
 
 # np.loadtxt is super slow
