@@ -356,10 +356,11 @@ def write(filename, mesh, float_fmt=".16e"):
         import gzip
 
         with gzip.open(filename, "wt") as f:
-            return write_buffer(f, mesh, float_fmt)
+            write_buffer(f, mesh, float_fmt)
+        return
 
     with open_file(filename, "w") as f:
-        return write_buffer(f, mesh, float_fmt)
+        write_buffer(f, mesh, float_fmt)
 
 
 def write_buffer(f, mesh, float_fmt):
