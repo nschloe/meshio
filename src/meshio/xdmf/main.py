@@ -309,7 +309,7 @@ class XdmfReader:
                 data = self._read_data_item(data_item)
 
                 if c.attrib["Center"] not in ["Node", "Cell"]:
-                    ReadError()
+                    raise ReadError(f"Unknown center '{c.attrib['Center']}'.")
 
                 name = c.attrib["Name"]
                 if c.attrib["Center"] == "Node":
