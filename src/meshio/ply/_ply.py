@@ -78,9 +78,9 @@ def read_buffer(f):
         raise ReadError("Expected ply")
 
     line = _next_line(f)
+    endianness = None
     if line == "format ascii 1.0":
         is_binary = False
-        endianness = None
     elif line == "format binary_big_endian 1.0":
         is_binary = True
         endianness = ">"
@@ -221,7 +221,6 @@ def _read_ascii(
                     n = int(data[i])
                     i += n + 1
                 else:
-                    n = 1
                     cell_data[name] = collections.defaultdict(list)
                     i += 1
 
