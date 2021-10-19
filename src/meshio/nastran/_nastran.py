@@ -270,7 +270,7 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
         cell_id = 0
         cell_refs = mesh.cell_data.get("nastran:ref", None)
         for ict, (cell_type, cells) in enumerate(mesh.cells):
-            if cell_type == "hexahedron20" or "wedge15":
+            if cell_type in ["hexahedron20", "wedge15"]:
                 nastran_type = meshio_to_nastran_type[cell_type]
             else:
                 nastran_type = meshio_to_nastran_type[cell_type].replace("_", "")

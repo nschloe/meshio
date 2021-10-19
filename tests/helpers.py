@@ -218,12 +218,7 @@ hex20_mesh = meshio.Mesh(
         [0.5, 1.0, 1.0],
         [0.0, 0.5, 1.0],
     ],
-    [
-        (
-            "hexahedron20",
-            [np.arange(20)],
-        )
-    ],
+    [("hexahedron20", [np.arange(20)])],
 )
 
 polygon_mesh = meshio.Mesh(
