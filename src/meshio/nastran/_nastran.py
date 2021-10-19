@@ -270,8 +270,10 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
         cell_id = 0
         cell_refs = mesh.cell_data.get("nastran:ref", None)
         for ict, (cell_type, cells) in enumerate(mesh.cells):
+            # Second order elements
             if cell_type in ["hexahedron20", "wedge15"]:
                 nastran_type = meshio_to_nastran_type[cell_type]
+            # Remove '_' for first order elements
             else:
                 nastran_type = meshio_to_nastran_type[cell_type].replace("_", "")
             if cell_format.endswith("-large"):
