@@ -403,6 +403,34 @@ def _convert_to_vtk_ordering(cell, nastran_type):
 def _convert_to_nastran_ordering(cell, nastran_type):
     if nastran_type in ["CTRAX6", "CTRIAX6"]:
         cell = [cell[i] for i in [0, 3, 1, 4, 2, 5]]
+    elif nastran_type == "CHEXA_":
+        cell = [
+            cell[i]
+            for i in [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+            ]
+        ]
+    elif nastran_type == "CPENTA_":
+        cell = [cell[i] for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]]
     return cell
 
 
