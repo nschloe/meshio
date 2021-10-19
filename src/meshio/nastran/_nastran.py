@@ -419,18 +419,18 @@ def _convert_to_nastran_ordering(cell, nastran_type):
                 9,
                 10,
                 11,
-                12,
-                13,
-                14,
-                15,
                 16,
                 17,
                 18,
                 19,
+                12,
+                13,
+                14,
+                15,
             ]
         ]
     elif nastran_type == "CPENTA_":
-        cell = [cell[i] for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]]
+        cell = [cell[i] for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 9, 10, 11]]
     return cell
 
 
