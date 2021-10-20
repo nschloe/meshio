@@ -73,19 +73,24 @@ def read_buffer(f):
     def add_cell(nastran_type, cell, cell_type, cell_ref):
         cell_type = nastran_to_meshio_type[keyword]
         cell = list(map(int, cell))
-        cell = _convert_to_vtk_ordering(cell, nastran_type)
 
         # Treat 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
         if len(cell) > num_nodes_per_cell[cell_type]:
             assert cell_type in ["tetra", "pyramid", "wedge", "hexahedron"]
             if cell_type == "tetra":
                 cell_type = "tetra10"
+                nastran_type = "CTETRA_"
             elif cell_type == "pyramid":
                 cell_type = "pyramid13"
+                nastran_type = "CPYRA_"
             elif cell_type == "wedge":
                 cell_type = "wedge15"
+                nastran_type = "CPENTA_"
             elif cell_type == "hexahedron":
                 cell_type = "hexahedron20"
+                nastran_type = "CHEXA_"
+
+        cell = _convert_to_vtk_ordering(cell, nastran_type)
 
         if len(cells) > 0 and cells[-1].type == cell_type:
             cells[-1].data.append(cell)
@@ -265,7 +270,7 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
         cell_id = 0
         cell_refs = mesh.cell_data.get("nastran:ref", None)
         for ict, (cell_type, cells) in enumerate(mesh.cells):
-            nastran_type = meshio_to_nastran_type[cell_type].replace("_", "")
+            nastran_type = meshio_to_nastran_type[cell_type]
             if cell_format.endswith("-large"):
                 nastran_type += "*"
             if cell_refs is not None:
@@ -364,12 +369,68 @@ def _chunk_line(line):
 def _convert_to_vtk_ordering(cell, nastran_type):
     if nastran_type in ["CTRAX6", "CTRIAX6"]:
         cell = [cell[i] for i in [0, 2, 4, 1, 3, 5]]
+    elif nastran_type == "CHEXA_":
+        cell = [
+            cell[i]
+            for i in [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                16,
+                17,
+                18,
+                19,
+                12,
+                13,
+                14,
+                15,
+            ]
+        ]
+    elif nastran_type == "CPENTA_":
+        cell = [cell[i] for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 9, 10, 11]]
     return cell
 
 
 def _convert_to_nastran_ordering(cell, nastran_type):
     if nastran_type in ["CTRAX6", "CTRIAX6"]:
         cell = [cell[i] for i in [0, 3, 1, 4, 2, 5]]
+    elif nastran_type == "CHEXA_":
+        cell = [
+            cell[i]
+            for i in [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                16,
+                17,
+                18,
+                19,
+                12,
+                13,
+                14,
+                15,
+            ]
+        ]
+    elif nastran_type == "CPENTA_":
+        cell = [cell[i] for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 9, 10, 11]]
     return cell
 
 
