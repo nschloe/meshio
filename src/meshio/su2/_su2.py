@@ -111,7 +111,7 @@ def read_buffer(f):
             points = np.vstack([first_line, points])
 
         elif name == "NELEM" or name == "MARKER_ELEMS":
-            # we cannot? read at onece using numpy becasue we do not know the
+            # we cannot? read at once using numpy because we do not know the
             # total size. Read, instead next num_elems as is and re-use the
             # translate_cells function from vtk reader
 
@@ -168,7 +168,7 @@ def read_buffer(f):
 
     if markers_found != expected_nmarkers:
         logging.warning(
-            f"expected {expected_nmarkers} markes according to NMARK value "
+            f"expected {expected_nmarkers} markers according to NMARK value "
             f"but found only {markers_found}"
         )
 

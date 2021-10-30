@@ -17,7 +17,7 @@ from .._files import open_file
 from .._helpers import register
 from .._mesh import CellBlock, Mesh
 
-# Float size and endianess are recorded by these suffixes
+# Float size and endianness are recorded by these suffixes
 # binary files come in C-type or FORTRAN type
 # https://www.simcenter.msstate.edu/software/documentation/ug_io/ugc_file_formats.html
 #

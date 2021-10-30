@@ -355,7 +355,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
     byte_starts_ends = np.fromiter(parse_ragged(0, num_cells), np.intp, num_cells + 1)
 
     # Next, find where the row length changes and list the (start, end) row ids
-    # of each homogenous block into `block_bounds`.
+    # of each homogeneous block into `block_bounds`.
     row_lengths = np.diff(byte_starts_ends)
     count_changed_ids = np.nonzero(np.diff(row_lengths))[0] + 1
 
@@ -366,7 +366,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
         start = end
     block_bounds.append((start, len(byte_starts_ends) - 1))
 
-    # Finally, parse each homogenous block. Constructing an appropriate
+    # Finally, parse each homogeneous block. Constructing an appropriate
     # `block_dtype` to include the initial counts in each row avoids any
     # wasteful copy operations.
     blocks = []
