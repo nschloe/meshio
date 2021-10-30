@@ -741,10 +741,10 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             da.text_writer = text_writer_ascii
 
     def _polyhedron_face_cells(face_cells):
-        # Define the faces of each cell on the format specfied for VTU Polyhedron cells.
-        # These are defined in Mesh.polyhedron_faces, as block data. The block consists
-        # of a nested list (outer list represents cell, inner is faces for this cells),
-        # where the items of the inner list are the nodes of specific faces.
+        # Define the faces of each cell on the format specified for VTU Polyhedron
+        # cells. These are defined in Mesh.polyhedron_faces, as block data. The block
+        # consists of a nested list (outer list represents cell, inner is faces for this
+        # cells), where the items of the inner list are the nodes of specific faces.
         #
         # The output format is specified at https://vtk.org/Wiki/VTK/Polyhedron_Support
 

@@ -392,7 +392,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     #      numPhysicalTags(size_t) physicalTag(int) ...
     #      numBoundngSurfaces(size_t) surfaceTag(int) ...
 
-    # Both nodes and cells have enities, but the cell entities are a subset of
+    # Both nodes and cells have entities, but the cell entities are a subset of
     # the nodes. The reason is (if the inner workings of Gmsh has been correctly
     # understood) that node entities are assigned to all
     # objects necessary to specify the geometry whereas only cells of Physical

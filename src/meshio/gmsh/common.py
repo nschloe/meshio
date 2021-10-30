@@ -78,7 +78,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
 
     _fast_forward_to_end_block(f, tag)
 
-    # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
+    # The gmsh format cannot distinguish between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.
     if data.shape[1] == 1:
         data = data[:, 0]

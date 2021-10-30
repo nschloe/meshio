@@ -273,7 +273,7 @@ def _prepare_cells(cells, cell_tags):
 #     if line.strip() != f"End {tag}":
 #         raise ReadError()
 #
-#     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
+#     # The gmsh format cannot distinguish between data of shape (n,) and (n, 1).
 #     # If shape[1] == 1, cut it off.
 #     if data.shape[1] == 1:
 #         data = data[:, 0]

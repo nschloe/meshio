@@ -261,7 +261,7 @@ def read_buffer(f):
         elif line == "geomtype":
             geomtype = int(f.readline())
             if geomtype not in [0, 1, 10, 11, 12, 13]:
-                warnings.warn(f"Unkown geomtype in Netgen mesh: {geomtype}")
+                warnings.warn(f"Unknown geomtype in Netgen mesh: {geomtype}")
 
         elif line == "points":
             num_points = int(f.readline())

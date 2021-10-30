@@ -306,7 +306,7 @@ class TimeSeriesWriter:
         if point_data:
             self.point_data(point_data, grid)
 
-        # permit old dict strucutre, convert it to list of tuples
+        # permit old dict structure, convert it to list of tuples
         for name, entry in cell_data.items():
             if isinstance(entry, dict):
                 cell_data[name] = np.array(list(entry.values()))

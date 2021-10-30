@@ -80,7 +80,7 @@ def read_binary_buffer(f):
         raise ReadError("Invalid code")
 
     if code == 16777216:
-        # swap endianess
+        # swap endianness
         swapped = ">" if struct.unpack("=l", struct.pack("<l", 1))[0] == 1 else "<"
         itype += swapped
         ftype += swapped
