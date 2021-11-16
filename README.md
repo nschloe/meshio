@@ -9,8 +9,8 @@
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/meshio.svg?style=flat-square)](https://pypi.org/project/meshio/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1173115.svg?style=flat-square)](https://doi.org/10.5281/zenodo.1173115)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshio.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshio)
-<!--[![PyPi downloads](https://img.shields.io/pypi/dm/meshio.svg?style=flat-square)](https://pypistats.org/packages/meshio)-->
 [![Downloads](https://pepy.tech/badge/meshio/month?style=flat-square)](https://pepy.tech/project/meshio)
+<!--[![PyPi downloads](https://img.shields.io/pypi/dm/meshio.svg?style=flat-square)](https://pypistats.org/packages/meshio)-->
 
 [![Discord](https://img.shields.io/static/v1?logo=discord&label=chat&message=on%20discord&color=7289da&style=flat-square)](https://discord.gg/Z6DMsJh4Hr)
 
@@ -55,10 +55,11 @@ meshio can read and write all of the following and smoothly converts between the
 ([Here's a little survey](https://forms.gle/PSeNb3N3gv3wbEus8) on which formats are actually
 used.)
 
-Install with
+Install with one of
 
 ```
 pip install meshio[all]
+conda install -c conda-forge meshio
 ```
 
 (`[all]` pulls in all optional dependencies. By default, meshio only uses numpy.)
