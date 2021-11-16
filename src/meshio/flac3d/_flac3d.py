@@ -9,7 +9,6 @@ import numpy as np
 
 from ..__about__ import __version__ as version
 from .._common import _pick_first_int_data
-from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register
 from .._mesh import Mesh
@@ -265,25 +264,7 @@ def _update_cells(cells, cell, flag):
     return cells
 
 
-def _update_field_data(field_data, mapper, data, name, gidx, flag):
-    """Update field data dict."""
-    for cid in data:
-        mapper[cid].append(gidx)
-    field_data[name] = np.array([gidx, flag_to_numdim[flag]])
-
-    return field_data, mapper
-
-
-def _update_slots(slots, slot):
-    """Update slot set. Only one slot is supported."""
-    slots.add(slot)
-    if len(slots) > 1:
-        raise ReadError("Multiple slots are not supported")
-
-    return slots
-
-
-def write(filename, mesh, float_fmt=".16e", binary=False):
+def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     """Write FLAC3D f3grid grid file."""
     skip = [c for c in mesh.cells if c.type not in meshio_only["zone"]]
     if skip:
