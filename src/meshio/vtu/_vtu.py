@@ -642,7 +642,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     assert header_type is not None
 
     if binary and compression:
-        # TODO lz4, lzma <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>
+        # TODO lz4 <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>
         compressions = {
             "lzma": "vtkLZMADataCompressor",
             "zlib": "vtkZLibDataCompressor",
