@@ -129,7 +129,7 @@ def read_buffer(f, binary):
             (num_cells,) = struct.unpack("<I", f.read(4))
             for _ in range(num_cells):
                 _, cell = _read_cell_binary(f, point_ids)
-                cells = _update_cells(cells, cell, flag)
+                _update_cells(cells, cell, flag)
                 # mapper[flag][cid] = [cidx]
                 # cidx += 1
 
@@ -148,7 +148,7 @@ def read_buffer(f, binary):
             elif line[0] in {"Z", "F"}:
                 flag = zone_or_face[line[0]]
                 _, cell = _read_cell_ascii(line, point_ids)
-                cells = _update_cells(cells, cell, flag)
+                _update_cells(cells, cell, flag)
                 # mapper[flag][cid] = [cidx]
                 # cidx += 1
             elif line[0] in {"ZGROUP", "FGROUP"}:
@@ -235,7 +235,7 @@ def _read_cell_group_ascii(buf_or_line, line):
     assert line[1][-1] in {"'", '"'}
     name = line[1][1:-1]
     assert line[2] == "SLOT"
-    slot = int(line[3])
+    slot = line[3]
 
     i = buf_or_line.tell()
     line = buf_or_line.readline()
@@ -260,8 +260,6 @@ def _update_cells(cells, cell, flag):
         cells[-1][1].append(cell)
     else:
         cells.append((cell_type, [cell]))
-
-    return cells
 
 
 def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
@@ -354,7 +352,10 @@ def _write_cells(f, points, cells, flag, binary):
 
 def _write_groups(f, cells, cell_data, field_data, flag, binary):
     """Write groups."""
-    if cell_data is not None:
+    if cell_data is None:
+        if binary:
+            f.write(struct.pack("<I", 0))
+    else:
         groups, labels = _translate_groups(cells, cell_data, field_data, flag)
 
         if binary:
@@ -381,11 +382,8 @@ def _write_groups(f, cells, cell_data, field_data, flag, binary):
 
             f.write(f"* {flag.upper()} GROUPS\n")
             for k in sorted(groups.keys()):
-                f.write(f'{flag_to_text[flag]} "{labels[k]}"\n')
+                f.write(f'{flag_to_text[flag]} "{labels[k]}" SLOT 1\n')
                 _write_table(f, groups[k])
-    else:
-        if binary:
-            f.write(struct.pack("<I", 0))
 
 
 def _translate_zones(points, cells):

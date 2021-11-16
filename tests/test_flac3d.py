@@ -1,4 +1,3 @@
-import copy
 import pathlib
 import sys
 
@@ -11,19 +10,16 @@ from . import helpers
 
 
 @pytest.mark.parametrize(
-    "mesh, data",
+    "mesh",
     [
-        (helpers.empty_mesh, []),
-        (helpers.tet_mesh, []),
-        (helpers.hex_mesh, []),
-        (helpers.tet_mesh, [1, 2]),
+        helpers.empty_mesh,
+        helpers.tet_mesh,
+        helpers.hex_mesh,
+        helpers.tet_mesh,
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test(mesh, data, binary, tmp_path):
-    if data:
-        mesh = copy.deepcopy(mesh)
-        mesh.cell_data["flac3d:group"] = [np.array(data)]
+def test(mesh, binary, tmp_path):
     helpers.write_read(
         tmp_path,
         lambda f, m: meshio.flac3d.write(f, m, binary=binary),
@@ -64,6 +60,7 @@ def test_reference_file(filename):
         ("triangle", 3),
     ]
     assert [(k, len(v)) for k, v in mesh.cells] == ref_num_cells
-    # Cell data
-    ref_sum_cell_data = [num_cell[1] for num_cell in ref_num_cells]
-    assert [len(arr) for arr in mesh.cell_data["flac3d:group"]] == ref_sum_cell_data
+    # Cell sets
+    for arr in mesh.cell_sets.values():
+        assert len(arr) == 12
+    assert [len(arr) for arr in mesh.cell_sets.values()] == [12, 12, 12, 12, 12]
