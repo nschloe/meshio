@@ -266,7 +266,7 @@ def _update_cells(cells, cell, flag):
 
 def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     """Write FLAC3D f3grid grid file."""
-    skip = [c for c in mesh.cells if c.type not in meshio_only["zone"]]
+    skip = [c.type for c in mesh.cells if c.type not in meshio_only["zone"]]
     if skip:
         logging.warning(
             f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.'
@@ -287,9 +287,8 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     mode = "wb" if binary else "w"
     with open_file(filename, mode) as f:
         if binary:
-            f.write(
-                struct.pack("<2I", 1375135718, 3)
-            )  # Don't know what these values represent
+            # Don't know what these values represent
+            f.write(struct.pack("<2I", 1375135718, 3))
         else:
             f.write(f"* FLAC3D grid produced by meshio v{version}\n")
             f.write(f"* {time.ctime()}\n")
@@ -461,7 +460,7 @@ def _translate_groups(cells, cell_data, field_data, flag):
     return groups, labels
 
 
-def _write_table(f, data, ncol=20):
+def _write_table(f, data, ncol: int = 20):
     """Write group data table."""
     nrow = len(data) // ncol
     lines = np.split(data, np.full(nrow, ncol).cumsum())
