@@ -107,26 +107,14 @@ def read(filename):
 
 def read_buffer(f, binary):
     """Read binary or ASCII file."""
-    flags = {
-        "Z": "zone",
-        "F": "face",
-        "ZGROUP": "zone",
-        "FGROUP": "face",
-    }
+    zone_or_face = {"Z": "zone", "F": "face"}
 
     points = []
     point_ids = {}
     cells = []
-    field_data = {}
-
-    # Zones and faces do not share the same cell ID pool in FLAC3D
-    # i.e. a given cell ID can be assigned to a zone and a face concurrently
-    mapper = {"zone": {}, "face": {}}
-    slots = {"zone": set(), "face": set()}
+    cell_sets = {}
 
     pidx = 0
-    cidx = 0
-    gidx = 0
     if binary:
         # Not sure what the first bytes represent, the format might be wrong
         # It does not seem to be useful anyway
@@ -134,146 +122,134 @@ def read_buffer(f, binary):
 
         (num_nodes,) = struct.unpack("<I", f.read(4))
         for pidx in range(num_nodes):
-            pid, point = _read_point(f, binary)
+            pid, point = _read_point_binary(f)
             points.append(point)
             point_ids[pid] = pidx
 
         for flag in ["zone", "face"]:
             (num_cells,) = struct.unpack("<I", f.read(4))
             for _ in range(num_cells):
-                cid, cell = _read_cell(f, point_ids, binary)
+                _, cell = _read_cell_binary(f, point_ids)
                 cells = _update_cells(cells, cell, flag)
-                mapper[flag][cid] = [cidx]
-                cidx += 1
+                # mapper[flag][cid] = [cidx]
+                # cidx += 1
 
             (num_groups,) = struct.unpack("<I", f.read(4))
             for _ in range(num_groups):
-                name, slot, data = _read_group(f, binary)
-                field_data, mapper[flag] = _update_field_data(
-                    field_data,
-                    mapper[flag],
-                    data,
-                    name,
-                    gidx + 1,
-                    flag,
-                )
-                slots[flag] = _update_slots(slots[flag], slot)
-                gidx += 1
+                name, slot, data = _read_cell_group_binary(f)
+                cell_sets[f"{flag}:{name}:{slot}"] = np.array(data)
     else:
         line = f.readline().rstrip().split()
         while line:
             if line[0] == "G":
-                pid, point = _read_point(line, binary)
+                pid, point = _read_point_ascii(line)
                 points.append(point)
                 point_ids[pid] = pidx
                 pidx += 1
             elif line[0] in {"Z", "F"}:
-                flag = flags[line[0]]
-                cid, cell = _read_cell(line, point_ids, binary)
+                flag = zone_or_face[line[0]]
+                _, cell = _read_cell_ascii(line, point_ids)
                 cells = _update_cells(cells, cell, flag)
-                mapper[flag][cid] = [cidx]
-                cidx += 1
+                # mapper[flag][cid] = [cidx]
+                # cidx += 1
             elif line[0] in {"ZGROUP", "FGROUP"}:
-                flag = flags[line[0]]
-                name, slot, data = _read_group(f, binary, line)
-                field_data, mapper[flag] = _update_field_data(
-                    field_data,
-                    mapper[flag],
-                    data,
-                    name,
-                    gidx + 1,
-                    flag,
-                )
-                slots[flag] = _update_slots(slots[flag], slot)
-                gidx += 1
+                flag = zone_or_face[line[0][0]]
+                name, slot, data = _read_cell_group_ascii(f, line)
+                cell_sets[f"{flag}:{name}:{slot}"] = np.array(data)
 
             line = f.readline().rstrip().split()
 
-    if field_data:
-        num_cells = np.cumsum([len(c[1]) for c in cells])
-        cell_data = np.zeros(num_cells[-1], dtype=int)
-        for k, v in mapper.items():
-            if not slots[k]:
-                continue
+    cell_blocks = [
+        (key, np.array(indices)[:, flac3d_to_meshio_order[key]])
+        for key, indices in cells
+    ]
 
-            for cid, zid in v.values():
-                cell_data[cid] = zid
-        cell_data = {"flac3d:group": np.split(cell_data, num_cells[:-1])}
-    else:
-        cell_data = {}
+    # cell_sets contains the indices into the global cell list. Since this is
+    # split up into blocks, we need to split the cell_sets, too.
+    bins = np.cumsum([len(cb[1]) for cb in cell_blocks])
+    for key, data in cell_sets.items():
+        d = np.digitize(data, bins)
+        cell_sets[key] = [data[d == k] for k in range(len(cell_blocks))]
 
-    return Mesh(
-        points=np.array(points),
-        cells=[(k, np.array(v)[:, flac3d_to_meshio_order[k]]) for k, v in cells],
-        cell_data=cell_data,
-        field_data=field_data,
-    )
+    return Mesh(points=np.array(points), cells=cell_blocks, cell_sets=cell_sets)
 
 
-def _read_point(buf_or_line, binary):
+def _read_point_ascii(buf_or_line):
     """Read point coordinates."""
-    if binary:
-        pid, x, y, z = struct.unpack("<I3d", buf_or_line.read(28))
-        point = [x, y, z]
-    else:
-        pid = int(buf_or_line[1])
-        point = [float(l) for l in buf_or_line[2:]]
-
+    pid = int(buf_or_line[1])
+    point = [float(l) for l in buf_or_line[2:]]
     return pid, point
 
 
-def _read_cell(buf_or_line, point_ids, binary):
-    """Read cell connectivity."""
-    if binary:
-        cid, num_verts = struct.unpack("<2I", buf_or_line.read(8))
-        cell = struct.unpack(f"<{num_verts}I", buf_or_line.read(4 * num_verts))
-        is_b7 = num_verts == 7
-    else:
-        cid = int(buf_or_line[2])
-        cell = buf_or_line[3:]
-        is_b7 = buf_or_line[1] == "B7"
+def _read_point_binary(buf_or_line):
+    """Read point coordinates."""
+    pid, x, y, z = struct.unpack("<I3d", buf_or_line.read(28))
+    return pid, [x, y, z]
 
+
+def _read_cell_ascii(buf_or_line, point_ids):
+    """Read cell connectivity."""
+    cid = int(buf_or_line[2])
+    cell = buf_or_line[3:]
+    is_b7 = buf_or_line[1] == "B7"
     cell = [point_ids[int(l)] for l in cell]
     if is_b7:
         cell.append(cell[-1])
-
     return cid, cell
 
 
-def _read_group(buf_or_line, binary, line=None):
-    """Read cell group."""
-    if binary:
-        # Group name
-        (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
-        (name,) = struct.unpack(f"<{num_chars}s", buf_or_line.read(num_chars))
-        name = name.decode()
+def _read_cell_binary(buf_or_line, point_ids):
+    """Read cell connectivity."""
+    cid, num_verts = struct.unpack("<2I", buf_or_line.read(8))
+    cell = struct.unpack(f"<{num_verts}I", buf_or_line.read(4 * num_verts))
+    is_b7 = num_verts == 7
+    cell = [point_ids[int(l)] for l in cell]
+    if is_b7:
+        cell.append(cell[-1])
+    return cid, cell
 
-        # Slot name
-        (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
-        (slot,) = struct.unpack(f"<{num_chars}s", buf_or_line.read(num_chars))
-        slot = slot.decode()
 
-        # Zones
-        (num_zones,) = struct.unpack("<I", buf_or_line.read(4))
-        data = struct.unpack(f"<{num_zones}I", buf_or_line.read(4 * num_zones))
-    else:
-        line = " ".join(line).replace("'", '"')
-        line = [l.strip() for l in line.split('"') if l]
-        name = line[1]
-        data = []
-        slot = "" if "SLOT" not in line else line[-1]
+def _read_cell_group_binary(buf_or_line):
+    # Group name
+    (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
+    (name,) = struct.unpack(f"<{num_chars}s", buf_or_line.read(num_chars))
+    name = name.decode()
 
+    # Slot name
+    (num_chars,) = struct.unpack("<H", buf_or_line.read(2))
+    (slot,) = struct.unpack(f"<{num_chars}s", buf_or_line.read(num_chars))
+    slot = slot.decode()
+
+    # Zones
+    (num_zones,) = struct.unpack("<I", buf_or_line.read(4))
+    data = struct.unpack(f"<{num_zones}I", buf_or_line.read(4 * num_zones))
+    return name, slot, data
+
+
+def _read_cell_group_ascii(buf_or_line, line):
+    # a group line read
+    # ```
+    # ZGROUP 'groupname' SLOT 5
+    # ```
+    assert line[0] in {"Z", "F", "ZGROUP", "FGROUP"}
+    assert line[1][0] in {"'", '"'}
+    assert line[1][-1] in {"'", '"'}
+    name = line[1][1:-1]
+    assert line[2] == "SLOT"
+    slot = int(line[3])
+
+    i = buf_or_line.tell()
+    line = buf_or_line.readline()
+    data = []
+    while True:
+        line = line.rstrip().split()
+        if line and (line[0] not in {"*", "ZGROUP", "FGROUP"}):
+            data += [int(l) for l in line]
+        else:
+            buf_or_line.seek(i)
+            break
         i = buf_or_line.tell()
         line = buf_or_line.readline()
-        while True:
-            line = line.rstrip().split()
-            if line and (line[0] not in {"*", "ZGROUP", "FGROUP"}):
-                data += [int(l) for l in line]
-            else:
-                buf_or_line.seek(i)
-                break
-            i = buf_or_line.tell()
-            line = buf_or_line.readline()
 
     return name, slot, data
 
