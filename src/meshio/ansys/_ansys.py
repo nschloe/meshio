@@ -1,6 +1,7 @@
 """
-I/O for Ansys's msh format, cf.
-<https://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>.
+I/O for Ansys's msh format.
+
+<https://romeo.univ-reims.fr/documents/fluent/tgrid/ug/appb.pdf>
 """
 import logging
 import re

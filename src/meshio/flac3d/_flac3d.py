@@ -154,7 +154,8 @@ def read_buffer(f, binary):
             elif line[0] in {"ZGROUP", "FGROUP"}:
                 flag = zone_or_face[line[0][0]]
                 name, slot, data = _read_cell_group_ascii(f, line)
-                cell_sets[f"{flag}:{name}:{slot}"] = np.array(data)
+                # flac data is 1-based
+                cell_sets[f"{flag}:{name}:{slot}"] = np.array(data) - 1
 
             line = f.readline().rstrip().split()
 
