@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import copy
 import warnings
 
 import numpy as np
@@ -131,6 +132,9 @@ class Mesh:
             lines.append(f"  Field data: {names}")
 
         return "\n".join(lines)
+
+    def copy(self):
+        return copy.deepcopy(self)
 
     def prune(self):
         # nschloe, 2020-11:

@@ -136,6 +136,14 @@ def test_gh_1165():
     assert_equal(mesh.cell_sets, {"test": [[], [1]], "sets": [[0, 1], [0, 2, 3]]})
 
 
+def test_copy():
+    mesh = helpers.tri_mesh
+    mesh2 = mesh.copy()
+
+    assert np.all(mesh.points == mesh2.points)
+    assert not np.may_share_memory(mesh.points, mesh2.points)
+
+
 if __name__ == "__main__":
     # test_sets_to_int_data()
     test_int_data_to_sets()
