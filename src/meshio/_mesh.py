@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import collections
+import copy
 import warnings
 
+import npx
 import numpy as np
 
 from ._common import _topological_dimension, num_nodes_per_cell
@@ -131,6 +133,9 @@ class Mesh:
             lines.append(f"  Field data: {names}")
 
         return "\n".join(lines)
+
+    def copy(self):
+        return copy.deepcopy(self)
 
     def prune(self):
         # nschloe, 2020-11:
@@ -407,3 +412,25 @@ class Mesh:
         # remove the cell data
         for key in keys:
             del self.point_data[key]
+
+    def deduplicate_points(self, tol: float) -> int:
+        num_points_before = len(self.points)
+
+        unique_points, idx, inv = npx.unique(
+            self.points, tol=tol, axis=0, return_index=True, return_inverse=True
+        )
+        self.points = unique_points
+        num_removed_points = num_points_before - len(self.points)
+
+        # re-index cell blocks
+        self.cells = [CellBlock(cb.type, inv[cb.data]) for cb in self.cells]
+
+        # reset point data
+        for key, values in self.point_data.items():
+            self.point_data[key] = values[idx]
+
+        # reset point sets
+        for key, values in self.point_sets.items():
+            self.point_sets[key] = inv[values]
+
+        return num_removed_points

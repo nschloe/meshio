@@ -136,6 +136,41 @@ def test_gh_1165():
     assert_equal(mesh.cell_sets, {"test": [[], [1]], "sets": [[0, 1], [0, 2, 3]]})
 
 
+def test_copy():
+    mesh = helpers.tri_mesh
+    mesh2 = mesh.copy()
+
+    assert np.all(mesh.points == mesh2.points)
+    assert not np.may_share_memory(mesh.points, mesh2.points)
+
+
+def test_deduplicate_points():
+    points = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [2.0, 0.0],
+        ]
+    )
+    point_data = {"a": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]}
+    point_sets = {"b": [0, 4, 5]}
+    cells = [[0, 1, 2], [3, 4, 5]]
+    mesh = meshio.Mesh(
+        points, {"triangle": cells}, point_data=point_data, point_sets=point_sets
+    )
+
+    num_removed_points = mesh.deduplicate_points(1.0e-10)
+    assert num_removed_points == 2
+    assert np.all(mesh.points == [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [2.0, 0.0]])
+    assert np.all(mesh.cells[0].data == [[0, 1, 2], [1, 2, 3]])
+
+    assert np.all(mesh.point_data["a"] == [0.1, 0.2, 0.3, 0.6])
+    assert np.all(mesh.point_sets["b"] == [0, 2, 3])
+
+
 if __name__ == "__main__":
     # test_sets_to_int_data()
     test_int_data_to_sets()
