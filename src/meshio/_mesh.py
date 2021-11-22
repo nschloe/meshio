@@ -7,7 +7,7 @@ import warnings
 import npx
 import numpy as np
 
-from ._common import _topological_dimension, num_nodes_per_cell
+from ._common import num_nodes_per_cell, topological_dimension
 
 
 class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
@@ -152,13 +152,13 @@ class Mesh:
         """
         if not self.cells:
             return
-        max_topological_dim = max(_topological_dimension[c.type] for c in self.cells)
+        maxtopological_dim = max(topological_dimension[c.type] for c in self.cells)
         new_cells = []
         new_cell_data = {}
         new_cell_sets = {}
         prune_set = set()
         for idx, c in enumerate(self.cells):
-            if _topological_dimension[c.type] == max_topological_dim:
+            if topological_dimension[c.type] == maxtopological_dim:
                 new_cells.append(c)
 
                 for name, data in self.cell_data.items():
