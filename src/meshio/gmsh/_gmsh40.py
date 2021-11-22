@@ -7,10 +7,10 @@ from functools import partial
 import numpy as np
 
 from .._common import (
-    _topological_dimension,
     cell_data_from_raw,
     num_nodes_per_cell,
     raw_from_cell_data,
+    topological_dimension,
 )
 from .._exceptions import ReadError
 from .._mesh import Mesh
@@ -323,7 +323,7 @@ def _write_elements(fh, cells, binary):
         for cell_type, node_idcs in cells:
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             np.array(
-                [1, _topological_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
+                [1, topological_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
                 dtype=c_int,
             ).tofile(fh)
             np.array([node_idcs.shape[0]], dtype=c_ulong).tofile(fh)
@@ -358,7 +358,7 @@ def _write_elements(fh, cells, binary):
             fh.write(
                 "{} {} {} {}\n".format(
                     1,  # tag
-                    _topological_dimension[cell_type],
+                    topological_dimension[cell_type],
                     _meshio_to_gmsh_type[cell_type],
                     node_idcs.shape[0],
                 ).encode()
