@@ -83,7 +83,7 @@ num_nodes_per_cell = {
     "tetra286": 286,
 }
 
-_topological_dimension = {
+topological_dimension = {
     "line": 1,
     "triangle": 2,
     "quad": 2,

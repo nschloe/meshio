@@ -9,11 +9,6 @@ import meshio
 from . import helpers
 
 
-def test_public_attributes():
-    # Just make sure this is here
-    meshio.extension_to_filetype
-
-
 @pytest.mark.parametrize(
     "mesh",
     [helpers.tri_mesh, helpers.empty_mesh],

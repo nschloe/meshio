@@ -8,10 +8,10 @@ from functools import partial
 import numpy as np
 
 from .._common import (
-    _topological_dimension,
     cell_data_from_raw,
     num_nodes_per_cell,
     raw_from_cell_data,
+    topological_dimension,
 )
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
@@ -431,7 +431,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     cell_dim_tags = np.empty((len(cells), 2), dtype=int)
     for ci in range(len(cells)):
         cell_dim_tags[ci] = [
-            _topological_dimension[cells[ci][0]],
+            topological_dimension[cells[ci][0]],
             tag_data["gmsh:geometrical"][ci][0],
         ]
 
@@ -601,7 +601,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
                 + "to deal with more than one cell type. "
             )
 
-        dim = _topological_dimension[cells[0][0]]
+        dim = topological_dimension[cells[0][0]]
         tag = 0
         node_dim_tags = np.array([[dim, tag]])
         # All nodes map to the (single) dimension-entity object
@@ -673,7 +673,7 @@ def _write_elements(fh, cells, tag_data, binary):
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
 
-            dim = _topological_dimension[cell_type]
+            dim = topological_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
             if "gmsh:geometrical" in tag_data:
                 entity_tag = tag_data["gmsh:geometrical"][ci][0]
@@ -713,7 +713,7 @@ def _write_elements(fh, cells, tag_data, binary):
         for ci, (cell_type, node_idcs) in enumerate(cells):
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
 
-            dim = _topological_dimension[cell_type]
+            dim = topological_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
             if "gmsh:geometrical" in tag_data:
                 entity_tag = tag_data["gmsh:geometrical"][ci][0]
