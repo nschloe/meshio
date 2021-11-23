@@ -3,7 +3,7 @@
   <p align="center">I/O for mesh files.</p>
 </p>
 
-[![PyPi Version](https://img.shields.io/pypi/v/meshio.svg?style=flat-square)](https://pypi.org/project/meshio)
+[![PyPi Version](https://img.shields.io/pypi/v/meshio.svg?style=flat-square)](https://pypi.org/project/meshio/)
 [![Anaconda Cloud](https://anaconda.org/conda-forge/meshio/badges/version.svg?=style=flat-square)](https://anaconda.org/conda-forge/meshio/)
 [![Packaging status](https://repology.org/badge/tiny-repos/python:meshio.svg)](https://repology.org/project/python:meshio/versions)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/meshio.svg?style=flat-square)](https://pypi.org/project/meshio/)
@@ -50,7 +50,7 @@ meshio can read and write all of the following and smoothly converts between the
 > [VTK](https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf) (`.vtk`),
 > [VTU](https://vtk.org/Wiki/VTK_XML_Formats) (`.vtu`),
 > [WKT](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry) ([TIN](https://en.wikipedia.org/wiki/Triangulated_irregular_network)) (`.wkt`),
-> [XDMF](https://www.xdmf.org/index.php/XDMF_Model_and_Format) (`.xdmf`, `.xmf`).
+> [XDMF](https://xdmf.org/index.php/XDMF_Model_and_Format) (`.xdmf`, `.xmf`).
 
 ([Here's a little survey](https://forms.gle/PSeNb3N3gv3wbEus8) on which formats are actually
 used.)
@@ -139,8 +139,9 @@ For both input and output, you can optionally specify the exact `file_format`
 
 #### Time series
 
-The [XDMF format](https://www.xdmf.org/index.php/XDMF_Model_and_Format) supports time
-series with a shared mesh. You can write times series data using meshio with
+The [XDMF format](https://xdmf.org/index.php/XDMF_Model_and_Format) supports
+time series with a shared mesh. You can write times series data using meshio
+with
 
 <!--pytest-codeblocks:skip-->
 

@@ -1,6 +1,6 @@
 """
 I/O for XDMF.
-https://www.xdmf.org/index.php/XDMF_Model_and_Format
+https://xdmf.org/index.php/XDMF_Model_and_Format
 """
 import os
 import pathlib
@@ -75,7 +75,7 @@ class XdmfReader:
             data_type = data_item.attrib["NumberType"]
         else:
             # Default, see
-            # <https://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
+            # <https://xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
             data_type = "Float"
 
         precision = data_item.get("Precision", default="4")
