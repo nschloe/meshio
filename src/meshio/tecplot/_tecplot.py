@@ -1,6 +1,6 @@
 """
 I/O for Tecplot ASCII data format, cf.
-<https://download.tecplot.com/360/current/360_data_format_guide.pdf>,
+<https://github.com/su2code/SU2/raw/master/externals/tecio/360_data_format_guide.pdf>,
 <http://paulbourke.net/dataformats/tp/>.
 """
 import logging

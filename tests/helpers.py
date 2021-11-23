@@ -681,7 +681,7 @@ def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat"):
         assert np.all(c0.data == c1.data)
 
     # Numpy's array_equal is too strict here, cf.
-    # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
+    # <https://mail.python.org/archives/list/numpy-discussion@python.org/message/3LUSBW5BGD6NY6I76W5WSBOEBHNDKA4Y/>.
     # Use allclose.
     if in_mesh.points.shape[0] == 0:
         assert mesh.points.shape[0] == 0

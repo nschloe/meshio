@@ -10,7 +10,6 @@ from .._helpers import register
 from .._mesh import Mesh
 
 # https://docs.salome-platform.org/5/med/dev/med__outils_8hxx.html
-# https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {
     "vertex": "PO1",
     "line": "SE2",

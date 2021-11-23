@@ -140,7 +140,8 @@ def _read_cells(f, line):
                 return None, None
 
     if key == "mixed":
-        # From <https://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
+        # From
+        # <https://www.afs.enea.it/project/neptunius/docs/fluent/html/ug/node1470.htm>:
         #
         # > If a zone is of mixed type (element-type=0), it will have a body that
         # > lists the element type of each cell.
@@ -216,7 +217,8 @@ def _read_faces(f, line):
     if out.group(1) == "":
         # ASCII
         if key == "mixed":
-            # From <https://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
+            # From
+            # <https://www.afs.enea.it/project/neptunius/docs/fluent/html/ug/node1471.htm>:
             #
             # > If the face zone is of mixed type (element-type = > 0), the body of the
             # > section will include the face type and will appear as follows
