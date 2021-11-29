@@ -4,10 +4,9 @@ import collections
 import copy
 import warnings
 
-import npx
 import numpy as np
 
-from ._common import num_nodes_per_cell, topological_dimension
+from ._common import num_nodes_per_cell
 
 
 class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
@@ -136,93 +135,6 @@ class Mesh:
 
     def copy(self):
         return copy.deepcopy(self)
-
-    def prune(self):
-        # nschloe, 2020-11:
-        warnings.warn(
-            "prune() will soon be deprecated. "
-            "Use remove_lower_dimensional_cells(), remove_orphaned_nodes() instead."
-        )
-        self.remove_lower_dimensional_cells()
-        self.remove_orphaned_nodes()
-
-    def remove_lower_dimensional_cells(self):
-        """Remove all cells of topological dimension lower than the max dimension in the
-        mesh, i.e., in a mesh that contains tetrahedra, remove triangles, lines, etc.
-        """
-        if not self.cells:
-            return
-        maxtopological_dim = max(topological_dimension[c.type] for c in self.cells)
-        new_cells = []
-        new_cell_data = {}
-        new_cell_sets = {}
-        prune_set = set()
-        for idx, c in enumerate(self.cells):
-            if topological_dimension[c.type] == maxtopological_dim:
-                new_cells.append(c)
-
-                for name, data in self.cell_data.items():
-                    if name not in new_cell_data:
-                        new_cell_data[name] = []
-                    new_cell_data[name] += [data[idx]]
-
-                for name, data in self.cell_sets.items():
-                    if name not in new_cell_sets:
-                        new_cell_sets[name] = []
-                    new_cell_sets[name] += [data[idx]]
-            else:
-                prune_set.add(c.type)
-
-        self.cells = new_cells
-        self.cell_data = new_cell_data
-        self.cell_sets = new_cell_sets
-        return prune_set
-
-    def remove_orphaned_nodes(self):
-        """Remove nodes which don't belong to any cell."""
-        flat = [c.data.flat for c in self.cells]
-        if flat:
-            all_cells_flat = np.concatenate([c.data.flat for c in self.cells])
-        else:
-            all_cells_flat = np.array([], dtype=int)
-        orphaned_nodes = np.setdiff1d(np.arange(len(self.points)), all_cells_flat)
-
-        if len(orphaned_nodes) == 0:
-            return
-
-        self.points = np.delete(self.points, orphaned_nodes, axis=0)
-        # also adapt the point data
-        self.point_data = {
-            key: np.delete(val, orphaned_nodes, axis=0)
-            for key, val in self.point_data.items()
-        }
-
-        # reset GLOBAL_ID
-        if "GLOBAL_ID" in self.point_data:
-            n = len(self.point_data["GLOBAL_ID"])
-            assert np.all(self.point_data["GLOBAL_ID"] == np.arange(1, n + 1))
-            self.point_data["GLOBAL_ID"] = np.arange(1, len(self.points) + 1)
-
-        # We now need to adapt the cells too.
-        diff = np.zeros(len(all_cells_flat), dtype=all_cells_flat.dtype)
-        for orphan in orphaned_nodes:
-            diff[np.argwhere(all_cells_flat > orphan)] += 1
-        all_cells_flat -= diff
-        i = 0
-        for k, c in enumerate(self.cells):
-            s = c.data.shape
-            n = np.prod(s)
-            self.cells[k] = CellBlock(c.type, all_cells_flat[i : i + n].reshape(s))
-            i += n
-
-    def prune_z_0(self, tol: float = 1.0e-13):
-        """Remove third (z) component of points if it is 0 everywhere (up to a
-        tolerance).
-        """
-        if self.points.shape[0] == 0:
-            return
-        if self.points.shape[1] == 3 and np.all(np.abs(self.points[:, 2]) < tol):
-            self.points = self.points[:, :2]
 
     def write(self, path_or_buf, file_format: str | None = None, **kwargs):
         # avoid circular import
@@ -412,25 +324,3 @@ class Mesh:
         # remove the cell data
         for key in keys:
             del self.point_data[key]
-
-    def deduplicate_points(self, tol: float) -> int:
-        num_points_before = len(self.points)
-
-        unique_points, idx, inv = npx.unique(
-            self.points, tol=tol, axis=0, return_index=True, return_inverse=True
-        )
-        self.points = unique_points
-        num_removed_points = num_points_before - len(self.points)
-
-        # re-index cell blocks
-        self.cells = [CellBlock(cb.type, inv[cb.data]) for cb in self.cells]
-
-        # reset point data
-        for key, values in self.point_data.items():
-            self.point_data[key] = values[idx]
-
-        # reset point sets
-        for key, values in self.point_sets.items():
-            self.point_sets[key] = inv[values]
-
-        return num_removed_points
