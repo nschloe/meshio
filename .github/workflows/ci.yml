@@ -19,7 +19,7 @@ jobs:
       - name: Run pre-commit
         uses: pre-commit/action@v2.0.3
 
-  build:
+  test-ubuntu:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -40,3 +40,24 @@ jobs:
           tox -- --cov meshio --cov-report xml --cov-report term
       - uses: codecov/codecov-action@v1
         if: ${{ matrix.python-version == '3.9' }}
+
+  test-windows-mac:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        os: [windows-latest, macOS-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-activate-base: true
+          python-version: ${{ matrix.python-version }}
+      - name: Install h5py & netCDF4
+        run: conda install -c conda-forge h5py netCDF4 --yes
+      - name: Test with tox
+        run: |
+          pip install tox
+          tox -- --cov meshio --cov-report xml --cov-report term
