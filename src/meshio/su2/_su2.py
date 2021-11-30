@@ -10,7 +10,7 @@ import numpy as np
 from .._common import _pick_first_int_data
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 # follows VTK conventions
@@ -372,4 +372,4 @@ def write(filename, mesh):
     return
 
 
-register("su2", [".su2"], read, {"su2": write})
+register_format("su2", [".su2"], read, {"su2": write})

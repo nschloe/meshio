@@ -11,7 +11,7 @@ import numpy as np
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 from .common import (
     attribute_type,
@@ -544,7 +544,7 @@ def write(*args, **kwargs):
 
 
 # TODO register all xdmf except hdf outside this try block
-register(
+register_format(
     "xdmf",
     [".xdmf", ".xmf"],
     read,

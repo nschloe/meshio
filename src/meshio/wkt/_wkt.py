@@ -7,7 +7,7 @@ import numpy as np
 
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 float_pattern = r"[+-]?(?:\d+\.?\d*|\d*\.?\d+)"
@@ -101,4 +101,4 @@ def write_str(mesh):
     return buf.read()
 
 
-register("wkt", [".wkt"], read, {"wkt": write})
+register_format("wkt", [".wkt"], read, {"wkt": write})

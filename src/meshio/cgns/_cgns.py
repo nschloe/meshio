@@ -6,7 +6,7 @@ TODO link to specification?
 import numpy as np
 
 from .._exceptions import ReadError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 
@@ -97,4 +97,4 @@ def write(filename, mesh, compression="gzip", compression_opts=4):
             )
 
 
-register("cgns", [".cgns"], read, {"cgns": write})
+register_format("cgns", [".cgns"], read, {"cgns": write})

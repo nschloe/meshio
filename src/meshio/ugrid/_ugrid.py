@@ -14,7 +14,7 @@ import numpy as np
 from .._common import _pick_first_int_data
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 # Float size and endianness are recorded by these suffixes
@@ -275,4 +275,4 @@ def _write_buffer(f, file_type, mesh):
         _write_section(f, file_type, fortran_header, itype)
 
 
-register("ugrid", [".ugrid"], read, {"ugrid": write})
+register_format("ugrid", [".ugrid"], read, {"ugrid": write})

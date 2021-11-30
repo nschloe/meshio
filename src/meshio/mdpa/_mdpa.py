@@ -12,7 +12,7 @@ import numpy as np
 from .._common import num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 ## We check if we can read/write the mesh natively from Kratos
@@ -525,4 +525,4 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
             _write_data(fh, "ElementalData", name, dat, binary)
 
 
-register("mdpa", [".mdpa"], read, {"mdpa": write})
+register_format("mdpa", [".mdpa"], read, {"mdpa": write})

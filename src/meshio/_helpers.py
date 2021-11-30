@@ -14,7 +14,7 @@ reader_map = {}
 _writer_map = {}
 
 
-def register(name: str, extensions: list[str], reader, writer_map):
+def register_format(name: str, extensions: list[str], reader, writer_map):
     for ext in extensions:
         extension_to_filetype[ext] = name
 

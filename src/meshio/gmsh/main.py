@@ -2,7 +2,7 @@ import pathlib
 import struct
 
 from .._exceptions import ReadError, WriteError
-from .._helpers import register
+from .._helpers import register_format
 from . import _gmsh22, _gmsh40, _gmsh41
 from .common import _fast_forward_to_end_block
 
@@ -102,7 +102,7 @@ def write(filename, mesh, fmt_version="4.1", binary=True, float_fmt=".16e"):
     writer.write(filename, mesh, binary=binary, float_fmt=float_fmt)
 
 
-register(
+register_format(
     "gmsh",
     [".msh"],
     read,

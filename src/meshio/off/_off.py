@@ -9,7 +9,7 @@ import numpy as np
 
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 
@@ -92,4 +92,4 @@ def write(filename, mesh):
         fh.write(out.encode())
 
 
-register("off", [".off"], read, {"off": write})
+register_format("off", [".off"], read, {"off": write})

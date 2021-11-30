@@ -14,7 +14,7 @@ import numpy as np
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 # Reference dtypes
@@ -525,4 +525,4 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
                 fh.write(out.encode())
 
 
-register("ply", [".ply"], read, {"ply": write})
+register_format("ply", [".ply"], read, {"ply": write})

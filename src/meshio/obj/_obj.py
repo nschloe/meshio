@@ -9,7 +9,7 @@ import numpy as np
 from ..__about__ import __version__
 from .._exceptions import WriteError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 
@@ -132,4 +132,4 @@ def write(filename, mesh):
                 f.write(fmt.format(*(c + 1)))
 
 
-register("obj", [".obj"], read, {"obj": write})
+register_format("obj", [".obj"], read, {"obj": write})

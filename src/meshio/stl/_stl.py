@@ -12,7 +12,7 @@ import numpy as np
 from ..__about__ import __version__
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 
@@ -254,4 +254,4 @@ def _write_binary(filename, pts, normals):
         a.tofile(fh)
 
 
-register("stl", [".stl"], read, {"stl": write})
+register_format("stl", [".stl"], read, {"stl": write})

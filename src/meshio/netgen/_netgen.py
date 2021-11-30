@@ -9,7 +9,7 @@ import numpy as np
 from ..__about__ import __version__
 from .._common import topological_dimension
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 
@@ -457,4 +457,4 @@ def write_buffer(f, mesh, float_fmt):
     f.write("\nendmesh\n")
 
 
-register("netgen", [".vol", ".vol.gz"], read, {"netgen": write})
+register_format("netgen", [".vol", ".vol.gz"], read, {"netgen": write})

@@ -11,7 +11,7 @@ import numpy as np
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 
@@ -460,4 +460,4 @@ def write(filename, mesh, binary=True):
             first_index = last_index + 1
 
 
-register("ansys", [], read, {"ansys": write})
+register_format("ansys", [], read, {"ansys": write})
