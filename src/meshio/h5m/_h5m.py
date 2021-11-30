@@ -8,7 +8,7 @@ from datetime import datetime
 import numpy as np
 
 from .. import __about__
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 # def _int_to_bool_list(num):
@@ -265,4 +265,4 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     tstt.attrs.create("max_id", global_id, dtype="u8")
 
 
-register("h5m", [".h5m"], read, {"h5m": write})
+register_format("h5m", [".h5m"], read, {"h5m": write})

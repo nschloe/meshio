@@ -10,7 +10,7 @@ import numpy as np
 from ..__about__ import __version__ as version
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 zone_key_to_type = {
@@ -505,4 +505,4 @@ def _write_table(f, data, ncol=20):
             f.write(" ".join(str(l) for l in line) + "\n")
 
 
-register("tecplot", [".dat", ".tec"], read, {"tecplot": write})
+register_format("tecplot", [".dat", ".tec"], read, {"tecplot": write})

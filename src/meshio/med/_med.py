@@ -6,7 +6,7 @@ import numpy as np
 
 from .._common import num_nodes_per_cell
 from .._exceptions import ReadError, WriteError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 # https://docs.salome-platform.org/5/med/dev/med__outils_8hxx.html
@@ -454,4 +454,4 @@ def _write_families(fm_group, tags):
             dataset[i] = np.array([ord(x) for x in name_80])
 
 
-register("med", [".med"], read, {"med": write})
+register_format("med", [".med"], read, {"med": write})

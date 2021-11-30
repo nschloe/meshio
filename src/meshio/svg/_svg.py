@@ -5,7 +5,7 @@ from xml.etree import ElementTree as ET
 import numpy as np
 
 from .._exceptions import WriteError
-from .._helpers import register
+from .._helpers import register_format
 
 
 def write(
@@ -104,4 +104,4 @@ def write(
     tree.write(filename)
 
 
-register("svg", [".svg"], None, {"svg": write})
+register_format("svg", [".svg"], None, {"svg": write})

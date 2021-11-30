@@ -9,7 +9,7 @@ from ..__about__ import __version__
 from .._common import num_nodes_per_cell
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 nastran_to_meshio_type = {
@@ -434,4 +434,4 @@ def _convert_to_nastran_ordering(cell, nastran_type):
     return cell
 
 
-register("nastran", [".bdf", ".fem", ".nas"], read, {"nastran": write})
+register_format("nastran", [".bdf", ".fem", ".nas"], read, {"nastran": write})

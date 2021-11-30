@@ -10,7 +10,7 @@ import numpy as np
 
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 
@@ -75,4 +75,4 @@ def read_buffer(file):
     return Mesh(vertices, [CellBlock("triangle", triangles)])
 
 
-register("neuroglancer", [], read, {"neuroglancer": write})
+register_format("neuroglancer", [], read, {"neuroglancer": write})

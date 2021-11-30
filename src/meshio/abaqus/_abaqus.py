@@ -10,7 +10,7 @@ from ..__about__ import __version__
 from .._common import num_nodes_per_cell
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 abaqus_to_meshio_type = {
@@ -445,4 +445,4 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
         # f.write("*END")
 
 
-register("abaqus", [".inp"], read, {"abaqus": write})
+register_format("abaqus", [".inp"], read, {"abaqus": write})

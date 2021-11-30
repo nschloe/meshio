@@ -14,7 +14,7 @@ import numpy as np
 from ..__about__ import __version__
 from .._common import raw_from_cell_data
 from .._exceptions import CorruptionError, ReadError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 from .._vtk_common import meshio_to_vtk_order, meshio_to_vtk_type, vtk_cells_from_data
 
@@ -888,4 +888,4 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     tree.write(filename)
 
 
-register("vtu", [".vtu"], read, {"vtu": write})
+register_format("vtu", [".vtu"], read, {"vtu": write})

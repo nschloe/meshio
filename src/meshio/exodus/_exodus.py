@@ -13,7 +13,7 @@ import numpy as np
 
 from ..__about__ import __version__
 from .._exceptions import ReadError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 exodus_to_meshio_type = {
@@ -369,4 +369,4 @@ def write(filename, mesh):
                 data[:] = values + 1
 
 
-register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
+register_format("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})

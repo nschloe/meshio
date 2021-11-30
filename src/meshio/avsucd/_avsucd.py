@@ -9,7 +9,7 @@ import numpy as np
 from ..__about__ import __version__ as version
 from .._common import _pick_first_int_data
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 meshio_to_avsucd_type = {
@@ -239,4 +239,4 @@ def _write_data(f, labels, data_array, num_entities, num_data, num_data_sum):
     np.savetxt(f, data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_data_sum)
 
 
-register("avsucd", [".avs"], read, {"avsucd": write})
+register_format("avsucd", [".avs"], read, {"avsucd": write})

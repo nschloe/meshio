@@ -12,7 +12,7 @@ import numpy as np
 from .._common import _pick_first_int_data
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 from ._medit_internal import medit_codes
 
@@ -520,4 +520,4 @@ def write_binary_file(f, mesh):
         tmp_array.tofile(fh)
 
 
-register("medit", [".mesh", ".meshb"], read, {"medit": write})
+register_format("medit", [".mesh", ".meshb"], read, {"medit": write})

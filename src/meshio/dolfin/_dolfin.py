@@ -11,7 +11,7 @@ from xml.etree import ElementTree as ET
 import numpy as np
 
 from .._exceptions import ReadError, WriteError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 
@@ -237,4 +237,4 @@ def write(filename, mesh):
             _write_cell_data(cell_data_filename, dim, np.array(data))
 
 
-register("dolfin-xml", [".xml"], read, {"dolfin-xml": write})
+register_format("dolfin-xml", [".xml"], read, {"dolfin-xml": write})
