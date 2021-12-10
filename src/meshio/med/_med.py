@@ -270,7 +270,9 @@ def write(filename, mesh):
         raise WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
-    for k, (cell_type, cells) in enumerate(mesh.cells):
+    for k, cell_block in enumerate(mesh.cells):
+        cell_type = cell_block.type
+        cells = cell_block.data
         med_type = meshio_to_med_type[cell_type]
         med_cells = cells_group.create_group(med_type)
         med_cells.attrs.create("CGT", 1)

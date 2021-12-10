@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import warnings
-from dataclasses import dataclass, field
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -10,11 +9,16 @@ from numpy.typing import ArrayLike
 from ._common import num_nodes_per_cell
 
 
-@dataclass
 class CellBlock:
-    type: str
-    data: list | np.ndarray
-    tags: list[str] = field(default_factory=list)
+    def __init__(
+        self,
+        type: str,
+        data: list | np.ndarray,
+        tags: list[str] | None = None,
+    ):
+        self.type = type
+        self.data = np.asarray(data)
+        self.tags = [] if tags is None else tags
 
     def __repr__(self):
         items = [

@@ -269,7 +269,9 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
         # CellBlock
         cell_id = 0
         cell_refs = mesh.cell_data.get("nastran:ref", None)
-        for ict, (cell_type, cells) in enumerate(mesh.cells):
+        for ict, cell_block in enumerate(mesh.cells):
+            cell_type = cell_block.type
+            cells = cell_block.data
             nastran_type = meshio_to_nastran_type[cell_type]
             if cell_format.endswith("-large"):
                 nastran_type += "*"

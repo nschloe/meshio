@@ -398,7 +398,9 @@ def _read_set(f, params_map):
     return set_ids, set_names, line
 
 
-def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
+def write(
+    filename, mesh: Mesh, float_fmt: str = ".16e", translate_cell_names: bool = True
+) -> None:
     with open_file(filename, "wt") as f:
         f.write("*HEADING\n")
         f.write("Abaqus DataFile Version 6.14\n")
@@ -408,7 +410,9 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
         for k, x in enumerate(mesh.points):
             f.write(fmt.format(k + 1, *x))
         eid = 0
-        for cell_type, node_idcs in mesh.cells:
+        for cell_block in mesh.cells:
+            cell_type = cell_block.type
+            node_idcs = cell_block.data
             name = (
                 meshio_to_abaqus_type[cell_type] if translate_cell_names else cell_type
             )

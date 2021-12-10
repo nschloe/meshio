@@ -437,7 +437,9 @@ def write(filename, mesh, binary=True):
             np.dtype("int32"): "2012",
             np.dtype("int64"): "3012",
         }
-        for cell_type, values in mesh.cells:
+        for cell_block in mesh.cells:
+            cell_type = cell_block.type
+            values = cell_block.data
             key = binary_dtypes[values.dtype] if binary else "12"
             last_index = first_index + len(values) - 1
             try:

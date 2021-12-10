@@ -385,7 +385,9 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
     dimension_name = f"{dimension}D"
     wrong_dimension_name = "3D" if dimension == 2 else "2D"
     consecutive_index = 0
-    for cell_type, node_idcs in cells:
+    for cell_block in cells:
+        cell_type = cell_block.type
+        node_idcs = cell_block.data
         # NOTE: The names of the dummy conditions are not regular, require extra work
         # local_dimension = local_dimension_types[cell_type]
         # if (local_dimension < dimension):

@@ -654,7 +654,9 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     # Don't use byteswap to make sure that the dtype is changed; see
     # <https://github.com/numpy/numpy/issues/10372>.
     points = points.astype(points.dtype.newbyteorder("="), copy=False)
-    for k, (cell_type, data) in enumerate(mesh.cells):
+    for k, cell_block in enumerate(mesh.cells):
+        cell_type = cell_block.type
+        data = cell_block.data
         # Treatment of polyhedra is different from other types
         if is_polyhedron_grid:
             new_cell_info = []

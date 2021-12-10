@@ -219,7 +219,9 @@ def _write_nodes(f, points):
 
 def _write_cells(f, cells, material):
     i = 0
-    for cell_type, v in cells:
+    for cell_block in cells:
+        cell_type = cell_block.type
+        v = cell_block.data
         for cell in v[:, meshio_to_avsucd_order[cell_type]]:
             cell_str = " ".join(str(c) for c in cell + 1)
             f.write(

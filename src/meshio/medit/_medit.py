@@ -351,7 +351,9 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
                 f"Picking {labels_key}, skipping {string}."
             )
 
-        for k, (cell_type, data) in enumerate(mesh.cells):
+        for k, cell_block in enumerate(mesh.cells):
+            cell_type = cell_block.type
+            data = cell_block.data
             try:
                 medit_name, num = medit_from_meshio[cell_type]
             except KeyError:

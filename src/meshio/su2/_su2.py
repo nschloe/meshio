@@ -260,8 +260,8 @@ def write(filename, mesh):
         np.savetxt(f, mesh.points)
 
         # Through warnings about unsupported types
-        for type, _ in mesh.cells:
-            if type not in meshio_to_su2_type:
+        for cell_block in mesh.cells:
+            if cell_block.type not in meshio_to_su2_type:
                 logging.warning(
                     ".su2 does not support tags elements of type {}.\n"
                     "Skipping ...".format(type)
