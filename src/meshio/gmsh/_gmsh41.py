@@ -601,7 +601,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
                 + "to deal with more than one cell type. "
             )
 
-        dim = topological_dimension[cells[0][0]]
+        dim = topological_dimension[cells[0].type]
         tag = 0
         node_dim_tags = np.array([[dim, tag]])
         # All nodes map to the (single) dimension-entity object
@@ -658,7 +658,7 @@ def _write_elements(fh, cells, tag_data, binary):
     """
     fh.write(b"$Elements\n")
 
-    total_num_cells = sum(len(c) for _, c in cells)
+    total_num_cells = sum(len(c) for c in cells)
     num_blocks = len(cells)
     min_element_tag = 1
     max_element_tag = total_num_cells
@@ -669,7 +669,9 @@ def _write_elements(fh, cells, tag_data, binary):
         ).tofile(fh)
 
         tag0 = 1
-        for ci, (cell_type, node_idcs) in enumerate(cells):
+        for ci, cell_block in enumerate(cells):
+            cell_type = cell_block.type
+            node_idcs = cell_block.data
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
 

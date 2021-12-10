@@ -160,11 +160,10 @@ _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
 
 def _reorder_cells(cells, ordering):
     cells = cells[:]
-    for i, (cell_type, cell_data) in enumerate(cells):
-        permutation = ordering.get(cell_type)
+    for i, cell_block in enumerate(cells):
+        permutation = ordering.get(cell_block.type)
         if permutation is not None:
-            cell_data = cell_data[:, permutation]
-            cells[i] = (cell_type, cell_data)
+            cells[i] = (cell_block.type, cell_block.data[:, permutation])
     return cells
 
 

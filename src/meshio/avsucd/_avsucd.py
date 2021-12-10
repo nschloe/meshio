@@ -98,20 +98,20 @@ def _read_cells(f, num_cells, point_ids):
         cell_type = avsucd_to_meshio_type[line[2]]
         corner = [point_ids[int(pid)] for pid in line[3:]]
 
-        if len(cells) > 0 and cells[-1].type == cell_type:
-            cells[-1].data.append(corner)
+        if len(cells) > 0 and cells[-1][0] == cell_type:
+            cells[-1][1].append(corner)
             cell_data["avsucd:material"][-1].append(cell_mat)
         else:
-            cells.append(CellBlock(cell_type, [corner]))
+            cells.append((cell_type, [corner]))
             cell_data["avsucd:material"].append([cell_mat])
 
         cell_ids[cell_id] = count
         count += 1
 
     # Convert to numpy arrays
-    for k, c in enumerate(cells):
+    for k, (cell_type, cdata) in enumerate(cells):
         cells[k] = CellBlock(
-            c.type, np.array(c.data)[:, avsucd_to_meshio_order[c.type]]
+            cell_type, np.array(cdata)[:, avsucd_to_meshio_order[cell_type]]
         )
         cell_data["avsucd:material"][k] = np.array(cell_data["avsucd:material"][k])
     return cell_ids, cells, cell_data

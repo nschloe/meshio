@@ -317,7 +317,7 @@ def _write_cells(f, points, cells, flag, binary):
         count = 0
         cells = _translate_zones(points, cells)
     else:
-        count = sum(len(c[1]) for c in cells if c.type in meshio_only["zone"])
+        count = sum(len(c) for c in cells if c.type in meshio_only["zone"])
         cells = _translate_faces(cells)
 
     if binary:
@@ -401,20 +401,20 @@ def _translate_zones(points, cells):
         return a[:, 0] * c0 + a[:, 1] * c1 + a[:, 2] * c2
 
     zones = []
-    for key, idx in cells:
-        if key not in meshio_only["zone"].keys():
+    for cell_block in cells:
+        if cell_block.type not in meshio_only["zone"].keys():
             continue
 
         # Compute scalar triple products
-        key = meshio_only["zone"][key]
-        tmp = points[idx[:, meshio_to_flac3d_order[key][:4]].T]
+        key = meshio_only["zone"][cell_block.type]
+        tmp = points[cell_block.data[:, meshio_to_flac3d_order[key][:4]].T]
         det = slicing_summing(tmp[1] - tmp[0], tmp[2] - tmp[0], tmp[3] - tmp[0])
 
         # Reorder corner points
         data = np.where(
             (det > 0)[:, None],
-            idx[:, meshio_to_flac3d_order[key]],
-            idx[:, meshio_to_flac3d_order_2[key]],
+            cell_block.data[:, meshio_to_flac3d_order[key]],
+            cell_block.data[:, meshio_to_flac3d_order_2[key]],
         )
         zones.append((key, data))
 
@@ -424,12 +424,12 @@ def _translate_zones(points, cells):
 def _translate_faces(cells):
     """Reorder meshio cells to FLAC3D faces."""
     faces = []
-    for key, idx in cells:
-        if key not in meshio_only["face"].keys():
+    for cell_block in cells:
+        if cell_block.type not in meshio_only["face"].keys():
             continue
 
-        key = meshio_only["face"][key]
-        data = idx[:, meshio_to_flac3d_order[key]]
+        key = meshio_only["face"][cell_block.type]
+        data = cell_block.data[:, meshio_to_flac3d_order[key]]
         faces.append((key, data))
 
     return faces

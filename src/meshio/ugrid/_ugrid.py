@@ -216,8 +216,8 @@ def _write_buffer(f, file_type, mesh):
 
         # start next record
         fortran_header = mesh.points.nbytes
-        for key, array in mesh.cells:
-            fortran_header += array.nbytes
+        for cell_block in mesh.cells:
+            fortran_header += cell_block.data.nbytes
         # boundary tags
         if ugrid_counts["triangle"] > 0:
             fortran_header += ugrid_counts["triangle"] * np.dtype(itype).itemsize

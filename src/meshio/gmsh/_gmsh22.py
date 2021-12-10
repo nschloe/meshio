@@ -337,11 +337,13 @@ def _write_elements(fh, cells, tag_data, binary):
     # write elements
     fh.write(b"$Elements\n")
     # count all cells
-    total_num_cells = sum(c.shape[0] for _, c in cells)
+    total_num_cells = sum(len(cell_block) for cell_block in cells)
     fh.write(f"{total_num_cells}\n".encode())
 
     consecutive_index = 0
-    for k, (cell_type, node_idcs) in enumerate(cells):
+    for k, cell_block in enumerate(cells):
+        cell_type = cell_block.type
+        node_idcs = cell_block.data
         tags = []
         for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
             if name in tag_data:

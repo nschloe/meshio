@@ -233,10 +233,10 @@ def _read_ascii(
                 n = ply_to_numpy_dtype[idx_dtype](data[i])
                 dtype = ply_to_numpy_dtype[value_dtype]
                 idx = dtype(data[i + 1 : i + n + 1])
-                if len(cell_blocks) == 0 or len(cell_blocks[-1].data[-1]) != n:
-                    cell_blocks.append(CellBlock(cell_type_from_count(n), [idx]))
+                if len(cell_blocks) == 0 or len(cell_blocks[-1][1][-1]) != n:
+                    cell_blocks.append((cell_type_from_count(n), [idx]))
                 else:
-                    cell_blocks[-1].data.append(idx)
+                    cell_blocks[-1][1].append(idx)
                 i += n + 1
             else:
                 dtype = ply_to_numpy_dtype[dtype]
@@ -441,9 +441,9 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
 
         num_cells = 0
         legal_cell_types = ["vertex", "line", "triangle", "quad", "polygon"]
-        for cell_type, c in mesh.cells:
-            if cell_type in legal_cell_types:
-                num_cells += c.data.shape[0]
+        for cell_block in mesh.cells:
+            if cell_block.type in legal_cell_types:
+                num_cells += cell_block.data.shape[0]
 
         if num_cells > 0:
             fh.write(f"element face {num_cells:d}\n".encode())
@@ -451,10 +451,12 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
             # possibly cast down to int32
             # TODO don't alter the mesh data
             has_cast = False
-            for k, (cell_type, data) in enumerate(mesh.cells):
-                if data.dtype == np.int64:
+            for k, cell_block in enumerate(mesh.cells):
+                if cell_block.data.dtype == np.int64:
                     has_cast = True
-                    mesh.cells[k] = CellBlock(cell_type, data.astype(np.int32))
+                    mesh.cells[k] = CellBlock(
+                        cell_block.type, cell_block.data.astype(np.int32)
+                    )
 
             if has_cast:
                 warnings.warn(
@@ -463,10 +465,10 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
 
             # assert that all cell dtypes are equal
             cell_dtype = None
-            for _, cell in mesh.cells:
+            for cell_block in mesh.cells:
                 if cell_dtype is None:
-                    cell_dtype = cell.dtype
-                if cell.dtype != cell_dtype:
+                    cell_dtype = cell_block.data.dtype
+                if cell_block.data.dtype != cell_dtype:
                     raise WriteError()
 
             if cell_dtype is not None:
@@ -482,19 +484,17 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
             fh.write(out.tobytes())
 
             # cells
-            for cell_type, data in mesh.cells:
-                if cell_type not in legal_cell_types:
+            for cell_block in mesh.cells:
+                if cell_block.type not in legal_cell_types:
                     warnings.warn(
-                        f'cell_type "{cell_type}" is not supported by ply format - '
-                        "skipping"
+                        f'cell_type "{cell_block.type}" is not supported by PLY format '
+                        "- skipping"
                     )
                     continue
                 # prepend with count
+                d = cell_block.data
                 out = np.rec.fromarrays(
-                    [
-                        np.broadcast_to(np.uint8(data.shape[1]), data.shape[0]),
-                        *data.T,
-                    ]
+                    [np.broadcast_to(np.uint8(d.shape[1]), d.shape[0]), *d.T]
                 )
                 fh.write(out.tobytes())
         else:
@@ -507,16 +507,18 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
             fh.write(out.encode())
 
             # cells
-            for cell_type, data in mesh.cells:
-                if cell_type not in legal_cell_types:
+            for cell_block in mesh.cells:
+                if cell_block.type not in legal_cell_types:
                     warnings.warn(
-                        'cell_type "{}" is not supported by ply format - skipping'
+                        f'cell_type "{cell_block.type}" is not supported by PLY format '
+                        + "- skipping"
                     )
                     continue
                 #                if cell_type not in cell_type_to_count.keys():
                 #                    continue
+                d = cell_block.data
                 out = np.column_stack(
-                    [np.full(data.shape[0], data.shape[1], dtype=data.dtype), data]
+                    [np.full(d.shape[0], d.shape[1], dtype=d.dtype), d]
                 )
                 # savetxt is slower
                 # np.savetxt(fh, out, "%d  %d %d %d")
