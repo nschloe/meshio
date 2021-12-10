@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import collections
 import copy
 import warnings
+from dataclasses import dataclass, field
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -10,9 +10,20 @@ from numpy.typing import ArrayLike
 from ._common import num_nodes_per_cell
 
 
-class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
+@dataclass
+class CellBlock:
+    type: str
+    data: list | np.ndarray
+    tags: list[str] = field(default_factory=list)
+
     def __repr__(self):
-        return f"<meshio CellBlock, type: {self.type}, num cells: {len(self.data)}>"
+        items = [
+            "meshio CellBlock",
+            f"type: {self.type}",
+            f"num cells: {len(self.data)}",
+            f"tags: {self.tags}",
+        ]
+        return "<" + ", ".join(items) + ">"
 
     def __len__(self):
         return len(self.data)
