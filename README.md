@@ -26,7 +26,7 @@ meshio can read and write all of the following and smoothly converts between the
 > ANSYS msh (`.msh`),
 > [AVS-UCD](https://lanl.github.io/LaGriT/pages/docs/read_avs.html) (`.avs`),
 > [CGNS](https://cgns.github.io/) (`.cgns`),
-> [DOLFIN XML](https://manpages.ubuntu.com/manpages/disco/man1/dolfin-convert.1.html) (`.xml`),
+> [DOLFIN XML](https://manpages.ubuntu.com/manpages/jammy/en/man1/dolfin-convert.1.html) (`.xml`),
 > [Exodus](https://nschloe.github.io/meshio/exodus.pdf) (`.e`, `.exo`),
 > [FLAC3D](https://www.itascacg.com/software/flac3d) (`.f3grid`),
 > [H5M](https://www.mcs.anl.gov/~fathom/moab-docs/h5mmain.html) (`.h5m`),
