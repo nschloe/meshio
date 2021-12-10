@@ -5,6 +5,7 @@ import copy
 import warnings
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from ._common import num_nodes_per_cell
 
@@ -20,13 +21,13 @@ class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
 class Mesh:
     def __init__(
         self,
-        points,
-        cells,
-        point_data=None,
-        cell_data=None,
+        points: ArrayLike,
+        cells: dict[str, ArrayLike] | list[tuple[str, ArrayLike] | CellBlock],
+        point_data: dict[str, ArrayLike] | None = None,
+        cell_data: dict[str, list[ArrayLike]] | None = None,
         field_data=None,
-        point_sets=None,
-        cell_sets=None,
+        point_sets: dict[str, ArrayLike] | None = None,
+        cell_sets: dict[str, list[ArrayLike]] | None = None,
         gmsh_periodic=None,
         info=None,
     ):
@@ -40,20 +41,28 @@ class Mesh:
             #     DeprecationWarning,
             # )
             # old dict, deprecated
-            self.cells = [
-                CellBlock(cell_type, np.asarray(data))
-                for cell_type, data in cells.items()
-            ]
-        else:
-            self.cells = [
-                CellBlock(
-                    cell_type,
-                    # polyhedron data cannot be convert to numpy arrays because the
-                    # sublists don't all have the same length
-                    data if cell_type.startswith("polyhedron") else np.asarray(data),
+            #
+            # convert dict to list of tuples
+            cells = list(cells.items())
+
+        self.cells = []
+        for cell_block in cells:
+            if isinstance(cell_block, tuple):
+                cell_type, data = cell_block
+                self.cells.append(
+                    CellBlock(
+                        cell_type,
+                        # polyhedron data cannot be converted to numpy
+                        # arrays because the sublists don't all have the
+                        # same length
+                        data
+                        if cell_type.startswith("polyhedron")
+                        else np.asarray(data),
+                    )
                 )
-                for cell_type, data in cells
-            ]
+            else:
+                self.cells.append(cell_block)
+
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
         self.field_data = {} if field_data is None else field_data
