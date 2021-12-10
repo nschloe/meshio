@@ -243,31 +243,32 @@ def write(filename, mesh):
         tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]
         quad9_order = [0, 4, 1, 7, 8, 5, 3, 6, 2]
         wedge15_order = [0, 6, 1, 7, 2, 8, 9, 10, 11, 3, 12, 4, 13, 5, 14]
-        for cell_type, node_idcs in mesh.cells:
+        for cell_block in mesh.cells:
+            node_idcs = cell_block.data
             f.write("!\n")
-            f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_type] + "\n")
-            if cell_type == "tetra10":
+            f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_block.type] + "\n")
+            if cell_block.type == "tetra10":
                 for row in node_idcs:
                     eid += 1
                     mylist = row.tolist()
                     mylist = [mylist[i] for i in tet10_order]
                     nids_strs = (str(nid + 1) for nid in mylist)
                     f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
-            elif cell_type == "triangle6":
+            elif cell_block.type == "triangle6":
                 for row in node_idcs:
                     eid += 1
                     mylist = row.tolist()
                     mylist = [mylist[i] for i in tria6_order]
                     nids_strs = (str(nid + 1) for nid in mylist)
                     f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
-            elif cell_type == "quad9":
+            elif cell_block.type == "quad9":
                 for row in node_idcs:
                     eid += 1
                     mylist = row.tolist()
                     mylist = [mylist[i] for i in quad9_order]
                     nids_strs = (str(nid + 1) for nid in mylist)
                     f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
-            elif cell_type == "wedge15":
+            elif cell_block.type == "wedge15":
                 for row in node_idcs:
                     eid += 1
                     mylist = row.tolist()

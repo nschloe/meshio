@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import pathlib
 import warnings
@@ -5,6 +7,7 @@ from io import BytesIO
 from xml.etree import ElementTree as ET
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
@@ -268,7 +271,11 @@ class TimeSeriesWriter:
         if self.data_format == "HDF":
             self.h5_file.close()
 
-    def write_points_cells(self, points, cells):
+    def write_points_cells(
+        self,
+        points: ArrayLike,
+        cells: dict[str, ArrayLike] | list[tuple[str, ArrayLike] | CellBlock],
+    ) -> None:
         # <Grid Name="mesh" GridType="Uniform">
         #   <Topology NumberOfElements="16757" TopologyType="Triangle" NodesPerElement="3">
         #     <DataItem Dimensions="16757 3" NumberType="UInt" Format="HDF">maxwell.h5:/Mesh/0/mesh/topology</DataItem>
@@ -282,9 +289,7 @@ class TimeSeriesWriter:
             self.domain, "Grid", Name=self.mesh_name, GridType="Uniform"
         )
         self.points(grid, np.asarray(points))
-        self.cells(
-            [CellBlock(cell_type, np.asarray(data)) for cell_type, data in cells], grid
-        )
+        self.cells([CellBlock(cell_type, data) for cell_type, data in cells], grid)
         self.has_mesh = True
 
     def write_data(self, t, point_data=None, cell_data=None):

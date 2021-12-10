@@ -92,13 +92,13 @@ def read_buffer(f):
 
         cell = _convert_to_vtk_ordering(cell, nastran_type)
 
-        if len(cells) > 0 and cells[-1].type == cell_type:
-            cells[-1].data.append(cell)
+        if len(cells) > 0 and cells[-1][0] == cell_type:
+            cells[-1][1].append(cell)
             cells_id[-1].append(cell_id)
             if cell_ref is not None:
                 cell_refs[-1].append(cell_ref)
         else:
-            cells.append(CellBlock(cell_type, [cell]))
+            cells.append((cell_type, [cell]))
             cells_id.append([cell_id])
             if cell_ref is not None:
                 cell_refs.append([cell_ref])
@@ -188,7 +188,7 @@ def read_buffer(f):
     points = np.array(points)
     points_id = np.array(points_id, dtype=int)
     for k, (c, cid) in enumerate(zip(cells, cells_id)):
-        cells[k] = CellBlock(c.type, np.array(c.data, dtype=int))
+        cells[k] = CellBlock(c[0], np.array(c[1], dtype=int))
         cells_id[k] = np.array(cid, dtype=int)
 
     # Convert to natural point ordering

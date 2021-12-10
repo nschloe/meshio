@@ -843,12 +843,13 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
         # types
         types_array = []
-        for key, v in mesh.cells:
+        for cell_block in mesh.cells:
+            key = cell_block.type
             # some adaptions for polyhedron
             if key.startswith("polyhedron"):
                 # Get face-cell relation on the vtu format. See comments in helper
                 # function for more information of how to specify this.
-                faces_loc, faceoffsets_loc = _polyhedron_face_cells(v)
+                faces_loc, faceoffsets_loc = _polyhedron_face_cells(cell_block.data)
                 # Adjust offsets to global numbering
                 assert faceoffsets is not None
                 if len(faceoffsets) > 0:
@@ -859,7 +860,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                 faceoffsets += faceoffsets_loc
                 key = "polyhedron"
 
-            types_array.append(np.full(len(v), meshio_to_vtk_type[key]))
+            types_array.append(np.full(len(cell_block), meshio_to_vtk_type[key]))
 
         types = np.concatenate(
             types_array

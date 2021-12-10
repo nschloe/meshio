@@ -307,16 +307,16 @@ def write(filename, mesh):
         data = rootgrp.createVariable("eb_prop1", "i4", "num_el_blk")
         for k in range(len(mesh.cells)):
             data[k] = k
-        for k, (key, values) in enumerate(mesh.cells):
+        for k, cell_block in enumerate(mesh.cells):
             dim1 = f"num_el_in_blk{k + 1}"
             dim2 = f"num_nod_per_el{k + 1}"
-            rootgrp.createDimension(dim1, values.shape[0])
-            rootgrp.createDimension(dim2, values.shape[1])
-            dtype = numpy_to_exodus_dtype[values.dtype.name]
+            rootgrp.createDimension(dim1, cell_block.data.shape[0])
+            rootgrp.createDimension(dim2, cell_block.data.shape[1])
+            dtype = numpy_to_exodus_dtype[cell_block.data.dtype.name]
             data = rootgrp.createVariable(f"connect{k + 1}", dtype, (dim1, dim2))
-            data.elem_type = meshio_to_exodus_type[key]
+            data.elem_type = meshio_to_exodus_type[cell_block.type]
             # Exodus is 1-based
-            data[:] = values + 1
+            data[:] = cell_block.data + 1
 
         # point data
         # The variable `name_nod_var` holds the names and indices of the node variables, the

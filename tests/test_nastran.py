@@ -49,7 +49,9 @@ def test_reference_file(filename):
         "pyramid": 1180,
         "tetra": 5309,
     }
-    assert {k: v.sum() for k, v in mesh.cells} == ref_num_cells
+    assert {
+        cell_block.type: cell_block.data.sum() for cell_block in mesh.cells
+    } == ref_num_cells
 
 
 def test_long_format():
