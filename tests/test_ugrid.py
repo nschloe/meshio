@@ -91,9 +91,9 @@ def test_reference_file(
         "hexahedron": None,
     }
 
-    for i, (key, data) in enumerate(mesh.cells):
-        if key in ugrid_meshio_id:
-            ugrid_meshio_id[key] = i
+    for i, cell_block in enumerate(mesh.cells):
+        if cell_block.type in ugrid_meshio_id:
+            ugrid_meshio_id[cell_block.type] = i
 
     # validate element counts
     if ref_num_triangle > 0:
@@ -229,9 +229,9 @@ def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
         "hexahedron": None,
     }
 
-    for i, (key, data) in enumerate(mesh.cells):
-        if key in ugrid_meshio_id:
-            ugrid_meshio_id[key] = i
+    for i, cell_block in enumerate(mesh.cells):
+        if cell_block.type in ugrid_meshio_id:
+            ugrid_meshio_id[cell_block.type] = i
 
     tria = mesh.cells[ugrid_meshio_id["triangle"]]
     total_tri_area = 0

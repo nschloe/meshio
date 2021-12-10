@@ -312,15 +312,15 @@ def write(filename, mesh):
         # We want to separate boundary elements in groups of same tag
 
         # First, find unique tags and how many elements per tags we have
-        for index, (cell_type, data) in enumerate(mesh.cells):
+        for index, cell_block in enumerate(mesh.cells):
 
-            if cell_type not in types:
+            if cell_block.type not in types:
                 continue
 
             labels = (
                 mesh.cell_data[labels_key][index]
                 if labels_key
-                else np.ones(len(data), dtype=data.dtype)
+                else np.ones(len(cell_block), dtype=cell_block.data.dtype)
             )
 
             # Get unique tags and number of instances of each tag for this Cell block

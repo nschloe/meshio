@@ -13,7 +13,7 @@ from .._common import (
     topological_dimension,
 )
 from .._exceptions import ReadError
-from .._mesh import Mesh
+from .._mesh import CellBlock, Mesh
 from .common import (
     _fast_forward_to_end_block,
     _gmsh_to_meshio_order,
@@ -316,11 +316,18 @@ def _write_elements(fh, cells, binary):
     fh.write(b"$Elements\n")
 
     if binary:
-        total_num_cells = sum(data.shape[0] for _, data in cells)
+        total_num_cells = sum(len(cell_block) for cell_block in cells)
         np.array([len(cells), total_num_cells], dtype=c_ulong).tofile(fh)
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells:
+        for cell_block in cells:
+            if isinstance(cell_block, tuple):
+                cell_type, node_idcs = cell_block
+            else:
+                assert isinstance(cell_block, CellBlock)
+                cell_type = cell_block.type
+                node_idcs = cell_block.data
+
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             np.array(
                 [1, topological_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
@@ -349,24 +356,24 @@ def _write_elements(fh, cells, binary):
         fh.write(b"\n")
     else:
         # count all cells
-        total_num_cells = sum(data.shape[0] for _, data in cells)
+        total_num_cells = sum(len(cell_block) for cell_block in cells)
         fh.write(f"{len(cells)} {total_num_cells}\n".encode())
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells:
+        for cell_block in cells:
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             fh.write(
                 "{} {} {} {}\n".format(
                     1,  # tag
-                    topological_dimension[cell_type],
-                    _meshio_to_gmsh_type[cell_type],
-                    node_idcs.shape[0],
+                    topological_dimension[cell_block.type],
+                    _meshio_to_gmsh_type[cell_block.type],
+                    len(cell_block),
                 ).encode()
             )
             # increment indices by one to conform with gmsh standard
-            idcs = node_idcs + 1
+            idcs = cell_block.data + 1
 
-            fmt = " ".join(["{}"] * (num_nodes_per_cell[cell_type] + 1)) + "\n"
+            fmt = " ".join(["{}"] * (num_nodes_per_cell[cell_block.type] + 1)) + "\n"
             for idx in idcs:
                 fh.write(fmt.format(consecutive_index, *idx).encode())
                 consecutive_index += 1

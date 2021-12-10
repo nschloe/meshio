@@ -670,8 +670,13 @@ def _write_elements(fh, cells, tag_data, binary):
 
         tag0 = 1
         for ci, cell_block in enumerate(cells):
-            cell_type = cell_block.type
-            node_idcs = cell_block.data
+            if isinstance(cell_block, tuple):
+                cell_type, node_idcs = cell_block
+            else:
+                assert isinstance(cell_block, CellBlock)
+                cell_type = cell_block.type
+                node_idcs = cell_block.data
+
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
 
@@ -712,23 +717,23 @@ def _write_elements(fh, cells, tag_data, binary):
         )
 
         tag0 = 1
-        for ci, (cell_type, node_idcs) in enumerate(cells):
+        for ci, cell_block in enumerate(cells):
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
 
-            dim = topological_dimension[cell_type]
+            dim = topological_dimension[cell_block.type]
             # The entity tag should be equal within a CellBlock
             if "gmsh:geometrical" in tag_data:
                 entity_tag = tag_data["gmsh:geometrical"][ci][0]
             else:
                 entity_tag = 0
 
-            cell_type = _meshio_to_gmsh_type[cell_type]
-            n = node_idcs.shape[0]
+            cell_type = _meshio_to_gmsh_type[cell_block.type]
+            n = len(cell_block)
             fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode())
             np.savetxt(
                 fh,
                 # Gmsh indexes from 1 not 0
-                np.column_stack([np.arange(tag0, tag0 + n), node_idcs + 1]),
+                np.column_stack([np.arange(tag0, tag0 + n), cell_block.data + 1]),
                 "%d",
                 " ",
             )

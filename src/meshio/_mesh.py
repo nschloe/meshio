@@ -127,11 +127,11 @@ class Mesh:
         ]
         if len(self.cells) > 0:
             lines.append("  Number of cells:")
-            for cell_type, elems in self.cells:
-                string = cell_type
-                if cell_type in special_cells:
-                    string += f"({elems.shape[1]})"
-                lines.append(f"    {string}: {len(elems)}")
+            for cell_block in self.cells:
+                string = cell_block.type
+                if cell_block.type in special_cells:
+                    string += f"({cell_block.data.shape[1]})"
+                lines.append(f"    {string}: {len(cell_block)}")
         else:
             lines.append("  No cells.")
 

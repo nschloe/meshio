@@ -8,7 +8,7 @@ import numpy as np
 
 from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError
-from .._mesh import Mesh
+from .._mesh import CellBlock, Mesh
 from .common import (
     _fast_forward_over_blank_lines,
     _fast_forward_to_end_block,
@@ -38,6 +38,8 @@ def read_buffer(f, is_ascii, data_size):
     cell_tags = {}
     point_data = {}
     periodic = None
+    point_tags = None
+    has_additional_tag_data = False
     while True:
         # fast-forward over blank lines
         line, is_eof = _fast_forward_over_blank_lines(f)
@@ -52,7 +54,7 @@ def read_buffer(f, is_ascii, data_size):
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Nodes":
-            points, point_tags = _read_nodes(f, is_ascii, data_size)
+            points, point_tags = _read_nodes(f, is_ascii)
         elif environ == "Elements":
             has_additional_tag_data, cell_tags = _read_cells(
                 f, cells, point_tags, is_ascii
@@ -94,7 +96,7 @@ def read_buffer(f, is_ascii, data_size):
     )
 
 
-def _read_nodes(f, is_ascii, data_size):
+def _read_nodes(f, is_ascii):
     # The first line is the number of nodes
     line = f.readline().decode()
     num_nodes = int(line)
@@ -163,7 +165,7 @@ def _read_cells(f, cells, point_tags, is_ascii):
     return has_additional_tag_data, output_cell_tags
 
 
-def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
+def _read_cells_ascii(f, cells, cell_tags, total_num_cells: int) -> None:
     for _ in range(total_num_cells):
         line = f.readline().decode()
         data = [int(k) for k in filter(None, line.split())]
@@ -342,8 +344,13 @@ def _write_elements(fh, cells, tag_data, binary):
 
     consecutive_index = 0
     for k, cell_block in enumerate(cells):
-        cell_type = cell_block.type
-        node_idcs = cell_block.data
+        if isinstance(cell_block, tuple):
+            cell_type, node_idcs = cell_block
+        else:
+            assert isinstance(cell_block, CellBlock)
+            cell_type = cell_block.type
+            node_idcs = cell_block.data
+
         tags = []
         for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
             if name in tag_data:
