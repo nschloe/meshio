@@ -6,20 +6,25 @@ import warnings
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._common import num_nodes_per_cell
+from ._common import num_nodes_per_cell, topological_dimension
 
 
 class CellBlock:
     def __init__(
         self,
-        type: str,
+        cell_type: str,
         data: list | np.ndarray,
         tags: list[str] | None = None,
     ):
-        self.type = type
+        self.type = cell_type
         self.data = data
-        if not type.startswith("polyhedron"):
+
+        if cell_type.startswith("polyhedron"):
+            self.dim = 3
+        else:
             self.data = np.asarray(self.data)
+            self.dim = topological_dimension[cell_type]
+
         self.tags = [] if tags is None else tags
 
     def __repr__(self):

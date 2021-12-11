@@ -85,6 +85,7 @@ num_nodes_per_cell = {
 
 topological_dimension = {
     "line": 1,
+    "polygon": 2,
     "triangle": 2,
     "quad": 2,
     "tetra": 3,
@@ -147,6 +148,13 @@ topological_dimension = {
     "wedge288": 3,
     "wedge405": 3,
     "wedge550": 3,
+    "VTK_LAGRANGE_CURVE": 1,
+    "VTK_LAGRANGE_TRIANGLE": 2,
+    "VTK_LAGRANGE_QUADRILATERAL": 2,
+    "VTK_LAGRANGE_TETRAHEDRON": 3,
+    "VTK_LAGRANGE_HEXAHEDRON": 3,
+    "VTK_LAGRANGE_WEDGE": 3,
+    "VTK_LAGRANGE_PYRAMID": 3,
 }
 
 

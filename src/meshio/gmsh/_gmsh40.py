@@ -6,12 +6,7 @@ from functools import partial
 
 import numpy as np
 
-from .._common import (
-    cell_data_from_raw,
-    num_nodes_per_cell,
-    raw_from_cell_data,
-    topological_dimension,
-)
+from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError
 from .._mesh import CellBlock, Mesh
 from .common import (
@@ -196,7 +191,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     cells = []
     cell_data = {}
     for physical_tag, geom_tag, key, values in data:
-        cells.append((key, values))
+        cells.append(CellBlock(key, _gmsh_to_meshio_order(key, values)))
         if physical_tag:
             if "gmsh:physical" not in cell_data:
                 cell_data["gmsh:physical"] = []
@@ -206,7 +201,6 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         if "gmsh:geometrical" not in cell_data:
             cell_data["gmsh:geometrical"] = []
         cell_data["gmsh:geometrical"].append(np.full(len(values), geom_tag, int))
-    cells[:] = _gmsh_to_meshio_order(cells)
 
     return cells, cell_data
 
@@ -241,12 +235,10 @@ def _read_periodic(f, is_ascii):
     return periodic
 
 
-def write(filename, mesh, float_fmt=".16e", binary=True):
+def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = True) -> None:
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
-    cells = _meshio_to_gmsh_order(mesh.cells)
-
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
@@ -260,7 +252,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             _write_physical_names(fh, mesh.field_data)
 
         _write_nodes(fh, mesh.points, float_fmt, binary)
-        _write_elements(fh, cells, binary)
+        _write_elements(fh, mesh.cells, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt, binary)
         for name, dat in mesh.point_data.items():
@@ -270,7 +262,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             _write_data(fh, "ElementData", name, dat, binary)
 
 
-def _write_nodes(fh, points, float_fmt, binary):
+def _write_nodes(fh, points: np.ndarray, float_fmt: str, binary: bool) -> None:
     if points.shape[1] == 2:
         points = np.column_stack([points, np.zeros_like(points[:, 0])])
 
@@ -310,27 +302,22 @@ def _write_nodes(fh, points, float_fmt, binary):
     fh.write(b"$EndNodes\n")
 
 
-def _write_elements(fh, cells, binary):
+def _write_elements(fh, cell_blocks: list[CellBlock], binary: bool):
     # TODO respect binary
     # write elements
     fh.write(b"$Elements\n")
 
     if binary:
-        total_num_cells = sum(len(cell_block) for cell_block in cells)
-        np.array([len(cells), total_num_cells], dtype=c_ulong).tofile(fh)
+        total_num_cells = sum(len(cell_block) for cell_block in cell_blocks)
+        np.array([len(cell_blocks), total_num_cells], dtype=c_ulong).tofile(fh)
 
         consecutive_index = 0
-        for cell_block in cells:
-            if isinstance(cell_block, tuple):
-                cell_type, node_idcs = cell_block
-            else:
-                assert isinstance(cell_block, CellBlock)
-                cell_type = cell_block.type
-                node_idcs = cell_block.data
+        for cell_block in cell_blocks:
+            node_idcs = _meshio_to_gmsh_order(cell_block.type, cell_block.data)
 
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             np.array(
-                [1, topological_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
+                [1, cell_block.dim, _meshio_to_gmsh_type[cell_block.type]],
                 dtype=c_int,
             ).tofile(fh)
             np.array([node_idcs.shape[0]], dtype=c_ulong).tofile(fh)
@@ -356,22 +343,19 @@ def _write_elements(fh, cells, binary):
         fh.write(b"\n")
     else:
         # count all cells
-        total_num_cells = sum(len(cell_block) for cell_block in cells)
-        fh.write(f"{len(cells)} {total_num_cells}\n".encode())
+        total_num_cells = sum(len(cell_block) for cell_block in cell_blocks)
+        fh.write(f"{len(cell_blocks)} {total_num_cells}\n".encode())
 
         consecutive_index = 0
-        for cell_block in cells:
-            if isinstance(cell_block, tuple):
-                cell_type, cell_data = cell_block
-            else:
-                assert isinstance(cell_block, CellBlock)
-                cell_type = cell_block.type
-                cell_data = cell_block.data
+        for cell_block in cell_blocks:
+            cell_type = cell_block.type
+            cell_data = _meshio_to_gmsh_order(cell_block.type, cell_block.data)
+
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             fh.write(
                 "{} {} {} {}\n".format(
                     1,  # tag
-                    topological_dimension[cell_type],
+                    cell_block.dim,
                     _meshio_to_gmsh_type[cell_type],
                     len(cell_data),
                 ).encode()
