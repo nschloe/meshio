@@ -338,8 +338,18 @@ def _write_nodes(fh, points, float_fmt, binary):
 def _write_elements(fh, cells, tag_data, binary):
     # write elements
     fh.write(b"$Elements\n")
+
     # count all cells
-    total_num_cells = sum(len(cell_block) for cell_block in cells)
+    total_num_cells = 0
+    for k, cell_block in enumerate(cells):
+        if isinstance(cell_block, tuple):
+            node_idcs = cell_block[1]
+        else:
+            assert isinstance(cell_block, CellBlock)
+            node_idcs = cell_block.data
+
+        total_num_cells += len(node_idcs)
+
     fh.write(f"{total_num_cells}\n".encode())
 
     consecutive_index = 0

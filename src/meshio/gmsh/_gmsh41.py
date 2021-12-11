@@ -404,10 +404,16 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
         return
 
     if binary:
-        for k, (key, value) in enumerate(cells):
-            if value.dtype != c_size_t:
+        for k, cell_block in enumerate(cells):
+            if isinstance(cell_block, tuple):
+                cell_type, cell_data = cell_block
+            else:
+                assert isinstance(cell_block, CellBlock)
+                cell_type = cell_block.type
+                cell_data = cell_block.data
+            if cell_data.dtype != c_size_t:
                 # Binary Gmsh needs c_size_t. Converting."
-                cells[k] = CellBlock(key, value.astype(c_size_t))
+                cells[k] = CellBlock(cell_type, cell_data.astype(c_size_t))
 
     fh.write(b"$Entities\n")
 
@@ -431,7 +437,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     cell_dim_tags = np.empty((len(cells), 2), dtype=int)
     for ci in range(len(cells)):
         cell_dim_tags[ci] = [
-            topological_dimension[cells[ci][0]],
+            topological_dimension[cells[ci].type],
             tag_data["gmsh:geometrical"][ci][0],
         ]
 
@@ -718,22 +724,28 @@ def _write_elements(fh, cells, tag_data, binary):
 
         tag0 = 1
         for ci, cell_block in enumerate(cells):
+            if isinstance(cell_block, tuple):
+                cell_type, cell_data = cell_block
+            else:
+                assert isinstance(cell_block, CellBlock)
+                cell_type = cell_block.type
+                cell_data = cell_block.data
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
 
-            dim = topological_dimension[cell_block.type]
+            dim = topological_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
             if "gmsh:geometrical" in tag_data:
                 entity_tag = tag_data["gmsh:geometrical"][ci][0]
             else:
                 entity_tag = 0
 
-            cell_type = _meshio_to_gmsh_type[cell_block.type]
-            n = len(cell_block)
+            cell_type = _meshio_to_gmsh_type[cell_type]
+            n = len(cell_data)
             fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode())
             np.savetxt(
                 fh,
                 # Gmsh indexes from 1 not 0
-                np.column_stack([np.arange(tag0, tag0 + n), cell_block.data + 1]),
+                np.column_stack([np.arange(tag0, tag0 + n), cell_data + 1]),
                 "%d",
                 " ",
             )

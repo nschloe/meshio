@@ -361,19 +361,25 @@ def _write_elements(fh, cells, binary):
 
         consecutive_index = 0
         for cell_block in cells:
+            if isinstance(cell_block, tuple):
+                cell_type, cell_data = cell_block
+            else:
+                assert isinstance(cell_block, CellBlock)
+                cell_type = cell_block.type
+                cell_data = cell_block.data
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             fh.write(
                 "{} {} {} {}\n".format(
                     1,  # tag
-                    topological_dimension[cell_block.type],
-                    _meshio_to_gmsh_type[cell_block.type],
-                    len(cell_block),
+                    topological_dimension[cell_type],
+                    _meshio_to_gmsh_type[cell_type],
+                    len(cell_data),
                 ).encode()
             )
             # increment indices by one to conform with gmsh standard
-            idcs = cell_block.data + 1
+            idcs = cell_data + 1
 
-            fmt = " ".join(["{}"] * (num_nodes_per_cell[cell_block.type] + 1)) + "\n"
+            fmt = " ".join(["{}"] * (num_nodes_per_cell[cell_type] + 1)) + "\n"
             for idx in idcs:
                 fh.write(fmt.format(consecutive_index, *idx).encode())
                 consecutive_index += 1
