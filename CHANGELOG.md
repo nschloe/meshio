@@ -1,3 +1,4 @@
+<!--pytest-codeblocks:skipfile-->
 # Changelog
 
 This document only describes _breaking_ changes in meshio. If you are interested in bug
