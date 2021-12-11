@@ -126,9 +126,9 @@ def write(filename, mesh):
             for vt in dat:
                 f.write(fmt.format(*vt))
 
-        for _, cell_array in mesh.cells:
-            fmt = "f " + " ".join(["{}"] * cell_array.shape[1]) + "\n"
-            for c in cell_array:
+        for cell_block in mesh.cells:
+            fmt = "f " + " ".join(["{}"] * cell_block.data.shape[1]) + "\n"
+            for c in cell_block.data:
                 f.write(fmt.format(*(c + 1)))
 
 

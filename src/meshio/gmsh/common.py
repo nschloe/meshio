@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import logging
 import shlex
 
 import numpy as np
 
 from .._exceptions import ReadError, WriteError
+from .._mesh import CellBlock
 
 c_int = np.dtype("int32")
 c_double = np.dtype("float64")
@@ -158,13 +161,21 @@ _gmsh_to_meshio_type = {
 _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
 
 
-def _reorder_cells(cells, ordering):
+def _reorder_cells(
+    cells: list[CellBlock | tuple[str, np.ndarray]], ordering
+) -> list[tuple[str, np.ndarray]]:
     cells = cells[:]
-    for i, (cell_type, cell_data) in enumerate(cells):
+    for i, cell_block in enumerate(cells):
+        if isinstance(cell_block, tuple):
+            cell_type, cell_data = cell_block
+        else:
+            assert isinstance(cell_block, CellBlock)
+            cell_type = cell_block.type
+            cell_data = cell_block.data
+
         permutation = ordering.get(cell_type)
         if permutation is not None:
-            cell_data = cell_data[:, permutation]
-            cells[i] = (cell_type, cell_data)
+            cells[i] = (cell_type, cell_data[:, permutation])
     return cells
 
 
@@ -191,7 +202,7 @@ def _gmsh_to_meshio_order(cells):
     return _reorder_cells(cells, meshio_ordering)
 
 
-def _meshio_to_gmsh_order(cells):
+def _meshio_to_gmsh_order(cells: list[CellBlock]):
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     gmsh_ordering = {
         # fmt: off

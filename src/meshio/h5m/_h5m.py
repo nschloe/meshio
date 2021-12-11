@@ -228,7 +228,9 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
         "triangle": {"name": "Tri3", "type": 2},
         "tetra": {"name": "Tet4", "type": 5},
     }
-    for key, data in mesh.cells:
+    for cell_block in mesh.cells:
+        key = cell_block.type
+        data = cell_block.data
         if key not in meshio_to_h5m_type:
             logging.warning("Unsupported H5M element type '%s'. Skipping.", key)
             continue

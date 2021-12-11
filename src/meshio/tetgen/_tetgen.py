@@ -157,7 +157,8 @@ def write(filename, mesh, float_fmt=".16e"):
         fh.write(f"# This file was created by meshio v{__version__}\n")
         if nattr > 0:
             fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))
-        for id, (_, data) in enumerate(filter(lambda c: c.type == "tetra", mesh.cells)):
+        for id, c in enumerate(filter(lambda c: c.type == "tetra", mesh.cells)):
+            data = c.data
             fh.write(f"{data.shape[0]} {4} {nattr}\n")
             fmt = " ".join((5 + nattr) * ["{}"]) + "\n"
             for k, tet in enumerate(data):

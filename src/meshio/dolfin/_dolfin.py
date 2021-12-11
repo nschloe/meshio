@@ -171,9 +171,9 @@ def _write_mesh(filename, points, cell_type, cells):
 
         f.write(f'    <cells size="{num_cells}">\n')
         idx = 0
-        for ct, cls in stripped_cells:
-            type_string = meshio_to_dolfin_type[ct]
-            for cell in cls:
+        for cell_block in stripped_cells:
+            type_string = meshio_to_dolfin_type[cell_block.type]
+            for cell in cell_block.data:
                 s = " ".join(f'v{k}="{c}"' for k, c in enumerate(cell))
                 f.write(f'      <{type_string} index="{idx}" {s} />\n')
                 idx += 1

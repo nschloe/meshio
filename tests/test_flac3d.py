@@ -59,7 +59,9 @@ def test_reference_file(filename):
         ("quad", 15),
         ("triangle", 3),
     ]
-    assert [(k, len(v)) for k, v in mesh.cells] == ref_num_cells
+    assert [
+        (cell_block.type, len(cell_block)) for cell_block in mesh.cells
+    ] == ref_num_cells
     # Cell sets
     for arr in mesh.cell_sets.values():
         assert len(arr) == 12

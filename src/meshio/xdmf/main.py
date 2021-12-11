@@ -462,13 +462,16 @@ class XdmfWriter:
                     np.hstack(
                         [
                             np.full(
-                                (value.shape[0], 2 if key in {"vertex", "line"} else 1),
-                                meshio_type_to_xdmf_index[key],
+                                (
+                                    cell_block.data.shape[0],
+                                    2 if cell_block.type in {"vertex", "line"} else 1,
+                                ),
+                                meshio_type_to_xdmf_index[cell_block.type],
                             ),
-                            value,
+                            cell_block.data,
                         ]
                     ).flatten()
-                    for key, value in cells
+                    for cell_block in cells
                 ]
             )
             dt, prec = numpy_to_xdmf_dtype[cd.dtype.name]

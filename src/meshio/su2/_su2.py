@@ -260,8 +260,8 @@ def write(filename, mesh):
         np.savetxt(f, mesh.points)
 
         # Through warnings about unsupported types
-        for type, _ in mesh.cells:
-            if type not in meshio_to_su2_type:
+        for cell_block in mesh.cells:
+            if cell_block.type not in meshio_to_su2_type:
                 logging.warning(
                     ".su2 does not support tags elements of type {}.\n"
                     "Skipping ...".format(type)
@@ -312,15 +312,15 @@ def write(filename, mesh):
         # We want to separate boundary elements in groups of same tag
 
         # First, find unique tags and how many elements per tags we have
-        for index, (cell_type, data) in enumerate(mesh.cells):
+        for index, cell_block in enumerate(mesh.cells):
 
-            if cell_type not in types:
+            if cell_block.type not in types:
                 continue
 
             labels = (
                 mesh.cell_data[labels_key][index]
                 if labels_key
-                else np.ones(len(data), dtype=data.dtype)
+                else np.ones(len(cell_block), dtype=cell_block.data.dtype)
             )
 
             # Get unique tags and number of instances of each tag for this Cell block

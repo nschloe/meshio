@@ -404,10 +404,16 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
         return
 
     if binary:
-        for k, (key, value) in enumerate(cells):
-            if value.dtype != c_size_t:
+        for k, cell_block in enumerate(cells):
+            if isinstance(cell_block, tuple):
+                cell_type, cell_data = cell_block
+            else:
+                assert isinstance(cell_block, CellBlock)
+                cell_type = cell_block.type
+                cell_data = cell_block.data
+            if cell_data.dtype != c_size_t:
                 # Binary Gmsh needs c_size_t. Converting."
-                cells[k] = CellBlock(key, value.astype(c_size_t))
+                cells[k] = CellBlock(cell_type, cell_data.astype(c_size_t))
 
     fh.write(b"$Entities\n")
 
@@ -431,7 +437,7 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     cell_dim_tags = np.empty((len(cells), 2), dtype=int)
     for ci in range(len(cells)):
         cell_dim_tags[ci] = [
-            topological_dimension[cells[ci][0]],
+            topological_dimension[cells[ci].type],
             tag_data["gmsh:geometrical"][ci][0],
         ]
 
@@ -601,7 +607,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
                 + "to deal with more than one cell type. "
             )
 
-        dim = topological_dimension[cells[0][0]]
+        dim = topological_dimension[cells[0].type]
         tag = 0
         node_dim_tags = np.array([[dim, tag]])
         # All nodes map to the (single) dimension-entity object
@@ -658,7 +664,7 @@ def _write_elements(fh, cells, tag_data, binary):
     """
     fh.write(b"$Elements\n")
 
-    total_num_cells = sum(len(c) for _, c in cells)
+    total_num_cells = sum(len(c) for c in cells)
     num_blocks = len(cells)
     min_element_tag = 1
     max_element_tag = total_num_cells
@@ -669,7 +675,14 @@ def _write_elements(fh, cells, tag_data, binary):
         ).tofile(fh)
 
         tag0 = 1
-        for ci, (cell_type, node_idcs) in enumerate(cells):
+        for ci, cell_block in enumerate(cells):
+            if isinstance(cell_block, tuple):
+                cell_type, node_idcs = cell_block
+            else:
+                assert isinstance(cell_block, CellBlock)
+                cell_type = cell_block.type
+                node_idcs = cell_block.data
+
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
 
@@ -710,7 +723,13 @@ def _write_elements(fh, cells, tag_data, binary):
         )
 
         tag0 = 1
-        for ci, (cell_type, node_idcs) in enumerate(cells):
+        for ci, cell_block in enumerate(cells):
+            if isinstance(cell_block, tuple):
+                cell_type, cell_data = cell_block
+            else:
+                assert isinstance(cell_block, CellBlock)
+                cell_type = cell_block.type
+                cell_data = cell_block.data
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
 
             dim = topological_dimension[cell_type]
@@ -721,12 +740,12 @@ def _write_elements(fh, cells, tag_data, binary):
                 entity_tag = 0
 
             cell_type = _meshio_to_gmsh_type[cell_type]
-            n = node_idcs.shape[0]
+            n = len(cell_data)
             fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode())
             np.savetxt(
                 fh,
                 # Gmsh indexes from 1 not 0
-                np.column_stack([np.arange(tag0, tag0 + n), node_idcs + 1]),
+                np.column_stack([np.arange(tag0, tag0 + n), cell_data + 1]),
                 "%d",
                 " ",
             )

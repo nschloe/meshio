@@ -286,7 +286,8 @@ polyhedron_mesh = meshio.Mesh(
         [1.0, 1.0, 1.0],
         [0.0, 1.0, 1.0],
     ],
-    [  # Split the cube into tets and pyramids.
+    # Split the cube into tets and pyramids.
+    [
         (
             "polyhedron4",
             [
@@ -611,8 +612,8 @@ def add_cell_data(mesh, specs: list[tuple[str, tuple[int, ...], type]]):
 
     mesh2.cell_data = {
         name: [
-            (100 * rng.random((len(cells),) + shape)).astype(dtype)
-            for _, cells in mesh.cells
+            (100 * rng.random((len(cellblock),) + shape)).astype(dtype)
+            for cellblock in mesh.cells
         ]
         for name, shape, dtype in specs
     }

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 import copy
 import warnings
 
@@ -10,9 +9,27 @@ from numpy.typing import ArrayLike
 from ._common import num_nodes_per_cell
 
 
-class CellBlock(collections.namedtuple("CellBlock", ["type", "data"])):
+class CellBlock:
+    def __init__(
+        self,
+        type: str,
+        data: list | np.ndarray,
+        tags: list[str] | None = None,
+    ):
+        self.type = type
+        self.data = data
+        if not type.startswith("polyhedron"):
+            self.data = np.asarray(self.data)
+        self.tags = [] if tags is None else tags
+
     def __repr__(self):
-        return f"<meshio CellBlock, type: {self.type}, num cells: {len(self.data)}>"
+        items = [
+            "meshio CellBlock",
+            f"type: {self.type}",
+            f"num cells: {len(self.data)}",
+            f"tags: {self.tags}",
+        ]
+        return "<" + ", ".join(items) + ">"
 
     def __len__(self):
         return len(self.data)
@@ -112,11 +129,11 @@ class Mesh:
         ]
         if len(self.cells) > 0:
             lines.append("  Number of cells:")
-            for cell_type, elems in self.cells:
-                string = cell_type
-                if cell_type in special_cells:
-                    string += f"({elems.shape[1]})"
-                lines.append(f"    {string}: {len(elems)}")
+            for cell_block in self.cells:
+                string = cell_block.type
+                if cell_block.type in special_cells:
+                    string += f"({cell_block.data.shape[1]})"
+                lines.append(f"    {string}: {len(cell_block)}")
         else:
             lines.append("  No cells.")
 
@@ -164,10 +181,10 @@ class Mesh:
     @property
     def cells_dict(self):
         cells_dict = {}
-        for cell_type, data in self.cells:
-            if cell_type not in cells_dict:
-                cells_dict[cell_type] = []
-            cells_dict[cell_type].append(data)
+        for cell_block in self.cells:
+            if cell_block.type not in cells_dict:
+                cells_dict[cell_block.type] = []
+            cells_dict[cell_block.type].append(cell_block.data)
         # concatenate
         for key, value in cells_dict.items():
             cells_dict[key] = np.concatenate(value)
@@ -178,10 +195,10 @@ class Mesh:
         cell_data_dict = {}
         for key, value_list in self.cell_data.items():
             cell_data_dict[key] = {}
-            for value, (cell_type, _) in zip(value_list, self.cells):
-                if cell_type not in cell_data_dict[key]:
-                    cell_data_dict[key][cell_type] = []
-                cell_data_dict[key][cell_type].append(value)
+            for value, cell_block in zip(value_list, self.cells):
+                if cell_block.type not in cell_data_dict[key]:
+                    cell_data_dict[key][cell_block.type] = []
+                cell_data_dict[key][cell_block.type].append(value)
 
             for cell_type, val in cell_data_dict[key].items():
                 cell_data_dict[key][cell_type] = np.concatenate(val)

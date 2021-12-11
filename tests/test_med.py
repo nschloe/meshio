@@ -54,7 +54,9 @@ def test_reference_file_with_mixed_cells(tmp_path):
 
     # CellBlock
     ref_num_cells = {"pyramid": 18, "quad": 18, "line": 17, "tetra": 63, "triangle": 4}
-    assert {k: len(v) for k, v in mesh.cells} == ref_num_cells
+    assert {
+        cell_block.type: len(cell_block) for cell_block in mesh.cells
+    } == ref_num_cells
 
     # Point tags
     assert mesh.point_data["point_tags"].sum() == 52
@@ -96,7 +98,9 @@ def test_reference_file_with_point_cell_data(tmp_path):
     assert np.isclose(mesh.points.sum(), 12)
 
     # CellBlock
-    assert {k: len(v) for k, v in mesh.cells} == {"hexahedron": 1}
+    assert {cell_block.type: len(cell_block) for cell_block in mesh.cells} == {
+        "hexahedron": 1
+    }
 
     # Point data
     data_u = mesh.point_data["resu____DEPL"]

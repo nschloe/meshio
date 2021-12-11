@@ -9,7 +9,7 @@ import numpy as np
 from ..__about__ import __version__
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._mesh import CellBlock, Mesh
+from .._mesh import Mesh
 from .._vtk_common import (
     Info,
     meshio_to_vtk_order,
@@ -544,19 +544,15 @@ def translate_cells(connectivity, types, cell_data_raw):
 
             if (
                 len(cells) > 0
-                and cells[-1].type == cell_type
+                and cells[-1][0] == cell_type
                 # the following check if needed for polygons; key can be equal, but
                 # still needs to go into a new block
-                and len(cell) == len(cells[-1].data[-1])
+                and len(cell) == len(cells[-1][1][-1])
             ):
-                cells[-1].data.append(cell)
+                cells[-1][1].append(cell)
             else:
                 # open up a new cell block
-                cells.append(CellBlock(cell_type, [cell]))
-
-        # convert data to numpy arrays
-        for k, c in enumerate(cells):
-            cells[k] = CellBlock(c.type, np.array(c.data))
+                cells.append((cell_type, [cell]))
     else:
         # Infer offsets from the cell types. This is much faster than manually going
         # through the data array. Slight disadvantage: This doesn't work for cells with
@@ -593,7 +589,7 @@ def translate_cells(connectivity, types, cell_data_raw):
             else:
                 cell_idx = idx0 + new_order
             indices = np.add.outer(offsets[start:end], cell_idx)
-            cells.append(CellBlock(meshio_type, connectivity[indices]))
+            cells.append((meshio_type, connectivity[indices]))
             for name, d in cell_data_raw.items():
                 if name not in cell_data:
                     cell_data[name] = []

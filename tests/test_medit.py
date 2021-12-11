@@ -83,9 +83,9 @@ def test_reference_file(
         "hexahedron": None,
     }
 
-    for i, (key, data) in enumerate(mesh.cells):
-        if key in medit_meshio_id:
-            medit_meshio_id[key] = i
+    for i, cell_block in enumerate(mesh.cells):
+        if cell_block.type in medit_meshio_id:
+            medit_meshio_id[cell_block.type] = i
 
     # validate element counts
     if ref_num_triangle > 0:

@@ -13,7 +13,7 @@ from .._common import num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register_format
-from .._mesh import CellBlock, Mesh
+from .._mesh import Mesh
 
 ## We check if we can read/write the mesh natively from Kratos
 # TODO: Implement native reading
@@ -158,19 +158,15 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
         if t is None:
             t = inverse_num_nodes_per_cell[num_nodes_per_elem]
 
-        if len(cells) == 0 or t != cells[-1].type:
-            cells.append(CellBlock(t, []))
+        if len(cells) == 0 or t != cells[-1][0]:
+            cells.append((t, []))
         # Subtract one to account for the fact that python indices are 0-based.
-        cells[-1].data.append(np.array(data[-num_nodes_per_elem:]) - 1)
+        cells[-1][1].append(np.array(data[-num_nodes_per_elem:]) - 1)
 
         # Using the property id as tag
         if t not in cell_tags:
             cell_tags[t] = []
         cell_tags[t].append([data[1]])
-
-    # convert to numpy arrays
-    for k, c in enumerate(cells):
-        cells[k] = CellBlock(c.type, np.array(c.data, dtype=int))
 
     # Cannot convert cell_tags[key] to numpy array: There may be a
     # different number of tags for each cell.
@@ -385,7 +381,9 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
     dimension_name = f"{dimension}D"
     wrong_dimension_name = "3D" if dimension == 2 else "2D"
     consecutive_index = 0
-    for cell_type, node_idcs in cells:
+    for cell_block in cells:
+        cell_type = cell_block.type
+        node_idcs = cell_block.data
         # NOTE: The names of the dummy conditions are not regular, require extra work
         # local_dimension = local_dimension_types[cell_type]
         # if (local_dimension < dimension):

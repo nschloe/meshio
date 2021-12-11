@@ -351,7 +351,9 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
                 f"Picking {labels_key}, skipping {string}."
             )
 
-        for k, (cell_type, data) in enumerate(mesh.cells):
+        for k, cell_block in enumerate(mesh.cells):
+            cell_type = cell_block.type
+            data = cell_block.data
             try:
                 medit_name, num = medit_from_meshio[cell_type]
             except KeyError:
@@ -390,8 +392,8 @@ def write_binary_file(f, mesh):
 
         # if we store internally 64bit integers upgrade file version
         has_big_ints = False
-        for _, data in mesh.cells:
-            if data.dtype.itemsize == 8:
+        for cell_block in mesh.cells:
+            if cell_block.data.dtype.itemsize == 8:
                 has_big_ints = True
                 break
 
@@ -472,16 +474,17 @@ def write_binary_file(f, mesh):
             "pyramid": 49,
             "hexahedron": 10,
         }
-        for k, (cell_type, data) in enumerate(mesh.cells):
+        for k, cell_block in enumerate(mesh.cells):
             try:
-                medit_key = medit_from_meshio[cell_type]
+                medit_key = medit_from_meshio[cell_block.type]
             except KeyError:
                 logging.warning(
-                    f"MEDIT's mesh format doesn't know {cell_type} cells. Skipping."
+                    f"MEDIT's mesh format doesn't know {cell_block.type} cells. "
+                    + "Skipping."
                 )
                 continue
 
-            num_cells, num_verts = data.shape
+            num_cells, num_verts = cell_block.data.shape
 
             pos += num_cells * (num_verts + 1) * itype_size
             pos += keyword_size + postype_size + itype_size
@@ -497,7 +500,7 @@ def write_binary_file(f, mesh):
             labels = (
                 mesh.cell_data[labels_key][k]
                 if labels_key
-                else np.ones(len(data), dtype=data.dtype)
+                else np.ones(len(cell_block.data), dtype=cell_block.data.dtype)
             )
             field_template = medit_codes[medit_key][2]
             dtype = np.dtype(_produce_dtype(field_template, dim, itype, ftype))
@@ -505,7 +508,7 @@ def write_binary_file(f, mesh):
             tmp_array = np.empty(num_cells, dtype=dtype)
             i = 0
             for col_type in dtype.names[:-1]:
-                tmp_array[col_type] = data[:, i] + 1
+                tmp_array[col_type] = cell_block.data[:, i] + 1
                 i += 1
 
             tmp_array[dtype.names[-1]] = labels

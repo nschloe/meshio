@@ -185,7 +185,9 @@ def _write_buffer(f, file_type, mesh):
 
     ugrid_counts["points"] = mesh.points.shape[0]
 
-    for i, (key, data) in enumerate(mesh.cells):
+    for i, cell_block in enumerate(mesh.cells):
+        key = cell_block.type
+        data = cell_block.data
         if key in ugrid_counts:
             if ugrid_counts[key] > 0:
                 raise ValueError("Ugrid can only handle one cell block of a type.")
@@ -214,8 +216,8 @@ def _write_buffer(f, file_type, mesh):
 
         # start next record
         fortran_header = mesh.points.nbytes
-        for key, array in mesh.cells:
-            fortran_header += array.nbytes
+        for cell_block in mesh.cells:
+            fortran_header += cell_block.data.nbytes
         # boundary tags
         if ugrid_counts["triangle"] > 0:
             fortran_header += ugrid_counts["triangle"] * np.dtype(itype).itemsize

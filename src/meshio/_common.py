@@ -151,7 +151,7 @@ topological_dimension = {
 
 
 def cell_data_from_raw(cells, cell_data_raw):
-    cs = np.cumsum([len(c[1]) for c in cells])[:-1]
+    cs = np.cumsum([len(c) for c in cells])[:-1]
     return {name: np.split(d, cs) for name, d in cell_data_raw.items()}
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pathlib
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from ._common import num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
@@ -72,20 +73,17 @@ def read(filename, file_format: str | None = None):
 
 def write_points_cells(
     filename,
-    points,
-    cells,
-    point_data=None,
-    cell_data=None,
+    points: ArrayLike,
+    cells: dict[str, ArrayLike] | list[tuple[str, ArrayLike] | CellBlock],
+    point_data: dict[str, ArrayLike] | None = None,
+    cell_data: dict[str, list[ArrayLike]] | None = None,
     field_data=None,
-    point_sets=None,
-    cell_sets=None,
-    file_format=None,
+    point_sets: dict[str, ArrayLike] | None = None,
+    cell_sets: dict[str, list[ArrayLike]] | None = None,
+    file_format: str | None = None,
     **kwargs,
 ):
     points = np.asarray(points)
-    if isinstance(cells, dict):
-        cells = [CellBlock(name, vals) for name, vals in cells.items()]
-    cells = [(key, np.asarray(value)) for key, value in cells]
     mesh = Mesh(
         points,
         cells,
@@ -127,7 +125,9 @@ def write(filename, mesh: Mesh, file_format: str | None = None, **kwargs):
         raise WriteError(f"Unknown format '{file_format}'. Pick one of {formats}")
 
     # check cells for sanity
-    for key, value in mesh.cells:
+    for cell_block in mesh.cells:
+        key = cell_block.type
+        value = cell_block.data
         if key in num_nodes_per_cell:
             if value.shape[1] != num_nodes_per_cell[key]:
                 raise WriteError(
