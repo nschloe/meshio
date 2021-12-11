@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import pathlib
-import warnings
 from io import BytesIO
 from xml.etree import ElementTree as ET
 
@@ -289,7 +288,7 @@ class TimeSeriesWriter:
             self.domain, "Grid", Name=self.mesh_name, GridType="Uniform"
         )
         self.points(grid, np.asarray(points))
-        self.cells([CellBlock(cell_type, data) for cell_type, data in cells], grid)
+        self.cells(cells, grid)
         self.has_mesh = True
 
     def write_data(self, t, point_data=None, cell_data=None):
@@ -361,15 +360,6 @@ class TimeSeriesWriter:
         data_item.text = self.numpy_to_xml_string(points)
 
     def cells(self, cells, grid):
-        if isinstance(cells, dict):
-            warnings.warn(
-                "cell dictionaries are deprecated, use list of tuples, e.g., "
-                '[("triangle", [[0, 1, 2], ...])]',
-                DeprecationWarning,
-            )
-            cells = [CellBlock(cell_type, data) for cell_type, data in cells.items()]
-        else:
-            cells = [CellBlock(cell_type, data) for cell_type, data in cells]
         if len(cells) == 1:
             meshio_type = cells[0].type
             num_cells = len(cells[0].data)

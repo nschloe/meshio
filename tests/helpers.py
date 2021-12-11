@@ -286,7 +286,8 @@ polyhedron_mesh = meshio.Mesh(
         [1.0, 1.0, 1.0],
         [0.0, 1.0, 1.0],
     ],
-    [  # Split the cube into tets and pyramids.
+    # Split the cube into tets and pyramids.
+    [
         (
             "polyhedron4",
             [

@@ -17,7 +17,9 @@ class CellBlock:
         tags: list[str] | None = None,
     ):
         self.type = type
-        self.data = np.asarray(data)
+        self.data = data
+        if not type.startswith("polyhedron"):
+            self.data = np.asarray(self.data)
         self.tags = [] if tags is None else tags
 
     def __repr__(self):
