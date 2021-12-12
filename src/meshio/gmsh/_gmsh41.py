@@ -32,7 +32,7 @@ def _size_type(data_size):
     return np.dtype(f"u{data_size}")
 
 
-def read_buffer(f, is_ascii, data_size):
+def read_buffer(f, is_ascii: bool, data_size):
     # The format is specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 
@@ -112,7 +112,7 @@ def read_buffer(f, is_ascii, data_size):
     )
 
 
-def _read_entities(f, is_ascii, data_size):
+def _read_entities(f, is_ascii: bool, data_size):
     # Read the entity section. Return physical tags of the entities, and (for
     # entities of dimension > 0) the bounding entities (so points that form
     # the boundary of a line etc).
@@ -141,7 +141,7 @@ def _read_entities(f, is_ascii, data_size):
     return physical_tags, bounding_entities
 
 
-def _read_nodes(f, is_ascii, data_size):
+def _read_nodes(f, is_ascii: bool, data_size):
     # Read node data: Node coordinates and tags.
     # Also find the entities of the nodes, and store this as point_data.
     # Note that entity tags are 1-offset within each dimension, thus it is
@@ -151,9 +151,7 @@ def _read_nodes(f, is_ascii, data_size):
     c_size_t = _size_type(data_size)
 
     # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
-    num_entity_blocks, total_num_nodes, min_node_tag, max_node_tag = fromfile(
-        f, c_size_t, 4
-    )
+    num_entity_blocks, total_num_nodes, _, _ = fromfile(f, c_size_t, 4)
 
     points = np.empty((total_num_nodes, 3), dtype=float)
     tags = np.empty(total_num_nodes, dtype=int)
@@ -162,7 +160,7 @@ def _read_nodes(f, is_ascii, data_size):
     # To save the entity block id for each node, initialize an array here,
     # populate it with num_nodes
     idx = 0
-    for k in range(num_entity_blocks):
+    for _ in range(num_entity_blocks):
         # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
         dim, entity_tag, parametric = fromfile(f, c_int, 3)
         if parametric != 0:
@@ -200,9 +198,7 @@ def _read_elements(
     c_size_t = _size_type(data_size)
 
     # numEntityBlocks numElements minElementTag maxElementTag (all size_t)
-    num_entity_blocks, total_num_elements, min_ele_tag, max_ele_tag = fromfile(
-        f, c_size_t, 4
-    )
+    num_entity_blocks, _, _, _ = fromfile(f, c_size_t, 4)
 
     data = []
     cell_data = {}
@@ -630,7 +626,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     fh.write(b"$EndNodes\n")
 
 
-def _write_elements(fh, cells, tag_data, binary):
+def _write_elements(fh, cells, tag_data, binary: bool) -> None:
     """write the $Elements block
 
     $Elements
@@ -726,7 +722,7 @@ def _write_elements(fh, cells, tag_data, binary):
     fh.write(b"$EndElements\n")
 
 
-def _write_periodic(fh, periodic, float_fmt, binary):
+def _write_periodic(fh, periodic, float_fmt: str, binary: bool) -> None:
     """write the $Periodic block
 
     specified as

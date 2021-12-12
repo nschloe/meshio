@@ -2,6 +2,8 @@
 I/O for Gmsh's msh format (version 4.0, as used by Gmsh 4.1.5), cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
+from __future__ import annotations
+
 from functools import partial
 
 import numpy as np
@@ -27,7 +29,7 @@ c_ulong = np.dtype("L")
 c_double = np.dtype("d")
 
 
-def read_buffer(f, is_ascii, data_size):
+def read_buffer(f, is_ascii: bool, data_size) -> Mesh:
     # Initialize the optional data fields
     points = []
     field_data = {}
@@ -48,13 +50,11 @@ def read_buffer(f, is_ascii, data_size):
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Entities":
-            physical_tags = _read_entities(f, is_ascii, data_size)
+            physical_tags = _read_entities(f, is_ascii)
         elif environ == "Nodes":
-            points, point_tags = _read_nodes(f, is_ascii, data_size)
+            points, point_tags = _read_nodes(f, is_ascii)
         elif environ == "Elements":
-            cells, cell_tags = _read_elements(
-                f, point_tags, physical_tags, is_ascii, data_size
-            )
+            cells, cell_tags = _read_elements(f, point_tags, physical_tags, is_ascii)
         elif environ == "Periodic":
             periodic = _read_periodic(f, is_ascii)
         elif environ == "NodeData":
@@ -85,7 +85,7 @@ def read_buffer(f, is_ascii, data_size):
     )
 
 
-def _read_entities(f, is_ascii, data_size):
+def _read_entities(f, is_ascii: bool):
     physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
     fromfile = partial(np.fromfile, sep=" " if is_ascii else "")
     number = fromfile(f, c_ulong, 4)  # dims 0, 1, 2, 3
@@ -103,7 +103,7 @@ def _read_entities(f, is_ascii, data_size):
     return physical_tags
 
 
-def _read_nodes(f, is_ascii, data_size):
+def _read_nodes(f, is_ascii):
     if is_ascii:
         # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
         line = f.readline().decode()
@@ -113,12 +113,12 @@ def _read_nodes(f, is_ascii, data_size):
         tags = np.empty(total_num_nodes, dtype=int)
 
         idx = 0
-        for k in range(num_entity_blocks):
+        for _ in range(num_entity_blocks):
             # first line in the entity block:
             # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
             line = f.readline().decode()
-            tag_entity, dim_entity, type_node, num_nodes = map(int, line.split())
-            for i in range(num_nodes):
+            _, _, _, num_nodes = map(int, line.split())
+            for _ in range(num_nodes):
                 # tag(int) x(double) y(double) z(double)
                 line = f.readline().decode()
                 tag, x, y, z = line.split()
@@ -151,15 +151,15 @@ def _read_nodes(f, is_ascii, data_size):
     return points, tags
 
 
-def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
+def _read_elements(f, point_tags, physical_tags, is_ascii):
     fromfile = partial(np.fromfile, sep=" " if is_ascii else "")
 
     # numEntityBlocks(unsigned long) numElements(unsigned long)
-    num_entity_blocks, total_num_elements = fromfile(f, c_ulong, 2)
+    num_entity_blocks, _ = fromfile(f, c_ulong, 2)
 
     data = []
 
-    for k in range(num_entity_blocks):
+    for _ in range(num_entity_blocks):
         # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
         tag_entity, dim_entity, type_ele = fromfile(f, c_int, 3)
         (num_ele,) = fromfile(f, c_ulong, 1)
