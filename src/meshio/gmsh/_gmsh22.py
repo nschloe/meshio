@@ -129,7 +129,8 @@ def _read_cells(f, cells, point_tags, is_ascii):
     else:
         _read_cells_binary(f, cells, cell_tags, total_num_cells)
 
-    cells = [(key, _gmsh_to_meshio_order(key, values)) for key, values in cells]
+    # override cells in-place
+    cells[:] = [(key, _gmsh_to_meshio_order(key, values)) for key, values in cells]
 
     point_tags = np.asarray(point_tags, dtype=np.int32) - 1
     remap = -np.ones((np.max(point_tags) + 1,), dtype=np.int32)

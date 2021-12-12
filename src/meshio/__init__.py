@@ -32,7 +32,6 @@ from . import (
     xdmf,
 )
 from .__about__ import __version__
-from ._common import topological_dimension
 from ._exceptions import ReadError, WriteError
 from ._helpers import (
     extension_to_filetype,
