@@ -7,12 +7,7 @@ from functools import partial
 
 import numpy as np
 
-from .._common import (
-    cell_data_from_raw,
-    num_nodes_per_cell,
-    raw_from_cell_data,
-    topological_dimension,
-)
+from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
@@ -37,7 +32,7 @@ def _size_type(data_size):
     return np.dtype(f"u{data_size}")
 
 
-def read_buffer(f, is_ascii, data_size):
+def read_buffer(f, is_ascii: bool, data_size):
     # The format is specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 
@@ -117,7 +112,7 @@ def read_buffer(f, is_ascii, data_size):
     )
 
 
-def _read_entities(f, is_ascii, data_size):
+def _read_entities(f, is_ascii: bool, data_size):
     # Read the entity section. Return physical tags of the entities, and (for
     # entities of dimension > 0) the bounding entities (so points that form
     # the boundary of a line etc).
@@ -146,7 +141,7 @@ def _read_entities(f, is_ascii, data_size):
     return physical_tags, bounding_entities
 
 
-def _read_nodes(f, is_ascii, data_size):
+def _read_nodes(f, is_ascii: bool, data_size):
     # Read node data: Node coordinates and tags.
     # Also find the entities of the nodes, and store this as point_data.
     # Note that entity tags are 1-offset within each dimension, thus it is
@@ -156,9 +151,7 @@ def _read_nodes(f, is_ascii, data_size):
     c_size_t = _size_type(data_size)
 
     # numEntityBlocks numNodes minNodeTag maxNodeTag (all size_t)
-    num_entity_blocks, total_num_nodes, min_node_tag, max_node_tag = fromfile(
-        f, c_size_t, 4
-    )
+    num_entity_blocks, total_num_nodes, _, _ = fromfile(f, c_size_t, 4)
 
     points = np.empty((total_num_nodes, 3), dtype=float)
     tags = np.empty(total_num_nodes, dtype=int)
@@ -167,7 +160,7 @@ def _read_nodes(f, is_ascii, data_size):
     # To save the entity block id for each node, initialize an array here,
     # populate it with num_nodes
     idx = 0
-    for k in range(num_entity_blocks):
+    for _ in range(num_entity_blocks):
         # entityDim(int) entityTag(int) parametric(int) numNodes(size_t)
         dim, entity_tag, parametric = fromfile(f, c_int, 3)
         if parametric != 0:
@@ -205,9 +198,7 @@ def _read_elements(
     c_size_t = _size_type(data_size)
 
     # numEntityBlocks numElements minElementTag maxElementTag (all size_t)
-    num_entity_blocks, total_num_elements, min_ele_tag, max_ele_tag = fromfile(
-        f, c_size_t, 4
-    )
+    num_entity_blocks, _, _, _ = fromfile(f, c_size_t, 4)
 
     data = []
     cell_data = {}
@@ -257,7 +248,7 @@ def _read_elements(
 
     cells = []
     for physical_tag, bound_entity, geom_tag, key, values in data:
-        cells.append((key, values))
+        cells.append(CellBlock(key, _gmsh_to_meshio_order(key, values)))
         if physical_tag:
             if "gmsh:physical" not in cell_data:
                 cell_data["gmsh:physical"] = []
@@ -273,8 +264,6 @@ def _read_elements(
             if "gmsh:bounding_entities" not in cell_sets:
                 cell_sets["gmsh:bounding_entities"] = []
             cell_sets["gmsh:bounding_entities"].append(bound_entity)
-
-    cells[:] = _gmsh_to_meshio_order(cells)
 
     return cells, cell_data, cell_sets
 
@@ -306,8 +295,6 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
     """
-    cells = _meshio_to_gmsh_order(mesh.cells)
-
     # Filter the point data: gmsh:dim_tags are tags, the rest is actual point data.
     point_data = {}
     for key, d in mesh.point_data.items():
@@ -337,9 +324,11 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
         if mesh.field_data:
             _write_physical_names(fh, mesh.field_data)
 
-        _write_entities(fh, cells, tag_data, mesh.cell_sets, mesh.point_data, binary)
+        _write_entities(
+            fh, mesh.cells, tag_data, mesh.cell_sets, mesh.point_data, binary
+        )
         _write_nodes(fh, mesh.points, mesh.cells, mesh.point_data, float_fmt, binary)
-        _write_elements(fh, cells, tag_data, binary)
+        _write_elements(fh, mesh.cells, tag_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt, binary)
 
@@ -403,18 +392,6 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     if "gmsh:dim_tags" not in point_data:
         return
 
-    if binary:
-        for k, cell_block in enumerate(cells):
-            if isinstance(cell_block, tuple):
-                cell_type, cell_data = cell_block
-            else:
-                assert isinstance(cell_block, CellBlock)
-                cell_type = cell_block.type
-                cell_data = cell_block.data
-            if cell_data.dtype != c_size_t:
-                # Binary Gmsh needs c_size_t. Converting."
-                cells[k] = CellBlock(cell_type, cell_data.astype(c_size_t))
-
     fh.write(b"$Entities\n")
 
     # Array of entity tag (first row) and dimension (second row) per node.
@@ -435,9 +412,9 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
     # Array of dimension and entity tag per cell. Will be compared with the
     # similar not array.
     cell_dim_tags = np.empty((len(cells), 2), dtype=int)
-    for ci in range(len(cells)):
+    for ci, cell_block in enumerate(cells):
         cell_dim_tags[ci] = [
-            topological_dimension[cells[ci].type],
+            cell_block.dim,
             tag_data["gmsh:geometrical"][ci][0],
         ]
 
@@ -607,7 +584,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
                 + "to deal with more than one cell type. "
             )
 
-        dim = topological_dimension[cells[0].type]
+        dim = cells[0].dim
         tag = 0
         node_dim_tags = np.array([[dim, tag]])
         # All nodes map to the (single) dimension-entity object
@@ -647,10 +624,9 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
         fh.write(b"\n")
 
     fh.write(b"$EndNodes\n")
-    return
 
 
-def _write_elements(fh, cells, tag_data, binary):
+def _write_elements(fh, cells, tag_data, binary: bool) -> None:
     """write the $Elements block
 
     $Elements
@@ -676,25 +652,22 @@ def _write_elements(fh, cells, tag_data, binary):
 
         tag0 = 1
         for ci, cell_block in enumerate(cells):
-            if isinstance(cell_block, tuple):
-                cell_type, node_idcs = cell_block
-            else:
-                assert isinstance(cell_block, CellBlock)
-                cell_type = cell_block.type
-                node_idcs = cell_block.data
+            node_idcs = _meshio_to_gmsh_order(cell_block.type, cell_block.data)
+            if node_idcs.dtype != c_size_t:
+                # Binary Gmsh needs c_size_t. Converting."
+                node_idcs = node_idcs.astype(c_size_t)
 
             # entityDim(int) entityTag(int) elementType(int)
             # numElementsBlock(size_t)
 
-            dim = topological_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
             if "gmsh:geometrical" in tag_data:
                 entity_tag = tag_data["gmsh:geometrical"][ci][0]
             else:
                 entity_tag = 0
 
-            cell_type = _meshio_to_gmsh_type[cell_type]
-            np.array([dim, entity_tag, cell_type], dtype=c_int).tofile(fh)
+            cell_type = _meshio_to_gmsh_type[cell_block.type]
+            np.array([cell_block.dim, entity_tag, cell_type], dtype=c_int).tofile(fh)
             n = node_idcs.shape[0]
             np.array([n], dtype=c_size_t).tofile(fh)
 
@@ -724,38 +697,32 @@ def _write_elements(fh, cells, tag_data, binary):
 
         tag0 = 1
         for ci, cell_block in enumerate(cells):
-            if isinstance(cell_block, tuple):
-                cell_type, cell_data = cell_block
-            else:
-                assert isinstance(cell_block, CellBlock)
-                cell_type = cell_block.type
-                cell_data = cell_block.data
+            node_idcs = _meshio_to_gmsh_order(cell_block.type, cell_block.data)
+
             # entityDim(int) entityTag(int) elementType(int) numElementsBlock(size_t)
 
-            dim = topological_dimension[cell_type]
             # The entity tag should be equal within a CellBlock
             if "gmsh:geometrical" in tag_data:
                 entity_tag = tag_data["gmsh:geometrical"][ci][0]
             else:
                 entity_tag = 0
 
-            cell_type = _meshio_to_gmsh_type[cell_type]
-            n = len(cell_data)
-            fh.write(f"{dim} {entity_tag} {cell_type} {n}\n".encode())
+            cell_type = _meshio_to_gmsh_type[cell_block.type]
+            n = len(cell_block.data)
+            fh.write(f"{cell_block.dim} {entity_tag} {cell_type} {n}\n".encode())
             np.savetxt(
                 fh,
                 # Gmsh indexes from 1 not 0
-                np.column_stack([np.arange(tag0, tag0 + n), cell_data + 1]),
+                np.column_stack([np.arange(tag0, tag0 + n), node_idcs + 1]),
                 "%d",
                 " ",
             )
             tag0 += n
 
     fh.write(b"$EndElements\n")
-    return
 
 
-def _write_periodic(fh, periodic, float_fmt, binary):
+def _write_periodic(fh, periodic, float_fmt: str, binary: bool) -> None:
     """write the $Periodic block
 
     specified as

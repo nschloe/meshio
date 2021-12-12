@@ -4,9 +4,9 @@ import logging
 import shlex
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .._exceptions import ReadError, WriteError
-from .._mesh import CellBlock
 
 c_int = np.dtype("int32")
 c_double = np.dtype("float64")
@@ -161,25 +161,7 @@ _gmsh_to_meshio_type = {
 _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
 
 
-def _reorder_cells(
-    cells: list[CellBlock | tuple[str, np.ndarray]], ordering
-) -> list[tuple[str, np.ndarray]]:
-    cells = cells[:]
-    for i, cell_block in enumerate(cells):
-        if isinstance(cell_block, tuple):
-            cell_type, cell_data = cell_block
-        else:
-            assert isinstance(cell_block, CellBlock)
-            cell_type = cell_block.type
-            cell_data = cell_block.data
-
-        permutation = ordering.get(cell_type)
-        if permutation is not None:
-            cells[i] = (cell_type, cell_data[:, permutation])
-    return cells
-
-
-def _gmsh_to_meshio_order(cells):
+def _gmsh_to_meshio_order(cell_type: str, idx: ArrayLike) -> np.ndarray:
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     meshio_ordering = {
         # fmt: off
@@ -199,10 +181,13 @@ def _gmsh_to_meshio_order(cells):
         "pyramid13": [0, 1, 2, 3, 4, 5, 8, 10, 6, 7, 9, 11, 12],
         # fmt: on
     }
-    return _reorder_cells(cells, meshio_ordering)
+    idx = np.asarray(idx)
+    if cell_type not in meshio_ordering:
+        return idx
+    return idx[:, meshio_ordering[cell_type]]
 
 
-def _meshio_to_gmsh_order(cells: list[CellBlock]):
+def _meshio_to_gmsh_order(cell_type: str, idx: ArrayLike) -> np.ndarray:
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     gmsh_ordering = {
         # fmt: off
@@ -222,7 +207,10 @@ def _meshio_to_gmsh_order(cells: list[CellBlock]):
         "pyramid13": [0, 1, 2, 3, 4, 5, 8, 9, 6, 10, 7, 11, 12],
         # fmt: on
     }
-    return _reorder_cells(cells, gmsh_ordering)
+    idx = np.asarray(idx)
+    if cell_type not in gmsh_ordering:
+        return idx
+    return idx[:, gmsh_ordering[cell_type]]
 
 
 def _write_physical_names(fh, field_data):

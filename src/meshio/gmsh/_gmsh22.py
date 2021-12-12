@@ -2,6 +2,8 @@
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
+from __future__ import annotations
+
 import logging
 
 import numpy as np
@@ -128,7 +130,9 @@ def _read_cells(f, cells, point_tags, is_ascii):
         _read_cells_ascii(f, cells, cell_tags, total_num_cells)
     else:
         _read_cells_binary(f, cells, cell_tags, total_num_cells)
-    cells[:] = _gmsh_to_meshio_order(cells)
+
+    # override cells in-place
+    cells[:] = [(key, _gmsh_to_meshio_order(key, values)) for key, values in cells]
 
     point_tags = np.asarray(point_tags, dtype=np.int32) - 1
     remap = -np.ones((np.max(point_tags) + 1,), dtype=np.int32)
@@ -263,8 +267,6 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
-    cells = _meshio_to_gmsh_order(mesh.cells)
-
     # Filter the point data: gmsh:dim_tags are tags, the rest is actual point data.
     point_data = {}
     for key, d in mesh.point_data.items():
@@ -288,7 +290,9 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             logging.warning(
                 f"Appending zeros to replace the missing {tag[5:]} tag data."
             )
-            tag_data[tag] = [np.zeros(len(x.data), dtype=c_int) for x in mesh.cells]
+            tag_data[tag] = [
+                np.zeros(len(cell_block), dtype=c_int) for cell_block in mesh.cells
+            ]
 
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
@@ -303,7 +307,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             _write_physical_names(fh, mesh.field_data)
 
         _write_nodes(fh, mesh.points, float_fmt, binary)
-        _write_elements(fh, cells, tag_data, binary)
+        _write_elements(fh, mesh.cells, tag_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt)
 
@@ -335,31 +339,18 @@ def _write_nodes(fh, points, float_fmt, binary):
     fh.write(b"$EndNodes\n")
 
 
-def _write_elements(fh, cells, tag_data, binary):
+def _write_elements(fh, cells: list[CellBlock], tag_data, binary: bool):
     # write elements
     fh.write(b"$Elements\n")
 
     # count all cells
-    total_num_cells = 0
-    for k, cell_block in enumerate(cells):
-        if isinstance(cell_block, tuple):
-            node_idcs = cell_block[1]
-        else:
-            assert isinstance(cell_block, CellBlock)
-            node_idcs = cell_block.data
-
-        total_num_cells += len(node_idcs)
-
+    total_num_cells = sum(len(cell_block) for cell_block in cells)
     fh.write(f"{total_num_cells}\n".encode())
 
     consecutive_index = 0
     for k, cell_block in enumerate(cells):
-        if isinstance(cell_block, tuple):
-            cell_type, node_idcs = cell_block
-        else:
-            assert isinstance(cell_block, CellBlock)
-            cell_type = cell_block.type
-            node_idcs = cell_block.data
+        cell_type = cell_block.type
+        node_idcs = _meshio_to_gmsh_order(cell_type, cell_block.data)
 
         tags = []
         for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
