@@ -27,7 +27,7 @@ classifiers = [
 ]
 dependencies = [
   "importlib_metadata; python_version<'3.8'",
-  "numpy"
+  "numpy>=1.20.0"
 ]
 
 [project.optional-dependencies]
