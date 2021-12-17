@@ -145,19 +145,13 @@ class Mesh:
         for cell_block in cells:
             if isinstance(cell_block, tuple):
                 cell_type, data = cell_block
-                self.cells.append(
-                    CellBlock(
-                        cell_type,
-                        # polyhedron data cannot be converted to numpy
-                        # arrays because the sublists don't all have the
-                        # same length
-                        data
-                        if cell_type.startswith("polyhedron")
-                        else np.asarray(data),
-                    )
+                cell_block = CellBlock(
+                    cell_type,
+                    # polyhedron data cannot be converted to numpy arrays
+                    # because the sublists don't all have the same length
+                    data if cell_type.startswith("polyhedron") else np.asarray(data),
                 )
-            else:
-                self.cells.append(cell_block)
+            self.cells.append(cell_block)
 
         self.point_data = {} if point_data is None else point_data
         self.cell_data = {} if cell_data is None else cell_data
