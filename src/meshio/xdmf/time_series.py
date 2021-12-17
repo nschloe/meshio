@@ -93,6 +93,7 @@ class TimeSeriesReader:
         points = None
         cells = []
 
+        assert self.mesh_grid is not None
         for c in self.mesh_grid:
             if c.tag == "Topology":
                 data_items = list(c)
@@ -131,7 +132,7 @@ class TimeSeriesReader:
         self.cells = cells
         return points, cells
 
-    def read_data(self, k):
+    def read_data(self, k: int):
         point_data = {}
         cell_data_raw = {}
 
@@ -230,7 +231,7 @@ class TimeSeriesReader:
 
 
 class TimeSeriesWriter:
-    def __init__(self, filename, data_format="HDF"):
+    def __init__(self, filename, data_format: str = "HDF") -> None:
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -359,10 +360,26 @@ class TimeSeriesWriter:
         )
         data_item.text = self.numpy_to_xml_string(points)
 
-    def cells(self, cells, grid):
-        if len(cells) == 1:
-            meshio_type = cells[0].type
-            num_cells = len(cells[0].data)
+    def cells(
+        self,
+        cells: dict[str, ArrayLike] | list[tuple[str, ArrayLike] | CellBlock],
+        grid: ET.Element,
+    ) -> None:
+        if isinstance(cells, dict):
+            # convert dict to list of tuples
+            cells = list(cells.items())
+
+        # conver to cell_blocks
+        cell_blocks = []
+        for cell_block in cells:
+            if isinstance(cell_block, tuple):
+                cell_type, data = cell_block
+                cell_block = CellBlock(cell_type, np.asarray(data))
+            cell_blocks.append(cell_block)
+
+        if len(cell_blocks) == 1:
+            meshio_type = cell_blocks[0].type
+            num_cells = len(cell_blocks[0].data)
             xdmf_type = meshio_to_xdmf_type[meshio_type][0]
             topo = ET.SubElement(
                 grid,
@@ -370,8 +387,8 @@ class TimeSeriesWriter:
                 TopologyType=xdmf_type,
                 NumberOfElements=str(num_cells),
             )
-            dt, prec = numpy_to_xdmf_dtype[cells[0].data.dtype.name]
-            dim = "{} {}".format(*cells[0].data.shape)
+            dt, prec = numpy_to_xdmf_dtype[cell_blocks[0].data.dtype.name]
+            dim = "{} {}".format(*cell_blocks[0].data.shape)
             data_item = ET.SubElement(
                 topo,
                 "DataItem",
@@ -380,20 +397,20 @@ class TimeSeriesWriter:
                 Format=self.data_format,
                 Precision=prec,
             )
-            data_item.text = self.numpy_to_xml_string(cells[0].data)
-        elif len(cells) > 1:
-            total_num_cells = sum(c.data.shape[0] for c in cells)
+            data_item.text = self.numpy_to_xml_string(cell_blocks[0].data)
+        elif len(cell_blocks) > 1:
+            total_num_cells = sum(c.data.shape[0] for c in cell_blocks)
             topo = ET.SubElement(
                 grid,
                 "Topology",
                 TopologyType="Mixed",
                 NumberOfElements=str(total_num_cells),
             )
-            total_num_cell_items = sum(np.prod(c.data.shape) for c in cells)
+            total_num_cell_items = sum(np.prod(c.data.shape) for c in cell_blocks)
             dim = total_num_cell_items + total_num_cells
             # Lines translate to Polylines, and one needs to specify the exact
             # number of nodes. Hence, prepend 2.
-            for c in cells:
+            for c in cell_blocks:
                 if c.type == "line":
                     c.data[:] = np.insert(c.data, 0, 2, axis=1)
                     dim += len(c.data)
@@ -402,9 +419,9 @@ class TimeSeriesWriter:
                 [
                     # prepend column with xdmf type index
                     np.insert(
-                        value, 0, meshio_type_to_xdmf_index[key], axis=1
+                        c.data, 0, meshio_type_to_xdmf_index[c.type], axis=1
                     ).flatten()
-                    for key, value in cells
+                    for c in cell_blocks
                 ]
             )
             dt, prec = numpy_to_xdmf_dtype[cd.dtype.name]
@@ -418,7 +435,7 @@ class TimeSeriesWriter:
             )
             data_item.text = self.numpy_to_xml_string(cd)
 
-    def point_data(self, point_data, grid):
+    def point_data(self, point_data: dict[str, np.ndarray], grid: ET.Element):
         for name, data in point_data.items():
             att = ET.SubElement(
                 grid,
@@ -439,7 +456,9 @@ class TimeSeriesWriter:
             )
             data_item.text = self.numpy_to_xml_string(data)
 
-    def cell_data(self, cell_data, grid):
+    def cell_data(
+        self, cell_data: dict[str, list[np.ndarray]], grid: ET.Element
+    ) -> None:
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(
