@@ -48,6 +48,7 @@ def test_sets_to_int_data():
     assert_equal(mesh.point_sets, {"fixed": [0, 1, 2], "loose": [3, 4, 5, 6]})
 
 
+@pytest.mark.skip
 def test_sets_to_int_data_warning():
     mesh = meshio.Mesh(
         [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]],

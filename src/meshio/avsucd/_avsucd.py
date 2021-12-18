@@ -2,12 +2,10 @@
 I/O for AVS-UCD format, cf.
 <https://lanl.github.io/LaGriT/pages/docs/read_avs.html>.
 """
-import logging
-
 import numpy as np
 
 from ..__about__ import __version__ as version
-from .._common import _pick_first_int_data
+from .._common import _pick_first_int_data, warn
 from .._files import open_file
 from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
@@ -147,7 +145,7 @@ def _read_data(f, num_entities, entity_ids):
 
 def write(filename, mesh):
     if len(mesh.points.shape) > 1 and mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "AVS-UCD requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
@@ -165,7 +163,7 @@ def write(filename, mesh):
         key, other = _pick_first_int_data(mesh.cell_data)
         if key and other:
             other_string = ", ".join(other)
-            logging.warning(
+            warn(
                 "AVS-UCD can only write one cell data array. "
                 f"Picking {key}, skipping {other_string}."
             )

@@ -1,6 +1,7 @@
 from xml.etree import ElementTree as ET
 
 import numpy as np
+from rich.console import Console
 
 # See <https://github.com/nschloe/meshio/wiki/Node-ordering-in-cells> for the node
 # ordering.
@@ -117,3 +118,13 @@ def _pick_first_int_data(data):
         other = []
 
     return key, other
+
+
+def warn(string, highlight: bool = True) -> None:
+    Console(stderr=True).print(
+        f"[yellow]Warning: {string}[/yellow]", highlight=highlight
+    )
+
+
+def error(string, highlight: bool = True) -> None:
+    Console(stderr=True).print(f"[red]Error: {string}[/red]", highlight=highlight)

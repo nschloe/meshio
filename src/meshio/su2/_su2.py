@@ -2,12 +2,11 @@
 I/O SU2 mesh format
 <https://su2code.github.io/docs_v7/Mesh-File/>
 """
-import logging
 from itertools import chain, islice
 
 import numpy as np
 
-from .._common import _pick_first_int_data
+from .._common import _pick_first_int_data, warn
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
@@ -76,7 +75,7 @@ def read_buffer(f):
         try:
             name, rest_of_line = line.split("=")
         except ValueError:
-            logging.warning(f"meshio could not parse line\n {line}\n skipping.....")
+            warn(f"meshio could not parse line\n {line}\n skipping.....")
             continue
 
         if name == "NDIME":
@@ -158,16 +157,14 @@ def read_buffer(f):
                 next_tag_id = int(next_tag)
             except ValueError:
                 next_tag_id += 1
-                logging.warning(
+                warn(
                     "meshio does not support tags of string type.\n"
-                    "    Surface tag {} will be replaced by {}".format(
-                        rest_of_line, next_tag_id
-                    )
+                    f"    Surface tag {rest_of_line} will be replaced by {next_tag_id}"
                 )
             markers_found += 1
 
     if markers_found != expected_nmarkers:
-        logging.warning(
+        warn(
             f"expected {expected_nmarkers} markers according to NMARK value "
             f"but found only {markers_found}"
         )
@@ -262,7 +259,7 @@ def write(filename, mesh):
         # Through warnings about unsupported types
         for cell_block in mesh.cells:
             if cell_block.type not in meshio_to_su2_type:
-                logging.warning(
+                warn(
                     ".su2 does not support tags elements of type {}.\n"
                     "Skipping ...".format(type)
                 )
@@ -297,7 +294,7 @@ def write(filename, mesh):
 
         labels_key, other = _pick_first_int_data(mesh.cell_data)
         if labels_key and other:
-            logging.warning(
+            warn(
                 "su2 file format can only write one cell data array. "
                 "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
             )

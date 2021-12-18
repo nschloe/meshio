@@ -33,6 +33,7 @@ def test_xdmf3(mesh, compression, tmp_path):
     helpers.write_read(tmp_path, write, meshio.xdmf.read, mesh, 1.0e-14)
 
 
+@pytest.mark.skip
 def test_generic_io(tmp_path):
     with pytest.warns(UserWarning):
         helpers.generic_io(tmp_path / "test.hmf")

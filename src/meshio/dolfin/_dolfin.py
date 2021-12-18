@@ -2,7 +2,6 @@
 I/O for DOLFIN's XML format, cf.
 <https://people.sc.fsu.edu/~jburkardt/data/dolfin_xml/dolfin_xml.html>.
 """
-import logging
 import os
 import pathlib
 import re
@@ -10,6 +9,7 @@ from xml.etree import ElementTree as ET
 
 import numpy as np
 
+from .._common import warn
 from .._exceptions import ReadError, WriteError
 from .._helpers import register_format
 from .._mesh import Mesh
@@ -71,7 +71,7 @@ def _read_mesh(filename):
             assert cell_tags is not None
             cells[0][1][k] = [elem.attrib[t] for t in cell_tags]
         else:
-            logging.warning("Unknown entry %s. Ignoring.", elem.tag)
+            warn("Unknown entry %s. Ignoring.", elem.tag)
 
         elem.clear()
 
@@ -138,7 +138,7 @@ def _write_mesh(filename, points, cell_type, cells):
 
     if any(c.type != cell_type for c in cells):
         discarded_cell_types = {c.type for c in cells if c.type != cell_type}
-        logging.warning(
+        warn(
             "DOLFIN XML can only handle one cell type at a time. "
             "Using %s, discarding %s.",
             cell_type,
@@ -215,7 +215,7 @@ def _write_cell_data(filename, dim, cell_data):
 
 
 def write(filename, mesh):
-    logging.warning("DOLFIN XML is a legacy format. Consider using XDMF instead.")
+    warn("DOLFIN XML is a legacy format. Consider using XDMF instead.")
 
     if any("tetra" == c.type for c in mesh.cells):
         cell_type = "tetra"

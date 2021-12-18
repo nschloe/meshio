@@ -3,13 +3,12 @@ I/O for Medit's format/Gamma Mesh Format,
 Latest official up-to-date documentation and a reference C implementation at
 <https://github.com/LoicMarechal/libMeshb>
 """
-import logging
 import struct
 from ctypes import c_double, c_float
 
 import numpy as np
 
-from .._common import _pick_first_int_data
+from .._common import _pick_first_int_data, warn
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
@@ -126,7 +125,7 @@ def read_binary_buffer(f):
 
         if field.size == 0:
             msg = "End-of-file reached before GmfEnd keyword"
-            logging.warning(msg)
+            warn(msg)
             break
 
         field = field.item()
@@ -151,7 +150,7 @@ def read_binary_buffer(f):
         dtype = np.dtype(_produce_dtype(field_template, dim, itype, ftype))
         out = np.asarray(np.fromfile(f, count=nitems, dtype=dtype))
         if field_code[0] not in meshio_from_medit.keys():
-            logging.warning(f"meshio doesn't know {field_code[0]} type. Skipping.")
+            warn(f"meshio doesn't know {field_code[0]} type. Skipping.")
             continue
 
         elif field_code[0] == "GmfVertices":
@@ -284,7 +283,7 @@ def read_ascii_buffer(f):
             "Ridges",
         ]:
             msg = f"Meshio doesn't know keyword {items[0]}. Skipping."
-            logging.warning(msg)
+            warn(msg)
             num_to_pass = int(f.readline())
             for _ in range(num_to_pass):
                 f.readline()
@@ -322,7 +321,7 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
         labels_key, other = _pick_first_int_data(mesh.point_data)
         if labels_key and other:
             string = ", ".join(other)
-            logging.warning(
+            warn(
                 "Medit can only write one point data array. "
                 f"Picking {labels_key}, skipping {string}."
             )
@@ -346,7 +345,7 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
         labels_key, other = _pick_first_int_data(mesh.cell_data)
         if labels_key and other:
             string = ", ".join(other)
-            logging.warning(
+            warn(
                 "Medit can only write one cell data array. "
                 f"Picking {labels_key}, skipping {string}."
             )
@@ -358,7 +357,7 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
                 medit_name, num = medit_from_meshio[cell_type]
             except KeyError:
                 msg = f"MEDIT's mesh format doesn't know {cell_type} cells. Skipping."
-                logging.warning(msg)
+                warn(msg)
                 continue
             fh.write(b"\n")
             fh.write(f"{medit_name}\n".encode())
@@ -441,7 +440,7 @@ def write_binary_file(f, mesh):
         labels_key, other = _pick_first_int_data(mesh.point_data)
         if labels_key and other:
             other_string = ", ".join(other)
-            logging.warning(
+            warn(
                 "Medit can only write one point data array. "
                 f"Picking {labels_key}, skipping {other_string}."
             )
@@ -459,7 +458,7 @@ def write_binary_file(f, mesh):
         labels_key, other = _pick_first_int_data(mesh.cell_data)
         if labels_key and other:
             string = ", ".join(other)
-            logging.warning(
+            warn(
                 "Medit can only write one cell data array. "
                 f"Picking {labels_key}, skipping {string}."
             )
@@ -478,7 +477,7 @@ def write_binary_file(f, mesh):
             try:
                 medit_key = medit_from_meshio[cell_block.type]
             except KeyError:
-                logging.warning(
+                warn(
                     f"MEDIT's mesh format doesn't know {cell_block.type} cells. "
                     + "Skipping."
                 )

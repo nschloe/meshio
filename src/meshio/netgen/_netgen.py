@@ -2,11 +2,10 @@
 I/O for Netgen mesh files
 <https://github.com/NGSolve/netgen/blob/master/libsrc/meshing/meshclass.cpp>.
 """
-import warnings
-
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._files import open_file
 from .._helpers import register_format
 from .._mesh import Mesh
@@ -259,7 +258,7 @@ def read_buffer(f):
         elif line == "geomtype":
             geomtype = int(f.readline())
             if geomtype not in [0, 1, 10, 11, 12, 13]:
-                warnings.warn(f"Unknown geomtype in Netgen mesh: {geomtype}")
+                warn(f"Unknown geomtype in Netgen mesh: {geomtype}")
 
         elif line == "points":
             num_points = int(f.readline())

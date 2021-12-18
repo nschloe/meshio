@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import logging
 import shlex
 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from .._common import warn
 from .._exceptions import ReadError, WriteError
 
 c_int = np.dtype("int32")
@@ -24,7 +24,7 @@ def _fast_forward_to_end_block(f, block):
         if line.strip() == f"$End{block}":
             break
     else:
-        logging.warning(f"${block} not closed by $End{block}.")
+        warn(f"${block} not closed by $End{block}.")
 
 
 def _fast_forward_over_blank_lines(f):
@@ -222,7 +222,7 @@ def _write_physical_names(fh, field_data):
             phys_num, phys_dim = int(phys_num), int(phys_dim)
             entries.append((phys_dim, phys_num, phys_name))
         except (ValueError, TypeError):
-            logging.warning("Field data contains entry that cannot be processed.")
+            warn("Field data contains entry that cannot be processed.")
     entries.sort()
     if entries:
         fh.write(b"$PhysicalNames\n")

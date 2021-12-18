@@ -5,11 +5,9 @@ I/O for KratosMultiphysics's mdpa format, cf.
 The MDPA format is unsuitable for fast consumption, this is why:
 <https://github.com/KratosMultiphysics/Kratos/issues/5365>.
 """
-import logging
-
 import numpy as np
 
-from .._common import num_nodes_per_cell, raw_from_cell_data
+from .._common import num_nodes_per_cell, raw_from_cell_data, warn
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register_format
@@ -333,7 +331,7 @@ def read_buffer(f):
     #     # _read_data(f, "ConditionalData", cell_data_raw, data_size, is_ascii)
 
     if has_additional_tag_data:
-        logging.warning("The file contains tag data that couldn't be processed.")
+        warn("The file contains tag data that couldn't be processed.")
 
     # cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -438,7 +436,7 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
     if binary:
         raise WriteError()
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "mdpa requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )

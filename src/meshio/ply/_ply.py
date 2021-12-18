@@ -7,11 +7,11 @@ import collections
 import datetime
 import re
 import sys
-import warnings
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register_format
@@ -430,7 +430,7 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
         pd = []
         for key, value in mesh.point_data.items():
             if len(value.shape) > 1:
-                warnings.warn(
+                warn(
                     "PLY writer doesn't support multidimensional point data yet. "
                     f"Skipping {key}."
                 )
@@ -459,9 +459,7 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
                     )
 
             if has_cast:
-                warnings.warn(
-                    "PLY doesn't support 64-bit integers. Casting down to 32-bit."
-                )
+                warn("PLY doesn't support 64-bit integers. Casting down to 32-bit.")
 
             # assert that all cell dtypes are equal
             cell_dtype = None
@@ -486,7 +484,7 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
             # cells
             for cell_block in mesh.cells:
                 if cell_block.type not in legal_cell_types:
-                    warnings.warn(
+                    warn(
                         f'cell_type "{cell_block.type}" is not supported by PLY format '
                         "- skipping"
                     )
@@ -509,7 +507,7 @@ def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
             # cells
             for cell_block in mesh.cells:
                 if cell_block.type not in legal_cell_types:
-                    warnings.warn(
+                    warn(
                         f'cell_type "{cell_block.type}" is not supported by PLY format '
                         + "- skipping"
                     )

@@ -1,15 +1,13 @@
 """
 I/O for FLAC3D format.
 """
-import logging
 import struct
 import time
-from warnings import warn
 
 import numpy as np
 
 from ..__about__ import __version__ as version
-from .._common import _pick_first_int_data
+from .._common import _pick_first_int_data, warn
 from .._files import open_file
 from .._helpers import register_format
 from .._mesh import Mesh
@@ -170,10 +168,13 @@ def read_buffer(f, binary):
     ]
 
     if len(cell_sets) > 0:
-        # Can only deal with sequential cell_ids for now. If the order is messed
-        # up, or if some indices are missing, cell_sets will be wrong.
-        if not np.all(np.arange(cell_ids[0], cell_ids[-1] + 1) == cell_ids):
-            warn("FLAC3D cell IDs not sequential. Cell sets probably messed up.")
+        # Can only deal with arange cell_ids for now.
+        if not np.array_equal(np.arange(0, cell_ids[-1] + 1), cell_ids):
+            warn(
+                "FLAC3D cell IDs not arange (0, 1, 2, ..., n). "
+                + "Cell sets probably messed up.",
+                highlight=False,
+            )
 
     # cell_sets contains the indices into the global cell list. Since this is
     # split up into blocks, we need to split the cell_sets, too.
@@ -278,9 +279,7 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     """Write FLAC3D f3grid grid file."""
     skip = [c.type for c in mesh.cells if c.type not in meshio_only["zone"]]
     if skip:
-        logging.warning(
-            f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.'
-        )
+        warn(f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.')
 
     # Pick out material
     material = None
@@ -289,7 +288,7 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
         if key:
             material = np.concatenate(mesh.cell_data[key])
             if other:
-                logging.warning(
+                warn(
                     "FLAC3D can only write one cell data array. "
                     f'Picking {key}, skipping {", ".join(other)}.'
                 )

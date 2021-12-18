@@ -4,7 +4,6 @@ I/O for VTU.
 <https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf>
 """
 import base64
-import logging
 import re
 import sys
 import zlib
@@ -12,7 +11,7 @@ import zlib
 import numpy as np
 
 from ..__about__ import __version__
-from .._common import raw_from_cell_data
+from .._common import raw_from_cell_data, warn
 from .._exceptions import CorruptionError, ReadError
 from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
@@ -404,7 +403,7 @@ class VtuReader:
                         try:
                             piece_point_data[c.attrib["Name"]] = self.read_data(c)
                         except CorruptionError as e:
-                            logging.warning(e.args[0] + " Skipping.")
+                            warn(e.args[0] + " Skipping.")
 
                     point_data.append(piece_point_data)
 
@@ -615,10 +614,10 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                 )
 
     if not binary:
-        logging.warning("VTU ASCII files are only meant for debugging.")
+        warn("VTU ASCII files are only meant for debugging.")
 
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "VTU requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
