@@ -168,10 +168,13 @@ def read_buffer(f, binary):
     ]
 
     if len(cell_sets) > 0:
-        # Can only deal with sequential cell_ids for now. If the order is messed
-        # up, or if some indices are missing, cell_sets will be wrong.
-        if not np.all(np.arange(cell_ids[0], cell_ids[-1] + 1) == cell_ids):
-            warn("FLAC3D cell IDs not sequential. Cell sets probably messed up.")
+        # Can only deal with arange cell_ids for now.
+        if not np.array_equal(np.arange(0, cell_ids[-1] + 1), cell_ids):
+            warn(
+                "FLAC3D cell IDs not arange (0, 1, 2, ..., n). "
+                + "Cell sets probably messed up.",
+                highlight=False,
+            )
 
     # cell_sets contains the indices into the global cell list. Since this is
     # split up into blocks, we need to split the cell_sets, too.

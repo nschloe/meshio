@@ -120,9 +120,11 @@ def _pick_first_int_data(data):
     return key, other
 
 
-def warn(string):
-    Console(stderr=True).print(f"[yellow]Warning: {string}[/yellow]")
+def warn(string, highlight: bool = True) -> None:
+    Console(stderr=True).print(
+        f"[yellow]Warning: {string}[/yellow]", highlight=highlight
+    )
 
 
-def error(string):
-    Console(stderr=True).print(f"[red]Error: {string}[/red]")
+def error(string, highlight: bool = True) -> None:
+    Console(stderr=True).print(f"[red]Error: {string}[/red]", highlight=highlight)
