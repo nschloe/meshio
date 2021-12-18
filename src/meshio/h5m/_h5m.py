@@ -2,12 +2,12 @@
 I/O for h5m, cf.
 <https://www.mcs.anl.gov/~fathom/moab-docs/html/h5mmain.html>.
 """
-import logging
 from datetime import datetime
 
 import numpy as np
 
 from .. import __about__
+from .._common import warn
 from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
@@ -232,7 +232,7 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
         key = cell_block.type
         data = cell_block.data
         if key not in meshio_to_h5m_type:
-            logging.warning("Unsupported H5M element type '%s'. Skipping.", key)
+            warn("Unsupported H5M element type '%s'. Skipping.", key)
             continue
         this_type = meshio_to_h5m_type[key]
         elem_group = elements.create_group(this_type["name"])

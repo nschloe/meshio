@@ -3,11 +3,10 @@ I/O for Tecplot ASCII data format, cf.
 <https://github.com/su2code/SU2/raw/master/externals/tecio/360_data_format_guide.pdf>,
 <http://paulbourke.net/dataformats/tp/>.
 """
-import logging
-
 import numpy as np
 
 from ..__about__ import __version__ as version
+from .._common import warn
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register_format
@@ -385,7 +384,7 @@ def write(filename, mesh):
             cell_types.append(c.type)
             cell_blocks.append(ic)
         else:
-            logging.warning(
+            warn(
                 (
                     "Tecplot does not support cell type '{}'. "
                     "Skipping cell block {}."
@@ -411,7 +410,7 @@ def write(filename, mesh):
 
         # Skip 2D cells if it does
         if len(np.unique(num_dims)) == 2:
-            logging.warning("Mesh contains 2D and 3D cells. Skipping 2D cells.")
+            warn("Mesh contains 2D and 3D cells. Skipping 2D cells.")
             cell_blocks = [ic for ic, ndim in zip(cell_blocks, num_dims) if ndim == 3]
 
         # Convert 2D cells to quads / 3D cells to hexahedra
@@ -445,7 +444,7 @@ def write(filename, mesh):
                     data += [vv]
                     varrange[0] += 1
         else:
-            logging.warning(f"Skipping point data '{k}'.")
+            warn(f"Skipping point data '{k}'.")
 
     if mesh.cell_data:
         varrange[1] = varrange[0] - 1
@@ -462,7 +461,7 @@ def write(filename, mesh):
                         data += [vv]
                         varrange[1] += 1
             else:
-                logging.warning(f"Skipping cell data '{k}'.")
+                warn(f"Skipping cell data '{k}'.")
 
     with open_file(filename, "w") as f:
         # Title

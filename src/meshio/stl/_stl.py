@@ -4,12 +4,12 @@ I/O for the STL format, cf.
 """
 from __future__ import annotations
 
-import logging
 import os
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
@@ -182,14 +182,14 @@ def _read_binary(f, num_triangles: int):
 
 def write(filename, mesh, binary=False):
     if "triangle" not in {block.type for block in mesh.cells}:
-        logging.warning("STL can only write triangle cells. No triangle cells found.")
+        warn("STL can only write triangle cells. No triangle cells found.")
     if len(mesh.cells) > 1:
         invalid = {block.type for block in mesh.cells if block.type != "triangle"}
         invalid = ", ".join(invalid)
-        logging.warning(f"STL can only write triangle cells. Discarding {invalid}.")
+        warn(f"STL can only write triangle cells. Discarding {invalid}.")
 
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "STL requires 3D points, but 2D points given. Appending 0 third component."
         )
         points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])

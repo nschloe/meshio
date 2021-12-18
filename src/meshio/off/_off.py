@@ -3,10 +3,9 @@ I/O for the OFF surface format, cf.
 <https://en.wikipedia.org/wiki/OFF_(file_format)>,
 <http://www.geomview.org/docs/html/OFF.html>.
 """
-import logging
-
 import numpy as np
 
+from .._common import warn
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
@@ -54,7 +53,7 @@ def read_buffer(f):
 
 def write(filename, mesh):
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "OFF requires 3D points, but 2D points given. "
             "Appending 0 as third component."
         )
@@ -65,7 +64,7 @@ def write(filename, mesh):
     skip = [c for c in mesh.cells if c.type != "triangle"]
     if skip:
         string = ", ".join(item.type for item in skip)
-        logging.warning(f"OFF only supports triangle cells. Skipping {string}.")
+        warn(f"OFF only supports triangle cells. Skipping {string}.")
 
     tri = mesh.get_cells_type("triangle")
 

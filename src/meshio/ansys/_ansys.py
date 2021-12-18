@@ -3,12 +3,12 @@ I/O for Ansys's msh format.
 
 <https://romeo.univ-reims.fr/documents/fluent/tgrid/ug/appb.pdf>
 """
-import logging
 import re
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._helpers import register_format
@@ -357,23 +357,23 @@ def read(filename):  # noqa: C901
                     cells.append((key, data[key]))
 
             elif index == "39":
-                logging.warning("Zone specification not supported yet. Skipping.")
+                warn("Zone specification not supported yet. Skipping.")
                 _skip_close(f, line.count("(") - line.count(")"))
 
             elif index == "45":
                 # (45 (2 fluid solid)())
                 obj = re.match("\\(45 \\([0-9]+ ([\\S]+) ([\\S]+)\\)\\(\\)\\)", line)
                 if obj:
-                    logging.warning(
+                    warn(
                         "Zone specification not supported yet (%r, %r). " "Skipping.",
                         obj.group(1),
                         obj.group(2),
                     )
                 else:
-                    logging.warning("Zone specification not supported yet.")
+                    warn("Zone specification not supported yet.")
 
             else:
-                logging.warning("Unknown index %r. Skipping.", index)
+                warn("Unknown index %r. Skipping.", index)
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count("(") - line.count(")"))
 

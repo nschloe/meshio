@@ -2,12 +2,12 @@
 I/O for the TetGen file format, c.f.
 <https://wias-berlin.de/software/tetgen/fformats.node.html>
 """
-import logging
 import pathlib
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError, WriteError
 from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
@@ -140,9 +140,7 @@ def write(filename, mesh, float_fmt=".16e"):
 
     if any(c.type != "tetra" for c in mesh.cells):
         string = ", ".join([c.type for c in mesh.cells if c.type != "tetra"])
-        logging.warning(
-            f"TetGen only supports tetrahedra, but mesh has {string}. Skipping those."
-        )
+        warn(f"TetGen only supports tetrahedra, but mesh has {string}. Skipping those.")
 
     # write cells
     with open(ele_filename, "w") as fh:

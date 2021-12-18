@@ -1,11 +1,10 @@
 """
 I/O for PERMAS dat files.
 """
-import logging
-
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
@@ -222,7 +221,7 @@ def read_set(f, params_map):
 
 def write(filename, mesh):
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "PERMAS requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )

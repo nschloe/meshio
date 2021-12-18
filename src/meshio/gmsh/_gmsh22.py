@@ -4,11 +4,9 @@ I/O for Gmsh's msh format, cf.
 """
 from __future__ import annotations
 
-import logging
-
 import numpy as np
 
-from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
+from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data, warn
 from .._exceptions import ReadError
 from .._mesh import CellBlock, Mesh
 from .common import (
@@ -71,7 +69,7 @@ def read_buffer(f, is_ascii, data_size):
             _fast_forward_to_end_block(f, environ)
 
     if has_additional_tag_data:
-        logging.warning("The file contains tag data that couldn't be processed.")
+        warn("The file contains tag data that couldn't be processed.")
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -287,9 +285,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     # the gmsh documentation in the _read_cells_ascii function above.
     for tag in ["gmsh:physical", "gmsh:geometrical"]:
         if tag not in tag_data:
-            logging.warning(
-                f"Appending zeros to replace the missing {tag[5:]} tag data."
-            )
+            warn(f"Appending zeros to replace the missing {tag[5:]} tag data.")
             tag_data[tag] = [
                 np.zeros(len(cell_block), dtype=c_int) for cell_block in mesh.cells
             ]

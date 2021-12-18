@@ -1,10 +1,10 @@
-import logging
 import re
 from collections import OrderedDict
 from io import StringIO
 
 import numpy as np
 
+from .._common import warn
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
@@ -78,7 +78,7 @@ def write(filename, mesh):
 def write_buffer(f, mesh):
     skip = [c for c in mesh.cells if c.type != "triangle"]
     if skip:
-        logging.warning('WTK only supports triangle cells. Skipping {", ".join(skip)}.')
+        warn('WTK only supports triangle cells. Skipping {", ".join(skip)}.')
 
     triangles = mesh.get_cells_type("triangle")
 

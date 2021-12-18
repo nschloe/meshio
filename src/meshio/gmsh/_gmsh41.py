@@ -2,12 +2,11 @@
 I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2+), cf.
 <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 """
-import logging
 from functools import partial
 
 import numpy as np
 
-from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
+from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data, warn
 from .._exceptions import ReadError, WriteError
 from .._mesh import CellBlock, Mesh
 from .common import (
@@ -595,9 +594,7 @@ def _write_nodes(fh, points, cells, point_data, float_fmt, binary):
     # First write preamble
     if binary:
         if points.dtype != c_double:
-            logging.warning(
-                f"Binary Gmsh needs c_double points (got {points.dtype}). Converting."
-            )
+            warn(f"Binary Gmsh needs c_double points (got {points.dtype}). Converting.")
             points = points.astype(c_double)
         np.array([num_blocks, n, min_tag, max_tag], dtype=c_size_t).tofile(fh)
     else:
@@ -672,7 +669,7 @@ def _write_elements(fh, cells, tag_data, binary: bool) -> None:
             np.array([n], dtype=c_size_t).tofile(fh)
 
             if node_idcs.dtype != c_size_t:
-                logging.warning(
+                warn(
                     f"Binary Gmsh cells need c_size_t (got {node_idcs.dtype}). "
                     + "Converting."
                 )

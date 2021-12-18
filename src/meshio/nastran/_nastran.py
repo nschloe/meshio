@@ -1,12 +1,10 @@
 """
 I/O for Nastran bulk data.
 """
-import logging
-
 import numpy as np
 
 from ..__about__ import __version__
-from .._common import num_nodes_per_cell
+from .._common import num_nodes_per_cell, warn
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
@@ -247,7 +245,7 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
         raise RuntimeError(f'unknown "{format}" format')
 
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "Nastran requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )

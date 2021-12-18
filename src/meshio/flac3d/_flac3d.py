@@ -1,7 +1,6 @@
 """
 I/O for FLAC3D format.
 """
-import logging
 import struct
 import time
 
@@ -277,9 +276,7 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     """Write FLAC3D f3grid grid file."""
     skip = [c.type for c in mesh.cells if c.type not in meshio_only["zone"]]
     if skip:
-        logging.warning(
-            f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.'
-        )
+        warn(f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.')
 
     # Pick out material
     material = None
@@ -288,7 +285,7 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
         if key:
             material = np.concatenate(mesh.cell_data[key])
             if other:
-                logging.warning(
+                warn(
                     "FLAC3D can only write one cell data array. "
                     f'Picking {key}, skipping {", ".join(other)}.'
                 )
