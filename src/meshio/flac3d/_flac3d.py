@@ -4,6 +4,7 @@ I/O for FLAC3D format.
 import logging
 import struct
 import time
+from warnings import warn
 
 import numpy as np
 
@@ -112,6 +113,7 @@ def read_buffer(f, binary):
     point_ids = {}
     cells = []
     cell_sets = {}
+    cell_ids = []
 
     pidx = 0
     if binary:
@@ -128,7 +130,8 @@ def read_buffer(f, binary):
         for flag in ["zone", "face"]:
             (num_cells,) = struct.unpack("<I", f.read(4))
             for _ in range(num_cells):
-                _, cell = _read_cell_binary(f, point_ids)
+                cell_id, cell = _read_cell_binary(f, point_ids)
+                cell_ids.append(cell_id)
                 _update_cells(cells, cell, flag)
                 # mapper[flag][cid] = [cidx]
                 # cidx += 1
@@ -147,15 +150,17 @@ def read_buffer(f, binary):
                 pidx += 1
             elif line[0] in {"Z", "F"}:
                 flag = zone_or_face[line[0]]
-                _, cell = _read_cell_ascii(line, point_ids)
+                cell_id, cell = _read_cell_ascii(line, point_ids)
+                cell_ids.append(cell_id)
                 _update_cells(cells, cell, flag)
                 # mapper[flag][cid] = [cidx]
                 # cidx += 1
             elif line[0] in {"ZGROUP", "FGROUP"}:
                 flag = zone_or_face[line[0][0]]
                 name, slot, data = _read_cell_group_ascii(f, line)
-                # flac data is 1-based
-                cell_sets[f"{flag}:{name}:{slot}"] = np.array(data) - 1
+                # Watch out! data refers to the glocal cell_ids, so we need to
+                # adapt this later.
+                cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
 
             line = f.readline().rstrip().split()
 
@@ -163,6 +168,12 @@ def read_buffer(f, binary):
         (key, np.array(indices)[:, flac3d_to_meshio_order[key]])
         for key, indices in cells
     ]
+
+    if len(cell_sets) > 0:
+        # Can only deal with sequential cell_ids for now. If the order is messed
+        # up, or if some indices are missing, cell_sets will be wrong.
+        if not np.all(np.arange(cell_ids[0], cell_ids[-1] + 1) == cell_ids):
+            warn("FLAC3D cell IDs not sequential. Cell sets probably messed up.")
 
     # cell_sets contains the indices into the global cell list. Since this is
     # split up into blocks, we need to split the cell_sets, too.
