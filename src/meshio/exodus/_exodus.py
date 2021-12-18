@@ -7,11 +7,11 @@ in particular Appendix A (page 171, Implementation of EXODUS II with netCDF).
 """
 import datetime
 import re
-import warnings
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError
 from .._helpers import register_format
 from .._mesh import Mesh
@@ -122,7 +122,7 @@ def read(filename):  # noqa: C901
                 # For now only take the first value
                 pd[idx] = value[0]
                 if len(value) > 1:
-                    warnings.warn("Skipping some time data")
+                    warn("Skipping some time data")
             elif key == "name_elem_var":
                 value.set_auto_mask(False)
                 cell_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
@@ -139,7 +139,7 @@ def read(filename):  # noqa: C901
                 cd[idx][block] = value[0]
 
                 if len(value) > 1:
-                    warnings.warn("Skipping some time data")
+                    warn("Skipping some time data")
             elif key == "ns_names":
                 value.set_auto_mask(False)
                 ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]

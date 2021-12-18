@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import copy
-import warnings
 
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._common import num_nodes_per_cell
+from ._common import num_nodes_per_cell, warn
 
 topological_dimension = {
     "line": 1,
@@ -130,8 +129,7 @@ class Mesh:
         self.points = np.asarray(points)
         if isinstance(cells, dict):
             # Let's not deprecate this for now.
-            # import warnings
-            # warnings.warn(
+            # warn(
             #     "cell dictionaries are deprecated, use list of tuples, e.g., "
             #     '[("triangle", [[0, 1, 2], ...])]',
             #     DeprecationWarning,
@@ -311,10 +309,7 @@ class Mesh:
         from ._helpers import read
 
         # 2021-02-21
-        warnings.warn(
-            "meshio.Mesh.read is deprecated, use meshio.read instead",
-            DeprecationWarning,
-        )
+        warn("meshio.Mesh.read is deprecated, use meshio.read instead")
         return read(path_or_buf, file_format)
 
     def sets_to_int_data(self):
@@ -335,7 +330,7 @@ class Mesh:
             for item in intfun:
                 num_default = np.sum(item == default_value)
                 if num_default > 0:
-                    warnings.warn(
+                    warn(
                         f"{num_default} cells are not part of any cell set. "
                         f"Using default value {default_value}."
                     )
@@ -353,7 +348,7 @@ class Mesh:
                 intfun[cc] = i
 
             if np.any(intfun == default_value):
-                warnings.warn(
+                warn(
                     "Not all points are part of a point set. "
                     f"Using default value {default_value}."
                 )

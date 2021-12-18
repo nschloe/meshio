@@ -4,12 +4,11 @@ I/O for FLAC3D format.
 import logging
 import struct
 import time
-from warnings import warn
 
 import numpy as np
 
 from ..__about__ import __version__ as version
-from .._common import _pick_first_int_data
+from .._common import _pick_first_int_data, warn
 from .._files import open_file
 from .._helpers import register_format
 from .._mesh import Mesh

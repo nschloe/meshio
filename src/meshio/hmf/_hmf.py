@@ -1,8 +1,6 @@
-import warnings
-
 import meshio
 
-from .._common import cell_data_from_raw, raw_from_cell_data
+from .._common import cell_data_from_raw, raw_from_cell_data, warn
 from .._helpers import register_format
 from ..xdmf.common import meshio_to_xdmf_type, xdmf_to_meshio_type
 
@@ -61,7 +59,7 @@ def write_points_cells(filename, points, cells, **kwargs):
 def write(filename, mesh, compression="gzip", compression_opts=4):
     import h5py
 
-    warnings.warn("Experimental file format. Format can change at any time.")
+    warn("Experimental file format. Format can change at any time.")
     with h5py.File(filename, "w") as h5_file:
         h5_file.attrs["type"] = "hmf"
         h5_file.attrs["version"] = "0.1-alpha"
