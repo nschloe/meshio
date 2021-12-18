@@ -333,9 +333,10 @@ class Mesh:
                 intfun.append(arr)
 
             for item in intfun:
-                if np.any(item == default_value):
+                num_default = np.sum(item == default_value)
+                if num_default > 0:
                     warnings.warn(
-                        "Not all cells are part of a cell set. "
+                        f"{num_default} cells are not part of any cell set. "
                         f"Using default value {default_value}."
                     )
                     break
