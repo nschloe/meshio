@@ -122,3 +122,7 @@ def _pick_first_int_data(data):
 
 def warn(string):
     Console(stderr=True).print(f"[yellow]Warning: {string}[/yellow]")
+
+
+def error(string):
+    Console(stderr=True).print(f"[red]Error: {string}[/red]")

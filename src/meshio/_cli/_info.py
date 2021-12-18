@@ -1,5 +1,6 @@
 import numpy as np
 
+from .._common import warn
 from .._helpers import read, reader_map
 
 
@@ -24,7 +25,7 @@ def info(args):
     is_consistent = True
     for cells in mesh.cells:
         if np.any(cells.data > mesh.points.shape[0]):
-            print("\nATTENTION: Inconsistent mesh. Cells refer to nonexistent points.")
+            warn("Inconsistent mesh. Cells refer to nonexistent points.")
             is_consistent = False
             break
 
@@ -34,6 +35,6 @@ def info(args):
         for cells in mesh.cells:
             point_is_used[cells.data] = True
         if np.any(~point_is_used):
-            print("ATTENTION: Some points are not part of any cell.")
+            warn("Some points are not part of any cell.")
 
     return 0

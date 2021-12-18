@@ -2,6 +2,7 @@ import os
 import pathlib
 
 from .. import ansys, flac3d, gmsh, mdpa, ply, stl, vtk, vtu, xdmf
+from .._common import error
 from .._helpers import _filetype_from_path, read, reader_map
 
 
@@ -49,7 +50,7 @@ def ascii(args):
     elif fmt == "xdmf":
         xdmf.write(args.infile, mesh, data_format="XML")
     else:
-        print(f"Don't know how to convert {args.infile} to ASCII format.")
+        error(f"Don't know how to convert {args.infile} to ASCII format.")
         return 1
 
     size = os.stat(args.infile).st_size

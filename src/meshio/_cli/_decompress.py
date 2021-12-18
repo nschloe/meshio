@@ -2,6 +2,7 @@ import os
 import pathlib
 
 from .. import cgns, h5m, vtu, xdmf
+from .._common import error
 from .._helpers import _filetype_from_path, read, reader_map
 
 
@@ -38,7 +39,7 @@ def decompress(args):
     elif fmt == "xdmf":
         xdmf.write(args.infile, mesh, data_format="HDF", compression=None)
     else:
-        print(f"Don't know how to decompress {args.infile}.")
+        error(f"Don't know how to decompress {args.infile}.")
         exit(1)
 
     size = os.stat(args.infile).st_size

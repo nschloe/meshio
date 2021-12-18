@@ -2,6 +2,7 @@ import os
 import pathlib
 
 from .. import ansys, cgns, gmsh, h5m, mdpa, ply, stl, vtk, vtu, xdmf
+from .._common import error
 from .._helpers import _filetype_from_path, read, reader_map
 
 
@@ -69,7 +70,7 @@ def compress(args):
             compression_opts=9 if args.max else 4,
         )
     else:
-        print(f"Don't know how to compress {args.infile}.")
+        error(f"Don't know how to compress {args.infile}.")
         exit(1)
 
     size = os.stat(args.infile).st_size
