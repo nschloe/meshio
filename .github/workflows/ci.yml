@@ -20,6 +20,7 @@ jobs:
         uses: pre-commit/action@v2.0.3
 
   build:
+    needs: [lint]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
