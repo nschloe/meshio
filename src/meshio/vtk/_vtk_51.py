@@ -511,6 +511,13 @@ def write(filename, mesh, binary=True):
     if not binary:
         warn("VTK ASCII files are only meant for debugging.")
 
+    if mesh.point_sets or mesh.cell_sets:
+        warn(
+            "VTK format cannot write sets. "
+            + "Consider converting them to \\[point,cell]_data.",
+            highlight=False,
+        )
+
     with open_file(filename, "wb") as f:
         f.write(b"# vtk DataFile Version 5.1\n")
         f.write(f"written by meshio v{__version__}\n".encode())
