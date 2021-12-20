@@ -337,7 +337,7 @@ class Mesh:
                     break
 
             data_name = "-".join(self.cell_sets.keys())
-            self.cell_data = {data_name: intfun}
+            self.cell_data[data_name] = intfun
             self.cell_sets = {}
 
         # now for the point sets
@@ -354,7 +354,7 @@ class Mesh:
                 )
 
             data_name = "-".join(self.point_sets.keys())
-            self.point_data = {data_name: intfun}
+            self.point_data[data_name] = intfun
             self.point_sets = {}
 
     def int_data_to_sets(self):
