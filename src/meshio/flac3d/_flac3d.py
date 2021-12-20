@@ -167,14 +167,16 @@ def read_buffer(f, binary):
         for key, indices in cells
     ]
 
-    if len(cell_sets) > 0:
-        # Can only deal with arange cell_ids for now.
-        if not np.array_equal(np.arange(0, cell_ids[-1] + 1), cell_ids):
-            warn(
-                "FLAC3D cell IDs not arange (0, 1, 2, ..., n). "
-                + "Cell sets probably messed up.",
-                highlight=False,
-            )
+    # # sanity check, but not really necessary
+    # _, counts = np.unique(cell_ids, return_counts=True)
+    # assert np.all(counts == 1), "Cell IDs not unique"
+
+    # FLAC3D contains global cell ids. Create an inverse array that maps the
+    # global IDs to the running index (0, 1,..., n) that's used in meshio.
+    inv = np.full(np.max(cell_ids) + 1, -1)
+    inv[cell_ids] = np.arange(len(cell_ids))
+    # Convert the cell sets accordingly
+    cell_sets = {key: inv[value] for key, value in cell_sets.items()}
 
     # cell_sets contains the indices into the global cell list. Since this is
     # split up into blocks, we need to split the cell_sets, too.
@@ -183,7 +185,15 @@ def read_buffer(f, binary):
         d = np.digitize(data, bins)
         cell_sets[key] = [data[d == k] for k in range(len(cell_blocks))]
 
-    return Mesh(points=np.array(points), cells=cell_blocks, cell_sets=cell_sets)
+    # also store the cell_ids
+    gids = np.split(cell_ids, [len(block) for _, block in cell_blocks][:-1])
+
+    return Mesh(
+        points=np.array(points),
+        cells=cell_blocks,
+        cell_data={"cell_ids": gids},
+        cell_sets=cell_sets,
+    )
 
 
 def _read_point_ascii(buf_or_line):
