@@ -1,6 +1,8 @@
 """
 I/O for FLAC3D format.
 """
+from __future__ import annotations
+
 import struct
 import time
 
@@ -88,6 +90,10 @@ flag_to_numdim = {
 }
 
 
+def _merge(a: dict, b: dict) -> dict:
+    return {**a, **b}
+
+
 def read(filename):
     """Read FLAC3D f3grid grid file."""
     # Read a small block of the file to assess its type
@@ -109,9 +115,12 @@ def read_buffer(f, binary):
 
     points = []
     point_ids = {}
-    cells = []
-    cell_sets = {}
-    cell_ids = []
+    f_cells = []
+    z_cells = []
+    f_cell_sets = {}
+    z_cell_sets = {}
+    f_cell_ids = []
+    z_cell_ids = []
 
     pidx = 0
     if binary:
@@ -126,6 +135,15 @@ def read_buffer(f, binary):
             point_ids[pid] = pidx
 
         for flag in ["zone", "face"]:
+            if flag == "zone":
+                cell_ids = z_cell_ids
+                cells = z_cells
+                cell_sets = z_cell_sets
+            else:
+                cell_ids = f_cell_ids
+                cells = f_cells
+                cell_sets = f_cell_sets
+
             (num_cells,) = struct.unpack("<I", f.read(4))
             for _ in range(num_cells):
                 cell_id, cell = _read_cell_binary(f, point_ids)
@@ -146,35 +164,63 @@ def read_buffer(f, binary):
                 points.append(point)
                 point_ids[pid] = pidx
                 pidx += 1
-            elif line[0] in {"Z", "F"}:
+            elif line[0] in ["Z", "F"]:
                 flag = zone_or_face[line[0]]
                 cell_id, cell = _read_cell_ascii(line, point_ids)
-                cell_ids.append(cell_id)
-                _update_cells(cells, cell, flag)
+                if flag == "zone":
+                    z_cell_ids.append(cell_id)
+                    _update_cells(z_cells, cell, flag)
+                else:
+                    f_cell_ids.append(cell_id)
+                    _update_cells(f_cells, cell, flag)
                 # mapper[flag][cid] = [cidx]
                 # cidx += 1
-            elif line[0] in {"ZGROUP", "FGROUP"}:
+            elif line[0] in ["ZGROUP", "FGROUP"]:
                 flag = zone_or_face[line[0][0]]
                 name, slot, data = _read_cell_group_ascii(f, line)
                 # Watch out! data refers to the glocal cell_ids, so we need to
                 # adapt this later.
-                cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
+                if flag == "zone":
+                    z_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
+                else:
+                    f_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
 
             line = f.readline().rstrip().split()
+
+    cells = f_cells + z_cells
+
+    # enforce int type, empty numpy arrays have type float64
+    f_cell_ids = np.asarray(f_cell_ids, dtype=int)
+    z_cell_ids = np.asarray(z_cell_ids, dtype=int)
+    z_offset = len(f_cell_ids)
+
+    cell_ids = np.concatenate([f_cell_ids, z_cell_ids + z_offset], dtype=np.int64)
 
     cell_blocks = [
         (key, np.array(indices)[:, flac3d_to_meshio_order[key]])
         for key, indices in cells
     ]
 
-    if len(cell_sets) > 0:
-        # Can only deal with arange cell_ids for now.
-        if not np.array_equal(np.arange(0, cell_ids[-1] + 1), cell_ids):
-            warn(
-                "FLAC3D cell IDs not arange (0, 1, 2, ..., n). "
-                + "Cell sets probably messed up.",
-                highlight=False,
-            )
+    # sanity check, but not really necessary
+    # _, counts = np.unique(z_ cell_ids, return_counts=True)
+    # assert np.all(counts == 1), "Zone cell IDs not unique"
+    # _, counts = np.unique(f_ cell_ids, return_counts=True)
+    # assert np.all(counts == 1), "Zone cell IDs not unique"
+
+    # FLAC3D contains global cell ids. Create an inverse array that maps the
+    # global IDs to the running index (0, 1,..., n) that's used in meshio.
+    if len(f_cell_ids) > 0:
+        f_inv = np.full(np.max(f_cell_ids) + 1, -1)
+        f_inv[f_cell_ids] = np.arange(len(f_cell_ids))
+        f_cell_sets = {key: f_inv[value] for key, value in f_cell_sets.items()}
+    if len(z_cell_ids) > 0:
+        z_inv = np.full(np.max(z_cell_ids) + 1, -1)
+        z_inv[z_cell_ids] = np.arange(len(z_cell_ids))
+        z_cell_sets = {
+            key: z_inv[value] + z_offset for key, value in z_cell_sets.items()
+        }
+
+    cell_sets = _merge(f_cell_sets, z_cell_sets)
 
     # cell_sets contains the indices into the global cell list. Since this is
     # split up into blocks, we need to split the cell_sets, too.
@@ -183,7 +229,23 @@ def read_buffer(f, binary):
         d = np.digitize(data, bins)
         cell_sets[key] = [data[d == k] for k in range(len(cell_blocks))]
 
-    return Mesh(points=np.array(points), cells=cell_blocks, cell_sets=cell_sets)
+    # assert len(cell_ids) == sum(len(block) for _, block in cell_blocks)
+
+    # also store the cell_ids
+    cell_data = {}
+    if len(cell_blocks) > 0:
+        cell_data = {
+            "cell_ids": np.split(
+                cell_ids, np.cumsum([len(block) for _, block in cell_blocks][:-1])
+            )
+        }
+
+    return Mesh(
+        points=np.array(points),
+        cells=cell_blocks,
+        cell_data=cell_data,
+        cell_sets=cell_sets,
+    )
 
 
 def _read_point_ascii(buf_or_line):

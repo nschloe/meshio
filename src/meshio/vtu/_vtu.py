@@ -885,6 +885,13 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         for name, data in raw_from_cell_data(mesh.cell_data).items():
             numpy_to_xml_array(cd, name, data)
 
+    if mesh.point_sets or mesh.cell_sets:
+        warn(
+            "VTU format cannot write sets. "
+            + "Consider converting them to \\[point,cell]_data.",
+            highlight=False,
+        )
+
     # write_xml(filename, vtk_file, pretty_xml)
     tree = ET.ElementTree(vtk_file)
     tree.write(filename)

@@ -46,6 +46,8 @@ def test_reference_file(filename):
 
     # cells
     ref_num_cells = [
+        ("quad", 15),
+        ("triangle", 3),
         ("hexahedron", 45),
         ("pyramid", 9),
         ("hexahedron", 18),
@@ -56,8 +58,6 @@ def test_reference_file(filename):
         ("wedge", 3),
         ("pyramid", 6),
         ("tetra", 3),
-        ("quad", 15),
-        ("triangle", 3),
     ]
     assert [
         (cell_block.type, len(cell_block)) for cell_block in mesh.cells
