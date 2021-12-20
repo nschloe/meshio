@@ -122,9 +122,11 @@ def _pick_first_int_data(data):
 
 def warn(string, highlight: bool = True) -> None:
     Console(stderr=True).print(
-        f"[yellow]Warning: {string}[/yellow]", highlight=highlight
+        f"[yellow][bold]Warning:[/bold] {string}[/yellow]", highlight=highlight
     )
 
 
 def error(string, highlight: bool = True) -> None:
-    Console(stderr=True).print(f"[red]Error: {string}[/red]", highlight=highlight)
+    Console(stderr=True).print(
+        f"[red][bold]Error:[/bold] {string}[/red]", highlight=highlight
+    )
