@@ -172,7 +172,7 @@ class Mesh:
         for key, data in self.cell_data.items():
             if len(data) != len(cells):
                 raise ValueError(
-                    "Incompatible cell data. "
+                    f"Incompatible cell data '{key}'. "
                     f"{len(cells)} cell blocks, but '{key}' has {len(data)} blocks."
                 )
 
@@ -181,8 +181,9 @@ class Mesh:
                 if len(data[k]) != len(self.cells[k]):
                     raise ValueError(
                         "Incompatible cell data. "
-                        f"Cell block {k} has length {len(self.cells[k])}, but "
-                        f"corresponding cell data {key} item has length {len(data[k])}."
+                        + f"Cell block {k} ('{self.cells[k].type}') "
+                        + f"has length {len(self.cells[k])}, but "
+                        + f"corresponding cell data item has length {len(data[k])}."
                     )
 
     def __repr__(self):
