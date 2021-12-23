@@ -7,20 +7,22 @@ import meshio
 from . import helpers
 
 test_set = [
-    # helpers.empty_mesh,
-    helpers.tet_mesh
+    (helpers.tet_mesh, '.node'),
+    (helpers.tet_mesh, '.ele'),
+    (helpers.tri_mesh, '.face'),
+    (helpers.line_mesh, '.edge'),
 ]
 
 
-@pytest.mark.parametrize("mesh", test_set)
-def test(mesh, tmp_path):
+@pytest.mark.parametrize("mesh,extension", test_set)
+def test(mesh, extension, tmp_path):
     helpers.write_read(
         tmp_path,
         meshio.tetgen.write,
         meshio.tetgen.read,
         mesh,
         1.0e-15,
-        extension=".node",
+        extension=extension,
     )
 
 
