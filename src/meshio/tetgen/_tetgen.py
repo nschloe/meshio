@@ -12,17 +12,16 @@ from .._exceptions import ReadError, WriteError
 from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
-
 CELL_DIM = {
-    '.ele': 4,
-    '.face': 3,
-    '.edge': 2,
+    ".ele": 4,
+    ".face": 3,
+    ".edge": 2,
 }
 
 CELL_NAME = {
-    '.ele': 'tetra',
-    '.face': 'triangle',
-    '.edge': 'line',
+    ".ele": "tetra",
+    ".face": "triangle",
+    ".edge": "line",
 }
 
 
@@ -82,7 +81,7 @@ def read(filename):
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
 
-        if cell_name == 'tetra':
+        if cell_name == "tetra":
             num_cells, num_points_per_tet, num_attrs = (
                 int(item) for item in line.strip().split(" ") if item != ""
             )
@@ -102,11 +101,14 @@ def read(filename):
             flag = "" if k == 0 else str(k + 1)
             cell_data["tetgen:ref" + flag] = [cells[:, 1 + cell_dim + k]]
         # remove the leading index column and the attributes
-        cells = cells[:, 1:1 + cell_dim]
+        cells = cells[:, 1 : 1 + cell_dim]
         cells -= node_index_base
 
     return Mesh(
-        points, [CellBlock(cell_name, cells)], point_data=point_data, cell_data=cell_data
+        points,
+        [CellBlock(cell_name, cells)],
+        point_data=point_data,
+        cell_data=cell_data,
     )
 
 
@@ -119,7 +121,9 @@ def write(filename, mesh, float_fmt=".16e"):
         node_filename = filename.parent / (filename.stem + ".node")
         ele_filename = filename
     else:
-        raise WriteError(f"Must specify .node, .ele, .face, or .edge file. Got {filename}.")
+        raise WriteError(
+            f"Must specify .node, .ele, .face, or .edge file. Got {filename}."
+        )
 
     if mesh.points.shape[1] != 3:
         raise WriteError("Can only write 3D points")
@@ -165,7 +169,9 @@ def write(filename, mesh, float_fmt=".16e"):
 
     if any(c.type != cell_name for c in mesh.cells):
         string = ", ".join([c.type for c in mesh.cells if c.type != cell_name])
-        warn(f"{filename} only supports {cell_name} cells, but mesh has {string}. Skipping those.")
+        warn(
+            f"{filename} only supports {cell_name} cells, but mesh has {string}. Skipping those."
+        )
 
     # write cells
     with open(ele_filename, "w") as fh:
@@ -182,13 +188,15 @@ def write(filename, mesh, float_fmt=".16e"):
             fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))
         for id, c in enumerate(filter(lambda c: c.type == cell_name, mesh.cells)):
             data = c.data
-            if cell_name == 'tetra':
+            if cell_name == "tetra":
                 fh.write(f"{data.shape[0]} {cell_dim} {nattr}\n")
             else:
                 fh.write(f"{data.shape[0]} {nattr}\n")
             fmt = " ".join((1 + cell_dim + nattr) * ["{}"]) + "\n"
             for k, cells in enumerate(data):
-                data = list(cells[:cell_dim]) + [mesh.cell_data[key][id][k] for key in attr_keys]
+                data = list(cells[:cell_dim]) + [
+                    mesh.cell_data[key][id][k] for key in attr_keys
+                ]
                 fh.write(fmt.format(k, *data))
 
 

@@ -7,10 +7,10 @@ import meshio
 from . import helpers
 
 test_set = [
-    (helpers.tet_mesh, '.node'),
-    (helpers.tet_mesh, '.ele'),
-    (helpers.tri_mesh, '.face'),
-    (helpers.line_mesh, '.edge'),
+    (helpers.tet_mesh, ".node"),
+    (helpers.tet_mesh, ".ele"),
+    (helpers.tri_mesh, ".face"),
+    (helpers.line_mesh, ".edge"),
 ]
 
 
