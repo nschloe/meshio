@@ -115,11 +115,11 @@ def write(filename, mesh, float_fmt=".16e"):
     if filename.suffix == ".node":
         node_filename = filename
         ele_filename = filename.parent / (filename.stem + ".ele")
-    elif filename.suffix == ".ele":
+    elif filename.suffix in (".ele", ".face", ".edge"):
         node_filename = filename.parent / (filename.stem + ".node")
         ele_filename = filename
     else:
-        raise WriteError(f"Must specify .node or .ele file. Got {filename}.")
+        raise WriteError(f"Must specify .node, .ele, .face, or .edge file. Got {filename}.")
 
     if mesh.points.shape[1] != 3:
         raise WriteError("Can only write 3D points")
@@ -160,9 +160,12 @@ def write(filename, mesh, float_fmt=".16e"):
             )
             fh.write(fmt.format(k, *data))
 
-    if any(c.type != "tetra" for c in mesh.cells):
-        string = ", ".join([c.type for c in mesh.cells if c.type != "tetra"])
-        warn(f"TetGen only supports tetrahedra, but mesh has {string}. Skipping those.")
+    cell_dim = CELL_DIM[ele_filename.suffix]
+    cell_name = CELL_NAME[ele_filename.suffix]
+
+    if any(c.type != cell_name for c in mesh.cells):
+        string = ", ".join([c.type for c in mesh.cells if c.type != cell_name])
+        warn(f"{filename} only supports {cell_name} cells, but mesh has {string}. Skipping those.")
 
     # write cells
     with open(ele_filename, "w") as fh:
@@ -177,12 +180,12 @@ def write(filename, mesh, float_fmt=".16e"):
         fh.write(f"# This file was created by meshio v{__version__}\n")
         if nattr > 0:
             fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))
-        for id, c in enumerate(filter(lambda c: c.type == "tetra", mesh.cells)):
+        for id, c in enumerate(filter(lambda c: c.type == cell_name, mesh.cells)):
             data = c.data
-            fh.write(f"{data.shape[0]} {4} {nattr}\n")
-            fmt = " ".join((5 + nattr) * ["{}"]) + "\n"
-            for k, tet in enumerate(data):
-                data = list(tet[:4]) + [mesh.cell_data[key][id][k] for key in attr_keys]
+            fh.write(f"{data.shape[0]} {cell_dim} {nattr}\n")
+            fmt = " ".join((1 + cell_dim + nattr) * ["{}"]) + "\n"
+            for k, cells in enumerate(data):
+                data = list(cells[:cell_dim]) + [mesh.cell_data[key][id][k] for key in attr_keys]
                 fh.write(fmt.format(k, *data))
 
 
