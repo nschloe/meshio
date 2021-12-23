@@ -13,12 +13,25 @@ from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 
+CELL_DIM = {
+    '.ele': 4,
+    '.face': 3,
+    '.edge': 2,
+}
+
+CELL_NAME = {
+    '.ele': 'tetra',
+    '.face': 'triangle',
+    '.edge': 'line',
+}
+
+
 def read(filename):
     filename = pathlib.Path(filename)
     if filename.suffix == ".node":
         node_filename = filename
         ele_filename = filename.parent / (filename.stem + ".ele")
-    elif filename.suffix == ".ele":
+    elif filename.suffix in (".ele", ".face", ".edge"):
         node_filename = filename.parent / (filename.stem + ".node")
         ele_filename = filename
     else:
@@ -60,31 +73,40 @@ def read(filename):
         # remove the leading index column, the attributes, and the boundary markers
         points = points[:, 1:4]
 
+    cell_dim = CELL_DIM[ele_filename.suffix]
+    cell_name = CELL_NAME[ele_filename.suffix]
+
     # read elements
     with open(ele_filename.as_posix()) as f:
         line = f.readline().strip()
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
 
-        num_tets, num_points_per_tet, num_attrs = (
-            int(item) for item in line.strip().split(" ") if item != ""
-        )
-        if num_points_per_tet != 4:
-            raise ReadError()
+        if ele_filename.suffix == '.ele':
+            num_cells, num_points_per_tet, num_attrs = (
+                int(item) for item in line.strip().split(" ") if item != ""
+            )
+            if num_points_per_tet != cell_dim:
+                raise ReadError()
+        else:
+            num_cells, num_attrs = (
+                int(item) for item in line.strip().split(" ") if item != ""
+            )
+
         cells = np.fromfile(
-            f, dtype=int, count=(5 + num_attrs) * num_tets, sep=" "
-        ).reshape(num_tets, 5 + num_attrs)
+            f, dtype=int, count=(1 + cell_dim + num_attrs) * num_cells, sep=" "
+        ).reshape(num_cells, 1 + cell_dim + num_attrs)
         # read cell (region) attributes, the first is "ref", the others are "ref2",
         # "ref3", ...
         for k in range(num_attrs):
             flag = "" if k == 0 else str(k + 1)
-            cell_data["tetgen:ref" + flag] = [cells[:, 5 + k]]
+            cell_data["tetgen:ref" + flag] = [cells[:, 1 + cell_dim + k]]
         # remove the leading index column and the attributes
-        cells = cells[:, 1:5]
+        cells = cells[:, 1:1 + cell_dim]
         cells -= node_index_base
 
     return Mesh(
-        points, [CellBlock("tetra", cells)], point_data=point_data, cell_data=cell_data
+        points, [CellBlock(cell_name, cells)], point_data=point_data, cell_data=cell_data
     )
 
 
@@ -164,4 +186,4 @@ def write(filename, mesh, float_fmt=".16e"):
                 fh.write(fmt.format(k, *data))
 
 
-register_format("tetgen", [".ele", ".node"], read, {"tetgen": write})
+register_format("tetgen", [".face", ".edge", ".ele", ".node"], read, {"tetgen": write})
