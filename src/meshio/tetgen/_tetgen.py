@@ -82,7 +82,7 @@ def read(filename):
         while len(line) == 0 or line[0] == "#":
             line = f.readline().strip()
 
-        if ele_filename.suffix == '.ele':
+        if cell_name == 'tetra':
             num_cells, num_points_per_tet, num_attrs = (
                 int(item) for item in line.strip().split(" ") if item != ""
             )
@@ -182,7 +182,10 @@ def write(filename, mesh, float_fmt=".16e"):
             fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))
         for id, c in enumerate(filter(lambda c: c.type == cell_name, mesh.cells)):
             data = c.data
-            fh.write(f"{data.shape[0]} {cell_dim} {nattr}\n")
+            if cell_name == 'tetra':
+                fh.write(f"{data.shape[0]} {cell_dim} {nattr}\n")
+            else:
+                fh.write(f"{data.shape[0]} {nattr}\n")
             fmt = " ".join((1 + cell_dim + nattr) * ["{}"]) + "\n"
             for k, cells in enumerate(data):
                 data = list(cells[:cell_dim]) + [mesh.cell_data[key][id][k] for key in attr_keys]
