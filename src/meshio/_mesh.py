@@ -26,6 +26,7 @@ topological_dimension = {
     "vertex": 0,
     "quad8": 2,
     "hexahedron20": 3,
+    "wedge15": 3,
     "triangle10": 2,
     "triangle15": 2,
     "triangle21": 2,
