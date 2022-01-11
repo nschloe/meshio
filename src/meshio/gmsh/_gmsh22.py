@@ -88,7 +88,6 @@ def read_buffer(f, is_ascii, data_size):
             tags = np.array(tags[start:end], dtype=c_int)
             cell_data[tag_name].append(tags)
 
-
     return Mesh(
         points,
         cells,
