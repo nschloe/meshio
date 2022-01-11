@@ -68,6 +68,8 @@ def read_buffer(f, is_ascii, data_size):
         else:
             _fast_forward_to_end_block(f, environ)
 
+    cells = [CellBlock(*cell) for cell in cells]
+
     if has_additional_tag_data:
         warn("The file contains tag data that couldn't be processed.")
 
@@ -78,13 +80,14 @@ def read_buffer(f, is_ascii, data_size):
         if tag_name not in cell_data:
             cell_data[tag_name] = []
         offset = {}
-        for cell_type, cell_array in cells:
-            start = offset.setdefault(cell_type, 0)
-            end = start + len(cell_array)
-            offset[cell_type] = end
-            tags = tag_dict.get(cell_type, [])
+        for cell in cells:
+            start = offset.setdefault(cell.type, 0)
+            end = start + len(cell.data)
+            offset[cell.type] = end
+            tags = tag_dict.get(cell.type, [])
             tags = np.array(tags[start:end], dtype=c_int)
             cell_data[tag_name].append(tags)
+
 
     return Mesh(
         points,

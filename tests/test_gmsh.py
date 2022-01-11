@@ -45,6 +45,9 @@ def gmsh_periodic():
         helpers.add_field_data(helpers.tet_mesh, [1, 3], int),
         helpers.add_field_data(helpers.hex_mesh, [1, 3], int),
         gmsh_periodic(),
+        helpers.add_cell_data(helpers.line_tri_mesh, [("a", (), np.float64)]),
+        helpers.add_cell_data(helpers.line_tri_mesh, [("a", (3,), np.float64)]),
+        helpers.add_cell_data(helpers.line_tri_mesh, [("a", (9,), np.float64)]),
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
