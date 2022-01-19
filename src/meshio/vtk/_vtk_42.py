@@ -605,7 +605,7 @@ def write(filename, mesh, binary=True):
     if mesh.points.shape[1] == 2:
         warn(
             "VTK requires 3D points, but 2D points given. "
-            "Appending 0 third component."
+            + "Appending 0 third component."
         )
         points = pad(mesh.points)
     else:
@@ -616,7 +616,7 @@ def write(filename, mesh, binary=True):
             if len(values.shape) == 2 and values.shape[1] == 2:
                 warn(
                     "VTK requires 3D vectors, but 2D vectors given. "
-                    "Appending 0 third component to {}.".format(name)
+                    + f"Appending 0 third component to {name}."
                 )
                 mesh.point_data[name] = pad(values)
 
@@ -625,7 +625,7 @@ def write(filename, mesh, binary=True):
             if len(values.shape) == 2 and values.shape[1] == 2:
                 warn(
                     "VTK requires 3D vectors, but 2D vectors given. "
-                    "Appending 0 third component to {}.".format(name)
+                    + f"Appending 0 third component to {name}."
                 )
                 data[k] = pad(data[k])
 
