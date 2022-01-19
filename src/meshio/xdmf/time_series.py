@@ -256,7 +256,7 @@ class TimeSeriesWriter:
         ET.register_namespace("xi", "https://www.w3.org/2001/XInclude/")
 
         self.has_mesh = False
-        self.mesh_name = None
+        self.mesh_name = "mesh"
 
     def __enter__(self):
         if self.data_format == "HDF":
@@ -284,7 +284,6 @@ class TimeSeriesWriter:
         #     <DataItem Dimensions="8457 2" Format="HDF">maxwell.h5:/Mesh/0/mesh/geometry</DataItem>
         #   </Geometry>
         # </Grid>
-        self.mesh_name = "mesh"
         grid = ET.SubElement(
             self.domain, "Grid", Name=self.mesh_name, GridType="Uniform"
         )
@@ -388,18 +387,17 @@ class TimeSeriesWriter:
                 NumberOfElements=str(num_cells),
             )
             dt, prec = numpy_to_xdmf_dtype[cell_blocks[0].data.dtype.name]
-            dim = "{} {}".format(*cell_blocks[0].data.shape)
             data_item = ET.SubElement(
                 topo,
                 "DataItem",
                 DataType=dt,
-                Dimensions=dim,
+                Dimensions="{} {}".format(*cell_blocks[0].data.shape),
                 Format=self.data_format,
                 Precision=prec,
             )
             data_item.text = self.numpy_to_xml_string(cell_blocks[0].data)
         elif len(cell_blocks) > 1:
-            total_num_cells = sum(c.data.shape[0] for c in cell_blocks)
+            total_num_cells = sum(len(c.data) for c in cell_blocks)
             topo = ET.SubElement(
                 grid,
                 "Topology",

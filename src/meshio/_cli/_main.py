@@ -24,7 +24,6 @@ def main(argv=None):
     )
 
     parser = subparsers.add_parser("convert", help="Convert mesh files", aliases=["c"])
-
     _convert.add_args(parser)
     parser.set_defaults(func=_convert.convert)
 

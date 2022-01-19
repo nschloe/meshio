@@ -365,15 +365,14 @@ def read(filename):  # noqa: C901
                 obj = re.match("\\(45 \\([0-9]+ ([\\S]+) ([\\S]+)\\)\\(\\)\\)", line)
                 if obj:
                     warn(
-                        "Zone specification not supported yet (%r, %r). " "Skipping.",
-                        obj.group(1),
-                        obj.group(2),
+                        f"Zone specification not supported yet ({obj.group(1)}, {obj.group(2)}). "
+                        + "Skipping.",
                     )
                 else:
                     warn("Zone specification not supported yet.")
 
             else:
-                warn("Unknown index %r. Skipping.", index)
+                warn(f"Unknown index {index}. Skipping.")
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count("(") - line.count(")"))
 
