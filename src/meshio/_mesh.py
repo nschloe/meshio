@@ -358,15 +358,19 @@ class Mesh:
             self.point_data[data_name] = intfun
             self.point_sets = {}
 
-    def int_data_to_sets(self):
+    def int_data_to_sets(self, keys: list[str] | None = None):
         """Convert all int data to {point,cell}_sets, where possible."""
-        keys = []
+        rm_keys = []
         for key, data in self.cell_data.items():
+            if keys is not None:
+                if key not in keys:
+                    continue
+
             # handle all int and uint data
             if not all(v.dtype.kind in ["i", "u"] for v in data):
                 continue
 
-            keys.append(key)
+            rm_keys.append(key)
 
             # this call can be rather expensive
             tags = np.unique(np.concatenate(data))
@@ -379,7 +383,7 @@ class Mesh:
             names = list(dict.fromkeys(names))
             if len(names) != len(tags):
                 # alternative names
-                names = [f"set{tag}" for tag in tags]
+                names = [f"set-{key}-{tag}" for tag in tags]
 
             # TODO there's probably a better way besides np.where, something from
             # np.unique or np.sort
@@ -387,17 +391,21 @@ class Mesh:
                 self.cell_sets[name] = [np.where(d == tag)[0] for d in data]
 
         # remove the cell data
-        for key in keys:
+        for key in rm_keys:
             del self.cell_data[key]
 
         # now point data
-        keys = []
+        rm_keys = []
         for key, data in self.point_data.items():
+            if keys is not None:
+                if key not in keys:
+                    continue
+
             # handle all int and uint data
             if not all(v.dtype.kind in ["i", "u"] for v in data):
                 continue
 
-            keys.append(key)
+            rm_keys.append(key)
 
             # this call can be rather expensive
             tags = np.unique(data)
@@ -418,5 +426,5 @@ class Mesh:
                 self.point_sets[name] = np.where(data == tag)[0]
 
         # remove the cell data
-        for key in keys:
+        for key in rm_keys:
             del self.point_data[key]
