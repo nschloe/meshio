@@ -39,7 +39,8 @@ def test_sets_to_int_data():
     assert_equal(mesh.point_data, {"fixed-loose": [0, 0, 0, 1, 1, 1, 1]})
 
     # now back to set data
-    mesh.int_data_to_sets()
+    mesh.cell_data_to_sets("grain0-grain1")
+    mesh.point_data_to_sets("fixed-loose")
 
     assert mesh.cell_data == {}
     assert_equal(mesh.cell_sets, {"grain0": [[0, 1]], "grain1": [[2, 3, 4]]})
@@ -74,7 +75,7 @@ def test_int_data_to_sets():
     mesh = helpers.tri_mesh
     mesh.cell_data = {"grain0-grain1": [np.array([0, 1])]}
 
-    mesh.int_data_to_sets()
+    mesh.cell_data_to_sets("grain0-grain1")
 
     assert_equal(mesh.cell_sets, {"grain0": [[0]], "grain1": [[1]]})
 
@@ -93,7 +94,7 @@ def test_gh_1165():
     )
 
     mesh.sets_to_int_data()
-    mesh.int_data_to_sets()
+    mesh.cell_data_to_sets("test-sets")
 
     assert_equal(mesh.cell_sets, {"test": [[], [1]], "sets": [[0, 1], [0, 2, 3]]})
 
