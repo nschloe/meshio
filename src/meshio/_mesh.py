@@ -313,7 +313,7 @@ class Mesh:
         warn("meshio.Mesh.read is deprecated, use meshio.read instead")
         return read(path_or_buf, file_format)
 
-    def sets_to_int_data(self):
+    def cell_sets_to_data(self):
         # If possible, convert cell sets to integer cell data. This is possible if all
         # cells appear exactly in one group.
         default_value = -1
@@ -341,8 +341,10 @@ class Mesh:
             self.cell_data[data_name] = intfun
             self.cell_sets = {}
 
+    def point_sets_to_data(self):
         # now for the point sets
         # Go for -1 as the default value. (NaN is not int.)
+        default_value = -1
         if len(self.point_sets) > 0:
             intfun = np.full(len(self.points), default_value, dtype=int)
             for i, cc in enumerate(self.point_sets.values()):
@@ -358,73 +360,61 @@ class Mesh:
             self.point_data[data_name] = intfun
             self.point_sets = {}
 
-    def int_data_to_sets(self, keys: list[str] | None = None):
-        """Convert all int data to {point,cell}_sets, where possible."""
-        rm_keys = []
-        for key, data in self.cell_data.items():
-            if keys is not None:
-                if key not in keys:
-                    continue
+    # This used to be int_data_to_sets(), converting _all_ cell and point data.
+    # This is not useful in many cases, as one usually only wants one
+    # particular data array (e.g., "MaterialIDs") converted to sets.
+    def cell_data_to_sets(self, key: str):
+        """Convert point_data to cell_sets."""
+        data = self.cell_data[key]
 
-            # handle all int and uint data
-            if not all(v.dtype.kind in ["i", "u"] for v in data):
-                continue
+        # handle all int and uint data
+        if not all(v.dtype.kind in ["i", "u"] for v in data):
+            raise RuntimeError(f"cell_data['{key}'] is not int data.")
 
-            rm_keys.append(key)
+        tags = np.unique(np.concatenate(data))
 
-            # this call can be rather expensive
-            tags = np.unique(np.concatenate(data))
+        # try and get the names by splitting the key along "-" (this is how
+        # sets_to_int_data() forms the key)
+        names = key.split("-")
+        # remove duplicates and preserve order
+        # <https://stackoverflow.com/a/7961390/353337>:
+        names = list(dict.fromkeys(names))
+        if len(names) != len(tags):
+            # alternative names
+            names = [f"set-{key}-{tag}" for tag in tags]
 
-            # try and get the names by splitting the key along "-" (this is how
-            # sets_to_int_data() forms the key)
-            names = key.split("-")
-            # remove duplicates and preserve order
-            # <https://stackoverflow.com/a/7961390/353337>:
-            names = list(dict.fromkeys(names))
-            if len(names) != len(tags):
-                # alternative names
-                names = [f"set-{key}-{tag}" for tag in tags]
-
-            # TODO there's probably a better way besides np.where, something from
-            # np.unique or np.sort
-            for name, tag in zip(names, tags):
-                self.cell_sets[name] = [np.where(d == tag)[0] for d in data]
+        # TODO there's probably a better way besides np.where, something from
+        # np.unique or np.sort
+        for name, tag in zip(names, tags):
+            self.cell_sets[name] = [np.where(d == tag)[0] for d in data]
 
         # remove the cell data
-        for key in rm_keys:
-            del self.cell_data[key]
+        del self.cell_data[key]
 
-        # now point data
-        rm_keys = []
-        for key, data in self.point_data.items():
-            if keys is not None:
-                if key not in keys:
-                    continue
+    def point_data_to_sets(self, key: str):
+        """Convert point_data to point_sets."""
+        data = self.point_data[key]
 
-            # handle all int and uint data
-            if not all(v.dtype.kind in ["i", "u"] for v in data):
-                continue
+        # handle all int and uint data
+        if not all(v.dtype.kind in ["i", "u"] for v in data):
+            raise RuntimeError(f"point_data['{key}'] is not int data.")
 
-            rm_keys.append(key)
+        tags = np.unique(data)
 
-            # this call can be rather expensive
-            tags = np.unique(data)
+        # try and get the names by splitting the key along "-" (this is how
+        # sets_to_int_data() forms the key
+        names = key.split("-")
+        # remove duplicates and preserve order
+        # <https://stackoverflow.com/a/7961390/353337>:
+        names = list(dict.fromkeys(names))
+        if len(names) != len(tags):
+            # alternative names
+            names = [f"set-key-{tag}" for tag in tags]
 
-            # try and get the names by splitting the key along "-" (this is how
-            # sets_to_int_data() forms the key
-            names = key.split("-")
-            # remove duplicates and preserve order
-            # <https://stackoverflow.com/a/7961390/353337>:
-            names = list(dict.fromkeys(names))
-            if len(names) != len(tags):
-                # alternative names
-                names = [f"set{tag}" for tag in tags]
-
-            # TODO there's probably a better way besides np.where, something from
-            # np.unique or np.sort
-            for name, tag in zip(names, tags):
-                self.point_sets[name] = np.where(data == tag)[0]
+        # TODO there's probably a better way besides np.where, something from
+        # np.unique or np.sort
+        for name, tag in zip(names, tags):
+            self.point_sets[name] = np.where(data == tag)[0]
 
         # remove the cell data
-        for key in rm_keys:
-            del self.point_data[key]
+        del self.point_data[key]
