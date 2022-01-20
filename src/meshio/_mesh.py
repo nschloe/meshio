@@ -313,7 +313,7 @@ class Mesh:
         warn("meshio.Mesh.read is deprecated, use meshio.read instead")
         return read(path_or_buf, file_format)
 
-    def sets_to_int_data(self):
+    def cell_sets_to_data(self):
         # If possible, convert cell sets to integer cell data. This is possible if all
         # cells appear exactly in one group.
         default_value = -1
@@ -341,8 +341,10 @@ class Mesh:
             self.cell_data[data_name] = intfun
             self.cell_sets = {}
 
+    def point_sets_to_data(self):
         # now for the point sets
         # Go for -1 as the default value. (NaN is not int.)
+        default_value = -1
         if len(self.point_sets) > 0:
             intfun = np.full(len(self.points), default_value, dtype=int)
             for i, cc in enumerate(self.point_sets.values()):

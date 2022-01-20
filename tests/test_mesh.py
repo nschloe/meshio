@@ -30,7 +30,8 @@ def test_sets_to_int_data():
     mesh = helpers.add_point_sets(mesh)
     mesh = helpers.add_cell_sets(mesh)
 
-    mesh.sets_to_int_data()
+    mesh.point_sets_to_data()
+    mesh.cell_sets_to_data()
 
     assert mesh.cell_sets == {}
     assert_equal(mesh.cell_data, {"grain0-grain1": [[0, 0, 1, 1, 1]]})
@@ -57,7 +58,7 @@ def test_sets_to_int_data_warning():
         cell_sets={"tag": [[0]]},
     )
     with pytest.warns(UserWarning):
-        mesh.sets_to_int_data()
+        mesh.cell_sets_to_data()
     assert np.all(mesh.cell_data["tag"] == np.array([[0, -1]]))
 
     mesh = meshio.Mesh(
@@ -66,7 +67,7 @@ def test_sets_to_int_data_warning():
         point_sets={"tag": [[0, 1, 3]]},
     )
     with pytest.warns(UserWarning):
-        mesh.sets_to_int_data()
+        mesh.point_sets_to_data()
 
     assert np.all(mesh.point_data["tag"] == np.array([[0, 0, -1, 0]]))
 
@@ -93,7 +94,7 @@ def test_gh_1165():
         },
     )
 
-    mesh.sets_to_int_data()
+    mesh.cell_sets_to_data()
     mesh.cell_data_to_sets("test-sets")
 
     assert_equal(mesh.cell_sets, {"test": [[], [1]], "sets": [[0, 1], [0, 2, 3]]})
