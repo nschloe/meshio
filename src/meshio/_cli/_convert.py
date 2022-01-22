@@ -56,10 +56,14 @@ def convert(args):
     mesh.points = np.ascontiguousarray(mesh.points)
 
     if args.sets_to_int_data:
-        mesh.sets_to_int_data()
+        mesh.point_sets_to_data()
+        mesh.cell_sets_to_data()
 
     if args.int_data_to_sets:
-        mesh.int_data_to_sets()
+        for key in mesh.point_data:
+            mesh.point_data_to_sets(key)
+        for key in mesh.cell_data:
+            mesh.cell_data_to_sets(key)
 
     # write it out
     kwargs = {"file_format": args.output_format}
