@@ -24,7 +24,6 @@ def ascii(args):
         fmts = [args.input_format]
     else:
         fmts = _filetypes_from_path(pathlib.Path(args.infile))
-
     # pick the first
     fmt = fmts[0]
 

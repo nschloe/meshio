@@ -15,15 +15,27 @@ reader_map = {}
 _writer_map = {}
 
 
-def register_format(name: str, extensions: list[str], reader, writer_map):
+def register_format(format_name: str, extensions: list[str], reader, writer_map):
     for ext in extensions:
         if ext not in extension_to_filetypes:
             extension_to_filetypes[ext] = []
-        extension_to_filetypes[ext].append(name)
+        extension_to_filetypes[ext].append(format_name)
 
     if reader is not None:
-        reader_map[name] = reader
+        reader_map[format_name] = reader
     _writer_map.update(writer_map)
+
+
+def deregister_format(format_name: str):
+    for value in extension_to_filetypes.values():
+        if format_name in value:
+            value.remove(format_name)
+
+    if format_name in reader_map:
+        reader_map.pop(format_name)
+
+    if format_name in _writer_map:
+        _writer_map.pop(format_name)
 
 
 def _filetypes_from_path(path: Path) -> list[str]:
