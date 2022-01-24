@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._common import num_nodes_per_cell, warn
+from ._common import error, num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
 from ._mesh import CellBlock, Mesh
@@ -15,7 +16,9 @@ reader_map = {}
 _writer_map = {}
 
 
-def register_format(format_name: str, extensions: list[str], reader, writer_map):
+def register_format(
+    format_name: str, extensions: list[str], reader, writer_map
+) -> None:
     for ext in extensions:
         if ext not in extension_to_filetypes:
             extension_to_filetypes[ext] = []
@@ -23,6 +26,7 @@ def register_format(format_name: str, extensions: list[str], reader, writer_map)
 
     if reader is not None:
         reader_map[format_name] = reader
+
     _writer_map.update(writer_map)
 
 
@@ -86,19 +90,22 @@ def _read_file(path: Path, file_format: str | None):
         raise ReadError(f"File {path} not found.")
 
     if file_format:
-        file_formats = [file_format]
+        possible_file_formats = [file_format]
     else:
         # deduce possible file formats from extension
-        file_formats = _filetypes_from_path(path)
+        possible_file_formats = _filetypes_from_path(path)
 
-    for file_format in file_formats:
+    for file_format in possible_file_formats:
         if file_format not in reader_map:
             raise ReadError(f"Unknown file format '{file_format}' of '{path}'.")
 
         try:
             return reader_map[file_format](str(path))
         except ReadError:
-            warn(f"Failed to read {path} as {file_format}")
+            pass
+
+    error(f"Couldn't read file {path} as either of {', '.join(possible_file_formats)}")
+    sys.exit(1)
 
 
 def write_points_cells(
