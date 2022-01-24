@@ -461,4 +461,4 @@ def write(filename, mesh, binary=True):
             first_index = last_index + 1
 
 
-register_format("ansys", [], read, {"ansys": write})
+register_format("ansys", [".msh"], read, {"ansys": write})

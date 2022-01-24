@@ -34,7 +34,8 @@ from . import (
 from .__about__ import __version__
 from ._exceptions import ReadError, WriteError
 from ._helpers import (
-    extension_to_filetype,
+    deregister_format,
+    extension_to_filetypes,
     read,
     register_format,
     write,
@@ -77,8 +78,9 @@ __all__ = [
     "read",
     "write",
     "register_format",
+    "deregister_format",
     "write_points_cells",
-    "extension_to_filetype",
+    "extension_to_filetypes",
     "Mesh",
     "CellBlock",
     "ReadError",
