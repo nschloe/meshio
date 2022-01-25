@@ -1,39 +1,59 @@
 from __future__ import annotations
 
-import pathlib
+import sys
+from pathlib import Path
 
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._common import num_nodes_per_cell
+from ._common import error, num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
 from ._mesh import CellBlock, Mesh
 
-extension_to_filetype = {}
+extension_to_filetypes = {}
 reader_map = {}
 _writer_map = {}
 
 
-def register_format(name: str, extensions: list[str], reader, writer_map):
+def register_format(
+    format_name: str, extensions: list[str], reader, writer_map
+) -> None:
     for ext in extensions:
-        extension_to_filetype[ext] = name
+        if ext not in extension_to_filetypes:
+            extension_to_filetypes[ext] = []
+        extension_to_filetypes[ext].append(format_name)
 
     if reader is not None:
-        reader_map[name] = reader
+        reader_map[format_name] = reader
+
     _writer_map.update(writer_map)
 
 
-def _filetype_from_path(path: pathlib.Path):
+def deregister_format(format_name: str):
+    for value in extension_to_filetypes.values():
+        if format_name in value:
+            value.remove(format_name)
+
+    if format_name in reader_map:
+        reader_map.pop(format_name)
+
+    if format_name in _writer_map:
+        _writer_map.pop(format_name)
+
+
+def _filetypes_from_path(path: Path) -> list[str]:
     ext = ""
-    out = None
+    out = []
     for suffix in reversed(path.suffixes):
         ext = (suffix + ext).lower()
-        if ext in extension_to_filetype:
-            out = extension_to_filetype[ext]
+        try:
+            out += extension_to_filetypes[ext]
+        except KeyError:
+            pass
 
-    if out is None:
-        raise ReadError(f"Could not deduce file format from extension '{ext}'.")
+    if not out:
+        raise ReadError(f"Could not deduce file format from path '{path}'.")
     return out
 
 
@@ -46,29 +66,46 @@ def read(filename, file_format: str | None = None):
     :returns mesh{2,3}d: The mesh data.
     """
     if is_buffer(filename, "r"):
-        if file_format is None:
-            raise ReadError("File format must be given if buffer is used")
-        if file_format == "tetgen":
-            raise ReadError(
-                "tetgen format is spread across multiple files "
-                "and so cannot be read from a buffer"
-            )
-        msg = f"Unknown file format '{file_format}'"
-    else:
-        path = pathlib.Path(filename)
-        if not path.exists():
-            raise ReadError(f"File {filename} not found.")
+        return _read_buffer(filename, file_format)
 
-        if not file_format:
-            # deduce file format from extension
-            file_format = _filetype_from_path(path)
+    return _read_file(Path(filename), file_format)
 
-        msg = f"Unknown file format '{file_format}' of '{filename}'."
 
+def _read_buffer(filename, file_format: str | None):
+    if file_format is None:
+        raise ReadError("File format must be given if buffer is used")
+    if file_format == "tetgen":
+        raise ReadError(
+            "tetgen format is spread across multiple files "
+            "and so cannot be read from a buffer"
+        )
     if file_format not in reader_map:
-        raise ReadError(msg)
+        raise ReadError(f"Unknown file format '{file_format}'")
 
     return reader_map[file_format](filename)
+
+
+def _read_file(path: Path, file_format: str | None):
+    if not path.exists():
+        raise ReadError(f"File {path} not found.")
+
+    if file_format:
+        possible_file_formats = [file_format]
+    else:
+        # deduce possible file formats from extension
+        possible_file_formats = _filetypes_from_path(path)
+
+    for file_format in possible_file_formats:
+        if file_format not in reader_map:
+            raise ReadError(f"Unknown file format '{file_format}' of '{path}'.")
+
+        try:
+            return reader_map[file_format](str(path))
+        except ReadError:
+            pass
+
+    error(f"Couldn't read file {path} as either of {', '.join(possible_file_formats)}")
+    sys.exit(1)
 
 
 def write_points_cells(
@@ -113,10 +150,12 @@ def write(filename, mesh: Mesh, file_format: str | None = None, **kwargs):
                 "tetgen format is spread across multiple files, and so cannot be written to a buffer"
             )
     else:
-        path = pathlib.Path(filename)
+        path = Path(filename)
         if not file_format:
-            # deduce file format from extension
-            file_format = _filetype_from_path(path)
+            # deduce possible file formats from extension
+            file_formats = _filetypes_from_path(path)
+            # just take the first one
+            file_format = file_formats[0]
 
     try:
         writer = _writer_map[file_format]

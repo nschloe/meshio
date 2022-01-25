@@ -36,6 +36,7 @@ def test_convert(tmp_path):
             "gmsh",
             "--output-format",
             "vtk",
+            "--sets-to-int-data",
         ]
     )
 

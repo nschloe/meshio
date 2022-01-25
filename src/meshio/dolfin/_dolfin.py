@@ -71,7 +71,7 @@ def _read_mesh(filename):
             assert cell_tags is not None
             cells[0][1][k] = [elem.attrib[t] for t in cell_tags]
         else:
-            warn("Unknown entry %s. Ignoring.", elem.tag)
+            warn(f"Unknown entry {elem.tag}. Ignoring.")
 
         elem.clear()
 
@@ -140,9 +140,7 @@ def _write_mesh(filename, points, cell_type, cells):
         discarded_cell_types = {c.type for c in cells if c.type != cell_type}
         warn(
             "DOLFIN XML can only handle one cell type at a time. "
-            "Using %s, discarding %s.",
-            cell_type,
-            ", ".join(discarded_cell_types),
+            + f"Using {cell_type}, discarding {', '.join(discarded_cell_types)}.",
         )
 
     dim = points.shape[1]
