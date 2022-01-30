@@ -21,7 +21,7 @@ triangle_pattern = r"\(\s*\(\s*({})\s*\)\s*\)".format(
 )
 triangle_re = re.compile(triangle_pattern)
 
-tin_pattern = fr"TIN\s*\((?:\s*{triangle_pattern}\s*,?)*\s*\)"
+tin_pattern = rf"TIN\s*\((?:\s*{triangle_pattern}\s*,?)*\s*\)"
 tin_re = re.compile(tin_pattern)
 
 

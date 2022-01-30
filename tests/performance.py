@@ -144,7 +144,7 @@ def read_write(plot=False):
     mesh = generate_triangular_mesh()
     print(mesh)
     mem_size = mesh.points.nbytes + mesh.cells[0].data.nbytes
-    mem_size /= 1024.0 ** 2
+    mem_size /= 1024.0**2
     print(f"mem_size: {mem_size:.2f} MB")
 
     formats = {
@@ -311,20 +311,20 @@ def read_write(plot=False):
                     name,
                     elapsed_write[-1],
                     elapsed_read[-1],
-                    file_sizes[-1] / 1024.0 ** 2,
-                    peak_memory_write[-1] / 1024.0 ** 2,
-                    peak_memory_read[-1] / 1024.0 ** 2,
+                    file_sizes[-1] / 1024.0**2,
+                    peak_memory_write[-1] / 1024.0**2,
+                    peak_memory_read[-1] / 1024.0**2,
                 )
             )
 
     names = list(formats.keys())
     # convert to MB
     file_sizes = np.array(file_sizes)
-    file_sizes = file_sizes / 1024.0 ** 2
+    file_sizes = file_sizes / 1024.0**2
     peak_memory_write = np.array(peak_memory_write)
-    peak_memory_write = peak_memory_write / 1024.0 ** 2
+    peak_memory_write = peak_memory_write / 1024.0**2
     peak_memory_read = np.array(peak_memory_read)
-    peak_memory_read = peak_memory_read / 1024.0 ** 2
+    peak_memory_read = peak_memory_read / 1024.0**2
 
     if plot:
         plot_speed(names, elapsed_write, elapsed_read)
