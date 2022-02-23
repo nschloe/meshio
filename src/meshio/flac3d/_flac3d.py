@@ -9,7 +9,7 @@ import time
 import numpy as np
 
 from ..__about__ import __version__ as version
-from .._common import _pick_first_int_data, info, join_strings, replace_space, warn
+from .._common import _pick_first_int_data, warn
 from .._files import open_file
 from .._helpers import register_format
 from .._mesh import Mesh
@@ -317,6 +317,7 @@ def _read_cell_group_ascii(buf_or_line, line):
     data = []
     while True:
         line = line.rstrip().split()
+        print(line)
         if line and (line[0] not in {"*", "ZGROUP", "FGROUP"}):
             data += [int(l) for l in line]
         else:
@@ -344,25 +345,30 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
         warn(f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.')
 
     # Pick out material
-    material = None
-    if mesh.cell_data:
+    materials = None
+    if mesh.cell_sets:
+        materials = mesh.cell_sets.copy()
+    elif mesh.cell_data:
+        # TODO convert cell_data to cell_sets
+        exit(1)
         key, other = _pick_first_int_data(mesh.cell_data)
         if key:
-            material = np.concatenate(mesh.cell_data[key])
+            materials = np.concatenate(mesh.cell_data[key])
             if other:
                 warn(
                     "FLAC3D can only write one cell data array. "
                     f'Picking {key}, skipping {", ".join(other)}.'
                 )
-    elif mesh.cell_sets:
-        info(
-            "FLAC3D: Converting cell_sets to cell_data.",
-            highlight=False,
-        )
-        key, _ = join_strings(list(mesh.cell_sets.keys()))
-        key, _ = replace_space(key)
-        mesh.cell_sets_to_data(key)
-        material = np.concatenate(mesh.cell_data[key])
+
+    if materials is not None:
+        # Translate the material array from meshio.cell_set data to a
+        # dictionary with labels as keys, and _global_ indices.
+        for label, values in materials.items():
+            count = 0
+            for cells, item in zip(mesh.cells, values):
+                item += count
+                count += len(cells)
+            materials[label] = np.concatenate(values)
 
     mode = "wb" if binary else "w"
     with open_file(filename, mode) as f:
@@ -376,7 +382,7 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
         _write_points(f, mesh.points, binary, float_fmt)
         for flag in ["zone", "face"]:
             _write_cells(f, mesh.points, mesh.cells, flag, binary)
-            _write_groups(f, mesh.cells, material, mesh.field_data, flag, binary)
+            _write_groups(f, mesh.cells, materials, flag, binary)
 
 
 def _write_points(f, points, binary, float_fmt=None):
@@ -419,10 +425,8 @@ def _write_cells(f, points, cells, flag, binary):
             f.write(struct.pack(f"<{(num_verts + 2) * num_cells}I", *tmp.ravel()))
             count += num_cells
     else:
-        entity, abbrev = {
-            "zone": ("ZONES", "Z"),
-            "face": ("FACES", "F"),
-        }[flag]
+        entity = "ZONES" if flag == "zone" else "FACES"
+        abbrev = entity[0]
 
         f.write(f"* {entity}\n")
         for ctype, cdata in cells:
@@ -432,20 +436,18 @@ def _write_cells(f, points, cells, flag, binary):
                 f.write(fmt.format(meshio_to_flac3d_type[ctype], count, *entry))
 
 
-def _write_groups(f, cells, cell_data, field_data, flag, binary) -> None:
+def _write_groups(f, cells, materials, flag, binary) -> None:
     """Write groups."""
-    if cell_data is None:
+    if materials is None:
         if binary:
             f.write(struct.pack("<I", 0))
         return
 
-    d = _translate_groups(cells, cell_data, field_data, flag)
-
     if binary:
         slot = b"Default"
 
-        f.write(struct.pack("<I", len(d)))
-        for label, group in d.items():
+        f.write(struct.pack("<I", len(materials)))
+        for label, group in materials.items():
             num_chars, num_zones = len(label), len(group)
             fmt = f"<H{num_chars}sH7sI{num_zones}I"
             tmp = [
@@ -464,7 +466,7 @@ def _write_groups(f, cells, cell_data, field_data, flag, binary) -> None:
         }
 
         f.write(f"* {flag.upper()} GROUPS\n")
-        for label, group in d.items():
+        for label, group in materials.items():
             f.write(f'{flag_to_text[flag]} "{label}" SLOT 1\n')
             _write_table(f, group)
 
@@ -541,6 +543,8 @@ def _translate_groups(cells, cell_data, field_data, flag):
 
 def _write_table(f, data, ncol: int = 20):
     """Write group data table."""
+    print()
+    print("data", data)
     nrow = len(data) // ncol
     lines = np.split(data, np.full(nrow, ncol).cumsum())
     for line in lines:
