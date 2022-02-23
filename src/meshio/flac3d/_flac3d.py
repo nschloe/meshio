@@ -9,7 +9,7 @@ import time
 import numpy as np
 
 from ..__about__ import __version__ as version
-from .._common import _pick_first_int_data, warn
+from .._common import _pick_first_int_data, info, join_strings, replace_space, warn
 from .._files import open_file
 from .._helpers import register_format
 from .._mesh import Mesh
@@ -354,6 +354,15 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
                     "FLAC3D can only write one cell data array. "
                     f'Picking {key}, skipping {", ".join(other)}.'
                 )
+    elif mesh.cell_sets:
+        info(
+            "FLAC3D: Converting cell_sets to cell_data.",
+            highlight=False,
+        )
+        key, _ = join_strings(list(mesh.cell_sets.keys()))
+        key, _ = replace_space(key)
+        mesh.cell_sets_to_data(key)
+        material = np.concatenate(mesh.cell_data[key])
 
     mode = "wb" if binary else "w"
     with open_file(filename, mode) as f:
@@ -510,7 +519,7 @@ def _translate_faces(cells):
 def _translate_groups(cells, cell_data, field_data, flag):
     """Convert meshio cell_data to FLAC3D groups."""
     num_dims = np.concatenate(
-        [np.full(len(c[1]), 2 if c[0] in meshio_only["face"] else 3) for c in cells]
+        [np.full(len(c.data), 2 if c.type in meshio_only["face"] else 3) for c in cells]
     )
     groups = {
         k: np.nonzero(np.logical_and(cell_data == k, num_dims == flag_to_numdim[flag]))[
