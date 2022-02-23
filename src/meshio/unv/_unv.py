@@ -730,4 +730,4 @@ def _write_cells(unv_fh: BinaryIO, cell_blocks: List):
             unv_fh.write("\n".encode())
     _write_separator(unv_fh)
 
-register_format("su2", [".su2"], read, {"su2": write})
+register_format("unv", [".unv"], read, {"unv": write})
