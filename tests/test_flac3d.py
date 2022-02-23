@@ -1,5 +1,4 @@
 import pathlib
-import sys
 
 import numpy as np
 import pytest
@@ -12,10 +11,11 @@ from . import helpers
 @pytest.mark.parametrize(
     "mesh",
     [
-        helpers.empty_mesh,
-        helpers.tet_mesh,
-        helpers.hex_mesh,
-        helpers.tet_mesh,
+        # helpers.empty_mesh,
+        # helpers.tet_mesh,
+        # helpers.hex_mesh,
+        # helpers.tet_mesh,
+        helpers.add_cell_sets(helpers.tet_mesh)
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
@@ -29,8 +29,6 @@ def test(mesh, binary, tmp_path):
     )
 
 
-# the failure perhaps has to do with dictionary ordering
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="Fails with 3.5")
 @pytest.mark.parametrize(
     "filename",
     ["flac3d_mesh_ex.f3grid", "flac3d_mesh_ex_bin.f3grid"],

@@ -432,40 +432,41 @@ def _write_cells(f, points, cells, flag, binary):
                 f.write(fmt.format(meshio_to_flac3d_type[ctype], count, *entry))
 
 
-def _write_groups(f, cells, cell_data, field_data, flag, binary):
+def _write_groups(f, cells, cell_data, field_data, flag, binary) -> None:
     """Write groups."""
     if cell_data is None:
         if binary:
             f.write(struct.pack("<I", 0))
+        return
+
+    d = _translate_groups(cells, cell_data, field_data, flag)
+
+    if binary:
+        slot = b"Default"
+
+        f.write(struct.pack("<I", len(d)))
+        for label, group in d.items():
+            num_chars, num_zones = len(label), len(group)
+            fmt = f"<H{num_chars}sH7sI{num_zones}I"
+            tmp = [
+                num_chars,
+                label.encode(),
+                7,
+                slot,
+                num_zones,
+                *group,
+            ]
+            f.write(struct.pack(fmt, *tmp))
     else:
-        groups, labels = _translate_groups(cells, cell_data, field_data, flag)
+        flag_to_text = {
+            "zone": "ZGROUP",
+            "face": "FGROUP",
+        }
 
-        if binary:
-            slot = b"Default"
-
-            f.write(struct.pack("<I", len(groups)))
-            for k in sorted(groups.keys()):
-                num_chars, num_zones = len(labels[k]), len(groups[k])
-                fmt = f"<H{num_chars}sH7sI{num_zones}I"
-                tmp = [
-                    num_chars,
-                    labels[k].encode(),
-                    7,
-                    slot,
-                    num_zones,
-                    *groups[k],
-                ]
-                f.write(struct.pack(fmt, *tmp))
-        else:
-            flag_to_text = {
-                "zone": "ZGROUP",
-                "face": "FGROUP",
-            }
-
-            f.write(f"* {flag.upper()} GROUPS\n")
-            for k in sorted(groups.keys()):
-                f.write(f'{flag_to_text[flag]} "{labels[k]}" SLOT 1\n')
-                _write_table(f, groups[k])
+        f.write(f"* {flag.upper()} GROUPS\n")
+        for label, group in d.items():
+            f.write(f'{flag_to_text[flag]} "{label}" SLOT 1\n')
+            _write_table(f, group)
 
 
 def _translate_zones(points, cells):
@@ -518,14 +519,12 @@ def _translate_faces(cells):
 
 def _translate_groups(cells, cell_data, field_data, flag):
     """Convert meshio cell_data to FLAC3D groups."""
-    num_dims = np.concatenate(
+    dim = np.concatenate(
         [np.full(len(c.data), 2 if c.type in meshio_only["face"] else 3) for c in cells]
     )
+    numdim = flag_to_numdim[flag]
     groups = {
-        k: np.nonzero(np.logical_and(cell_data == k, num_dims == flag_to_numdim[flag]))[
-            0
-        ]
-        + 1
+        k: np.nonzero(np.logical_and(cell_data == k, dim == numdim))[0] + 1
         for k in np.unique(cell_data)
     }
     groups = {k: v for k, v in groups.items() if v.size}
@@ -537,7 +536,7 @@ def _translate_groups(cells, cell_data, field_data, flag):
             {v[0]: k for k, v in field_data.items() if v[1] == flag_to_numdim[flag]}
         )
 
-    return groups, labels
+    return dict(zip(labels.values(), groups.values()))
 
 
 def _write_table(f, data, ncol: int = 20):
