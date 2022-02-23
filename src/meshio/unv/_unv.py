@@ -4,7 +4,7 @@ I/O UNV mesh format
 # pylint: disable=too-many-locals
 import math
 import re
-from typing import Dict, List, TextIO, BinaryIO
+from typing import BinaryIO, Dict, List, TextIO
 
 import numpy as np
 
