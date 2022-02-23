@@ -12,6 +12,8 @@ from .._common import warn
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import CellBlock, Mesh
+from .._helpers import register_format
+
 
 unv_type_to_numnodes = {
     # line
@@ -727,3 +729,5 @@ def _write_cells(unv_fh: BinaryIO, cell_blocks: List):
                 unv_fh.write(f"{point + 1}{_SP}".encode())
             unv_fh.write("\n".encode())
     _write_separator(unv_fh)
+
+register_format("su2", [".su2"], read, {"su2": write})
