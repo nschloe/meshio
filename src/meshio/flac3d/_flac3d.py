@@ -317,7 +317,6 @@ def _read_cell_group_ascii(buf_or_line, line):
     data = []
     while True:
         line = line.rstrip().split()
-        print(line)
         if line and (line[0] not in {"*", "ZGROUP", "FGROUP"}):
             data += [int(l) for l in line]
         else:
@@ -541,8 +540,6 @@ def _translate_groups(cells, cell_data, field_data, flag):
 
 def _write_table(f, data, ncol: int = 20):
     """Write group data table."""
-    print()
-    print("data", data)
     nrow = len(data) // ncol
     lines = np.split(data, np.full(nrow, ncol).cumsum())
     for line in lines:
