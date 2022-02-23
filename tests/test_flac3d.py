@@ -11,11 +11,11 @@ from . import helpers
 @pytest.mark.parametrize(
     "mesh",
     [
-        # helpers.empty_mesh,
-        # helpers.tet_mesh,
-        # helpers.hex_mesh,
-        # helpers.tet_mesh,
-        helpers.add_cell_sets(helpers.tet_mesh)
+        helpers.empty_mesh,
+        helpers.tet_mesh,
+        helpers.hex_mesh,
+        helpers.tet_mesh,
+        helpers.add_cell_sets(helpers.tet_mesh),
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])

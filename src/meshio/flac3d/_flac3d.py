@@ -444,8 +444,9 @@ def _write_groups(f, cells, materials, flag, binary) -> None:
             f.write(struct.pack("<I", 0))
         return
 
+    # TODO filter materials by zones/faces
+
     if binary:
-        slot = b"Default"
         f.write(struct.pack("<I", len(materials)))
         for label, group in materials.items():
             num_chars, num_zones = len(label), len(group)
@@ -454,7 +455,7 @@ def _write_groups(f, cells, materials, flag, binary) -> None:
                 num_chars,
                 label.encode(),
                 7,
-                slot,
+                b"Default",  # slot
                 num_zones,
                 *group,
             ]
