@@ -11,7 +11,7 @@ import zlib
 import numpy as np
 
 from ..__about__ import __version__
-from .._common import raw_from_cell_data, warn
+from .._common import info, join_strings, raw_from_cell_data, replace_space, warn
 from .._exceptions import CorruptionError, ReadError
 from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
@@ -625,6 +625,24 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     else:
         points = mesh.points
 
+    if mesh.point_sets:
+        info(
+            "VTU format cannot write point_sets. Converting them to point_data...",
+            highlight=False,
+        )
+        key, _ = join_strings(list(mesh.point_sets.keys()))
+        key, _ = replace_space(key)
+        mesh.point_sets_to_data(key)
+
+    if mesh.cell_sets:
+        info(
+            "VTU format cannot write cell_sets. Converting them to cell_data...",
+            highlight=False,
+        )
+        key, _ = join_strings(list(mesh.cell_sets.keys()))
+        key, _ = replace_space(key)
+        mesh.cell_sets_to_data(key)
+
     vtk_file = ET.Element(
         "VTKFile",
         type="UnstructuredGrid",
@@ -884,13 +902,6 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         cd = ET.SubElement(piece, "CellData")
         for name, data in raw_from_cell_data(mesh.cell_data).items():
             numpy_to_xml_array(cd, name, data)
-
-    if mesh.point_sets or mesh.cell_sets:
-        warn(
-            "VTU format cannot write sets. "
-            + "Consider converting them to \\[point,cell]_data.",
-            highlight=False,
-        )
 
     # write_xml(filename, vtk_file, pretty_xml)
     tree = ET.ElementTree(vtk_file)
