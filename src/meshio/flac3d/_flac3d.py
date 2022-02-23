@@ -380,8 +380,11 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
             f.write(f"* {time.ctime()}\n")
 
         _write_points(f, mesh.points, binary, float_fmt)
+        # Make gid an array such that its value can be persitently altered
+        # inside the functions.
+        gid = np.array(0)
         for flag in ["zone", "face"]:
-            _write_cells(f, mesh.points, mesh.cells, flag, binary)
+            _write_cells(f, mesh.points, mesh.cells, flag, binary, gid)
             _write_groups(f, mesh.cells, materials, flag, binary)
 
 
@@ -398,13 +401,11 @@ def _write_points(f, points, binary, float_fmt=None):
             f.write(fmt.format(i + 1, *point))
 
 
-def _write_cells(f, points, cells, flag, binary):
+def _write_cells(f, points, cells, flag: str, binary: bool, gid):
     """Write cells."""
     if flag == "zone":
-        count = 0
         cells = _translate_zones(points, cells)
     else:
-        count = sum(len(c) for c in cells if c.type in meshio_only["zone"])
         cells = _translate_faces(cells)
 
     if binary:
@@ -417,13 +418,13 @@ def _write_cells(f, points, cells, flag, binary):
             num_cells, num_verts = cdata.shape
             tmp = np.column_stack(
                 (
-                    np.arange(1, num_cells + 1) + count,
+                    np.arange(1, num_cells + 1) + gid,
                     np.full(num_cells, num_verts),
                     cdata + 1,
                 )
             ).astype(int)
             f.write(struct.pack(f"<{(num_verts + 2) * num_cells}I", *tmp.ravel()))
-            count += num_cells
+            gid += num_cells
     else:
         entity = "ZONES" if flag == "zone" else "FACES"
         abbrev = entity[0]
@@ -432,8 +433,8 @@ def _write_cells(f, points, cells, flag, binary):
         for ctype, cdata in cells:
             fmt = f"{abbrev} {{}} {{}} " + " ".join(["{}"] * cdata.shape[1]) + "\n"
             for entry in cdata + 1:
-                count += 1
-                f.write(fmt.format(meshio_to_flac3d_type[ctype], count, *entry))
+                gid += 1
+                f.write(fmt.format(meshio_to_flac3d_type[ctype], gid, *entry))
 
 
 def _write_groups(f, cells, materials, flag, binary) -> None:
@@ -445,7 +446,6 @@ def _write_groups(f, cells, materials, flag, binary) -> None:
 
     if binary:
         slot = b"Default"
-
         f.write(struct.pack("<I", len(materials)))
         for label, group in materials.items():
             num_chars, num_zones = len(label), len(group)
@@ -460,14 +460,11 @@ def _write_groups(f, cells, materials, flag, binary) -> None:
             ]
             f.write(struct.pack(fmt, *tmp))
     else:
-        flag_to_text = {
-            "zone": "ZGROUP",
-            "face": "FGROUP",
-        }
+        flg = "ZGROUP" if flag == "zone" else "FGROUP"
 
         f.write(f"* {flag.upper()} GROUPS\n")
         for label, group in materials.items():
-            f.write(f'{flag_to_text[flag]} "{label}" SLOT 1\n')
+            f.write(f'{flg} "{label}" SLOT 1\n')
             _write_table(f, group)
 
 
