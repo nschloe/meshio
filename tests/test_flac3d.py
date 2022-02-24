@@ -1,5 +1,4 @@
 import pathlib
-import sys
 
 import numpy as np
 import pytest
@@ -16,10 +15,12 @@ from . import helpers
         helpers.tet_mesh,
         helpers.hex_mesh,
         helpers.tet_mesh,
+        helpers.add_cell_sets(helpers.tet_mesh),
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test(mesh, binary, tmp_path):
+    # mesh.write("out.f3grid")
     helpers.write_read(
         tmp_path,
         lambda f, m: meshio.flac3d.write(f, m, binary=binary),
@@ -29,8 +30,6 @@ def test(mesh, binary, tmp_path):
     )
 
 
-# the failure perhaps has to do with dictionary ordering
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="Fails with 3.5")
 @pytest.mark.parametrize(
     "filename",
     ["flac3d_mesh_ex.f3grid", "flac3d_mesh_ex_bin.f3grid"],
