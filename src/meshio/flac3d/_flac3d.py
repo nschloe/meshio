@@ -412,12 +412,16 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
 
     # Translate the material array from meshio.cell_set data to a
     # dictionary with labels as keys.
-    if zsets is not None:
-        for label, values in zsets.items():
-            zsets[label] = np.concatenate(values)
-    if fsets is not None:
-        for label, values in fsets.items():
-            fsets[label] = np.concatenate(values)
+    for label, values in zsets.items():
+        zsets[label] = np.concatenate(values)
+    for label, values in fsets.items():
+        fsets[label] = np.concatenate(values)
+
+    # flac3d indices start at 1
+    for label, values in zsets.items():
+        zsets[label] += 1
+    for label, values in fsets.items():
+        fsets[label] += 1
 
     mode = "wb" if binary else "w"
     with open_file(filename, mode) as f:
