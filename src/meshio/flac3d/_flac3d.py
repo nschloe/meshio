@@ -385,6 +385,34 @@ def split_f_z(mesh):
         if not all(item is None for item in value)
     }
 
+    # Right now, the zsets contain indices into the corresponding cell block.
+    # FLAC3D expects _global_ indices. Update.
+    cell_block_sizes = [len(cb) for cb in zcells]
+    for key, data in zsets.items():
+        gid = 0
+        for n, block in zip(cell_block_sizes, data):
+            block += gid
+            gid += n
+
+    # TODO not sure if fcells and zcells share a common global index
+    cell_block_sizes = [len(cb) for cb in fcells]
+    for key, data in fsets.items():
+        gid = 0
+        for n, block in zip(cell_block_sizes, data):
+            block += gid
+            gid += n
+
+    for label, values in zsets.items():
+        zsets[label] = np.concatenate(values)
+    for label, values in fsets.items():
+        fsets[label] = np.concatenate(values)
+
+    # flac3d indices start at 1
+    for label, values in zsets.items():
+        zsets[label] += 1
+    for label, values in fsets.items():
+        fsets[label] += 1
+
     return zcells, fcells, zsets, fsets
 
 
@@ -396,28 +424,6 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
 
     # split into face/zone data
     zcells, fcells, zsets, fsets = split_f_z(mesh)
-
-    # elif mesh.cell_data:
-    #     print(mesh)
-    #     # TODO convert cell_data to cell_sets
-    #     exit(1)
-    #     key, other = _pick_first_int_data(mesh.cell_data)
-    #     if key:
-    #         materials = np.concatenate(mesh.cell_data[key])
-    #         if other:
-    #             warn(
-    #                 "FLAC3D can only write one cell data array. "
-    #                 f'Picking {key}, skipping {", ".join(other)}.'
-    #             )
-
-    # Translate the material array from meshio.cell_set data to a
-    # dictionary with labels as keys.
-    if zsets is not None:
-        for label, values in zsets.items():
-            zsets[label] = np.concatenate(values)
-    if fsets is not None:
-        for label, values in fsets.items():
-            fsets[label] = np.concatenate(values)
 
     mode = "wb" if binary else "w"
     with open_file(filename, mode) as f:
