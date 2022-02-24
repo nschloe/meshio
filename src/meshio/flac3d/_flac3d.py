@@ -3,13 +3,15 @@ I/O for FLAC3D format.
 """
 from __future__ import annotations
 
+import re
 import struct
 import time
 
 import numpy as np
 
 from ..__about__ import __version__ as version
-from .._common import _pick_first_int_data, warn
+from .._common import warn
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
 from .._mesh import Mesh
@@ -111,8 +113,6 @@ def read(filename):
 
 def read_buffer(f, binary):
     """Read binary or ASCII file."""
-    zone_or_face = {"Z": "zone", "F": "face"}
-
     points = []
     point_ids = {}
     f_cells = []
@@ -157,35 +157,42 @@ def read_buffer(f, binary):
                 name, slot, data = _read_cell_group_binary(f)
                 cell_sets[f"{flag}:{name}:{slot}"] = np.array(data)
     else:
-        line = f.readline().rstrip().split()
-        while line:
-            if line[0] == "G":
-                pid, point = _read_point_ascii(line)
+        while True:
+            line = f.readline()
+
+            if not line:
+                break
+
+            split = line.rstrip().split()
+
+            if split[0] == "G":
+                pid, point = _read_point_ascii(split)
                 points.append(point)
                 point_ids[pid] = pidx
                 pidx += 1
-            elif line[0] in ["Z", "F"]:
-                flag = zone_or_face[line[0]]
-                cell_id, cell = _read_cell_ascii(line, point_ids)
-                if flag == "zone":
-                    z_cell_ids.append(cell_id)
-                    _update_cells(z_cells, cell, flag)
-                else:
-                    f_cell_ids.append(cell_id)
-                    _update_cells(f_cells, cell, flag)
-                # mapper[flag][cid] = [cidx]
-                # cidx += 1
-            elif line[0] in ["ZGROUP", "FGROUP"]:
-                flag = zone_or_face[line[0][0]]
-                name, slot, data = _read_cell_group_ascii(f, line)
-                # Watch out! data refers to the glocal cell_ids, so we need to
-                # adapt this later.
-                if flag == "zone":
-                    z_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
-                else:
-                    f_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
 
-            line = f.readline().rstrip().split()
+            elif split[0] == "Z":
+                cell_id, cell = _read_cell_ascii(split, point_ids)
+                z_cell_ids.append(cell_id)
+                _update_cells(z_cells, cell, "zone")
+
+            elif split[0] == "F":
+                cell_id, cell = _read_cell_ascii(split, point_ids)
+                f_cell_ids.append(cell_id)
+                _update_cells(f_cells, cell, "face")
+
+            elif split[0] == "ZGROUP":
+                # ZGROUP "Region 2" SLOT 1
+                name, slot, data = _read_cell_group_ascii(f, line)
+                # Watch out! data refers to the global cell_ids, so we need to
+                # adapt this later.
+                z_cell_sets[f"zone:{name}:{slot}"] = np.asarray(data)
+
+            elif split[0] == "FGROUP":
+                name, slot, data = _read_cell_group_ascii(f, line)
+                # Watch out! data refers to the global cell_ids, so we need to
+                # adapt this later.
+                f_cell_sets[f"face:{name}:{slot}"] = np.asarray(data)
 
     cells = f_cells + z_cells
 
@@ -300,17 +307,21 @@ def _read_cell_group_binary(buf_or_line):
     return name, slot, data
 
 
-def _read_cell_group_ascii(buf_or_line, line):
+def _read_cell_group_ascii(buf_or_line, line: str):
     # a group line read
     # ```
-    # ZGROUP 'groupname' SLOT 5
+    # ZGROUP 'group five' SLOT 5
     # ```
-    assert line[0] in {"Z", "F", "ZGROUP", "FGROUP"}
-    assert line[1][0] in {"'", '"'}
-    assert line[1][-1] in {"'", '"'}
-    name = line[1][1:-1]
-    assert line[2] == "SLOT"
-    slot = line[3]
+    m = re.match(r"^([A-Z]+) *[\'\"](.*?)[\'\"] *([A-Z]+) *(.*?) *$", line)
+    if m is None:
+        raise ReadError(
+            'Expected line of the form\n```\nZGROUP "group name" SLOT 5\n```\n '
+            + f"but got \n```\n{line}\n```\n"
+        )
+    assert m.group(1) in {"ZGROUP", "FGROUP"}
+    assert m.group(3) == "SLOT"
+    name = m.group(2)
+    slot = m.group(4)
 
     i = buf_or_line.tell()
     line = buf_or_line.readline()
@@ -337,23 +348,82 @@ def _update_cells(cells, cell, flag):
         cells.append((cell_type, [cell]))
 
 
+def split_f_z(mesh):
+    # FLAC3D makes a difference between ZONES (3D-cells only) and FACES
+    # (2D-cells only). Split cells into zcells and fcells, along with the cell
+    # sets etc.
+    zcells = []
+    fcells = []
+    for cell_block in mesh.cells:
+        if cell_block.type in meshio_only["zone"]:
+            zcells.append(cell_block)
+        elif cell_block.type in meshio_only["face"]:
+            fcells.append(cell_block)
+
+    zsets = {}
+    fsets = {}
+    for key, cset in mesh.cell_sets.items():
+        zsets[key] = []
+        fsets[key] = []
+        for cell_block, sblock in zip(mesh.cells, cset):
+            zsets[key].append(
+                sblock if cell_block.type in meshio_only["zone"] else None
+            )
+            fsets[key].append(
+                sblock if cell_block.type in meshio_only["face"] else None
+            )
+
+    # remove the data that is only None
+    zsets = {
+        key: value
+        for key, value in zsets.items()
+        if not all(item is None for item in value)
+    }
+    fsets = {
+        key: value
+        for key, value in fsets.items()
+        if not all(item is None for item in value)
+    }
+
+    # Right now, the zsets contain indices into the corresponding cell block.
+    # FLAC3D expects _global_ indices. Update.
+    cell_block_sizes = [len(cb) for cb in zcells]
+    for key, data in zsets.items():
+        gid = 0
+        for n, block in zip(cell_block_sizes, data):
+            block += gid
+            gid += n
+
+    # TODO not sure if fcells and zcells share a common global index
+    cell_block_sizes = [len(cb) for cb in fcells]
+    for key, data in fsets.items():
+        gid = 0
+        for n, block in zip(cell_block_sizes, data):
+            block += gid
+            gid += n
+
+    for label, values in zsets.items():
+        zsets[label] = np.concatenate(values)
+    for label, values in fsets.items():
+        fsets[label] = np.concatenate(values)
+
+    # flac3d indices start at 1
+    for label, values in zsets.items():
+        zsets[label] += 1
+    for label, values in fsets.items():
+        fsets[label] += 1
+
+    return zcells, fcells, zsets, fsets
+
+
 def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     """Write FLAC3D f3grid grid file."""
     skip = [c.type for c in mesh.cells if c.type not in meshio_only["zone"]]
     if skip:
         warn(f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.')
 
-    # Pick out material
-    material = None
-    if mesh.cell_data:
-        key, other = _pick_first_int_data(mesh.cell_data)
-        if key:
-            material = np.concatenate(mesh.cell_data[key])
-            if other:
-                warn(
-                    "FLAC3D can only write one cell data array. "
-                    f'Picking {key}, skipping {", ".join(other)}.'
-                )
+    # split into face/zone data
+    zcells, fcells, zsets, fsets = split_f_z(mesh)
 
     mode = "wb" if binary else "w"
     with open_file(filename, mode) as f:
@@ -365,9 +435,17 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
             f.write(f"* {time.ctime()}\n")
 
         _write_points(f, mesh.points, binary, float_fmt)
-        for flag in ["zone", "face"]:
-            _write_cells(f, mesh.points, mesh.cells, flag, binary)
-            _write_groups(f, mesh.cells, material, mesh.field_data, flag, binary)
+        # Make gid an array such that its value can be persitently altered
+        # inside the functions.
+        gid = np.array(0)
+        #
+        cells = _translate_zcells(mesh.points, mesh.cells)
+        _write_cells(f, cells, "zone", binary, gid)
+        _write_groups(f, mesh.cells, zsets, "zone", binary)
+        #
+        cells = _translate_fcells(fcells)
+        _write_cells(f, cells, "face", binary, gid)
+        _write_groups(f, mesh.cells, fsets, "face", binary)
 
 
 def _write_points(f, points, binary, float_fmt=None):
@@ -383,15 +461,8 @@ def _write_points(f, points, binary, float_fmt=None):
             f.write(fmt.format(i + 1, *point))
 
 
-def _write_cells(f, points, cells, flag, binary):
+def _write_cells(f, cells, flag: str, binary: bool, gid):
     """Write cells."""
-    if flag == "zone":
-        count = 0
-        cells = _translate_zones(points, cells)
-    else:
-        count = sum(len(c) for c in cells if c.type in meshio_only["zone"])
-        cells = _translate_faces(cells)
-
     if binary:
         f.write(
             struct.pack(
@@ -402,68 +473,63 @@ def _write_cells(f, points, cells, flag, binary):
             num_cells, num_verts = cdata.shape
             tmp = np.column_stack(
                 (
-                    np.arange(1, num_cells + 1) + count,
+                    np.arange(1, num_cells + 1) + gid,
                     np.full(num_cells, num_verts),
                     cdata + 1,
                 )
             ).astype(int)
             f.write(struct.pack(f"<{(num_verts + 2) * num_cells}I", *tmp.ravel()))
-            count += num_cells
+            gid += num_cells
     else:
-        entity, abbrev = {
-            "zone": ("ZONES", "Z"),
-            "face": ("FACES", "F"),
-        }[flag]
+        entity = "ZONES" if flag == "zone" else "FACES"
+        abbrev = entity[0]
 
         f.write(f"* {entity}\n")
         for ctype, cdata in cells:
             fmt = f"{abbrev} {{}} {{}} " + " ".join(["{}"] * cdata.shape[1]) + "\n"
             for entry in cdata + 1:
-                count += 1
-                f.write(fmt.format(meshio_to_flac3d_type[ctype], count, *entry))
+                gid += 1
+                f.write(fmt.format(meshio_to_flac3d_type[ctype], gid, *entry))
 
 
-def _write_groups(f, cells, cell_data, field_data, flag, binary):
+def _write_groups(f, cells, materials, flag, binary) -> None:
     """Write groups."""
-    if cell_data is None:
+    if materials is None:
         if binary:
             f.write(struct.pack("<I", 0))
+        return
+
+    # TODO filter materials by zones/faces
+
+    if binary:
+        f.write(struct.pack("<I", len(materials)))
+        for label, group in materials.items():
+            num_chars, num_zones = len(label), len(group)
+            fmt = f"<H{num_chars}sH7sI{num_zones}I"
+            tmp = [
+                num_chars,
+                label.encode(),
+                7,
+                b"Default",  # slot
+                num_zones,
+                *group,
+            ]
+            f.write(struct.pack(fmt, *tmp))
     else:
-        groups, labels = _translate_groups(cells, cell_data, field_data, flag)
+        flg = "ZGROUP" if flag == "zone" else "FGROUP"
 
-        if binary:
-            slot = b"Default"
-
-            f.write(struct.pack("<I", len(groups)))
-            for k in sorted(groups.keys()):
-                num_chars, num_zones = len(labels[k]), len(groups[k])
-                fmt = f"<H{num_chars}sH7sI{num_zones}I"
-                tmp = [
-                    num_chars,
-                    labels[k].encode(),
-                    7,
-                    slot,
-                    num_zones,
-                    *groups[k],
-                ]
-                f.write(struct.pack(fmt, *tmp))
-        else:
-            flag_to_text = {
-                "zone": "ZGROUP",
-                "face": "FGROUP",
-            }
-
-            f.write(f"* {flag.upper()} GROUPS\n")
-            for k in sorted(groups.keys()):
-                f.write(f'{flag_to_text[flag]} "{labels[k]}" SLOT 1\n')
-                _write_table(f, groups[k])
+        f.write(f"* {flag.upper()} GROUPS\n")
+        for label, group in materials.items():
+            f.write(f'{flg} "{label}" SLOT 1\n')
+            _write_table(f, group)
 
 
-def _translate_zones(points, cells):
+def _translate_zcells(points, cells):
     """Reorder meshio cells to FLAC3D zones.
 
-    Four first points must form a right-handed coordinate system (outward normal vectors).
-    Reorder corner points according to sign of scalar triple products.
+    Four first points must form a right-handed coordinate system (outward
+    normal vectors). Reorder corner points according to sign of scalar triple
+    products.
     """
     # See <https://stackoverflow.com/a/42386330/353337>
     def slicing_summing(a, b, c):
@@ -474,8 +540,7 @@ def _translate_zones(points, cells):
 
     zones = []
     for cell_block in cells:
-        if cell_block.type not in meshio_only["zone"].keys():
-            continue
+        assert cell_block.type in meshio_only["zone"]
 
         # Compute scalar triple products
         key = meshio_only["zone"][cell_block.type]
@@ -493,14 +558,14 @@ def _translate_zones(points, cells):
     return zones
 
 
-def _translate_faces(cells):
+def _translate_fcells(cells):
     """Reorder meshio cells to FLAC3D faces."""
     faces = []
     for cell_block in cells:
-        if cell_block.type not in meshio_only["face"].keys():
-            continue
+        ctype, data = cell_block
+        assert ctype in meshio_only["face"]
 
-        key = meshio_only["face"][cell_block.type]
+        key = meshio_only["face"][ctype]
         data = cell_block.data[:, meshio_to_flac3d_order[key]]
         faces.append((key, data))
 
@@ -509,14 +574,12 @@ def _translate_faces(cells):
 
 def _translate_groups(cells, cell_data, field_data, flag):
     """Convert meshio cell_data to FLAC3D groups."""
-    num_dims = np.concatenate(
-        [np.full(len(c[1]), 2 if c[0] in meshio_only["face"] else 3) for c in cells]
+    dim = np.concatenate(
+        [np.full(len(c.data), 2 if c.type in meshio_only["face"] else 3) for c in cells]
     )
+    numdim = flag_to_numdim[flag]
     groups = {
-        k: np.nonzero(np.logical_and(cell_data == k, num_dims == flag_to_numdim[flag]))[
-            0
-        ]
-        + 1
+        k: np.nonzero(np.logical_and(cell_data == k, dim == numdim))[0] + 1
         for k in np.unique(cell_data)
     }
     groups = {k: v for k, v in groups.items() if v.size}
@@ -528,7 +591,7 @@ def _translate_groups(cells, cell_data, field_data, flag):
             {v[0]: k for k, v in field_data.items() if v[1] == flag_to_numdim[flag]}
         )
 
-    return groups, labels
+    return dict(zip(labels.values(), groups.values()))
 
 
 def _write_table(f, data, ncol: int = 20):
