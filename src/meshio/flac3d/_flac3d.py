@@ -3,6 +3,7 @@ I/O for FLAC3D format.
 """
 from __future__ import annotations
 
+import re
 import struct
 import time
 
@@ -10,6 +11,7 @@ import numpy as np
 
 from ..__about__ import __version__ as version
 from .._common import _pick_first_int_data, warn
+from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
 from .._mesh import Mesh
@@ -111,8 +113,6 @@ def read(filename):
 
 def read_buffer(f, binary):
     """Read binary or ASCII file."""
-    zone_or_face = {"Z": "zone", "F": "face"}
-
     points = []
     point_ids = {}
     f_cells = []
@@ -157,35 +157,38 @@ def read_buffer(f, binary):
                 name, slot, data = _read_cell_group_binary(f)
                 cell_sets[f"{flag}:{name}:{slot}"] = np.array(data)
     else:
-        line = f.readline().rstrip().split()
-        while line:
-            if line[0] == "G":
-                pid, point = _read_point_ascii(line)
+        while True:
+            line = f.readline()
+
+            if not line:
+                break
+
+            split = line.rstrip().split()
+
+            if split[0] == "G":
+                pid, point = _read_point_ascii(split)
                 points.append(point)
                 point_ids[pid] = pidx
                 pidx += 1
-            elif line[0] in ["Z", "F"]:
-                flag = zone_or_face[line[0]]
-                cell_id, cell = _read_cell_ascii(line, point_ids)
-                if flag == "zone":
-                    z_cell_ids.append(cell_id)
-                    _update_cells(z_cells, cell, flag)
-                else:
-                    f_cell_ids.append(cell_id)
-                    _update_cells(f_cells, cell, flag)
-                # mapper[flag][cid] = [cidx]
-                # cidx += 1
-            elif line[0] in ["ZGROUP", "FGROUP"]:
-                flag = zone_or_face[line[0][0]]
+            elif split[0] == "Z":
+                cell_id, cell = _read_cell_ascii(split, point_ids)
+                z_cell_ids.append(cell_id)
+                _update_cells(z_cells, cell, "zone")
+            elif split[0] == "F":
+                cell_id, cell = _read_cell_ascii(split, point_ids)
+                f_cell_ids.append(cell_id)
+                _update_cells(f_cells, cell, "face")
+            elif split[0] == "ZGROUP":
+                # ZGROUP "Region 2" SLOT 1
                 name, slot, data = _read_cell_group_ascii(f, line)
-                # Watch out! data refers to the glocal cell_ids, so we need to
+                # Watch out! data refers to the global cell_ids, so we need to
                 # adapt this later.
-                if flag == "zone":
-                    z_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
-                else:
-                    f_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
-
-            line = f.readline().rstrip().split()
+                z_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
+            elif split[0] == "FGROUP":
+                name, slot, data = _read_cell_group_ascii(f, split)
+                # Watch out! data refers to the global cell_ids, so we need to
+                # adapt this later.
+                f_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
 
     cells = f_cells + z_cells
 
@@ -300,17 +303,22 @@ def _read_cell_group_binary(buf_or_line):
     return name, slot, data
 
 
-def _read_cell_group_ascii(buf_or_line, line):
+def _read_cell_group_ascii(buf_or_line, line: str):
     # a group line read
     # ```
-    # ZGROUP 'groupname' SLOT 5
+    # ZGROUP 'group five' SLOT 5
     # ```
-    assert line[0] in {"Z", "F", "ZGROUP", "FGROUP"}
-    assert line[1][0] in {"'", '"'}
-    assert line[1][-1] in {"'", '"'}
-    name = line[1][1:-1]
-    assert line[2] == "SLOT"
-    slot = line[3]
+    m = re.match(r"^([A-Z]+) *[\'\"](.*?)[\'\"] *([A-Z]+) *([0-9]+) *$", line)
+    # m = re.match(r"^[A-Z]+ *[\"\']", line)
+    if m is None:
+        raise ReadError(
+            'Expected line of the form\n```\nZGROUP "group name" SLOT 5\n```\n '
+            + f"but got \n```\n{line}\n```\n"
+        )
+    assert m.group(1) in {"ZGROUP", "FGROUP"}
+    assert m.group(3) == "SLOT"
+    name = m.group(2)
+    slot = m.group(4)
 
     i = buf_or_line.tell()
     line = buf_or_line.readline()
