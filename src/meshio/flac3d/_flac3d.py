@@ -10,7 +10,7 @@ import time
 import numpy as np
 
 from ..__about__ import __version__ as version
-from .._common import _pick_first_int_data, warn
+from .._common import warn
 from .._exceptions import ReadError
 from .._files import open_file
 from .._helpers import register_format
@@ -170,20 +170,24 @@ def read_buffer(f, binary):
                 points.append(point)
                 point_ids[pid] = pidx
                 pidx += 1
+
             elif split[0] == "Z":
                 cell_id, cell = _read_cell_ascii(split, point_ids)
                 z_cell_ids.append(cell_id)
                 _update_cells(z_cells, cell, "zone")
+
             elif split[0] == "F":
                 cell_id, cell = _read_cell_ascii(split, point_ids)
                 f_cell_ids.append(cell_id)
                 _update_cells(f_cells, cell, "face")
+
             elif split[0] == "ZGROUP":
                 # ZGROUP "Region 2" SLOT 1
                 name, slot, data = _read_cell_group_ascii(f, line)
                 # Watch out! data refers to the global cell_ids, so we need to
                 # adapt this later.
                 z_cell_sets[f"zone:{name}:{slot}"] = np.asarray(data)
+
             elif split[0] == "FGROUP":
                 name, slot, data = _read_cell_group_ascii(f, line)
                 # Watch out! data refers to the global cell_ids, so we need to
@@ -350,22 +354,33 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     if skip:
         warn(f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.')
 
+    # FLAC3D makes a difference between ZONES (3D-cells only) and FACES
+    # (2D-cells only). Split cells into zcells and fcells, along with the cell
+    # sets etc.
+    zcells = []
+    fcells = []
+    for cell_block in mesh.cells:
+        if cell_block.type in meshio_only["zone"]:
+            zcells.append(cell_block)
+        elif cell_block.type in meshio_only["face"]:
+            fcells.append(cell_block)
+
     # Pick out material
     materials = None
     if mesh.cell_sets:
         materials = mesh.cell_sets.copy()
-    elif mesh.cell_data:
-        print(mesh)
-        # TODO convert cell_data to cell_sets
-        exit(1)
-        key, other = _pick_first_int_data(mesh.cell_data)
-        if key:
-            materials = np.concatenate(mesh.cell_data[key])
-            if other:
-                warn(
-                    "FLAC3D can only write one cell data array. "
-                    f'Picking {key}, skipping {", ".join(other)}.'
-                )
+    # elif mesh.cell_data:
+    #     print(mesh)
+    #     # TODO convert cell_data to cell_sets
+    #     exit(1)
+    #     key, other = _pick_first_int_data(mesh.cell_data)
+    #     if key:
+    #         materials = np.concatenate(mesh.cell_data[key])
+    #         if other:
+    #             warn(
+    #                 "FLAC3D can only write one cell data array. "
+    #                 f'Picking {key}, skipping {", ".join(other)}.'
+    #             )
 
     if materials is not None:
         # Translate the material array from meshio.cell_set data to a
@@ -390,9 +405,14 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
         # Make gid an array such that its value can be persitently altered
         # inside the functions.
         gid = np.array(0)
-        for flag in ["zone", "face"]:
-            _write_cells(f, mesh.points, mesh.cells, flag, binary, gid)
-            _write_groups(f, mesh.cells, materials, flag, binary)
+        #
+        cells = _translate_zcells(mesh.points, mesh.cells)
+        _write_cells(f, cells, "zone", binary, gid)
+        _write_groups(f, mesh.cells, materials, "zone", binary)
+        #
+        cells = _translate_fcells(fcells)
+        _write_cells(f, cells, "face", binary, gid)
+        _write_groups(f, mesh.cells, materials, "face", binary)
 
 
 def _write_points(f, points, binary, float_fmt=None):
@@ -408,13 +428,8 @@ def _write_points(f, points, binary, float_fmt=None):
             f.write(fmt.format(i + 1, *point))
 
 
-def _write_cells(f, points, cells, flag: str, binary: bool, gid):
+def _write_cells(f, cells, flag: str, binary: bool, gid):
     """Write cells."""
-    if flag == "zone":
-        cells = _translate_zones(points, cells)
-    else:
-        cells = _translate_faces(cells)
-
     if binary:
         f.write(
             struct.pack(
@@ -476,11 +491,12 @@ def _write_groups(f, cells, materials, flag, binary) -> None:
             _write_table(f, group)
 
 
-def _translate_zones(points, cells):
+def _translate_zcells(points, cells):
     """Reorder meshio cells to FLAC3D zones.
 
-    Four first points must form a right-handed coordinate system (outward normal vectors).
-    Reorder corner points according to sign of scalar triple products.
+    Four first points must form a right-handed coordinate system (outward
+    normal vectors). Reorder corner points according to sign of scalar triple
+    products.
     """
     # See <https://stackoverflow.com/a/42386330/353337>
     def slicing_summing(a, b, c):
@@ -491,8 +507,7 @@ def _translate_zones(points, cells):
 
     zones = []
     for cell_block in cells:
-        if cell_block.type not in meshio_only["zone"].keys():
-            continue
+        assert cell_block.type in meshio_only["zone"]
 
         # Compute scalar triple products
         key = meshio_only["zone"][cell_block.type]
@@ -510,14 +525,14 @@ def _translate_zones(points, cells):
     return zones
 
 
-def _translate_faces(cells):
+def _translate_fcells(cells):
     """Reorder meshio cells to FLAC3D faces."""
     faces = []
     for cell_block in cells:
-        if cell_block.type not in meshio_only["face"].keys():
-            continue
+        ctype, data = cell_block
+        assert ctype in meshio_only["face"]
 
-        key = meshio_only["face"][cell_block.type]
+        key = meshio_only["face"][ctype]
         data = cell_block.data[:, meshio_to_flac3d_order[key]]
         faces.append((key, data))
 
