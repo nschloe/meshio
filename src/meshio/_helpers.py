@@ -95,7 +95,6 @@ def _read_file(path: Path, file_format: str | None):
         # deduce possible file formats from extension
         possible_file_formats = _filetypes_from_path(path)
 
-    err = None
     for file_format in possible_file_formats:
         if file_format not in reader_map:
             raise ReadError(f"Unknown file format '{file_format}' of '{path}'.")
@@ -103,10 +102,7 @@ def _read_file(path: Path, file_format: str | None):
         try:
             return reader_map[file_format](str(path))
         except ReadError as e:
-            err = e
-
-    if err:
-        print(err)
+            print(e)
 
     if len(possible_file_formats) == 1:
         msg = f"Couldn't read file {path} as {possible_file_formats[0]}"
