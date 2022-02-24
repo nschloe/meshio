@@ -20,7 +20,7 @@ from . import helpers
 )
 @pytest.mark.parametrize("binary", [False, True])
 def test(mesh, binary, tmp_path):
-    mesh.write("out.f3grid")
+    # mesh.write("out.f3grid")
     helpers.write_read(
         tmp_path,
         lambda f, m: meshio.flac3d.write(f, m, binary=binary),
