@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from xml.etree import ElementTree as ET
 
 import numpy as np
