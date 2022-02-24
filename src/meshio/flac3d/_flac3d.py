@@ -348,12 +348,7 @@ def _update_cells(cells, cell, flag):
         cells.append((cell_type, [cell]))
 
 
-def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
-    """Write FLAC3D f3grid grid file."""
-    skip = [c.type for c in mesh.cells if c.type not in meshio_only["zone"]]
-    if skip:
-        warn(f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.')
-
+def split_f_z(mesh):
     # FLAC3D makes a difference between ZONES (3D-cells only) and FACES
     # (2D-cells only). Split cells into zcells and fcells, along with the cell
     # sets etc.
@@ -364,6 +359,43 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
             zcells.append(cell_block)
         elif cell_block.type in meshio_only["face"]:
             fcells.append(cell_block)
+
+    zsets = {}
+    fsets = {}
+    for key, cset in mesh.cell_sets.items():
+        zsets[key] = []
+        fsets[key] = []
+        for cell_block, sblock in zip(mesh.cells, cset):
+            zsets[key].append(
+                sblock if cell_block.type in meshio_only["zone"] else None
+            )
+            fsets[key].append(
+                sblock if cell_block.type in meshio_only["face"] else None
+            )
+
+    # remove the data that is only None
+    zsets = {
+        key: value
+        for key, value in zsets.items()
+        if not all(item is None for item in value)
+    }
+    fsets = {
+        key: value
+        for key, value in fsets.items()
+        if not all(item is None for item in value)
+    }
+
+    return zcells, fcells, zsets, fsets
+
+
+def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
+    """Write FLAC3D f3grid grid file."""
+    skip = [c.type for c in mesh.cells if c.type not in meshio_only["zone"]]
+    if skip:
+        warn(f'FLAC3D format only supports 3D cells. Skipping {", ".join(skip)}.')
+
+    # split into face/zone data
+    zcells, fcells, zsets, fsets = split_f_z(mesh)
 
     # Pick out material
     materials = None
