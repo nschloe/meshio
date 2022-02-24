@@ -397,10 +397,6 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     # split into face/zone data
     zcells, fcells, zsets, fsets = split_f_z(mesh)
 
-    # Pick out material
-    materials = None
-    if mesh.cell_sets:
-        materials = mesh.cell_sets.copy()
     # elif mesh.cell_data:
     #     print(mesh)
     #     # TODO convert cell_data to cell_sets
@@ -414,15 +410,14 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     #                 f'Picking {key}, skipping {", ".join(other)}.'
     #             )
 
-    if materials is not None:
-        # Translate the material array from meshio.cell_set data to a
-        # dictionary with labels as keys, and _global_ indices.
-        for label, values in materials.items():
-            count = 0
-            for cells, item in zip(mesh.cells, values):
-                item += count
-                count += len(cells)
-            materials[label] = np.concatenate(values)
+    # Translate the material array from meshio.cell_set data to a
+    # dictionary with labels as keys.
+    if zsets is not None:
+        for label, values in zsets.items():
+            zsets[label] = np.concatenate(values)
+    if fsets is not None:
+        for label, values in fsets.items():
+            fsets[label] = np.concatenate(values)
 
     mode = "wb" if binary else "w"
     with open_file(filename, mode) as f:
@@ -440,11 +435,11 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
         #
         cells = _translate_zcells(mesh.points, mesh.cells)
         _write_cells(f, cells, "zone", binary, gid)
-        _write_groups(f, mesh.cells, materials, "zone", binary)
+        _write_groups(f, mesh.cells, zsets, "zone", binary)
         #
         cells = _translate_fcells(fcells)
         _write_cells(f, cells, "face", binary, gid)
-        _write_groups(f, mesh.cells, materials, "face", binary)
+        _write_groups(f, mesh.cells, fsets, "face", binary)
 
 
 def _write_points(f, points, binary, float_fmt=None):
