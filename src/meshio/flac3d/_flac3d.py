@@ -183,12 +183,12 @@ def read_buffer(f, binary):
                 name, slot, data = _read_cell_group_ascii(f, line)
                 # Watch out! data refers to the global cell_ids, so we need to
                 # adapt this later.
-                z_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
+                z_cell_sets[f"zone:{name}:{slot}"] = np.asarray(data)
             elif split[0] == "FGROUP":
-                name, slot, data = _read_cell_group_ascii(f, split)
+                name, slot, data = _read_cell_group_ascii(f, line)
                 # Watch out! data refers to the global cell_ids, so we need to
                 # adapt this later.
-                f_cell_sets[f"{flag}:{name}:{slot}"] = np.asarray(data)
+                f_cell_sets[f"face:{name}:{slot}"] = np.asarray(data)
 
     cells = f_cells + z_cells
 
@@ -309,7 +309,6 @@ def _read_cell_group_ascii(buf_or_line, line: str):
     # ZGROUP 'group five' SLOT 5
     # ```
     m = re.match(r"^([A-Z]+) *[\'\"](.*?)[\'\"] *([A-Z]+) *([0-9]+) *$", line)
-    # m = re.match(r"^[A-Z]+ *[\"\']", line)
     if m is None:
         raise ReadError(
             'Expected line of the form\n```\nZGROUP "group name" SLOT 5\n```\n '
