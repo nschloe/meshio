@@ -104,7 +104,13 @@ def _read_file(path: Path, file_format: str | None):
         except ReadError:
             pass
 
-    error(f"Couldn't read file {path} as either of {', '.join(possible_file_formats)}")
+    if len(possible_file_formats) == 1:
+        msg = f"Couldn't read file {path} as {possible_file_formats[0]}"
+    else:
+        lst = ", ".join(possible_file_formats)
+        msg = f"Couldn't read file {path} as either of {lst}"
+
+    error(msg)
     sys.exit(1)
 
 

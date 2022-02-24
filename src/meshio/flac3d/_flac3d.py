@@ -355,6 +355,7 @@ def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = False):
     if mesh.cell_sets:
         materials = mesh.cell_sets.copy()
     elif mesh.cell_data:
+        print(mesh)
         # TODO convert cell_data to cell_sets
         exit(1)
         key, other = _pick_first_int_data(mesh.cell_data)
