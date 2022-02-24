@@ -308,7 +308,7 @@ def _read_cell_group_ascii(buf_or_line, line: str):
     # ```
     # ZGROUP 'group five' SLOT 5
     # ```
-    m = re.match(r"^([A-Z]+) *[\'\"](.*?)[\'\"] *([A-Z]+) *([0-9]+) *$", line)
+    m = re.match(r"^([A-Z]+) *[\'\"](.*?)[\'\"] *([A-Z]+) *(.*?) *$", line)
     if m is None:
         raise ReadError(
             'Expected line of the form\n```\nZGROUP "group name" SLOT 5\n```\n '
