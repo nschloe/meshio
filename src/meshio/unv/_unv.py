@@ -503,7 +503,7 @@ class UNVReader:
                 break
 
             # current line holds patch id, we will ignore and read next line.
-            patch_name = self.unv_fh.readline().strip().split()[0]
+            patch_name = self.unv_fh.readline().split()[0]
             current_point_tag_number += 1
             self.point_tags[current_point_tag_number] = [patch_name]
 
