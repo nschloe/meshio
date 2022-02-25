@@ -1,6 +1,0 @@
-include LICENSE.txt
-# Don't recursively include everything that's in test; there may be cruft files,
-# left-overs from experiments etc.
-include tests/*.py
-# include tests/meshes/
-recursive-include tests/meshes *
