@@ -656,6 +656,7 @@ def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat"):
     in_mesh = copy.deepcopy(input_mesh)
 
     p = tmp_path / ("test" + extension)
+    print(input_mesh)
     writer(p, input_mesh)
     mesh = reader(p)
 
@@ -722,16 +723,14 @@ def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat"):
             input_mesh.point_data[key], mesh.point_data[key], atol=atol, rtol=0.0
         )
 
+    print(input_mesh.cell_data)
+    print()
+    print(mesh.cell_data)
     for name, cell_type_data in input_mesh.cell_data.items():
         for d0, d1 in zip(cell_type_data, mesh.cell_data[name]):
             # assert d0.dtype == d1.dtype, (d0.dtype, d1.dtype)
             assert np.allclose(d0, d1, atol=atol, rtol=0.0)
 
-    print()
-    print("helpers:")
-    print(input_mesh.field_data)
-    print()
-    print(mesh.field_data)
     for name, data in input_mesh.field_data.items():
         if isinstance(data, list):
             assert data == mesh.field_data[name]

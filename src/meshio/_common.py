@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from xml.etree import ElementTree as ET
 
 import numpy as np
@@ -120,6 +122,10 @@ def _pick_first_int_data(data):
     return key, other
 
 
+def info(string, highlight: bool = True) -> None:
+    Console(stderr=True).print(f"[bold]Info:[/bold] {string}", highlight=highlight)
+
+
 def warn(string, highlight: bool = True) -> None:
     Console(stderr=True).print(
         f"[yellow][bold]Warning:[/bold] {string}[/yellow]", highlight=highlight
@@ -130,3 +136,34 @@ def error(string, highlight: bool = True) -> None:
     Console(stderr=True).print(
         f"[red][bold]Error:[/bold] {string}[/red]", highlight=highlight
     )
+
+
+def is_in_any(string: str, strings: list[str]) -> bool:
+    """True if `string` is contained in any of `strings`."""
+    for s in strings:
+        if string in s:
+            return True
+    return False
+
+
+def join_strings(strings: list[str]) -> tuple[str, str]:
+    """Join strings such that they can be uniquely split again afterwards."""
+    possible_join_chars = ["-", "_", "#", "+", "/"]
+    char = None
+    for c in possible_join_chars:
+        if not is_in_any(c, strings):
+            char = c
+            break
+    assert char is not None
+    return char.join(strings), char
+
+
+def replace_space(string: str) -> tuple[str, str]:
+    possible_chars = ["_", "-", "+", "X", "/", "#"]
+    char = None
+    for c in possible_chars:
+        if c not in string:
+            char = c
+            break
+    assert char is not None
+    return string.replace(" ", char), char
