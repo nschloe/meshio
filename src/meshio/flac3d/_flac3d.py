@@ -163,6 +163,9 @@ def read_buffer(f, binary):
             if not line:
                 break
 
+            if line.strip() == "":
+                continue
+
             split = line.rstrip().split()
 
             if split[0] == "G":
