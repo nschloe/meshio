@@ -130,6 +130,7 @@ def read_buffer(f):
             # Blank lines or comments
             if len(next_line) < 4 or next_line.startswith(("$", "//", "#")):
                 continue
+
             elif next_line[0] in ["+", "*"]:
                 # From
                 # <https://docs.plm.automation.siemens.com/data_services/resources/nxnastran/10/help/en_US/tdocExt/pdf/User.pdf>:
@@ -139,6 +140,7 @@ def read_buffer(f):
                 # continues on another line.
                 c, _ = _chunk_line(next_line)
                 chunks.append(c[1:])
+
             elif len(chunks[-1]) == 10 and chunks[-1][-1] == "        ":
                 # automatic continuation: last chunk of previous line and first
                 # chunk of current line are spaces
@@ -148,7 +150,7 @@ def read_buffer(f):
                     chunks.append(c[1:])
                 else:
                     # not a continuation
-                    chunks.append(c)
+                    break
             else:
                 break
 
@@ -223,7 +225,6 @@ def read_buffer(f):
     points_id_dict = dict(zip(points_id, np.arange(len(points), dtype=int)))
     points_id_get = np.vectorize(points_id_dict.__getitem__)
     for k, c in enumerate(cells):
-        print(c.data)
         cells[k] = CellBlock(c.type, points_id_get(c.data))
 
     # Construct the mesh object
