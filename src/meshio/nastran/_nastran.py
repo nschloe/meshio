@@ -1,7 +1,10 @@
 """
 I/O for Nastran bulk data.
 """
+from __future__ import annotations
+
 import numpy as np
+from rich import print
 
 from ..__about__ import __version__
 from .._common import num_nodes_per_cell, warn
@@ -63,13 +66,12 @@ def read_buffer(f):
     cells = []
     cells_id = []
     cell = None
-    cell_type = None
     point_refs = []
     cell_refs = []
     cell_ref = None
 
-    def add_cell(nastran_type, cell, cell_type, cell_ref):
-        cell_type = nastran_to_meshio_type[keyword]
+    def add_cell(nastran_type, cell, cell_ref):
+        cell_type = nastran_to_meshio_type[nastran_type]
         cell = list(map(int, cell))
 
         # Treat 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
@@ -90,6 +92,7 @@ def read_buffer(f):
 
         cell = _convert_to_vtk_ordering(cell, nastran_type)
 
+        # decide if we should append cell or start a new cell block
         if len(cells) > 0 and cells[-1][0] == cell_type:
             cells[-1][1].append(cell)
             cells_id[-1].append(cell_id)
@@ -114,23 +117,50 @@ def read_buffer(f):
         if next_line.startswith("ENDDATA"):
             break
 
-        # read line and merge with all continuation lines (starting with `+`)
-        chunks = _chunk_line(next_line)
+        # read line and merge with all continuation lines (starting with `+` or
+        # `*` or automatic continuation lines in fixed format)
+        chunks = []
+        c, _ = _chunk_line(next_line)
+        chunks.append(c)
         while True:
             next_line = f.readline()
             if not next_line:
                 raise ReadError("Premature EOF")
-            next_line = next_line.rstrip()
             # Blank lines or comments
             if len(next_line) < 4 or next_line.startswith(("$", "//", "#")):
                 continue
-            elif next_line[0] == "+":
-                # skip the continuation chunk
-                chunks += _chunk_line(next_line)[1:]
+            elif next_line[0] in ["+", "*"]:
+                # From
+                # <https://docs.plm.automation.siemens.com/data_services/resources/nxnastran/10/help/en_US/tdocExt/pdf/User.pdf>:
+                # You can manually specify a continuation by using a
+                # continuation identifier. A continuation identifier is a
+                # special character (+ or *) that indicates that the data
+                # continues on another line.
+                c, _ = _chunk_line(next_line)
+                chunks.append(c[1:])
+            elif len(chunks[-1]) == 10 and chunks[-1][9] == "        ":
+                # automatic continuation: last chunk of previous line and first
+                # chunk of current line are spaces
+                c, _ = _chunk_line(next_line)
+                if c[0] == "        ":
+                    chunks[-1] = chunks[-1][:9]
+                    chunks.append(c[1:])
+                else:
+                    # not a continuation
+                    pass
             else:
                 break
 
+        # flatten
+        chunks = [item for sublist in chunks for item in sublist]
+
+        # strip chunks
         chunks = [chunk.strip() for chunk in chunks]
+
+        # remove empty chunks
+        chunks = [c for c in chunks if c != ""]
+
+        print("c", chunks)
 
         keyword = chunks[0]
 
@@ -148,7 +178,7 @@ def read_buffer(f):
             if len(pref) > 0:
                 point_refs.append(int(pref))
             points_id.append(point_id)
-            chunks2 = _chunk_line(next_line)
+            chunks2, _ = _chunk_line(next_line)
             next_line = f.readline()
             points.append(
                 [
@@ -174,13 +204,16 @@ def read_buffer(f):
                 # This information is removed.
                 cell = chunks[3:5]
             else:
+                print(keyword)
+                print(chunks)
+                exit(1)
                 cell = chunks[3:]
 
             # remove empty chunks
             cell = [item for item in cell if item != ""]
 
             if cell is not None:
-                add_cell(keyword, cell, cell_type, cell_ref)
+                add_cell(keyword, cell, cell_ref)
 
     # Convert to numpy arrays
     points = np.array(points)
@@ -209,10 +242,20 @@ def read_buffer(f):
 
 # There are two basic categories of input data formats in NX Nastran:
 #
-#     "Free" format data, in which the data fields are simply separated by commas. This type of data is known as free field data.
-#     "Fixed" format data, in which your data must be aligned in columns of specific width. There are two subcategories of fixed format data that differ based on the size of the fixed column width:
-#         Small field format, in which a single line of data is divided into 10 fields that can contain eight characters each.
-#         Large field format, in which a single line of input is expanded into two lines The first and last fields on each line are eight columns wide, while the intermediate fields are sixteen columns wide. The large field format is useful when you need greater numerical accuracy.
+# - "Free" format data, in which the data fields are simply separated by
+#   commas. This type of data is known as free field data.
+#
+# - "Fixed" format data, in which your data must be aligned in columns of
+#   specific width. There are two subcategories of fixed format data that differ
+#   based on the size of the fixed column width:
+#
+#     - Small field format, in which a single line of data is divided into 10
+#       fields that can contain eight characters each.
+#
+#     - Large field format, in which a single line of input is expanded into
+#       two lines The first and last fields on each line are eight columns wide,
+#       while the intermediate fields are sixteen columns wide. The large field
+#       format is useful when you need greater numerical accuracy.
 #
 # See: https://docs.plm.automation.siemens.com/data_services/resources/nxnastran/10/help/en_US/tdocExt/pdf/User.pdf
 
@@ -356,14 +399,14 @@ def _nastran_string_to_float(string):
         return float(string[0] + string[1:].replace("+", "e+").replace("-", "e-"))
 
 
-def _chunk_line(line):
-    if "," in line:  # free format
-        chunks = line.split(",")
-    else:  # fixed format
-        CHUNK_SIZE = 8
-        chunks = [line[i : CHUNK_SIZE + i] for i in range(0, 72, CHUNK_SIZE)]
-    # everything after the 9th chunk is ignored
-    return chunks[:9]
+def _chunk_line(line: str) -> tuple[list[str], bool]:
+    if "," in line:
+        # free format
+        return line.split(","), True
+    # fixed format
+    CHUNK_SIZE = 8
+    chunks = [line[i : CHUNK_SIZE + i] for i in range(0, 80, CHUNK_SIZE)]
+    return chunks, False
 
 
 def _convert_to_vtk_ordering(cell, nastran_type):
