@@ -75,7 +75,12 @@ def read_buffer(f):
 
         # Treat 2nd order CTETRA, CPYRA, CPENTA, CHEXA elements
         if len(cell) > num_nodes_per_cell[cell_type]:
-            assert cell_type in ["tetra", "pyramid", "wedge", "hexahedron"]
+            assert cell_type in [
+                "tetra",
+                "pyramid",
+                "wedge",
+                "hexahedron",
+            ], f"Illegal cell type {cell_type}"
             if cell_type == "tetra":
                 cell_type = "tetra10"
                 nastran_type = "CTETRA_"
@@ -160,31 +165,30 @@ def read_buffer(f):
         # strip chunks
         chunks = [chunk.strip() for chunk in chunks]
 
-        # remove empty chunks
-        chunks = [c for c in chunks if c != ""]
-
         keyword = chunks[0]
 
         # Points
         if keyword == "GRID":
+            # remove empty chunks
+            chunks = [c for c in chunks if c != ""]
             point_id = int(chunks[1])
             pref = chunks[2].strip()
             if len(pref) > 0:
                 point_refs.append(int(pref))
             points_id.append(point_id)
             points.append([_nastran_string_to_float(i) for i in chunks[3:6]])
+
         elif keyword == "GRID*":  # large field format: 8 + 16*4 + 8
             point_id = int(chunks[1] + chunks[2])
             pref = (chunks[3] + chunks[4]).strip()
             if len(pref) > 0:
                 point_refs.append(int(pref))
             points_id.append(point_id)
-            chunks2, _ = _chunk_line(next_line)
-            next_line = f.readline()
             points.append(
                 [
                     _nastran_string_to_float(i + j)
-                    for i, j in [chunks[5:7], chunks[7:9], chunks2[1:3]]
+                    # TODO why 10:12, not 9:11? check this in the manual
+                    for i, j in [chunks[5:7], chunks[7:9], chunks[10:12]]
                 ]
             )
 
