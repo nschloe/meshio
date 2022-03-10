@@ -4,7 +4,6 @@ I/O for Nastran bulk data.
 from __future__ import annotations
 
 import numpy as np
-from rich import print
 
 from ..__about__ import __version__
 from .._common import num_nodes_per_cell, warn
@@ -124,8 +123,10 @@ def read_buffer(f):
         chunks.append(c)
         while True:
             next_line = f.readline()
+
             if not next_line:
                 raise ReadError("Premature EOF")
+
             # Blank lines or comments
             if len(next_line) < 4 or next_line.startswith(("$", "//", "#")):
                 continue
@@ -138,7 +139,7 @@ def read_buffer(f):
                 # continues on another line.
                 c, _ = _chunk_line(next_line)
                 chunks.append(c[1:])
-            elif len(chunks[-1]) == 10 and chunks[-1][9] == "        ":
+            elif len(chunks[-1]) == 10 and chunks[-1][-1] == "        ":
                 # automatic continuation: last chunk of previous line and first
                 # chunk of current line are spaces
                 c, _ = _chunk_line(next_line)
@@ -147,7 +148,7 @@ def read_buffer(f):
                     chunks.append(c[1:])
                 else:
                     # not a continuation
-                    pass
+                    chunks.append(c)
             else:
                 break
 
@@ -159,8 +160,6 @@ def read_buffer(f):
 
         # remove empty chunks
         chunks = [c for c in chunks if c != ""]
-
-        print("c", chunks)
 
         keyword = chunks[0]
 
@@ -204,9 +203,6 @@ def read_buffer(f):
                 # This information is removed.
                 cell = chunks[3:5]
             else:
-                print(keyword)
-                print(chunks)
-                exit(1)
                 cell = chunks[3:]
 
             # remove empty chunks
@@ -227,6 +223,7 @@ def read_buffer(f):
     points_id_dict = dict(zip(points_id, np.arange(len(points), dtype=int)))
     points_id_get = np.vectorize(points_id_dict.__getitem__)
     for k, c in enumerate(cells):
+        print(c.data)
         cells[k] = CellBlock(c.type, points_id_get(c.data))
 
     # Construct the mesh object
