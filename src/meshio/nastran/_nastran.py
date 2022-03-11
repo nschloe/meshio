@@ -116,6 +116,9 @@ def read_buffer(f):
         else:
             break
 
+    print()
+    print()
+    print(repr(next_line))
     while True:
         # End loop when ENDDATA detected
         if next_line.startswith("ENDDATA"):
@@ -128,6 +131,7 @@ def read_buffer(f):
         chunks.append(c)
         while True:
             next_line = f.readline()
+            print(repr(next_line))
 
             if not next_line:
                 raise ReadError("Premature EOF")
@@ -167,6 +171,8 @@ def read_buffer(f):
 
         keyword = chunks[0]
 
+        print(chunks)
+
         # Points
         if keyword == "GRID":
             # remove empty chunks
@@ -187,8 +193,7 @@ def read_buffer(f):
             points.append(
                 [
                     _nastran_string_to_float(i + j)
-                    # TODO why 10:12, not 9:11? check this in the manual
-                    for i, j in [chunks[5:7], chunks[7:9], chunks[10:12]]
+                    for i, j in [chunks[5:7], chunks[7:9], chunks[9:11]]
                 ]
             )
 
@@ -307,7 +312,10 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
         for point_id, x in enumerate(points):
             fx = [float_fmt(k) for k in x]
             pref = str(point_refs[point_id]) if point_refs is not None else ""
-            f.write(grid_fmt.format(point_id + 1, pref, fx[0], fx[1], fx[2]))
+            string = grid_fmt.format(point_id + 1, pref, fx[0], fx[1], fx[2])
+            print(point_id + 1, repr(pref), x, fx)
+            print("s", repr(string))
+            f.write(string)
 
         # CellBlock
         cell_id = 0
@@ -357,40 +365,62 @@ def _float_rstrip(x, n=8):
 
 def _float_to_nastran_string(value, length=16):
     """
-    Return a value in NASTRAN scientific notation.
+    From
+    <https://docs.plm.automation.siemens.com/data_services/resources/nxnastran/10/help/en_US/tdocExt/pdf/User.pdf>:
+
+    Real numbers, including zero, must contain a decimal point. You can enter
+    real numbers in a variety of formats. For example, the following are all
+    acceptable versions of the real number, seven:
+    ```
+    7.0   .7E1  0.7+1
+    .70+1 7.E+0 70.-1
+    ```
+
+    This methods converts a float value into the corresponding string. Choose
+    the variant with `E` to make the file less ambigious when edited by a
+    human. (`5.-1` looks like 4.0, not 5.0e-1 = 0.5.)
+
     Examples:
-        1234.56789 --> "1.23456789+3"
-        -0.1234 --> "-1.234-1"
-        3.1415926535897932 --> "3.14159265359+0"
+        1234.56789 --> "1.23456789E+3"
+        -0.1234 --> "-1.234E-1"
+        3.1415926535897932 --> "3.14159265359E+0"
     """
-    aux = length - 2
-    # sfmt = "{" + f":{length}s" + "}"
-    sfmt = "{" + ":s" + "}"
-    pv_fmt = "{" + f":{length}.{aux}e" + "}"
+    out = np.format_float_scientific(value, exp_digits=1, precision=11).replace(
+        "e", "E"
+    )
+    assert len(out) <= 16
+    return out
+    # The following is the manual float conversion. Keep it around for a while in case
+    # we still need it.
 
-    if value == 0.0:
-        return sfmt.format("0.")
+    # aux = length - 2
+    # # sfmt = "{" + f":{length}s" + "}"
+    # sfmt = "{" + ":s" + "}"
+    # pv_fmt = "{" + f":{length}.{aux}e" + "}"
 
-    python_value = pv_fmt.format(value)  # -1.e-2
-    svalue, sexponent = python_value.strip().split("e")
-    exponent = int(sexponent)  # removes 0s
+    # if value == 0.0:
+    #     return sfmt.format("0.")
 
-    sign = "-" if abs(value) < 1.0 else "+"
+    # python_value = pv_fmt.format(value)  # -1.e-2
+    # svalue, sexponent = python_value.strip().split("e")
+    # exponent = int(sexponent)  # removes 0s
 
-    # the exponent will be added later...
-    sexp2 = str(exponent).strip("-+")
-    value2 = float(svalue)
+    # sign = "-" if abs(value) < 1.0 else "+"
 
-    # the plus 1 is for the sign
-    len_sexp = len(sexp2) + 1
-    leftover = length - len_sexp
-    leftover = leftover - 3 if value < 0 else leftover - 2
-    fmt = "{" + f":1.{leftover:d}f" + "}"
+    # # the exponent will be added later...
+    # sexp2 = str(exponent).strip("-+")
+    # value2 = float(svalue)
 
-    svalue3 = fmt.format(value2)
-    svalue4 = svalue3.strip("0")
-    field = sfmt.format(svalue4 + sign + sexp2)
-    return field
+    # # the plus 1 is for the sign
+    # len_sexp = len(sexp2) + 1
+    # leftover = length - len_sexp
+    # leftover = leftover - 3 if value < 0 else leftover - 2
+    # fmt = "{" + f":1.{leftover:d}f" + "}"
+
+    # svalue3 = fmt.format(value2)
+    # svalue4 = svalue3.strip("0")
+    # field = sfmt.format(svalue4 + sign + sexp2)
+    # return field
 
 
 def _nastran_string_to_float(string):
@@ -402,12 +432,15 @@ def _nastran_string_to_float(string):
 
 
 def _chunk_line(line: str) -> tuple[list[str], bool]:
+    # remove terminal newline
+    assert line[-1] == "\n"
+    line = line[:-1]
     if "," in line:
         # free format
         return line.split(","), True
     # fixed format
     CHUNK_SIZE = 8
-    chunks = [line[i : CHUNK_SIZE + i] for i in range(0, 80, CHUNK_SIZE)]
+    chunks = [line[i : CHUNK_SIZE + i] for i in range(0, len(line), CHUNK_SIZE)]
     return chunks, False
 
 
