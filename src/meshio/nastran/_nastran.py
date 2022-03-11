@@ -116,9 +116,6 @@ def read_buffer(f):
         else:
             break
 
-    print()
-    print()
-    print(repr(next_line))
     while True:
         # End loop when ENDDATA detected
         if next_line.startswith("ENDDATA"):
@@ -131,7 +128,6 @@ def read_buffer(f):
         chunks.append(c)
         while True:
             next_line = f.readline()
-            print(repr(next_line))
 
             if not next_line:
                 raise ReadError("Premature EOF")
@@ -147,55 +143,84 @@ def read_buffer(f):
                 # continuation identifier. A continuation identifier is a
                 # special character (+ or *) that indicates that the data
                 # continues on another line.
+                assert len(chunks[-1]) <= 10
+                if len(chunks[-1]) == 10:
+                    # This is a continuation line, so the 10th chunk of the
+                    # previous line must also be a continuation indicator.
+                    # Sometimes its first character is a `+`, but it's not
+                    # always present. Anyway, cut it off.
+                    chunks[-1][-1] = None
                 c, _ = _chunk_line(next_line)
-                chunks.append(c[1:])
+                c[0] = None
+                chunks.append(c)
 
             elif len(chunks[-1]) == 10 and chunks[-1][-1] == "        ":
                 # automatic continuation: last chunk of previous line and first
                 # chunk of current line are spaces
                 c, _ = _chunk_line(next_line)
                 if c[0] == "        ":
-                    chunks[-1] = chunks[-1][:9]
-                    chunks.append(c[1:])
+                    chunks[-1][9] = None
+                    c[0] = None
+                    chunks.append(c)
                 else:
                     # not a continuation
                     break
             else:
                 break
 
+        # merge chunks according to large field format
+        # large field format: 8 + 16 + 16 + 16 + 16 + 8
+        if chunks[0][0].startswith("GRID*"):
+            new_chunks = []
+            for c in chunks:
+                d = [c[0]]
+
+                if len(c) > 1:
+                    d.append(c[1])
+                if len(c) > 2:
+                    d[-1] += c[2]
+
+                if len(c) > 3:
+                    d.append(c[3])
+                if len(c) > 4:
+                    d[-1] += c[4]
+
+                if len(c) > 5:
+                    d.append(c[5])
+                if len(c) > 6:
+                    d[-1] += c[6]
+
+                if len(c) > 7:
+                    d.append(c[7])
+                if len(c) > 8:
+                    d[-1] += c[8]
+
+                if len(c) > 9:
+                    d.append(c[9])
+
+                new_chunks.append(d)
+
+            chunks = new_chunks
+
         # flatten
         chunks = [item for sublist in chunks for item in sublist]
+
+        # remove None (continuation blocks)
+        chunks = [chunk for chunk in chunks if chunk is not None]
 
         # strip chunks
         chunks = [chunk.strip() for chunk in chunks]
 
         keyword = chunks[0]
 
-        print(chunks)
-
         # Points
-        if keyword == "GRID":
-            # remove empty chunks
-            chunks = [c for c in chunks if c != ""]
+        if keyword in ["GRID", "GRID*"]:
             point_id = int(chunks[1])
             pref = chunks[2].strip()
             if len(pref) > 0:
                 point_refs.append(int(pref))
             points_id.append(point_id)
             points.append([_nastran_string_to_float(i) for i in chunks[3:6]])
-
-        elif keyword == "GRID*":  # large field format: 8 + 16*4 + 8
-            point_id = int(chunks[1] + chunks[2])
-            pref = (chunks[3] + chunks[4]).strip()
-            if len(pref) > 0:
-                point_refs.append(int(pref))
-            points_id.append(point_id)
-            points.append(
-                [
-                    _nastran_string_to_float(i + j)
-                    for i, j in [chunks[5:7], chunks[7:9], chunks[9:11]]
-                ]
-            )
 
         # CellBlock
         elif keyword in nastran_to_meshio_type:
@@ -313,8 +338,6 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
             fx = [float_fmt(k) for k in x]
             pref = str(point_refs[point_id]) if point_refs is not None else ""
             string = grid_fmt.format(point_id + 1, pref, fx[0], fx[1], fx[2])
-            print(point_id + 1, repr(pref), x, fx)
-            print("s", repr(string))
             f.write(string)
 
         # CellBlock
@@ -338,6 +361,7 @@ def write(filename, mesh, point_format="fixed-large", cell_format="fixed-small")
                 cell1 = cell + 1
                 cell1 = _convert_to_nastran_ordering(cell1, nastran_type)
                 conn = sjoin.join(int_fmt.format(nid) for nid in cell1[:nipl1])
+
                 if len(cell1) > nipl1:
                     if cell_format == "free":
                         cflag1 = cflag3 = ""
