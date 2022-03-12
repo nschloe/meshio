@@ -53,13 +53,14 @@ exodus_to_meshio_type = {
     "HEX27": "hexahedron27",
     #
     "TETRA": "tetra",
-    "TETRA4": "tetra4",
-    "TET4": "tetra4",
+    "TETRA4": "tetra",
+    "TET4": "tetra",
     "TETRA8": "tetra8",
     "TETRA10": "tetra10",
     "TETRA14": "tetra14",
     #
     "PYRAMID": "pyramid",
+    "PYRAMID5": "pyramid",
     "WEDGE": "wedge",
 }
 meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
