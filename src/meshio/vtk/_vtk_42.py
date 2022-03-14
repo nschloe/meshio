@@ -357,9 +357,9 @@ def _read_coords(f, data_type, is_ascii, num_points):
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         coords = np.fromfile(f, count=num_points, dtype=dtype)
-        line = f.readline().decode()
-        if line != "\n":
-            raise ReadError()
+        # skip optional newline after the binary data
+        if f.peek(1)[:1] == "\n":
+            f.read(1)
     return coords
 
 
@@ -372,9 +372,9 @@ def _read_points(f, data_type, is_ascii, num_points):
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         points = np.fromfile(f, count=num_points * 3, dtype=dtype)
-        line = f.readline().decode()
-        if line != "\n":
-            raise ReadError()
+        # skip optional newline after the binary data
+        if f.peek(1)[:1] == "\n":
+            f.read(1)
     return points.reshape((num_points, 3))
 
 
@@ -384,9 +384,9 @@ def _read_int_data(f, is_ascii, num_items, dtype=np.dtype("int32")):
     else:
         dtype = dtype.newbyteorder(">")
         c = np.fromfile(f, count=num_items, dtype=dtype)
-        line = f.readline().decode()
-        if line != "\n":
-            raise ReadError()
+        # skip optional newline after the binary data
+        if f.peek(1)[:1] == "\n":
+            f.read(1)
     return c
 
 
@@ -396,10 +396,9 @@ def _read_cell_types(f, is_ascii, num_items):
     else:
         # binary
         ct = np.fromfile(f, count=int(num_items), dtype=">i4")
-        line = f.readline().decode()
-        # Sometimes, there's no newline at the end
-        if line.strip() != "":
-            raise ReadError()
+        # skip optional newline after the binary data
+        if f.peek(1)[:1] == "\n":
+            f.read(1)
     return ct
 
 
@@ -428,9 +427,9 @@ def _read_scalar_field(f, num_data, split, is_ascii):
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         data = np.fromfile(f, count=num_data * num_comp, dtype=dtype)
-        line = f.readline().decode()
-        if line != "\n":
-            raise ReadError()
+        # skip optional newline after the binary data
+        if f.peek(1)[:1] == "\n":
+            f.read(1)
 
     data = data.reshape(-1, num_comp)
     return {data_name: data}
@@ -452,9 +451,9 @@ def _read_field(f, num_data, split, shape, is_ascii):
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
         dtype = dtype.newbyteorder(">")
         data = np.fromfile(f, count=k * num_data, dtype=dtype)
-        line = f.readline().decode()
-        if line != "\n":
-            raise ReadError()
+        # skip optional newline after the binary data
+        if f.peek(1)[:1] == "\n":
+            f.read(1)
 
     data = data.reshape(-1, *shape)
     return {data_name: data}
@@ -481,9 +480,9 @@ def _read_fields(f, num_fields, is_ascii):
             # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
             dtype = dtype.newbyteorder(">")
             dat = np.fromfile(f, count=shape0 * shape1, dtype=dtype)
-            line = f.readline().decode()
-            if line != "\n":
-                raise ReadError()
+            # skip optional newline after the binary data
+            if f.peek(1)[:1] == "\n":
+                f.read(1)
 
         if shape0 != 1:
             dat = dat.reshape((shape1, shape0))
