@@ -5,6 +5,7 @@
 # written in the text fields. Converting this to ASCII first requires a lot of memory.
 # This etree here allows the writing method to write to the file directly, without
 # having to create a string representation first.
+from .._files import open_file
 
 
 class Element:
@@ -54,7 +55,7 @@ class ElementTree:
         self.root = root
 
     def write(self, filename, xml_declaration=True):
-        with open(filename, "w") as f:
+        with open_file(filename, "w") as f:
             if xml_declaration:
                 f.write('<?xml version="1.0"?>\n')
             self.root.write(f)
