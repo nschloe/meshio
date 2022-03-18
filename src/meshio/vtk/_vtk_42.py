@@ -17,6 +17,7 @@ from .._vtk_common import (
     vtk_to_meshio_order,
     vtk_to_meshio_type,
 )
+from ._common import encode, tofile
 
 vtk_type_to_numnodes = np.array(
     [
@@ -632,11 +633,11 @@ def write(filename, mesh, binary=True):
     if not binary:
         warn("VTK ASCII files are only meant for debugging.")
 
-    with open_file(filename, "wb") as f:
-        f.write(b"# vtk DataFile Version 4.2\n")
-        f.write(f"written by meshio v{__version__}\n".encode())
-        f.write(("BINARY\n" if binary else "ASCII\n").encode())
-        f.write(b"DATASET UNSTRUCTURED_GRID\n")
+    with open_file(filename, mode="wb" if binary else "w") as f:
+        f.write(encode("# vtk DataFile Version 4.2\n", binary))
+        f.write(encode(f"written by meshio v{__version__}\n", binary))
+        f.write(encode("BINARY\n" if binary else "ASCII\n", binary))
+        f.write(encode("DATASET UNSTRUCTURED_GRID\n", binary))
 
         # write points and cells
         _write_points(f, points, binary)
@@ -645,21 +646,21 @@ def write(filename, mesh, binary=True):
         # write point data
         if mesh.point_data:
             num_points = mesh.points.shape[0]
-            f.write(f"POINT_DATA {num_points}\n".encode())
+            f.write(encode(f"POINT_DATA {num_points}\n", binary))
             _write_field_data(f, mesh.point_data, binary)
 
         # write cell data
         if mesh.cell_data:
             total_num_cells = sum(len(c.data) for c in mesh.cells)
-            f.write(f"CELL_DATA {total_num_cells}\n".encode())
+            f.write(encode(f"CELL_DATA {total_num_cells}\n", binary))
             _write_field_data(f, mesh.cell_data, binary)
 
 
 def _write_points(f, points, binary):
     f.write(
-        "POINTS {} {}\n".format(
+        encode("POINTS {} {}\n".format(
             len(points), numpy_to_vtk_dtype[points.dtype.name]
-        ).encode()
+        ), binary)
     )
 
     if binary:
@@ -669,11 +670,11 @@ def _write_points(f, points, binary):
         #     points.dtype.byteorder == "=" and sys.byteorder == "little"
         # ):
         #     logging.warn("Converting to new byte order")
-        points.astype(points.dtype.newbyteorder(">")).tofile(f, sep="")
+        tofile(points.astype(points.dtype.newbyteorder(">")), f, binary)
     else:
         # ascii
-        points.tofile(f, sep=" ")
-    f.write(b"\n")
+        tofile(points, f, binary, sep=" ")
+    f.write(encode("\n", binary))
 
 
 def _write_cells(f, cells, binary):
@@ -681,7 +682,7 @@ def _write_cells(f, cells, binary):
     total_num_idx = sum(c.data.size for c in cells)
     # For each cell, the number of nodes is stored
     total_num_idx += total_num_cells
-    f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode())
+    f.write(encode(f"CELLS {total_num_cells} {total_num_idx}\n", binary))
     if binary:
         for c in cells:
             n = c.data.shape[1]
@@ -694,9 +695,14 @@ def _write_cells(f, cells, binary):
             dtype = np.dtype(">i4")
             # One must force endianness here:
             # <https://github.com/numpy/numpy/issues/15088>
-            np.column_stack(
-                [np.full(d.shape[0], n, dtype=dtype), d.astype(dtype)],
-            ).astype(dtype).tofile(f, sep="")
+            tofile(
+                np.column_stack(
+                    [np.full(d.shape[0], n, dtype=dtype), d.astype(dtype)],
+                ).astype(dtype),
+                f,
+                binary,
+                sep="",
+            )
         f.write(b"\n")
     else:
         # ascii
@@ -709,28 +715,43 @@ def _write_cells(f, cells, binary):
                 d = d[:, new_order]
 
             # prepend a column with the value n
-            np.column_stack(
-                [np.full(c.data.shape[0], n, dtype=c.data.dtype), d]
-            ).tofile(f, sep="\n")
-            f.write(b"\n")
+            tofile(
+                np.column_stack(
+                    [np.full(c.data.shape[0], n, dtype=c.data.dtype), d]
+                ),
+                f,
+                binary,
+                sep="\n",
+            )
+            f.write("\n")
 
     # write cell types
-    f.write(f"CELL_TYPES {total_num_cells}\n".encode())
+    f.write(encode(f"CELL_TYPES {total_num_cells}\n", binary))
     if binary:
         for c in cells:
             vtk_type = meshio_to_vtk_type[c.type]
-            np.full(len(c.data), vtk_type, dtype=np.dtype(">i4")).tofile(f, sep="")
+            tofile(
+                np.full(len(c.data), vtk_type, dtype=np.dtype(">i4")),
+                f,
+                binary,
+                sep="",
+            )
         f.write(b"\n")
     else:
         # ascii
         for c in cells:
             vtk_type = meshio_to_vtk_type[c.type]
-            np.full(len(c.data), vtk_type).tofile(f, sep="\n")
-            f.write(b"\n")
+            tofile(
+                np.full(len(c.data), vtk_type),
+                f,
+                binary,
+                sep="\n",
+            )
+            f.write("\n")
 
 
 def _write_field_data(f, data, binary):
-    f.write((f"FIELD FieldData {len(data)}\n").encode())
+    f.write(encode(f"FIELD FieldData {len(data)}\n", binary))
     for name, values in data.items():
         if isinstance(values, list):
             values = np.concatenate(values)
@@ -745,19 +766,20 @@ def _write_field_data(f, data, binary):
             raise WriteError(f"VTK doesn't support spaces in field names ('{name}').")
 
         f.write(
-            (
+            encode(
                 "{} {} {} {}\n".format(
                     name,
                     num_components,
                     num_tuples,
                     numpy_to_vtk_dtype[values.dtype.name],
-                )
-            ).encode()
+                ),
+                binary,
+            )
         )
         if binary:
-            values.astype(values.dtype.newbyteorder(">")).tofile(f, sep="")
+            tofile(values.astype(values.dtype.newbyteorder(">")), f, binary, sep="")
         else:
             # ascii
-            values.tofile(f, sep=" ")
+            tofile(values, f, binary, sep=" ")
             # np.savetxt(f, points)
-        f.write(b"\n")
+        f.write(encode("\n", binary))
