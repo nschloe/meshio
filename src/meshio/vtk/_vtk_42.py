@@ -658,9 +658,10 @@ def write(filename, mesh, binary=True):
 
 def _write_points(f, points, binary):
     f.write(
-        encode("POINTS {} {}\n".format(
-            len(points), numpy_to_vtk_dtype[points.dtype.name]
-        ), binary)
+        encode(
+            "POINTS {} {}\n".format(len(points), numpy_to_vtk_dtype[points.dtype.name]),
+            binary,
+        )
     )
 
     if binary:
@@ -716,9 +717,7 @@ def _write_cells(f, cells, binary):
 
             # prepend a column with the value n
             tofile(
-                np.column_stack(
-                    [np.full(c.data.shape[0], n, dtype=c.data.dtype), d]
-                ),
+                np.column_stack([np.full(c.data.shape[0], n, dtype=c.data.dtype), d]),
                 f,
                 binary,
                 sep="\n",

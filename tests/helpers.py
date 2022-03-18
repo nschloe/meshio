@@ -652,14 +652,33 @@ def add_cell_sets(mesh):
     return mesh2
 
 
-def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat", memory_file_is_binary=False, test_memory_file=False):
+def write_read(
+    tmp_path,
+    writer,
+    reader,
+    input_mesh,
+    atol,
+    extension=".dat",
+    memory_file_is_binary=False,
+    test_memory_file=False,
+):
     """Write and read a file, and make sure the data is the same as before."""
     _write_read(tmp_path, writer, reader, input_mesh, atol, extension)
     if test_memory_file:
-        _write_read(tmp_path, writer, reader, input_mesh, atol, extension, memory_file_type="binary" if memory_file_is_binary else "ascii")
+        _write_read(
+            tmp_path,
+            writer,
+            reader,
+            input_mesh,
+            atol,
+            extension,
+            memory_file_type="binary" if memory_file_is_binary else "ascii",
+        )
 
 
-def _write_read(tmp_path, writer, reader, input_mesh, atol, extension, memory_file_type=None):
+def _write_read(
+    tmp_path, writer, reader, input_mesh, atol, extension, memory_file_type=None
+):
     in_mesh = copy.deepcopy(input_mesh)
 
     p = tmp_path / ("test" + extension)

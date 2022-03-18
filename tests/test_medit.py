@@ -23,7 +23,15 @@ from . import helpers
     ],
 )
 def test_io(mesh, tmp_path):
-    helpers.write_read(tmp_path, meshio.medit.write, meshio.medit.read, mesh, 1.0e-15, memory_file_is_binary=True, test_memory_file=True)
+    helpers.write_read(
+        tmp_path,
+        meshio.medit.write,
+        meshio.medit.read,
+        mesh,
+        1.0e-15,
+        memory_file_is_binary=True,
+        test_memory_file=True,
+    )
 
 
 def test_generic_io(tmp_path):

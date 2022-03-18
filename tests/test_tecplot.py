@@ -23,7 +23,12 @@ from . import helpers
 )
 def test(mesh, tmp_path):
     helpers.write_read(
-        tmp_path, meshio.tecplot.write, meshio.tecplot.read, mesh, 1.0e-15, test_memory_file=True
+        tmp_path,
+        meshio.tecplot.write,
+        meshio.tecplot.read,
+        mesh,
+        1.0e-15,
+        test_memory_file=True,
     )
 
 

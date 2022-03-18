@@ -44,7 +44,15 @@ def test(mesh, binary, tmp_path):
     def writer(*args, **kwargs):
         return meshio.vtk.write(*args, binary=binary, **kwargs)
 
-    helpers.write_read(tmp_path, writer, meshio.vtk.read, mesh, 1.0e-15, memory_file_is_binary=binary, test_memory_file=True)
+    helpers.write_read(
+        tmp_path,
+        writer,
+        meshio.vtk.read,
+        mesh,
+        1.0e-15,
+        memory_file_is_binary=binary,
+        test_memory_file=True,
+    )
 
 
 @pytest.mark.parametrize("mesh", test_set)
@@ -53,7 +61,15 @@ def test_vtk42(mesh, binary, tmp_path):
     def writer(*args, **kwargs):
         return meshio.vtk.write(*args, binary=binary, fmt_version="4.2", **kwargs)
 
-    helpers.write_read(tmp_path, writer, meshio.vtk.read, mesh, 1.0e-15, memory_file_is_binary=binary, test_memory_file=True)
+    helpers.write_read(
+        tmp_path,
+        writer,
+        meshio.vtk.read,
+        mesh,
+        1.0e-15,
+        memory_file_is_binary=binary,
+        test_memory_file=True,
+    )
 
 
 def test_generic_io(tmp_path):
@@ -77,7 +93,15 @@ def test_reference_file(filename, ref_sum, ref_num_cells, binary, tmp_path):
     assert mesh.cells[0].type == "triangle"
     assert len(mesh.cells[0].data) == ref_num_cells
     writer = partial(meshio.vtk.write, binary=binary)
-    helpers.write_read(tmp_path, writer, meshio.vtk.read, mesh, 1.0e-15, memory_file_is_binary=binary, test_memory_file=True)
+    helpers.write_read(
+        tmp_path,
+        writer,
+        meshio.vtk.read,
+        mesh,
+        1.0e-15,
+        memory_file_is_binary=binary,
+        test_memory_file=True,
+    )
 
 
 @pytest.mark.parametrize(
