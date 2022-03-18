@@ -46,6 +46,7 @@ def test(mesh, suffix, tmp_path):
         mesh,
         1.0e-13,
         extension=suffix,
+        test_memory_file=not suffix.endswith("gz"),
     )
 
 

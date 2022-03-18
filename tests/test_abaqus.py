@@ -24,7 +24,7 @@ from . import helpers
     ],
 )
 def test(mesh, tmp_path):
-    helpers.write_read(tmp_path, meshio.abaqus.write, meshio.abaqus.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, meshio.abaqus.write, meshio.abaqus.read, mesh, 1.0e-15, test_memory_file=True)
 
 
 @pytest.mark.parametrize(

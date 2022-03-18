@@ -22,7 +22,7 @@ def test_obj(mesh, tmp_path):
     for k, c in enumerate(mesh.cells):
         mesh.cells[k] = meshio.CellBlock(c.type, c.data.astype(np.int32))
 
-    helpers.write_read(tmp_path, meshio.obj.write, meshio.obj.read, mesh, 1.0e-12)
+    helpers.write_read(tmp_path, meshio.obj.write, meshio.obj.read, mesh, 1.0e-12, test_memory_file=True)
 
 
 @pytest.mark.skip("Fails point data consistency check.")

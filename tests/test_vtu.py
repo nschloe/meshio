@@ -52,7 +52,7 @@ def test(mesh, data_type, tmp_path):
     # ASCII files are only meant for debugging, VTK stores only 11 digits
     # <https://gitlab.kitware.com/vtk/vtk/-/issues/17038#note_264052>
     tol = 1.0e-15 if binary else 1.0e-10
-    helpers.write_read(tmp_path, writer, meshio.vtu.read, mesh, tol)
+    helpers.write_read(tmp_path, writer, meshio.vtu.read, mesh, tol, test_memory_file=True)
 
 
 def test_generic_io(tmp_path):

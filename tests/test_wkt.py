@@ -18,7 +18,7 @@ from . import helpers
     ],
 )
 def test_wkt(mesh, tmp_path):
-    helpers.write_read(tmp_path, meshio.wkt.write, meshio.wkt.read, mesh, 1.0e-12)
+    helpers.write_read(tmp_path, meshio.wkt.write, meshio.wkt.read, mesh, 1.0e-12, test_memory_file=True)
 
 
 @pytest.mark.parametrize(
