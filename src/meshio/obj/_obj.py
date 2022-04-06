@@ -111,8 +111,11 @@ def write(filename, mesh):
                 __version__, datetime.datetime.now().isoformat()
             )
         )
-        for p in mesh.points:
-            f.write(f"v {p[0]} {p[1]} {p[2]}\n")
+
+        dat = mesh.points
+        fmt = "v " + " ".join(["{}"] * dat.shape[1]) + "\n"
+        for v in dat:
+            f.write(fmt.format(*v))
 
         if "obj:vn" in mesh.point_data:
             dat = mesh.point_data["obj:vn"]
