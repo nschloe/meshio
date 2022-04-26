@@ -263,7 +263,7 @@ def _read_binary(
     cell_data_dtypes,
 ):
     ply_to_numpy_dtype_string = {
-        "uchar": "i1",
+        "uchar": "u1",
         "uint": "u4",
         "uint8": "u1",
         "uint16": "u2",
