@@ -91,6 +91,46 @@ def test_time_series():
                 assert np.all(np.abs(value - point_data[k][key]) < 1.0e-12)
 
 
+def test_time_series_quadratic():
+    # write the data
+    filename = "out.xdmf"
+
+    with meshio.xdmf.TimeSeriesWriter(filename) as writer:
+        writer.write_points_cells(
+            helpers.line3_triangle6_tetra10_mesh.points,
+            helpers.line3_triangle6_tetra10_mesh.cells,
+        )
+        n = helpers.line3_triangle6_tetra10_mesh.points.shape[0]
+
+        times = np.linspace(0.0, 1.0, 5)
+        point_data = [
+            {
+                "phi": np.full(n, t),
+                "u": np.full(helpers.line3_triangle6_tetra10_mesh.points.shape, t),
+            }
+            for t in times
+        ]
+        for t, pd in zip(times, point_data):
+            writer.write_data(
+                t, point_data=pd, cell_data={
+                    "a": {
+                        "line3": np.linspace(0, 1, 12),
+                        "triangle6": np.linspace(0, 1, 12),
+                        "tetra10": np.linspace(0, 1, 6)
+                        }
+                    }
+            )
+
+    # read it back in
+    with meshio.xdmf.TimeSeriesReader(filename) as reader:
+        points, cells = reader.read_points_cells()
+        for k in range(reader.num_steps):
+            t, pd, cd = reader.read_data(k)
+            assert np.abs(times[k] - t) < 1.0e-12
+            for key, value in pd.items():
+                assert np.all(np.abs(value - point_data[k][key]) < 1.0e-12)
+
+
 # def test_information_xdmf():
 #     mesh_out = meshio.Mesh(
 #         np.array(
