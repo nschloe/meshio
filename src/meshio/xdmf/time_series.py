@@ -135,6 +135,7 @@ class TimeSeriesReader:
     def read_data(self, k: int):
         point_data = {}
         cell_data_raw = {}
+        other_data = {}
 
         t = None
 
@@ -151,10 +152,13 @@ class TimeSeriesReader:
 
                 if c.get("Center") == "Node":
                     point_data[name] = data
-                else:
-                    if c.get("Center") != "Cell":
-                        raise ReadError()
+                elif c.get("Center") == "Cell":
                     cell_data_raw[name] = data
+                elif c.get("Center") == "Other":
+                    other_data[name] = data
+                else:
+                    raise ReadError()
+
             else:
                 # skip the xi:included mesh
                 continue
@@ -165,7 +169,7 @@ class TimeSeriesReader:
         if t is None:
             raise ReadError()
 
-        return t, point_data, cell_data
+        return t, point_data, cell_data, other_data
 
     def _read_data_item(self, data_item):
         dims = [int(d) for d in data_item.get("Dimensions").split()]
