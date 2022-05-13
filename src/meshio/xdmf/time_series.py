@@ -206,8 +206,19 @@ class TimeSeriesReader:
         if data_format != "HDF":
             raise ReadError(f"Unknown XDMF Format '{data_format}'.")
 
-        info = data_item.text.strip()
-        filename, h5path = info.split(":")
+        file_info = data_item.text.strip()
+        file_h5path__selections  = file_info.split("|")
+        file_h5path=file_h5path__selections[0]
+        selections = file_h5path__selections[1] if len(file_h5path__selections)>1 else None
+        filename, h5path = file_h5path.split(":")
+        if selections:
+            # offsets, slices, current_data_extends, global_data_extends by dimension
+            l  = [list(map(int, att.split(' '))) for att in selections.split(":")]
+            t = np.transpose(l)
+            selection = tuple(slice(start, start+extend, step) for start, step, extend, _ in t)
+        else:
+            selection = ()
+        
 
         # The HDF5 file path is given with respect to the XDMF (XML) file.
         dirpath = self.filename.resolve().parent
@@ -227,7 +238,7 @@ class TimeSeriesReader:
         for key in h5path[1:].split("/"):
             f = f[key]
         # `[()]` gives a np.ndarray
-        return f[()]
+        return f[selection].squeeze()
 
 
 class TimeSeriesWriter:
