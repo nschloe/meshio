@@ -355,8 +355,7 @@ def _read_coords(f, data_type, is_ascii, num_points):
     else:
         # Binary data is big endian, see
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
-        dtype = dtype.newbyteorder(">")
-        coords = np.fromfile(f, count=num_points, dtype=dtype)
+        coords = np.fromfile(f, count=num_points, dtype=dtype.newbyteorder(">")).astype(dtype)
         line = f.readline().decode()
         if line != "\n":
             raise ReadError()
@@ -370,8 +369,7 @@ def _read_points(f, data_type, is_ascii, num_points):
     else:
         # Binary data is big endian, see
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
-        dtype = dtype.newbyteorder(">")
-        points = np.fromfile(f, count=num_points * 3, dtype=dtype)
+        points = np.fromfile(f, count=num_points * 3, dtype=dtype.newbyteorder(">")).astype(dtype)
         line = f.readline().decode()
         if line != "\n":
             raise ReadError()
@@ -382,8 +380,7 @@ def _read_int_data(f, is_ascii, num_items, dtype=np.dtype("int32")):
     if is_ascii:
         c = np.fromfile(f, count=num_items, sep=" ", dtype=dtype)
     else:
-        dtype = dtype.newbyteorder(">")
-        c = np.fromfile(f, count=num_items, dtype=dtype)
+        c = np.fromfile(f, count=num_items, dtype=dtype.newbyteorder(">")).astype(dtype)
         line = f.readline().decode()
         if line != "\n":
             raise ReadError()
@@ -395,7 +392,7 @@ def _read_cell_types(f, is_ascii, num_items):
         ct = np.fromfile(f, count=int(num_items), sep=" ", dtype=int)
     else:
         # binary
-        ct = np.fromfile(f, count=int(num_items), dtype=">i4")
+        ct = np.fromfile(f, count=int(num_items), dtype=">i4").astype(int)
         line = f.readline().decode()
         # Sometimes, there's no newline at the end
         if line.strip() != "":
@@ -426,8 +423,7 @@ def _read_scalar_field(f, num_data, split, is_ascii):
     else:
         # Binary data is big endian, see
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
-        dtype = dtype.newbyteorder(">")
-        data = np.fromfile(f, count=num_data * num_comp, dtype=dtype)
+        data = np.fromfile(f, count=num_data * num_comp, dtype=dtype.newbyteorder(">")).astype(dtype)
         line = f.readline().decode()
         if line != "\n":
             raise ReadError()
@@ -450,8 +446,7 @@ def _read_field(f, num_data, split, shape, is_ascii):
     else:
         # Binary data is big endian, see
         # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
-        dtype = dtype.newbyteorder(">")
-        data = np.fromfile(f, count=k * num_data, dtype=dtype)
+        data = np.fromfile(f, count=k * num_data, dtype=dtype.newbyteorder(">")).astype(dtype)
         line = f.readline().decode()
         if line != "\n":
             raise ReadError()
@@ -479,8 +474,7 @@ def _read_fields(f, num_fields, is_ascii):
         else:
             # Binary data is big endian, see
             # <https://vtk.org/Wiki/VTK/Writing_VTK_files_using_python#.22legacy.22>.
-            dtype = dtype.newbyteorder(">")
-            dat = np.fromfile(f, count=shape0 * shape1, dtype=dtype)
+            dat = np.fromfile(f, count=shape0 * shape1, dtype=dtype.newbyteorder(">")).astype(dtype)
             line = f.readline().decode()
             if line != "\n":
                 raise ReadError()
