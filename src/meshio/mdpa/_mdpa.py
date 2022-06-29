@@ -371,36 +371,37 @@ def _write_nodes(fh, points, float_fmt, binary=False):
     fh.write(b"End Nodes\n\n")
 
 
+def _compute_blocks_offset(cells, dimension):
+    """Computes the id offset for the different blocks of entities.
+    (i.e. Elements and Conditions), as mdpa format requires a continuous
+    numbering between blocks of Elements, and another for Conditions.
+    The criteria used here is that the highest dimension entities are
+    considered 'Elements', and entities with lower dimension are 'Conditions',
+    where boundary conditions are applied."""
+
+    offset = {"Elements": [0], "Conditions": [0]}
+    for ib, b in enumerate(cells):
+        offset["Elements"].append(offset["Elements"][ib])
+        offset["Conditions"].append(offset["Conditions"][ib])
+        entity = "Conditions" if b.dim < dimension else "Elements"
+        offset[entity][-1] += len(b.data)
+    return offset
+
+
 def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=2):
     if binary:
         raise WriteError("Can only write ASCII")
-    # write elements
-    entity = "Elements"
-    dimension_name = f"{dimension}D"
-    wrong_dimension_name = "3D" if dimension == 2 else "2D"
-    consecutive_index = 0
-    for cell_block in cells:
-        cell_type = cell_block.type
-        node_idcs = cell_block.data
-        # NOTE: The names of the dummy conditions are not regular, require extra work
-        # local_dimension = local_dimension_types[cell_type]
-        # if (local_dimension < dimension):
-        # entity = "Conditions"
-        mdpa_cell_type = _meshio_to_mdpa_type[cell_type].replace(
-            wrong_dimension_name, dimension_name
-        )
-        fh.write(f"Begin {entity} {mdpa_cell_type}\n".encode())
 
-        # TODO: Add proper tag recognition in the future
-        fcd = np.empty((len(node_idcs), 0), dtype=np.int32)
-        for k, c in enumerate(node_idcs):
-            a1 = " ".join([str(val) for val in fcd[k]])
-            a2 = " ".join([str(cc) for cc in c + 1])
-            fh.write(
-                f" {consecutive_index + k + 1} {fcd.shape[1]} {a1} {a2}\n".encode()
-            )
+    offset = _compute_blocks_offset(cells, dimension)
+    for ib, b in enumerate(cells):
+        entity = "Conditions" if b.dim < dimension else "Elements"
+        type = _meshio_to_mdpa_type[b.type]
 
-        consecutive_index += len(node_idcs)
+        # Write block
+        fh.write(f"Begin {entity} {type}\n".encode())
+        for ie, pe in enumerate(b.data):
+            fh.write(f"  {offset[entity][ib] + ie + 1} 0 ".encode())
+            fh.write(f"{pe[0]+1} {pe[1]+1} {pe[2]+1}\n".encode())
         fh.write(f"End {entity}\n\n".encode())
 
 
