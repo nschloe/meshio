@@ -548,13 +548,13 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
         # identify entities
         _write_nodes(fh, points, float_fmt, binary)
         _write_elements_and_conditions(fh, cells, tag_data, binary, dimension)
-        for name, dat in mesh.point_data.items():
-            _write_data(fh, "NodalData", name, dat, binary)
-        cell_data_raw = raw_from_cell_data(other_data)
-        for name, dat in cell_data_raw.items():
-            # assume always that the components are elements (for now)
-            _write_data(fh, "ElementalData", name, dat, binary)
         _write_submodelparts(fh, mesh, binary, dimension)
+        #for name, dat in mesh.point_data.items():
+        #    _write_data(fh, "NodalData", name, dat, binary)
+        #cell_data_raw = raw_from_cell_data(other_data)
+        #for name, dat in cell_data_raw.items():
+        #    # assume always that the components are elements (for now)
+        #    _write_data(fh, "ElementalData", name, dat, binary)
 
 
 register_format("mdpa", [".mdpa"], read, {"mdpa": write})
