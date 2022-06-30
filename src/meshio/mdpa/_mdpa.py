@@ -399,9 +399,11 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
 
         # Write block
         fh.write(f"Begin {entity} {type}\n".encode())
-        for ie, pe in enumerate(b.data):
-            fh.write(f"  {offset[entity][ib] + ie + 1} 0 ".encode())
-            fh.write(f"{pe[0]+1} {pe[1]+1} {pe[2]+1}\n".encode())
+        for ie, pe0 in enumerate(b.data):
+            line = f"  {offset[entity][ib] + ie + 1} 0 "
+            line += " ".join([str(x + 1) for x in pe0])
+            line += "\n"
+            fh.write(line.encode())
         fh.write(f"End {entity}\n\n".encode())
 
 
