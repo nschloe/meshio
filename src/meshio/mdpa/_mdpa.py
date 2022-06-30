@@ -381,15 +381,15 @@ def _compute_blocks_offset(cells, dimension):
     where boundary conditions are applied."""
 
     offset = {"Elements": [0], "Conditions": [0]}
-    for ib, b in enumerate(cells):
-        offset["Elements"].append(offset["Elements"][ib])
-        offset["Conditions"].append(offset["Conditions"][ib])
-        entity = "Conditions" if b.dim < dimension else "Elements"
-        offset[entity][-1] += len(b.data)
+    for ic, c in enumerate(cells):
+        offset["Elements"].append(offset["Elements"][ic])
+        offset["Conditions"].append(offset["Conditions"][ic])
+        entity = "Conditions" if c.dim < dimension else "Elements"
+        offset[entity][-1] += len(c.data)
     return offset
 
 
-def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=2):
+def _write_elements_and_conditions(fh, cells, binary=False, dimension=3):
     if binary:
         raise WriteError("Can only write ASCII")
 
@@ -408,7 +408,7 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
         fh.write(f"End {entity}\n\n".encode())
 
 
-def _write_submodelparts(fh, mesh, binary=False, dimension=2):
+def _write_submodelparts(fh, mesh, binary=False, dimension=3):
     """Writes meshio cell sets as mdpa submodelparts"""
 
     if binary:
@@ -419,13 +419,13 @@ def _write_submodelparts(fh, mesh, binary=False, dimension=2):
         if "gmsh:bounding_entities" in part_name:
             continue
         part_data = {"Nodes": set(), "Elements": [], "Conditions": []}
-        for i, cells in enumerate(part_blocks):
-            if not cells.size:
+        for i, block in enumerate(part_blocks):
+            if not block.size:
                 continue
             is_condition = mesh.cells[i].dim < dimension
             subentity = "Conditions" if is_condition else "Elements"
             aux = []
-            for c in cells:
+            for c in block:
                 part_data["Nodes"].update(mesh.cells[i].data[c])
                 aux.append(int(c))
             part_data[subentity].extend([x + offset[subentity][i] for x in aux])
@@ -523,7 +523,6 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
     with open_file(filename, "wb") as fh:
         # Write some additional info
         fh.write(b"Begin ModelPartData\n")
-        fh.write(b"//  VARIABLE_NAME value\n")
         fh.write(b"End ModelPartData\n\n")
         fh.write(b"Begin Properties 0\n")
         fh.write(b"End Properties\n\n")
@@ -538,18 +537,15 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
             else:
                 other_data[key] = data
 
-        # identity dimension
-        dimension = 2
+        # identify dimension of the mesh
+        mesh_dim = -1
         for c in cells:
-            name_elem = _meshio_to_mdpa_type[c.type]
-            if local_dimension_types[name_elem] == 3:
-                dimension = 3
-                break
+            mesh_dim = c.dim if c.dim > mesh_dim else mesh_dim
 
         # identify entities
         _write_nodes(fh, points, float_fmt, binary)
-        _write_elements_and_conditions(fh, cells, tag_data, binary, dimension)
-        _write_submodelparts(fh, mesh, binary, dimension)
+        _write_elements_and_conditions(fh, cells, binary, mesh_dim)
+        _write_submodelparts(fh, mesh, binary, mesh_dim)
         #for name, dat in mesh.point_data.items():
         #    _write_data(fh, "NodalData", name, dat, binary)
         #cell_data_raw = raw_from_cell_data(other_data)
