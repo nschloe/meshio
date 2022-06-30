@@ -407,6 +407,38 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
         fh.write(f"End {entity}\n\n".encode())
 
 
+def _write_submodelparts(fh, mesh, binary=False, dimension=2):
+    """Writes meshio cell sets as mdpa submodelparts"""
+
+    if binary:
+        raise WriteError("Can only write ASCII")
+
+    offset = _compute_blocks_offset(mesh.cells, dimension)
+    for part_name, part_blocks in mesh.cell_sets.items():
+        if "gmsh:bounding_entities" in part_name:
+            continue
+        part_data = {"Nodes": set(), "Elements": [], "Conditions": []}
+        for i, cells in enumerate(part_blocks):
+            if not cells.size:
+                continue
+            is_condition = mesh.cells[i].dim < dimension
+            subentity = "Conditions" if is_condition else "Elements"
+            aux = []
+            for c in cells:
+                part_data["Nodes"].update(mesh.cells[i].data[c])
+                aux.append(int(c))
+            part_data[subentity].extend([x + offset[subentity][i] for x in aux])
+
+        # Write submodelpart
+        fh.write(f"Begin SubModelPart {part_name}\n".encode())
+        for k, v in part_data.items():
+            fh.write(f"    Begin SubModelPart{k}\n".encode())
+            for i in sorted(v):
+                fh.write(f"        {i + 1}\n".encode())
+            fh.write(f"    End SubModelPart{k}\n".encode())
+        fh.write(f"End SubModelPart\n\n".encode())
+
+
 def _write_data(fh, tag, name, data, binary):
     if binary:
         raise WriteError()
@@ -522,6 +554,7 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
         for name, dat in cell_data_raw.items():
             # assume always that the components are elements (for now)
             _write_data(fh, "ElementalData", name, dat, binary)
+        _write_submodelparts(fh, mesh, binary, dimension)
 
 
 register_format("mdpa", [".mdpa"], read, {"mdpa": write})
