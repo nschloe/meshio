@@ -31,6 +31,7 @@ _mdpa_to_meshio_type = {
     "Hexahedra3D8": "hexahedron",
     "Prism3D6": "wedge",
     "Line2D3": "line3",
+    "Line3D3": "line3",
     "Triangle2D6": "triangle6",
     "Triangle3D6": "triangle6",
     "Quadrilateral2D9": "quad9",
@@ -45,19 +46,19 @@ _mdpa_to_meshio_type = {
 }
 
 _meshio_to_mdpa_type = {
-    "line": "Line2D2",
-    "triangle": "Triangle2D3",
-    "quad": "Quadrilateral2D4",
+    "line": "Line3D2",
+    "triangle": "Triangle3D3",
+    "quad": "Quadrilateral3D4",
     "tetra": "Tetrahedra3D4",
     "hexahedron": "Hexahedra3D8",
     "wedge": "Prism3D6",
-    "line3": "Line2D3",
-    "triangle6": "Triangle2D6",
-    "quad9": "Quadrilateral2D9",
+    "line3": "Line3D3",
+    "triangle6": "Triangle3D6",
+    "quad9": "Quadrilateral3D9",
     "tetra10": "Tetrahedra3D10",
     "hexahedron27": "Hexahedra3D27",
-    "vertex": "Point2D",
-    "quad8": "Quadrilateral2D8",
+    "vertex": "Point3D",
+    "quad8": "Quadrilateral3D8",
     "hexahedron20": "Hexahedra3D20",
 }
 inverse_num_nodes_per_cell = {v: k for k, v in num_nodes_per_cell.items()}
