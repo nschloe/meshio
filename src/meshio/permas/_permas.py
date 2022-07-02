@@ -2,7 +2,8 @@
 I/O for PERMAS dat files.
 """
 import numpy as np
-
+import re
+from . import _permdat_line as pdl
 from ..__about__ import __version__
 from .._common import warn
 from .._exceptions import ReadError
@@ -55,6 +56,11 @@ permas_to_meshio_type = {
 }
 meshio_to_permas_type = {v: k for k, v in permas_to_meshio_type.items()}
 
+# re to get keyword that follows dollar sign
+dlkwd_pattern = '^ *\$([A-Z,a-z]*) *.*'
+dlkwd_find    = re.compile(dlkwd_pattern)
+
+
 
 def read(filename):
     """Reads a PERMAS dat file."""
@@ -81,11 +87,15 @@ def read_buffer(f):
         # Comments
         if line.startswith("!"):
             continue
-
-        keyword = line.strip("$").upper()
+        
+        # keyword line
+        if '$' in line:  keyword = dlkwd_find.findall(line)[0].upper()
+        #keyword = line.strip().strip("$").upper()
         if keyword.startswith("COOR"):
             points, point_gids = _read_nodes(f)
         elif keyword.startswith("ELEMENT"):
+            elline1 = pdl.pmkwd_line(f.tell(),line)
+            import pdb; pdb.set_trace()
             key, idx = _read_cells(f, keyword, point_gids)
             cells.append(CellBlock(key, idx))
         elif keyword.startswith("NSET"):
@@ -285,5 +295,5 @@ def write(filename, mesh):
 
 
 register_format(
-    "permas", [".post", ".post.gz", ".dato", ".dato.gz"], read, {"permas": write}
+    "permas", [".post", ".post.gz", ".dato", ".dato.gz", ".dat"], read, {"permas": write}
 )
