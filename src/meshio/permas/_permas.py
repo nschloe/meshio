@@ -80,21 +80,21 @@ def read_buffer(f):
 
     while True:
         line = f.readline()
-        if not line:
-            # EOF
-            break
+        # EOF
+        if not line:              break
 
         # Comments
-        if line.startswith("!"):
-            continue
+        if line.startswith("!"): continue
         
         # keyword line
         if '$' in line:  keyword = dlkwd_find.findall(line)[0].upper()
         #keyword = line.strip().strip("$").upper()
+        
         if keyword.startswith("COOR"):
             points, point_gids = _read_nodes(f)
         elif keyword.startswith("ELEMENT"):
-            elline1 = pdl.pmkwd_line(f.tell(),line)
+            elline1 = pdl.eldef(f.tell(),line)
+            elline1._read_cells(f)
             import pdb; pdb.set_trace()
             key, idx = _read_cells(f, keyword, point_gids)
             cells.append(CellBlock(key, idx))
