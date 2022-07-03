@@ -64,7 +64,6 @@ def read(filename):
     """Reads a PERMAS dat file."""
     with open_file(filename, "r") as f:
         out = prd.read_buffer(f)
-        #out = read_buffer(f)
     return out
 
 def write(filename, mesh):
