@@ -67,12 +67,12 @@ def read_buffer(f):
         elif keyword.startswith("ELEMENT"):
             eblk[ecnt] = pdl.eldef(f.tell(),line)
             ecnt += 1
-        elif keyword.startswith("NSET"):
-            nsblk[nscnt] = pdl.setdef(f.tell(),line)
-            nscnt += 1
-        elif keyword.startswith("ESET"):
-            esblk[escnt] = pdl.setdef(f.tell(),line)
-            escnt += 1
+        # elif keyword.startswith("NSET"):
+        #     nsblk[nscnt] = pdl.setdef(f.tell(),line)
+        #     nscnt += 1
+        # elif keyword.startswith("ESET"):
+        #     esblk[escnt] = pdl.setdef(f.tell(),line)
+        #     escnt += 1
         else:pass
     
     # read points
@@ -102,6 +102,6 @@ def read_buffer(f):
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
-        point_sets=nsets,
-        cell_sets=elsets,
+        # point_sets=nsets,
+        # cell_sets=elsets,
     )
