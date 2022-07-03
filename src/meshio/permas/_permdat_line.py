@@ -17,14 +17,19 @@ class pmkwd_line(object):
     fchar_pattern  =  '^[\s\t]*(.)'
     fchar          =   re.compile(fchar_pattern)
 
-    ## re to recoginize empty lines
+    ## re to recogonize empty lines
     emptline_pattern = '^[\s\t]*\n$'
     emptline = re.compile(emptline_pattern)
 
+    ## re to recogonize generated data lines
+    gen_pattern = '^.*generate.*$'
+    gen = re.compile(emptline_pattern,re.IGNORECASE)
+    
     # constructor
     def __init__(self,location,string):
         self.location = location
         self.kwds     = type(self).splkwd.findall(string)
+        self.gener    = type(self).gen.match(string)
 
 class nddef(pmkwd_line):
     
@@ -142,12 +147,13 @@ class eldef(pmkwd_line):
     def _read_cells(self,f,point_gids):
         """Reading cells with internal label(not from PERMAS)"""
         f.seek(self.location)
-        petype = self.kwds[1].split('=')[1].strip()
-        etype = type(self).permas_to_meshio_type[petype]
-        if 'TYPE' not in self.kwds[1]:
+        #if 'TYPE' not in self.kwds[1]:
+        if len(self.kwds) < 2:
             raise ReadError('*E* PERMAS: Element type not defined')
-        elif petype not in type(self).permas_to_meshio_type.keys():
+        petype = self.kwds[1].split('=')[1].strip()
+        if petype not in type(self).permas_to_meshio_type.keys():
             raise ReadError(f"*E* PERMAS: Element type not available: {etype}")
+        etype = type(self).permas_to_meshio_type[petype]
         elems,elnds = [],[]
         # starting to read data lines
         eidx = []
@@ -167,5 +173,32 @@ class eldef(pmkwd_line):
                 eidx.append([point_gids[key] for key in pcell_def])
         return etype,np.array(eidx)
 
-class nsdef(pmkwd_line):
-    
+class setdef(pmkwd_line):
+    """Line of a set definition"""
+    def _read_set(self,f):
+        f.seek(self.location)
+        #if 'NAME' not in self.kwds:
+        if len(self.kwds) < 2:
+            raise ReadError('*E* PERMAS: Set name not defined')
+        name = self.kwds[1].split('=')[1].strip()
+        ids = []
+        
+        # read all data lines
+        while True:
+            dline = f.readline() 
+            if '$' in type(self).fchar.findall(dline):
+                if not ids:
+                    raise ReadError('*E* PERMAS: No data line found under keyword $%s'% (self.kwds[0] + ' ' + self.kwds[1]))
+                break
+            elif type(self).emptline.findall(dline) or '!' in type(self).fchar.findall(dline)  : continue
+            elif dline:
+                entries = type(self).num.findall(dline)
+                ids += entries
+        if self.gener:
+            if len(ids) != 3: raise ReadError('*E* PERMAS: Wrong input for generated set')
+        else:
+            try: ids = np.unique(np.array(ids,dtype='int32'))
+            except ValueError: raise
+        return ids,name
+
+

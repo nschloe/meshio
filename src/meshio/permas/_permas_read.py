@@ -1,5 +1,5 @@
 """
-I for PERMAS dat files.
+Input for PERMAS dat files.
 """
 import numpy as np
 import re
@@ -67,8 +67,12 @@ def read_buffer(f):
         elif keyword.startswith("ELEMENT"):
             eblk[ecnt] = pdl.eldef(f.tell(),line)
             ecnt += 1
-        # elif keyword.startswith("NSET"):  
-        # elif keyword.startswith("ESET"):
+        elif keyword.startswith("NSET"):
+            nsblk[nscnt] = pdl.setdef(f.tell(),line)
+            nscnt += 1
+        elif keyword.startswith("ESET"):
+            esblk[escnt] = pdl.setdef(f.tell(),line)
+            escnt += 1
         else:pass
     
     # read points
@@ -80,6 +84,24 @@ def read_buffer(f):
         etype,eidx = eblk[key]._read_cells(f,point_gids)
         cells.append(CellBlock(etype, eidx))
 
+    # read node set
+    for key in nsblk.keys():
+        ids,name = nsblk[key]._read_set(f)
+        if name in nsets.keys(): raise ReadError('*E* PERMAS: Duplicated eset name')
+        else: nsets[name] = ids
+        
+    # read element set
+    for key in esblk.keys():
+        ids,name = esblk[key]._read_set(f)
+        if name in elsets.keys(): raise ReadError('*E* PERMAS: Duplicated nset name')
+        else: elsets[name] = ids
+
     return Mesh(
-        points, cells, point_data=point_data, cell_data=cell_data, field_data=field_data
+        points,
+        cells,
+        point_data=point_data,
+        cell_data=cell_data,
+        field_data=field_data,
+        point_sets=nsets,
+        cell_sets=elsets,
     )
