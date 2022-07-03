@@ -167,4 +167,5 @@ class eldef(pmkwd_line):
                 eidx.append([point_gids[key] for key in pcell_def])
         return etype,np.array(eidx)
 
+class nsdef(pmkwd_line):
     
