@@ -31,7 +31,7 @@ vtk_type_to_numnodes = np.array(
         -1,  # pixel
         4,  # quad
         4,  # tetra
-        -1,  # voxel
+        8,  # voxel
         8,  # hexahedron
         6,  # wedge
         5,  # pyramid

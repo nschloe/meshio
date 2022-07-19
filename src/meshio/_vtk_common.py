@@ -17,7 +17,7 @@ vtk_to_meshio_type = {
     8: "pixel",
     9: "quad",
     10: "tetra",
-    # 11: 'voxel',
+    11: "voxel",
     12: "hexahedron",
     13: "wedge",
     14: "pyramid",
