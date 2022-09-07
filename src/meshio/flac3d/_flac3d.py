@@ -506,14 +506,21 @@ def _write_groups(f, cells, materials, flag, binary) -> None:
 
     if binary:
         f.write(struct.pack("<I", len(materials)))
-        for label, group in materials.items():
+        for label, zgroup in materials.items():
+            
+            if "=" in label:
+                slot, zgroup = label.split("=")
+            else:
+                slot = "Default"
+                zgroup = label
+
             num_chars, num_zones = len(label), len(group)
             fmt = f"<H{num_chars}sH7sI{num_zones}I"
             tmp = [
                 num_chars,
-                label.encode(),
+                zgroup.encode(),
                 7,
-                b"Default",  # slot
+                slot.encode(),  # slot
                 num_zones,
                 *group,
             ]
@@ -523,7 +530,14 @@ def _write_groups(f, cells, materials, flag, binary) -> None:
 
         f.write(f"* {flag.upper()} GROUPS\n")
         for label, group in materials.items():
-            f.write(f'{flg} "{label}" SLOT 1\n')
+
+            if "=" in label:
+                slot, zgroup = label.split("=")
+            else:
+                slot = "Default"
+                zgroup = label
+
+            f.write(f'{flg} "{zgroup}" SLOT {slot}\n')
             _write_table(f, group)
 
 
