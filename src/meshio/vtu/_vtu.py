@@ -894,13 +894,16 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             numpy_to_xml_array(cls, "faceoffsets", np.array(faceoffsets, dtype=int))
 
     if mesh.point_data:
-        pd = ET.SubElement(piece, "PointData")
+        attrib = {name: name for name in mesh.point_data.keys()}
+        pd = ET.SubElement(piece, "PointData", **attrib)
         for name, data in mesh.point_data.items():
             numpy_to_xml_array(pd, name, data)
 
     if mesh.cell_data:
-        cd = ET.SubElement(piece, "CellData")
-        for name, data in raw_from_cell_data(mesh.cell_data).items():
+        raw_cell_data = raw_from_cell_data(mesh.cell_data)
+        attrib = {name: name for name in raw_cell_data.keys()}
+        cd = ET.SubElement(piece, "CellData", **attrib)
+        for name, data in raw_cell_data.items():
             numpy_to_xml_array(cd, name, data)
 
     # write_xml(filename, vtk_file, pretty_xml)
