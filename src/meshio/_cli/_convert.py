@@ -71,5 +71,7 @@ def convert(args):
         kwargs["float_fmt"] = args.float_format
     if args.ascii:
         kwargs["binary"] = False
+    else:
+        kwargs["binary"] = True
 
     write(args.outfile, mesh, **kwargs)
