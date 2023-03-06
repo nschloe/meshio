@@ -25,17 +25,18 @@ def test_obj(mesh, tmp_path):
     helpers.write_read(tmp_path, meshio.obj.write, meshio.obj.read, mesh, 1.0e-12)
 
 
-@pytest.mark.skip("Fails point data consistency check.")
 @pytest.mark.parametrize(
-    "filename, ref_sum, ref_num_cells", [("elephav.obj", 3.678372172450000e05, 1148)]
+    "filename, ref_sum, ref_num_cells", [
+    ("elephav.obj", 3.678372172450000e05, 1148),
+    ("cube_tri_mesh.obj", 0., 12),
+    ]
 )
 def test_reference_file(filename, ref_sum, ref_num_cells):
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "obj" / filename
 
     mesh = meshio.read(filename)
-    tol = 1.0e-5
     s = np.sum(mesh.points)
-    assert abs(s - ref_sum) < tol * abs(ref_sum)
+    np.testing.assert_almost_equal(s, ref_sum, decimal=5)
     assert mesh.cells[0].type == "triangle"
     assert len(mesh.cells[0].data) == ref_num_cells
