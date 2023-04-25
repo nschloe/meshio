@@ -699,12 +699,14 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     for key, data in mesh.field_data.items():
         mesh.field_data[key] = data.astype(data.dtype.newbyteorder("="), copy=False)
 
-    def numpy_to_xml_array(parent, name, data):
+    def numpy_to_xml_array(parent, name, data, is_field_data=False):
         vtu_type = numpy_to_vtu_type[data.dtype]
         fmt = "{:.11e}" if vtu_type.startswith("Float") else "{:d}"
         da = ET.SubElement(parent, "DataArray", type=vtu_type, Name=name)
         if len(data.shape) == 2:
             da.set("NumberOfComponents", f"{data.shape[1]}")
+        if is_field_data:
+            da.set("NumberOfTuples", f"{data.shape[0]}")
 
         def text_writer_compressed(f):
             max_block_size = 32768
@@ -902,6 +904,11 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         cd = ET.SubElement(piece, "CellData")
         for name, data in raw_from_cell_data(mesh.cell_data).items():
             numpy_to_xml_array(cd, name, data)
+            
+    if mesh.field_data:
+        fd = ET.SubElement(grid, "FieldData")
+        for name, data in mesh.field_data.items():
+            numpy_to_xml_array(fd, name, data, is_field_data=True)
 
     # write_xml(filename, vtk_file, pretty_xml)
     tree = ET.ElementTree(vtk_file)
