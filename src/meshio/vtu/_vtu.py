@@ -309,7 +309,7 @@ class VtuReader:
 
         if "version" in root.attrib:
             version = root.attrib["version"]
-            if version not in ["0.1", "1.0"]:
+            if version not in ["0.1", "1.0", "2.2"]:
                 raise ReadError(f"Unknown VTU file version '{version}'.")
 
         # fix empty NumberOfComponents attributes as produced by Firedrake
