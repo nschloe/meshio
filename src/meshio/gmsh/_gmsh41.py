@@ -248,7 +248,9 @@ def _read_elements(
     cells = []
     for physical_tag, bound_entity, geom_tag, key, values in data:
         cells.append(CellBlock(key, _gmsh_to_meshio_order(key, values)))
-        if physical_tag:
+        if physical_tag or physical_tag == []:
+            if physical_tag == []:
+                physical_tag = [-999999999] # The number seems not be used actually as physical name number. (and as per 32bit-int min -2147483648) 
             if "gmsh:physical" not in cell_data:
                 cell_data["gmsh:physical"] = []
             cell_data["gmsh:physical"].append(
