@@ -309,7 +309,7 @@ class VtuReader:
 
         if "version" in root.attrib:
             version = root.attrib["version"]
-            if version not in ["0.1", "1.0"]:
+            if version not in ["0.1", "1.0", "2.2"]:
                 raise ReadError(f"Unknown VTU file version '{version}'.")
 
         # fix empty NumberOfComponents attributes as produced by Firedrake
@@ -590,7 +590,9 @@ def _chunk_it(array, n):
         k += 1
 
 
-def write(filename, mesh, binary=True, compression="zlib", header_type=None):
+def write(
+    filename, mesh, binary=True, compression="zlib", header_type=None, vtu_version="2.2"
+):
     # Writing XML with an etree required first transforming the (potentially large)
     # arrays into string, which are much larger in memory still. This makes this writer
     # very memory hungry. See <https://stackoverflow.com/q/59272477/353337>.
@@ -646,7 +648,10 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     vtk_file = ET.Element(
         "VTKFile",
         type="UnstructuredGrid",
-        version="0.1",
+        # version<2.0 does not support corrected ordering for
+        # VTK_BEZIER_HEXAHEDRON
+        # version="0.1",
+        version=vtu_version,
         # Use the native endianness. Not strictly necessary, but this simplifies things
         # a bit.
         byte_order=("LittleEndian" if sys.byteorder == "little" else "BigEndian"),
@@ -894,13 +899,16 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             numpy_to_xml_array(cls, "faceoffsets", np.array(faceoffsets, dtype=int))
 
     if mesh.point_data:
-        pd = ET.SubElement(piece, "PointData")
+        attrib = {name: name for name in mesh.point_data.keys()}
+        pd = ET.SubElement(piece, "PointData", **attrib)
         for name, data in mesh.point_data.items():
             numpy_to_xml_array(pd, name, data)
 
     if mesh.cell_data:
-        cd = ET.SubElement(piece, "CellData")
-        for name, data in raw_from_cell_data(mesh.cell_data).items():
+        raw_cell_data = raw_from_cell_data(mesh.cell_data)
+        attrib = {name: name for name in raw_cell_data.keys()}
+        cd = ET.SubElement(piece, "CellData", **attrib)
+        for name, data in raw_cell_data.items():
             numpy_to_xml_array(cd, name, data)
 
     # write_xml(filename, vtk_file, pretty_xml)
