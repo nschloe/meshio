@@ -210,7 +210,7 @@ def write(filename, mesh, binary=False):
 
 def _write_ascii(filename, pts, normals):
     with open_file(filename, "w") as fh:
-        fh.write("solid\n")
+        fh.write("solid \n")
         for local_pts, normal in zip(pts, normals):
             out = (
                 "\n".join(
