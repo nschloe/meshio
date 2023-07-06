@@ -20,6 +20,9 @@ def add_args(parser):
 
 
 def binary(args):
+    print(glob.glob(args.infile))
+    print("\n\n")
+    print(args.infile)
     for file in glob.glob(args.infile):
         if args.input_format:
             fmts = [args.input_format]
