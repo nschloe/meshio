@@ -1,13 +1,11 @@
 import os
 import pathlib
-import glob
 
 from .. import ansys, flac3d, gmsh, mdpa, ply, stl, vtk, vtu, xdmf
 from .._helpers import _filetypes_from_path, read, reader_map
 
 
 def add_args(parser):
-    parser.add_argument("infile", type=str, help="mesh file to convert")
 
     parser.add_argument(
         "--input-format",
@@ -18,12 +16,15 @@ def add_args(parser):
         default=None,
     )
 
+    parser.add_argument("infile", type=str, nargs='*', help="mesh file to convert")
 
+
+    
 def binary(args):
-    print(glob.glob(args.infile))
-    print("\n\n")
-    print(args.infile)
-    for file in glob.glob(args.infile):
+    if not isinstance(args.infile, list):
+        args.infile = [args.infile]
+
+    for file in args.infile:
         if args.input_format:
             fmts = [args.input_format]
         else:
