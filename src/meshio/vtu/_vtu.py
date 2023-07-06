@@ -62,7 +62,7 @@ def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
             num_nodes_this_face = faces[next_face]
             faces_this_cell.append(
                 np.array(
-                    faces[next_face + 1 : (next_face + num_nodes_this_face + 1)],
+                    faces[next_face + 1: (next_face + num_nodes_this_face + 1)],
                     dtype=int,
                 )
             )
@@ -227,9 +227,9 @@ def _parse_raw_binary(filename):
                 raise RuntimeError(f"Could not find .//DataArray[@offset='{i}']")
             da_tag.set("offset", str(len(arrays)))
 
-            block_size = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
+            block_size = int(np.frombuffer(data[i: i + dtype.itemsize], dtype)[0])
             arrays += base64.b64encode(
-                data[i : i + block_size + dtype.itemsize]
+                data[i: i + block_size + dtype.itemsize]
             ).decode()
             i += block_size + dtype.itemsize
 
@@ -245,10 +245,10 @@ def _parse_raw_binary(filename):
             assert da_tag is not None
             da_tag.set("offset", str(len(arrays)))
 
-            num_blocks = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
+            num_blocks = int(np.frombuffer(data[i: i + dtype.itemsize], dtype)[0])
             num_header_items = 3 + num_blocks
             num_header_bytes = num_header_items * dtype.itemsize
-            header = np.frombuffer(data[i : i + num_header_bytes], dtype)
+            header = np.frombuffer(data[i: i + num_header_bytes], dtype)
 
             block_data = b""
             j = 0
@@ -256,7 +256,7 @@ def _parse_raw_binary(filename):
                 block_size = int(header[k + 3])
                 block_data += c.decompress(
                     data[
-                        i + j + num_header_bytes : i + j + block_size + num_header_bytes
+                        i + j + num_header_bytes: i + j + block_size + num_header_bytes
                     ]
                 )
                 j += block_size
@@ -415,7 +415,8 @@ class VtuReader:
 
                     cell_data_raw.append(piece_cell_data_raw)
                 else:
-                    raise ReadError(f"Unknown tag '{child.tag}'.")
+                    print(f"Warning: Ignoring unknown tag '{child.tag}' in vtu.")
+                    
 
         if not cell_data_raw:
             cell_data_raw = [{}] * len(cells)
@@ -514,7 +515,7 @@ class VtuReader:
         block_data = np.concatenate(
             [
                 np.frombuffer(
-                    c.decompress(byte_array[byte_offsets[k] : byte_offsets[k + 1]]),
+                    c.decompress(byte_array[byte_offsets[k]: byte_offsets[k + 1]]),
                     dtype=dtype,
                 )
                 for k in range(num_blocks)
@@ -586,7 +587,7 @@ def read(filename):
 def _chunk_it(array, n):
     k = 0
     while k * n < len(array):
-        yield array[k * n : (k + 1) * n]
+        yield array[k * n: (k + 1) * n]
         k += 1
 
 
