@@ -35,7 +35,7 @@ dtype_to_format_string = {
 # alternatives as well.
 meshio_to_xdmf_type = {
     "vertex": ["Polyvertex"],
-    "line": ["Polyline"],
+    "line": ["Polyline", "PolyLine"],
     "line3": ["Edge_3"],
     "quad": ["Quadrilateral"],
     "quad8": ["Quadrilateral_8", "Quad_8"],
