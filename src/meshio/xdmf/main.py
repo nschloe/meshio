@@ -79,7 +79,7 @@ class XdmfReader:
             data_type = "Float"
 
         precision = data_item.get("Precision", default="4")
-        fmt = data_item.attrib["Format"]
+        fmt = data_item.get("Format", default="XML")
 
         if fmt == "XML":
             dtype = xdmf_to_numpy_type[(data_type, precision)]
