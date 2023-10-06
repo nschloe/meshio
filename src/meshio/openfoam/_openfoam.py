@@ -9,7 +9,7 @@ from enum import Enum
 
 import numpy as np
 
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 
@@ -84,7 +84,7 @@ def write(filename, mesh, binary=False):
     faces = Odict()
     # Iterate over cell groups, counting cell index i
     i = 0
-    for cell_type, cells in mesh.cells:
+    for cell_type, cells in mesh.cell_data.items():
         # Define a vertex order for each face which follows right-hand rule
         if cell_type == "tetra":
             cell_order = [[0, 2, 1], [1, 2, 3], [0, 1, 3], [0, 3, 2]]
@@ -432,4 +432,4 @@ def read(dirpath: str):
     return Mesh(points, cells)
 
 
-register("openfoam", [], read, {"openfoam": write})
+register_format("openfoam", [], read, {"openfoam": write})
