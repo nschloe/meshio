@@ -1,6 +1,4 @@
-import copy
 import pathlib
-import sys
 
 import numpy as np
 import pytest
@@ -11,20 +9,20 @@ from . import helpers
 
 
 @pytest.mark.parametrize(
-    "mesh, data",
+    "mesh",
     [
-        (helpers.empty_mesh, []),
-        (helpers.tet_mesh, []),
-        (helpers.hex_mesh, []),
-        (helpers.tet_mesh, [1, 2]),
+        helpers.empty_mesh,
+        helpers.tet_mesh,
+        helpers.hex_mesh,
+        helpers.tet_mesh,
+        helpers.add_cell_sets(helpers.tet_mesh),
     ],
 )
 @pytest.mark.parametrize("binary", [False, True])
-def test(mesh, data, binary):
-    if data:
-        mesh = copy.deepcopy(mesh)
-        mesh.cell_data["flac3d:group"] = [np.array(data)]
+def test(mesh, binary, tmp_path):
+    # mesh.write("out.f3grid")
     helpers.write_read(
+        tmp_path,
         lambda f, m: meshio.flac3d.write(f, m, binary=binary),
         meshio.flac3d.read,
         mesh,
@@ -32,8 +30,6 @@ def test(mesh, data, binary):
     )
 
 
-# the failure perhaps has to do with dictionary ordering
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="Fails with 3.5")
 @pytest.mark.parametrize(
     "filename",
     ["flac3d_mesh_ex.f3grid", "flac3d_mesh_ex_bin.f3grid"],
@@ -49,6 +45,8 @@ def test_reference_file(filename):
 
     # cells
     ref_num_cells = [
+        ("quad", 15),
+        ("triangle", 3),
         ("hexahedron", 45),
         ("pyramid", 9),
         ("hexahedron", 18),
@@ -59,10 +57,11 @@ def test_reference_file(filename):
         ("wedge", 3),
         ("pyramid", 6),
         ("tetra", 3),
-        ("quad", 15),
-        ("triangle", 3),
     ]
-    assert [(k, len(v)) for k, v in mesh.cells] == ref_num_cells
-    # Cell data
-    ref_sum_cell_data = [num_cell[1] for num_cell in ref_num_cells]
-    assert [len(arr) for arr in mesh.cell_data["flac3d:group"]] == ref_sum_cell_data
+    assert [
+        (cell_block.type, len(cell_block)) for cell_block in mesh.cells
+    ] == ref_num_cells
+    # Cell sets
+    for arr in mesh.cell_sets.values():
+        assert len(arr) == 12
+    assert [len(arr) for arr in mesh.cell_sets.values()] == [12, 12, 12, 12, 12]

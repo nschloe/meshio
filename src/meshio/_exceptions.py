@@ -4,3 +4,7 @@ class ReadError(Exception):
 
 class WriteError(Exception):
     pass
+
+
+class CorruptionError(Exception):
+    pass

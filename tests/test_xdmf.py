@@ -47,17 +47,17 @@ test_set_reduced = [
         {"data_format": "HDF", "compression": "gzip"},
     ],
 )
-def test_xdmf3(mesh, kwargs0):
+def test_xdmf3(mesh, kwargs0, tmp_path):
     def write(*args, **kwargs):
         return meshio.xdmf.write(*args, **{**kwargs0, **kwargs})
 
-    helpers.write_read(write, meshio.xdmf.read, mesh, 1.0e-14)
+    helpers.write_read(tmp_path, write, meshio.xdmf.read, mesh, 1.0e-14)
 
 
-def test_generic_io():
-    helpers.generic_io("test.xdmf")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.xdmf")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.xdmf")
+    helpers.generic_io(tmp_path / "test.0.xdmf")
 
 
 def test_time_series():

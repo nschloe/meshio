@@ -1,6 +1,3 @@
-import tempfile
-from pathlib import Path
-
 import numpy as np
 
 import meshio
@@ -17,37 +14,33 @@ def is_same_mesh(mesh0, mesh1, atol):
     return True
 
 
-def test_info():
-    input_mesh = helpers.tri_mesh
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-        infile = tmpdir / "out.msh"
-        meshio.write(infile, input_mesh, file_format="gmsh")
-        meshio._cli.main(["info", str(infile), "--input-format", "gmsh"])
+def test_info(tmp_path):
+    infile = tmp_path / "out.msh"
+    meshio.write(infile, helpers.tri_mesh, file_format="gmsh")
+    meshio._cli.main(["info", str(infile), "--input-format", "gmsh"])
 
 
-def test_convert():
+def test_convert(tmp_path):
     input_mesh = helpers.tri_mesh
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-        infile = tmpdir / "in.msh"
-        meshio.write(infile, input_mesh, file_format="gmsh")
+    infile = tmp_path / "in.msh"
+    meshio.write(infile, helpers.tri_mesh, file_format="gmsh")
 
-        outfile = tmpdir / "out.msh"
-        meshio._cli.main(
-            [
-                "convert",
-                str(infile),
-                str(outfile),
-                "--input-format",
-                "gmsh",
-                "--output-format",
-                "vtk",
-            ]
-        )
+    outfile = tmp_path / "out.msh"
+    meshio._cli.main(
+        [
+            "convert",
+            str(infile),
+            str(outfile),
+            "--input-format",
+            "gmsh",
+            "--output-format",
+            "vtk",
+            "--sets-to-int-data",
+        ]
+    )
 
-        mesh = meshio.read(outfile, file_format="vtk")
+    mesh = meshio.read(outfile, file_format="vtk")
 
     atol = 1.0e-15
     assert np.allclose(input_mesh.points, mesh.points, atol=atol, rtol=0.0)
@@ -57,35 +50,31 @@ def test_convert():
         assert np.allclose(cells0.data, cells1.data)
 
 
-def test_compress():
+def test_compress(tmp_path):
     input_mesh = helpers.tri_mesh
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-        infile = tmpdir / "in.vtu"
-        meshio.write(infile, input_mesh)
+    infile = tmp_path / "in.vtu"
+    meshio.write(infile, input_mesh)
 
-        meshio._cli.main(["decompress", str(infile)])
-        mesh = meshio.read(infile)
-        assert is_same_mesh(input_mesh, mesh, atol=1.0e-15)
+    meshio._cli.main(["decompress", str(infile)])
+    mesh = meshio.read(infile)
+    assert is_same_mesh(input_mesh, mesh, atol=1.0e-15)
 
-        meshio._cli.main(["compress", str(infile)])
-        mesh = meshio.read(infile)
-        assert is_same_mesh(input_mesh, mesh, atol=1.0e-15)
+    meshio._cli.main(["compress", str(infile)])
+    mesh = meshio.read(infile)
+    assert is_same_mesh(input_mesh, mesh, atol=1.0e-15)
 
 
-def test_ascii_binary():
+def test_ascii_binary(tmp_path):
     input_mesh = helpers.tri_mesh
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-        infile = tmpdir / "in.vtu"
-        meshio.write(infile, input_mesh)
+    infile = tmp_path / "in.vtu"
+    meshio.write(infile, input_mesh)
 
-        meshio._cli.main(["ascii", str(infile)])
-        mesh = meshio.read(infile)
-        assert is_same_mesh(input_mesh, mesh, atol=1.0e-12)
+    meshio._cli.main(["ascii", str(infile)])
+    mesh = meshio.read(infile)
+    assert is_same_mesh(input_mesh, mesh, atol=1.0e-12)
 
-        meshio._cli.main(["binary", str(infile)])
-        mesh = meshio.read(infile)
-        assert is_same_mesh(input_mesh, mesh, atol=1.0e-12)
+    meshio._cli.main(["binary", str(infile)])
+    mesh = meshio.read(infile)
+    assert is_same_mesh(input_mesh, mesh, atol=1.0e-12)

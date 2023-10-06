@@ -36,14 +36,16 @@ this_dir = pathlib.Path(__file__).resolve().parent
         (1.0e-7, ".lr4.ugrid"),
     ],
 )
-def test_io(mesh, accuracy, ext):
-    helpers.write_read(meshio.ugrid.write, meshio.ugrid.read, mesh, accuracy, ext)
+def test_io(mesh, accuracy, ext, tmp_path):
+    helpers.write_read(
+        tmp_path, meshio.ugrid.write, meshio.ugrid.read, mesh, accuracy, ext
+    )
 
 
-def test_generic_io():
-    helpers.generic_io("test.lb8.ugrid")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.lb8.ugrid")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.lb8.ugrid")
+    helpers.generic_io(tmp_path / "test.0.lb8.ugrid")
 
 
 # sphere_mixed.1.lb8.ugrid and hch_strct.4.lb8.ugrid created
@@ -89,9 +91,9 @@ def test_reference_file(
         "hexahedron": None,
     }
 
-    for i, (key, data) in enumerate(mesh.cells):
-        if key in ugrid_meshio_id:
-            ugrid_meshio_id[key] = i
+    for i, cell_block in enumerate(mesh.cells):
+        if cell_block.type in ugrid_meshio_id:
+            ugrid_meshio_id[cell_block.type] = i
 
     # validate element counts
     if ref_num_triangle > 0:
@@ -227,9 +229,9 @@ def test_area(filename, area_tria_ref, area_quad_ref, accuracy):
         "hexahedron": None,
     }
 
-    for i, (key, data) in enumerate(mesh.cells):
-        if key in ugrid_meshio_id:
-            ugrid_meshio_id[key] = i
+    for i, cell_block in enumerate(mesh.cells):
+        if cell_block.type in ugrid_meshio_id:
+            ugrid_meshio_id[cell_block.type] = i
 
     tria = mesh.cells[ugrid_meshio_id["triangle"]]
     total_tri_area = 0

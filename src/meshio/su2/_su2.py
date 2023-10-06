@@ -2,15 +2,14 @@
 I/O SU2 mesh format
 <https://su2code.github.io/docs_v7/Mesh-File/>
 """
-import logging
 from itertools import chain, islice
 
 import numpy as np
 
-from .._common import _pick_first_int_data
+from .._common import _pick_first_int_data, warn
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 # follows VTK conventions
@@ -76,7 +75,7 @@ def read_buffer(f):
         try:
             name, rest_of_line = line.split("=")
         except ValueError:
-            logging.warning(f"meshio could not parse line\n {line}\n skipping.....")
+            warn(f"meshio could not parse line\n {line}\n skipping.....")
             continue
 
         if name == "NDIME":
@@ -111,7 +110,7 @@ def read_buffer(f):
             points = np.vstack([first_line, points])
 
         elif name == "NELEM" or name == "MARKER_ELEMS":
-            # we cannot? read at onece using numpy becasue we do not know the
+            # we cannot? read at once using numpy because we do not know the
             # total size. Read, instead next num_elems as is and re-use the
             # translate_cells function from vtk reader
 
@@ -137,7 +136,7 @@ def read_buffer(f):
             cell_array = " ".join([line.rstrip("\n") for line in gen])
             cell_array = np.fromiter(cell_array.split(), dtype=itype)
 
-            cells_, cell_data_ = _translate_cells(cell_array, has_extra_column)
+            cells_, _ = _translate_cells(cell_array, has_extra_column)
 
             for eltype, data in cells_.items():
                 cells.append(CellBlock(eltype, data))
@@ -158,17 +157,15 @@ def read_buffer(f):
                 next_tag_id = int(next_tag)
             except ValueError:
                 next_tag_id += 1
-                logging.warning(
+                warn(
                     "meshio does not support tags of string type.\n"
-                    "    Surface tag {} will be replaced by {}".format(
-                        rest_of_line, next_tag_id
-                    )
+                    f"    Surface tag {rest_of_line} will be replaced by {next_tag_id}"
                 )
             markers_found += 1
 
     if markers_found != expected_nmarkers:
-        logging.warning(
-            f"expected {expected_nmarkers} markes according to NMARK value "
+        warn(
+            f"expected {expected_nmarkers} markers according to NMARK value "
             f"but found only {markers_found}"
         )
 
@@ -260,9 +257,9 @@ def write(filename, mesh):
         np.savetxt(f, mesh.points)
 
         # Through warnings about unsupported types
-        for type, _ in mesh.cells:
-            if type not in meshio_to_su2_type:
-                logging.warning(
+        for cell_block in mesh.cells:
+            if cell_block.type not in meshio_to_su2_type:
+                warn(
                     ".su2 does not support tags elements of type {}.\n"
                     "Skipping ...".format(type)
                 )
@@ -297,7 +294,7 @@ def write(filename, mesh):
 
         labels_key, other = _pick_first_int_data(mesh.cell_data)
         if labels_key and other:
-            logging.warning(
+            warn(
                 "su2 file format can only write one cell data array. "
                 "Picking {}, skipping {}.".format(labels_key, ", ".join(other))
             )
@@ -312,15 +309,15 @@ def write(filename, mesh):
         # We want to separate boundary elements in groups of same tag
 
         # First, find unique tags and how many elements per tags we have
-        for index, (cell_type, data) in enumerate(mesh.cells):
+        for index, cell_block in enumerate(mesh.cells):
 
-            if cell_type not in types:
+            if cell_block.type not in types:
                 continue
 
             labels = (
                 mesh.cell_data[labels_key][index]
                 if labels_key
-                else np.ones(len(data), dtype=data.dtype)
+                else np.ones(len(cell_block), dtype=cell_block.data.dtype)
             )
 
             # Get unique tags and number of instances of each tag for this Cell block
@@ -372,4 +369,4 @@ def write(filename, mesh):
     return
 
 
-register("su2", [".su2"], read, {"su2": write})
+register_format("su2", [".su2"], read, {"su2": write})

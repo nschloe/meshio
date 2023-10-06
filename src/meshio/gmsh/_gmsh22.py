@@ -2,12 +2,12 @@
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
-import logging
+from __future__ import annotations
 
 import numpy as np
 
-from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
-from .._exceptions import ReadError, WriteError
+from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data, warn
+from .._exceptions import ReadError
 from .._mesh import CellBlock, Mesh
 from .common import (
     _fast_forward_over_blank_lines,
@@ -38,6 +38,8 @@ def read_buffer(f, is_ascii, data_size):
     cell_tags = {}
     point_data = {}
     periodic = None
+    point_tags = None
+    has_additional_tag_data = False
     while True:
         # fast-forward over blank lines
         line, is_eof = _fast_forward_over_blank_lines(f)
@@ -52,7 +54,7 @@ def read_buffer(f, is_ascii, data_size):
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Nodes":
-            points, point_tags = _read_nodes(f, is_ascii, data_size)
+            points, point_tags = _read_nodes(f, is_ascii)
         elif environ == "Elements":
             has_additional_tag_data, cell_tags = _read_cells(
                 f, cells, point_tags, is_ascii
@@ -67,7 +69,7 @@ def read_buffer(f, is_ascii, data_size):
             _fast_forward_to_end_block(f, environ)
 
     if has_additional_tag_data:
-        logging.warning("The file contains tag data that couldn't be processed.")
+        warn("The file contains tag data that couldn't be processed.")
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -94,7 +96,7 @@ def read_buffer(f, is_ascii, data_size):
     )
 
 
-def _read_nodes(f, is_ascii, data_size):
+def _read_nodes(f, is_ascii):
     # The first line is the number of nodes
     line = f.readline().decode()
     num_nodes = int(line)
@@ -126,7 +128,9 @@ def _read_cells(f, cells, point_tags, is_ascii):
         _read_cells_ascii(f, cells, cell_tags, total_num_cells)
     else:
         _read_cells_binary(f, cells, cell_tags, total_num_cells)
-    cells[:] = _gmsh_to_meshio_order(cells)
+
+    # override cells in-place
+    cells[:] = [(key, _gmsh_to_meshio_order(key, values)) for key, values in cells]
 
     point_tags = np.asarray(point_tags, dtype=np.int32) - 1
     remap = -np.ones((np.max(point_tags) + 1,), dtype=np.int32)
@@ -163,7 +167,7 @@ def _read_cells(f, cells, point_tags, is_ascii):
     return has_additional_tag_data, output_cell_tags
 
 
-def _read_cells_ascii(f, cells, cell_tags, total_num_cells):
+def _read_cells_ascii(f, cells, cell_tags, total_num_cells: int) -> None:
     for _ in range(total_num_cells):
         line = f.readline().decode()
         data = [int(k) for k in filter(None, line.split())]
@@ -261,26 +265,6 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
-    if mesh.points.shape[1] == 2:
-        logging.warning(
-            "msh2 requires 3D points, but 2D points given. "
-            "Appending 0 third component."
-        )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
-
-    if binary:
-        for k, (key, value) in enumerate(mesh.cells):
-            if value.dtype != c_int:
-                logging.warning(
-                    "Binary Gmsh needs 32-bit integers (got %s). Converting.",
-                    value.dtype,
-                )
-                mesh.cells[k] = CellBlock(key, np.array(value, dtype=c_int))
-
-    cells = _meshio_to_gmsh_order(mesh.cells)
-
     # Filter the point data: gmsh:dim_tags are tags, the rest is actual point data.
     point_data = {}
     for key, d in mesh.point_data.items():
@@ -301,10 +285,10 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
     # the gmsh documentation in the _read_cells_ascii function above.
     for tag in ["gmsh:physical", "gmsh:geometrical"]:
         if tag not in tag_data:
-            logging.warning(
-                f"Appending zeros to replace the missing {tag[5:]} tag data."
-            )
-            tag_data[tag] = [np.zeros(len(x.data), dtype=c_int) for x in mesh.cells]
+            warn(f"Appending zeros to replace the missing {tag[5:]} tag data.")
+            tag_data[tag] = [
+                np.zeros(len(cell_block), dtype=c_int) for cell_block in mesh.cells
+            ]
 
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
@@ -319,7 +303,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             _write_physical_names(fh, mesh.field_data)
 
         _write_nodes(fh, mesh.points, float_fmt, binary)
-        _write_elements(fh, cells, tag_data, binary)
+        _write_elements(fh, mesh.cells, tag_data, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt)
 
@@ -331,6 +315,10 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
 
 
 def _write_nodes(fh, points, float_fmt, binary):
+    if points.shape[1] == 2:
+        # msh2 requires 3D points, but 2D points given. Appending 0 third component.
+        points = np.column_stack([points, np.zeros_like(points[:, 0])])
+
     fh.write(b"$Nodes\n")
     fh.write(f"{len(points)}\n".encode())
     if binary:
@@ -347,15 +335,19 @@ def _write_nodes(fh, points, float_fmt, binary):
     fh.write(b"$EndNodes\n")
 
 
-def _write_elements(fh, cells, tag_data, binary):
+def _write_elements(fh, cells: list[CellBlock], tag_data, binary: bool):
     # write elements
     fh.write(b"$Elements\n")
+
     # count all cells
-    total_num_cells = sum(c.shape[0] for _, c in cells)
+    total_num_cells = sum(len(cell_block) for cell_block in cells)
     fh.write(f"{total_num_cells}\n".encode())
 
     consecutive_index = 0
-    for k, (cell_type, node_idcs) in enumerate(cells):
+    for k, cell_block in enumerate(cells):
+        cell_type = cell_block.type
+        node_idcs = _meshio_to_gmsh_order(cell_type, cell_block.data)
+
         tags = []
         for name in ["gmsh:physical", "gmsh:geometrical", "cell_tags"]:
             if name in tag_data:
@@ -374,7 +366,7 @@ def _write_elements(fh, cells, tag_data, binary):
             a += 1 + consecutive_index
             array = np.hstack([a, fcd, node_idcs + 1])
             if array.dtype != c_int:
-                raise WriteError(f"Wrong dtype (require c_int, got {array.dtype})")
+                array = array.astype(c_int)
             array.tofile(fh)
         else:
             form = (

@@ -1,14 +1,13 @@
 """
-I/O for Netgen mesh files <https://github.com/NGSolve/netgen/blob/master/libsrc/meshing/meshclass.cpp>.
+I/O for Netgen mesh files
+<https://github.com/NGSolve/netgen/blob/master/libsrc/meshing/meshclass.cpp>.
 """
-import warnings
-
 import numpy as np
 
 from ..__about__ import __version__
-from .._common import _topological_dimension
+from .._common import warn
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 
@@ -144,7 +143,7 @@ def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_other_line=F
     tmap = netgen_to_meshio_type[dim]
 
     for _ in range(num_cells):
-        line, is_eof = _fast_forward_over_blank_lines(f)
+        line, _ = _fast_forward_over_blank_lines(f)
         data = list(filter(None, line.split(" ")))
         index = int(data[i_index])
         if dim == 2:
@@ -161,39 +160,38 @@ def _read_cells(f, netgen_cell_type, cells, cells_index, skip_every_other_line=F
         cells[-1][1].append(pi)
         cells_index[-1].append(index)
         if skip_every_other_line:
-            line, is_eof = _fast_forward_over_blank_lines(f)
+            line, _ = _fast_forward_over_blank_lines(f)
 
 
-def _write_cells(f, block, index=None):
-    if len(block) == 0:
+def _write_cells(f, cell_block, index=None):
+    if len(cell_block) == 0:
         return
-    pmap = np.array(meshio_to_netgen_pmap[block.type])
-    dim = _topological_dimension[block.type]
+    pmap = np.array(meshio_to_netgen_pmap[cell_block.type])
     post_data = []
     pre_data = []
     i_index = 0
-    if dim == 0:
+    if cell_block.dim == 0:
         post_data = [1]
         i_index = 1
-    elif dim == 1:
+    elif cell_block.dim == 1:
         pre_data = [1, 0]
         post_data = [-1, -1, 0, 0, 1, 0, 1, 0]
-    elif dim == 2:
+    elif cell_block.dim == 2:
         pre_data = [1, 1, 0, 0, len(pmap)]
         i_index = 1
-    elif dim == 3:
+    elif cell_block.dim == 3:
         pre_data = [1, len(pmap)]
     else:
-        raise ValueError(f"Invalid cell dimension: {dim}")
+        raise ValueError(f"Invalid cell dimension: {cell_block.dim}")
 
     col1 = len(pre_data)
     col2 = col1 + len(pmap)
     col3 = col2 + len(post_data)
 
-    pi = np.zeros((len(block), col3), dtype=np.int32)
-    pi[:, :col1] = np.repeat([pre_data], len(block), axis=0)
-    pi[:, col1:col2] = block.data[:, pmap] + 1
-    pi[:, col2:] = np.repeat([post_data], len(block), axis=0)
+    pi = np.zeros((len(cell_block), col3), dtype=np.int32)
+    pi[:, :col1] = np.repeat([pre_data], len(cell_block), axis=0)
+    pi[:, col1:col2] = cell_block.data[:, pmap] + 1
+    pi[:, col2:] = np.repeat([post_data], len(cell_block), axis=0)
     if index is not None:
         pi[:, i_index] = index
     np.savetxt(f, pi, "%i")
@@ -215,10 +213,10 @@ def _write_codim_domain_data(f, mesh, cells_index, dim, codim):
     # set generic default names (is this appropriate/useful?)
     if len(data) == 0:
         indices = set()
-        for block, index in zip(mesh.cells, cells_index):
+        for cell_block, index in zip(mesh.cells, cells_index):
             if index is None:
                 continue
-            if _topological_dimension[block.type] == dim - codim:
+            if cell_block.dim == dim - codim:
                 indices = indices.union(set(index))
 
         for idx in indices:
@@ -260,7 +258,7 @@ def read_buffer(f):
         elif line == "geomtype":
             geomtype = int(f.readline())
             if geomtype not in [0, 1, 10, 11, 12, 13]:
-                warnings.warn(f"Unkown geomtype in Netgen mesh: {geomtype}")
+                warn(f"Unknown geomtype in Netgen mesh: {geomtype}")
 
         elif line == "points":
             num_points = int(f.readline())
@@ -290,7 +288,7 @@ def read_buffer(f):
         elif line in netgen_codims.keys():
             edim = dimension - netgen_codims[line]
             num_entries = int(f.readline())
-            for ii in range(num_entries):
+            for _ in range(num_entries):
                 line = f.readline().split()
                 if len(line) != 2:
                     continue
@@ -355,23 +353,36 @@ def write(filename, mesh, float_fmt=".16e"):
         import gzip
 
         with gzip.open(filename, "wt") as f:
-            return write_buffer(f, mesh, float_fmt)
+            write_buffer(f, mesh, float_fmt)
+        return
 
     with open_file(filename, "w") as f:
-        return write_buffer(f, mesh, float_fmt)
+        write_buffer(f, mesh, float_fmt)
 
 
 def write_buffer(f, mesh, float_fmt):
-    num_points, dimension = mesh.points.shape
+    _, dimension = mesh.points.shape
     cells_per_dim = [0, 0, 0, 0]
-    cells_index = (
-        mesh.cell_data["netgen:index"]
-        if "netgen:index" in mesh.cell_data
-        else [None] * len(mesh.cells)
-    )
 
-    for block in mesh.cells:
-        cells_per_dim[_topological_dimension[block.type]] += len(block)
+    # Netgen can store one cell_index, i.e., integer cell data. Pick one in
+    # mesh.cell_data, and prefer "netgen:index" if present. Unfortunately, netgen cannot
+    # store the name of the data; when reading, it will always be "netgen:index".
+    # See also <https://github.com/nschloe/meshio/issues/1199>.
+    if "netgen:index" in mesh.cell_data:
+        cells_index = mesh.cell_data["netgen:index"]
+    else:
+        # any other integer cell data?
+        cells_index = None
+        for values in mesh.cell_data.values():
+            if np.issubdtype(values[0].dtype, np.integer):
+                cells_index = values
+                break
+
+        if cells_index is None:
+            cells_index = [None] * len(mesh.cells)
+
+    for cell_block in mesh.cells:
+        cells_per_dim[cell_block.dim] += len(cell_block)
 
     f.write(f"# Generated by meshio {__version__}\n")
     f.write("mesh3d\n\n")
@@ -385,25 +396,25 @@ def write_buffer(f, mesh, float_fmt):
     f.write("\n# surfnr    bcnr   domin  domout      np      p1      p2      p3\n")
     f.write("surfaceelements\n")
     f.write(f"{cells_per_dim[2]}\n")
-    for block, index in zip(mesh.cells, cells_index):
-        if _topological_dimension[block.type] == 2:
-            _write_cells(f, block, index)
+    for cell_block, index in zip(mesh.cells, cells_index):
+        if cell_block.dim == 2:
+            _write_cells(f, cell_block, index)
 
     f.write("\n#  matnr      np      p1      p2      p3      p4\n")
     f.write("volumeelements\n")
     f.write(f"{cells_per_dim[3]}\n")
-    for block, index in zip(mesh.cells, cells_index):
-        if _topological_dimension[block.type] == 3:
-            _write_cells(f, block, index)
+    for cell_block, index in zip(mesh.cells, cells_index):
+        if cell_block.dim == 3:
+            _write_cells(f, cell_block, index)
 
     f.write(
         "\n# surfid  0   p1   p2   trignum1    trignum2   domin/surfnr1    domout/surfnr2   ednr1   dist1   ednr2   dist2\n",
     )
     f.write("edgesegmentsgi2\n")
     f.write(f"{cells_per_dim[1]}\n")
-    for block, index in zip(mesh.cells, cells_index):
-        if _topological_dimension[block.type] == 1:
-            _write_cells(f, block, index)
+    for cell_block, index in zip(mesh.cells, cells_index):
+        if cell_block.dim == 1:
+            _write_cells(f, cell_block, index)
 
     f.write("\n#          X             Y             Z\n")
     f.write("points\n")
@@ -419,9 +430,9 @@ def write_buffer(f, mesh, float_fmt):
     f.write("\n#          pnum             index\n")
     f.write("pointelements\n")
     f.write(f"{cells_per_dim[0]}\n")
-    for block, index in zip(mesh.cells, cells_index):
-        if _topological_dimension[block.type] == 0:
-            _write_cells(f, block, index)
+    for cell_block, index in zip(mesh.cells, cells_index):
+        if cell_block.dim == 0:
+            _write_cells(f, cell_block, index)
 
     # currently, there is no better place for identification data
     if isinstance(mesh.info, dict):
@@ -443,4 +454,4 @@ def write_buffer(f, mesh, float_fmt):
     f.write("\nendmesh\n")
 
 
-register("netgen", [".vol", ".vol.gz"], read, {"netgen": write})
+register_format("netgen", [".vol", ".vol.gz"], read, {"netgen": write})

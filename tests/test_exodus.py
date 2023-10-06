@@ -27,11 +27,11 @@ test_set = [
 
 
 @pytest.mark.parametrize("mesh", test_set)
-def test_io(mesh):
-    helpers.write_read(meshio.exodus.write, meshio.exodus.read, mesh, 1.0e-15)
+def test_io(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.exodus.write, meshio.exodus.read, mesh, 1.0e-15)
 
 
-def test_generic_io():
-    helpers.generic_io("test.e")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.e")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.e")
+    helpers.generic_io(tmp_path / "test.0.e")

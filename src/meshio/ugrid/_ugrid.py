@@ -7,17 +7,15 @@ for UG_IO C code able to read and convert UGRID files
 Node ordering described in
 [3] <https://www.simcenter.msstate.edu/software/documentation/ug_io/3d_input_output_grids.html>
 """
-import logging
-
 import numpy as np
 
-from .._common import _pick_first_int_data
+from .._common import _pick_first_int_data, warn
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
-# Float size and endianess are recorded by these suffixes
+# Float size and endianness are recorded by these suffixes
 # binary files come in C-type or FORTRAN type
 # https://www.simcenter.msstate.edu/software/documentation/ug_io/ugc_file_formats.html
 #
@@ -185,7 +183,9 @@ def _write_buffer(f, file_type, mesh):
 
     ugrid_counts["points"] = mesh.points.shape[0]
 
-    for i, (key, data) in enumerate(mesh.cells):
+    for i, cell_block in enumerate(mesh.cells):
+        key = cell_block.type
+        data = cell_block.data
         if key in ugrid_counts:
             if ugrid_counts[key] > 0:
                 raise ValueError("Ugrid can only handle one cell block of a type.")
@@ -193,7 +193,7 @@ def _write_buffer(f, file_type, mesh):
             ugrid_meshio_id[key] = i
         else:
             msg = f"UGRID mesh format doesn't know {key} cells. Skipping."
-            logging.warning(msg)
+            warn(msg)
             continue
 
     nitems = np.array([list(ugrid_counts.values())])
@@ -214,8 +214,8 @@ def _write_buffer(f, file_type, mesh):
 
         # start next record
         fortran_header = mesh.points.nbytes
-        for key, array in mesh.cells:
-            fortran_header += array.nbytes
+        for cell_block in mesh.cells:
+            fortran_header += cell_block.data.nbytes
         # boundary tags
         if ugrid_counts["triangle"] > 0:
             fortran_header += ugrid_counts["triangle"] * np.dtype(itype).itemsize
@@ -247,7 +247,7 @@ def _write_buffer(f, file_type, mesh):
         # pick out cell_data
         labels_key, other = _pick_first_int_data(mesh.cell_data)
         if labels_key and other:
-            logging.warning(
+            warn(
                 "UGRID can only write one cell data array. "
                 f'Picking {labels_key}, skipping {", ".join(other)}.'
             )
@@ -275,4 +275,4 @@ def _write_buffer(f, file_type, mesh):
         _write_section(f, file_type, fortran_header, itype)
 
 
-register("ugrid", [".ugrid"], read, {"ugrid": write})
+register_format("ugrid", [".ugrid"], read, {"ugrid": write})

@@ -35,18 +35,6 @@ def add_args(parser):
         help="float format used in output ASCII files (default: .16e)",
     )
     parser.add_argument(
-        "--prune",
-        "-p",
-        action="store_true",
-        help="remove lower order cells, remove orphaned nodes",
-    )
-    parser.add_argument(
-        "--prune-z-0",
-        "-z",
-        action="store_true",
-        help="remove third (z) dimension if all points are 0",
-    )
-    parser.add_argument(
         "--sets-to-int-data",
         "-s",
         action="store_true",
@@ -64,24 +52,18 @@ def convert(args):
     # read mesh data
     mesh = read(args.infile, file_format=args.input_format)
 
-    if args.prune:
-        mesh.prune()
-
-    if (
-        args.prune_z_0
-        and mesh.points.shape[1] == 3
-        and np.all(np.abs(mesh.points[:, 2]) < 1.0e-13)
-    ):
-        mesh.points = mesh.points[:, :2]
-
     # Some converters (like VTK) require `points` to be contiguous.
     mesh.points = np.ascontiguousarray(mesh.points)
 
     if args.sets_to_int_data:
-        mesh.sets_to_int_data()
+        mesh.point_sets_to_data()
+        mesh.cell_sets_to_data()
 
     if args.int_data_to_sets:
-        mesh.int_data_to_sets()
+        for key in mesh.point_data:
+            mesh.point_data_to_sets(key)
+        for key in mesh.cell_data:
+            mesh.cell_data_to_sets(key)
 
     # write it out
     kwargs = {"file_format": args.output_format}

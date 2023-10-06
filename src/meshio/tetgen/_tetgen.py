@@ -2,14 +2,14 @@
 I/O for the TetGen file format, c.f.
 <https://wias-berlin.de/software/tetgen/fformats.node.html>
 """
-import logging
 import pathlib
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError, WriteError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 
@@ -140,9 +140,7 @@ def write(filename, mesh, float_fmt=".16e"):
 
     if any(c.type != "tetra" for c in mesh.cells):
         string = ", ".join([c.type for c in mesh.cells if c.type != "tetra"])
-        logging.warning(
-            f"TetGen only supports tetrahedra, but mesh has {string}. Skipping those."
-        )
+        warn(f"TetGen only supports tetrahedra, but mesh has {string}. Skipping those.")
 
     # write cells
     with open(ele_filename, "w") as fh:
@@ -157,7 +155,8 @@ def write(filename, mesh, float_fmt=".16e"):
         fh.write(f"# This file was created by meshio v{__version__}\n")
         if nattr > 0:
             fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))
-        for id, (_, data) in enumerate(filter(lambda c: c.type == "tetra", mesh.cells)):
+        for id, c in enumerate(filter(lambda c: c.type == "tetra", mesh.cells)):
+            data = c.data
             fh.write(f"{data.shape[0]} {4} {nattr}\n")
             fmt = " ".join((5 + nattr) * ["{}"]) + "\n"
             for k, tet in enumerate(data):
@@ -165,4 +164,4 @@ def write(filename, mesh, float_fmt=".16e"):
                 fh.write(fmt.format(k, *data))
 
 
-register("tetgen", [".ele", ".node"], read, {"tetgen": write})
+register_format("tetgen", [".ele", ".node"], read, {"tetgen": write})

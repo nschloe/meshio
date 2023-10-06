@@ -1,8 +1,6 @@
-import warnings
-
 import numpy as np
 
-from ._common import num_nodes_per_cell
+from ._common import num_nodes_per_cell, warn
 from ._exceptions import ReadError
 from ._mesh import CellBlock
 
@@ -113,7 +111,7 @@ def vtk_cells_from_data(connectivity, offsets, types, cell_data_raw):
         try:
             meshio_type = vtk_to_meshio_type[types[start]]
         except KeyError:
-            warnings.warn(
+            warn(
                 f"File contains cells that meshio cannot handle (type {types[start]})."
             )
             continue

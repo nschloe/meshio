@@ -7,14 +7,14 @@ import collections
 import datetime
 import re
 import sys
-import warnings
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 # Reference dtypes
@@ -78,9 +78,9 @@ def read_buffer(f):
         raise ReadError("Expected ply")
 
     line = _next_line(f)
+    endianness = None
     if line == "format ascii 1.0":
         is_binary = False
-        endianness = None
     elif line == "format binary_big_endian 1.0":
         is_binary = True
         endianness = ">"
@@ -110,6 +110,7 @@ def read_buffer(f):
             line = _next_line(f)
             while line[:8] == "property":
                 m = re.match("property (.+) (.+)", line)
+                assert m is not None
                 point_data_formats.append(m.groups()[0])
                 point_data_names.append(m.groups()[1])
                 line = _next_line(f)
@@ -125,9 +126,11 @@ def read_buffer(f):
             while line[:8] == "property":
                 if line[:13] == "property list":
                     m = re.match("property list (.+) (.+) (.+)", line)
+                    assert m is not None
                     cell_data_dtypes.append(tuple(m.groups()[:-1]))
                 else:
                     m = re.match("property (.+) (.+)", line)
+                    assert m is not None
                     cell_data_dtypes.append(m.groups()[0])
                 cell_data_names.append(m.groups()[-1])
                 line = _next_line(f)
@@ -218,26 +221,27 @@ def _read_ascii(
                     n = int(data[i])
                     i += n + 1
                 else:
-                    n = 1
                     cell_data[name] = collections.defaultdict(list)
                     i += 1
 
         # go over the line
         i = 0
+        n = None
         for name, dtype in zip(cell_data_names, cell_dtypes):
             if name == "vertex_indices":
                 idx_dtype, value_dtype = dtype
                 n = ply_to_numpy_dtype[idx_dtype](data[i])
                 dtype = ply_to_numpy_dtype[value_dtype]
                 idx = dtype(data[i + 1 : i + n + 1])
-                if len(cell_blocks) == 0 or len(cell_blocks[-1].data[-1]) != n:
-                    cell_blocks.append(CellBlock(cell_type_from_count(n), [idx]))
+                if len(cell_blocks) == 0 or len(cell_blocks[-1][1][-1]) != n:
+                    cell_blocks.append((cell_type_from_count(n), [idx]))
                 else:
-                    cell_blocks[-1].data.append(idx)
+                    cell_blocks[-1][1].append(idx)
                 i += n + 1
             else:
                 dtype = ply_to_numpy_dtype[dtype]
                 # use n from vertex_indices
+                assert n is not None
                 cell_data[name][n] += [dtype(data[j]) for j in range(i, i + 1)]
                 i += 1
 
@@ -351,7 +355,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
     byte_starts_ends = np.fromiter(parse_ragged(0, num_cells), np.intp, num_cells + 1)
 
     # Next, find where the row length changes and list the (start, end) row ids
-    # of each homogenous block into `block_bounds`.
+    # of each homogeneous block into `block_bounds`.
     row_lengths = np.diff(byte_starts_ends)
     count_changed_ids = np.nonzero(np.diff(row_lengths))[0] + 1
 
@@ -362,7 +366,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
         start = end
     block_bounds.append((start, len(byte_starts_ends) - 1))
 
-    # Finally, parse each homogenous block. Constructing an appropriate
+    # Finally, parse each homogeneous block. Constructing an appropriate
     # `block_dtype` to include the initial counts in each row avoids any
     # wasteful copy operations.
     blocks = []
@@ -384,7 +388,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
     return byte_starts_ends[-1], blocks
 
 
-def write(filename, mesh, binary=True):  # noqa: C901
+def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
 
     with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")
@@ -426,7 +430,7 @@ def write(filename, mesh, binary=True):  # noqa: C901
         pd = []
         for key, value in mesh.point_data.items():
             if len(value.shape) > 1:
-                warnings.warn(
+                warn(
                     "PLY writer doesn't support multidimensional point data yet. "
                     f"Skipping {key}."
                 )
@@ -437,9 +441,9 @@ def write(filename, mesh, binary=True):  # noqa: C901
 
         num_cells = 0
         legal_cell_types = ["vertex", "line", "triangle", "quad", "polygon"]
-        for cell_type, c in mesh.cells:
-            if cell_type in legal_cell_types:
-                num_cells += c.data.shape[0]
+        for cell_block in mesh.cells:
+            if cell_block.type in legal_cell_types:
+                num_cells += cell_block.data.shape[0]
 
         if num_cells > 0:
             fh.write(f"element face {num_cells:d}\n".encode())
@@ -447,22 +451,22 @@ def write(filename, mesh, binary=True):  # noqa: C901
             # possibly cast down to int32
             # TODO don't alter the mesh data
             has_cast = False
-            for k, (cell_type, data) in enumerate(mesh.cells):
-                if data.dtype == np.int64:
+            for k, cell_block in enumerate(mesh.cells):
+                if cell_block.data.dtype == np.int64:
                     has_cast = True
-                    mesh.cells[k] = CellBlock(cell_type, data.astype(np.int32))
+                    mesh.cells[k] = CellBlock(
+                        cell_block.type, cell_block.data.astype(np.int32)
+                    )
 
             if has_cast:
-                warnings.warn(
-                    "PLY doesn't support 64-bit integers. Casting down to 32-bit."
-                )
+                warn("PLY doesn't support 64-bit integers. Casting down to 32-bit.")
 
             # assert that all cell dtypes are equal
             cell_dtype = None
-            for _, cell in mesh.cells:
+            for cell_block in mesh.cells:
                 if cell_dtype is None:
-                    cell_dtype = cell.dtype
-                if cell.dtype != cell_dtype:
+                    cell_dtype = cell_block.data.dtype
+                if cell_block.data.dtype != cell_dtype:
                     raise WriteError()
 
             if cell_dtype is not None:
@@ -478,19 +482,17 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write(out.tobytes())
 
             # cells
-            for cell_type, data in mesh.cells:
-                if cell_type not in legal_cell_types:
-                    warnings.warn(
-                        f'cell_type "{cell_type}" is not supported by ply format - '
-                        "skipping"
+            for cell_block in mesh.cells:
+                if cell_block.type not in legal_cell_types:
+                    warn(
+                        f'cell_type "{cell_block.type}" is not supported by PLY format '
+                        "- skipping"
                     )
                     continue
                 # prepend with count
+                d = cell_block.data
                 out = np.rec.fromarrays(
-                    [
-                        np.broadcast_to(np.uint8(data.shape[1]), data.shape[0]),
-                        *data.T,
-                    ]
+                    [np.broadcast_to(np.uint8(d.shape[1]), d.shape[0]), *d.T]
                 )
                 fh.write(out.tobytes())
         else:
@@ -503,16 +505,18 @@ def write(filename, mesh, binary=True):  # noqa: C901
             fh.write(out.encode())
 
             # cells
-            for cell_type, data in mesh.cells:
-                if cell_type not in legal_cell_types:
-                    warnings.warn(
-                        'cell_type "{}" is not supported by ply format - skipping'
+            for cell_block in mesh.cells:
+                if cell_block.type not in legal_cell_types:
+                    warn(
+                        f'cell_type "{cell_block.type}" is not supported by PLY format '
+                        + "- skipping"
                     )
                     continue
                 #                if cell_type not in cell_type_to_count.keys():
                 #                    continue
+                d = cell_block.data
                 out = np.column_stack(
-                    [np.full(data.shape[0], data.shape[1], dtype=data.dtype), data]
+                    [np.full(d.shape[0], d.shape[1], dtype=d.dtype), d]
                 )
                 # savetxt is slower
                 # np.savetxt(fh, out, "%d  %d %d %d")
@@ -521,4 +525,4 @@ def write(filename, mesh, binary=True):  # noqa: C901
                 fh.write(out.encode())
 
 
-register("ply", [".ply"], read, {"ply": write})
+register_format("ply", [".ply"], read, {"ply": write})

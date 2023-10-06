@@ -2,7 +2,6 @@
 I/O for DOLFIN's XML format, cf.
 <https://people.sc.fsu.edu/~jburkardt/data/dolfin_xml/dolfin_xml.html>.
 """
-import logging
 import os
 import pathlib
 import re
@@ -10,8 +9,9 @@ from xml.etree import ElementTree as ET
 
 import numpy as np
 
+from .._common import warn
 from .._exceptions import ReadError, WriteError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 
@@ -26,6 +26,8 @@ def _read_mesh(filename):
     keys = None
     cell_type = None
     num_nodes_per_cell = None
+    cells = None
+    cell_tags = None
     for event, elem in ET.iterparse(filename, events=("start", "end")):
         if event == "end":
             continue
@@ -65,9 +67,11 @@ def _read_mesh(filename):
             ]
         elif elem.tag in ["triangle", "tetrahedron"]:
             k = int(elem.attrib["index"])
+            assert cells is not None
+            assert cell_tags is not None
             cells[0][1][k] = [elem.attrib[t] for t in cell_tags]
         else:
-            logging.warning("Unknown entry %s. Ignoring.", elem.tag)
+            warn(f"Unknown entry {elem.tag}. Ignoring.")
 
         elem.clear()
 
@@ -134,11 +138,9 @@ def _write_mesh(filename, points, cell_type, cells):
 
     if any(c.type != cell_type for c in cells):
         discarded_cell_types = {c.type for c in cells if c.type != cell_type}
-        logging.warning(
+        warn(
             "DOLFIN XML can only handle one cell type at a time. "
-            "Using %s, discarding %s.",
-            cell_type,
-            ", ".join(discarded_cell_types),
+            + f"Using {cell_type}, discarding {', '.join(discarded_cell_types)}.",
         )
 
     dim = points.shape[1]
@@ -167,9 +169,9 @@ def _write_mesh(filename, points, cell_type, cells):
 
         f.write(f'    <cells size="{num_cells}">\n')
         idx = 0
-        for ct, cls in stripped_cells:
-            type_string = meshio_to_dolfin_type[ct]
-            for cell in cls:
+        for cell_block in stripped_cells:
+            type_string = meshio_to_dolfin_type[cell_block.type]
+            for cell in cell_block.data:
                 s = " ".join(f'v{k}="{c}"' for k, c in enumerate(cell))
                 f.write(f'      <{type_string} index="{idx}" {s} />\n')
                 idx += 1
@@ -211,7 +213,7 @@ def _write_cell_data(filename, dim, cell_data):
 
 
 def write(filename, mesh):
-    logging.warning("DOLFIN XML is a legacy format. Consider using XDMF instead.")
+    warn("DOLFIN XML is a legacy format. Consider using XDMF instead.")
 
     if any("tetra" == c.type for c in mesh.cells):
         cell_type = "tetra"
@@ -233,4 +235,4 @@ def write(filename, mesh):
             _write_cell_data(cell_data_filename, dim, np.array(data))
 
 
-register("dolfin-xml", [".xml"], read, {"dolfin-xml": write})
+register_format("dolfin-xml", [".xml"], read, {"dolfin-xml": write})

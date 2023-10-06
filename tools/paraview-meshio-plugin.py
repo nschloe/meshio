@@ -15,7 +15,7 @@ paraview_plugin_version = meshio.__version__
 vtk_to_meshio_type = meshio._vtk_common.vtk_to_meshio_type
 meshio_to_vtk_type = meshio._vtk_common.meshio_to_vtk_type
 meshio_input_filetypes = list(meshio._helpers.reader_map.keys())
-meshio_extensions = [ext[1:] for ext in meshio.extension_to_filetype.keys()]
+meshio_extensions = [ext[1:] for ext in meshio.extension_to_filetypes.keys()]
 meshio_input_filetypes = ["automatic"] + meshio_input_filetypes
 
 

@@ -4,7 +4,7 @@ authors:
 - family-names: "Schlömer"
   given-names: "Nico"
   orcid: "https://orcid.org/0000-0001-5228-0946"
-title: "meshio"
+title: "meshio: Tools for mesh files"
 doi: 10.5281/zenodo.1173115
-version: 4.4.6
-url: "https://github.com/nschloe/meshio"
+url: https://github.com/nschloe/meshio
+license: MIT

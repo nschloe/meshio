@@ -21,13 +21,13 @@ from . import helpers
         helpers.hex20_mesh,
     ],
 )
-def test_io(mesh):
-    helpers.write_read(meshio.permas.write, meshio.permas.read, mesh, 1.0e-15)
+def test_io(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.permas.write, meshio.permas.read, mesh, 1.0e-15)
 
 
-def test_generic_io():
-    helpers.generic_io("test.post")
-    helpers.generic_io("test.post.gz")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.post")
+    helpers.generic_io(tmp_path / "test.post.gz")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.post")
-    helpers.generic_io("test.0.post.gz")
+    helpers.generic_io(tmp_path / "test.0.post")
+    helpers.generic_io(tmp_path / "test.0.post.gz")

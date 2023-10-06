@@ -6,11 +6,10 @@ import numpy as np
 
 from .._common import num_nodes_per_cell
 from .._exceptions import ReadError, WriteError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 # https://docs.salome-platform.org/5/med/dev/med__outils_8hxx.html
-# https://bitbucket.org/code_aster/codeaster-src/src/default/catalo/cataelem/Commons/mesh_types.py
 meshio_to_med_type = {
     "vertex": "PO1",
     "line": "SE2",
@@ -271,7 +270,9 @@ def write(filename, mesh):
         raise WriteError("MED files cannot have two sections of the same cell type.")
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
-    for k, (cell_type, cells) in enumerate(mesh.cells):
+    for k, cell_block in enumerate(mesh.cells):
+        cell_type = cell_block.type
+        cells = cell_block.data
         med_type = meshio_to_med_type[cell_type]
         med_cells = cells_group.create_group(med_type)
         med_cells.attrs.create("CGT", 1)
@@ -455,4 +456,4 @@ def _write_families(fm_group, tags):
             dataset[i] = np.array([ord(x) for x in name_80])
 
 
-register("med", [".med"], read, {"med": write})
+register_format("med", [".med"], read, {"med": write})

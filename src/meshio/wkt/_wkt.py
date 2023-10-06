@@ -1,13 +1,13 @@
-import logging
 import re
 from collections import OrderedDict
 from io import StringIO
 
 import numpy as np
 
+from .._common import warn
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 float_pattern = r"[+-]?(?:\d+\.?\d*|\d*\.?\d+)"
@@ -21,7 +21,7 @@ triangle_pattern = r"\(\s*\(\s*({})\s*\)\s*\)".format(
 )
 triangle_re = re.compile(triangle_pattern)
 
-tin_pattern = fr"TIN\s*\((?:\s*{triangle_pattern}\s*,?)*\s*\)"
+tin_pattern = rf"TIN\s*\((?:\s*{triangle_pattern}\s*,?)*\s*\)"
 tin_re = re.compile(tin_pattern)
 
 
@@ -78,7 +78,7 @@ def write(filename, mesh):
 def write_buffer(f, mesh):
     skip = [c for c in mesh.cells if c.type != "triangle"]
     if skip:
-        logging.warning('WTK only supports triangle cells. Skipping {", ".join(skip)}.')
+        warn('WTK only supports triangle cells. Skipping {", ".join(skip)}.')
 
     triangles = mesh.get_cells_type("triangle")
 
@@ -101,4 +101,4 @@ def write_str(mesh):
     return buf.read()
 
 
-register("wkt", [".wkt"], read, {"wkt": write})
+register_format("wkt", [".wkt"], read, {"wkt": write})

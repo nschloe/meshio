@@ -10,7 +10,7 @@ from ..__about__ import __version__
 from .._common import num_nodes_per_cell
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 abaqus_to_meshio_type = {
@@ -56,6 +56,7 @@ abaqus_to_meshio_type = {
     "S3": "triangle",
     "S3R": "triangle",
     "S3RS": "triangle",
+    "R3D3": "triangle",
     # "TRI7": "triangle7",
     # 'TRISHELL': 'triangle',
     # 'TRISHELL3': 'triangle',
@@ -93,6 +94,8 @@ abaqus_to_meshio_type = {
     #
     # 4-node bilinear displacement and pore pressure
     "CAX4P": "quad",
+    # 6-node quadratic
+    "CPE6": "triangle6",
 }
 meshio_to_abaqus_type = {v: k for k, v in abaqus_to_meshio_type.items()}
 
@@ -395,7 +398,9 @@ def _read_set(f, params_map):
     return set_ids, set_names, line
 
 
-def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
+def write(
+    filename, mesh: Mesh, float_fmt: str = ".16e", translate_cell_names: bool = True
+) -> None:
     with open_file(filename, "wt") as f:
         f.write("*HEADING\n")
         f.write("Abaqus DataFile Version 6.14\n")
@@ -405,7 +410,9 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
         for k, x in enumerate(mesh.points):
             f.write(fmt.format(k + 1, *x))
         eid = 0
-        for cell_type, node_idcs in mesh.cells:
+        for cell_block in mesh.cells:
+            cell_type = cell_block.type
+            node_idcs = cell_block.data
             name = (
                 meshio_to_abaqus_type[cell_type] if translate_cell_names else cell_type
             )
@@ -442,4 +449,4 @@ def write(filename, mesh, float_fmt=".16e", translate_cell_names=True):
         # f.write("*END")
 
 
-register("abaqus", [".inp"], read, {"abaqus": write})
+register_format("abaqus", [".inp"], read, {"abaqus": write})

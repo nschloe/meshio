@@ -1,7 +1,7 @@
+from __future__ import annotations
+
 import copy
 import string
-import tempfile
-from pathlib import Path
 
 import numpy as np
 
@@ -286,7 +286,8 @@ polyhedron_mesh = meshio.Mesh(
         [1.0, 1.0, 1.0],
         [0.0, 1.0, 1.0],
     ],
-    [  # Split the cube into tets and pyramids.
+    # Split the cube into tets and pyramids.
+    [
         (
             "polyhedron4",
             [
@@ -593,23 +594,26 @@ lagrange_high_order_mesh = meshio.Mesh(
 
 
 def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=float):
-    np.random.seed(seed)
+    rng = np.random.default_rng(seed)
+
     mesh2 = copy.deepcopy(mesh)
 
     shape = (len(mesh.points),) if dim == 1 else (len(mesh.points), dim)
-    data = [(100 * np.random.rand(*shape)).astype(dtype) for _ in range(num_tags)]
+    data = [(100 * rng.random(shape)).astype(dtype) for _ in range(num_tags)]
 
     mesh2.point_data = {string.ascii_lowercase[k]: d for k, d in enumerate(data)}
     return mesh2
 
 
-def add_cell_data(mesh, specs):
+def add_cell_data(mesh, specs: list[tuple[str, tuple[int, ...], type]]):
     mesh2 = copy.deepcopy(mesh)
-    np.random.seed(0)
+
+    rng = np.random.default_rng(0)
+
     mesh2.cell_data = {
         name: [
-            (100 * np.random.rand(*((len(cells),) + shape))).astype(dtype)
-            for _, cells in mesh.cells
+            (100 * rng.random((len(cellblock),) + shape)).astype(dtype)
+            for cellblock in mesh.cells
         ]
         for name, shape, dtype in specs
     }
@@ -647,14 +651,14 @@ def add_cell_sets(mesh):
     return mesh2
 
 
-def write_read(writer, reader, input_mesh, atol, extension=".dat"):
+def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat"):
     """Write and read a file, and make sure the data is the same as before."""
     in_mesh = copy.deepcopy(input_mesh)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        p = Path(temp_dir) / ("test" + extension)
-        writer(p, input_mesh)
-        mesh = reader(p)
+    p = tmp_path / ("test" + extension)
+    print(input_mesh)
+    writer(p, input_mesh)
+    mesh = reader(p)
 
     # Make sure the output is writeable
     assert mesh.points.flags["WRITEABLE"]
@@ -668,10 +672,18 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
                     assert face.flags["WRITEABLE"]
 
     # assert that the input mesh hasn't changed at all
+    assert in_mesh.points.dtype == input_mesh.points.dtype
     assert np.allclose(in_mesh.points, input_mesh.points, atol=atol, rtol=0.0)
+    for c0, c1 in zip(in_mesh.cells, input_mesh.cells):
+        if c0.type.startswith("polyhedron"):
+            continue
+        assert c0.type == c1.type
+        assert c0.data.shape == c1.data.shape, f"{c0.data.shape} != {c1.data.shape}"
+        assert c0.data.dtype == c1.data.dtype, f"{c0.data.dtype} != {c1.data.dtype}"
+        assert np.all(c0.data == c1.data)
 
     # Numpy's array_equal is too strict here, cf.
-    # <https://mail.scipy.org/pipermail/numpy-discussion/2015-December/074410.html>.
+    # <https://mail.python.org/archives/list/numpy-discussion@python.org/message/3LUSBW5BGD6NY6I76W5WSBOEBHNDKA4Y/>.
     # Use allclose.
     if in_mesh.points.shape[0] == 0:
         assert mesh.points.shape[0] == 0
@@ -711,16 +723,14 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
             input_mesh.point_data[key], mesh.point_data[key], atol=atol, rtol=0.0
         )
 
+    print(input_mesh.cell_data)
+    print()
+    print(mesh.cell_data)
     for name, cell_type_data in input_mesh.cell_data.items():
         for d0, d1 in zip(cell_type_data, mesh.cell_data[name]):
             # assert d0.dtype == d1.dtype, (d0.dtype, d1.dtype)
             assert np.allclose(d0, d1, atol=atol, rtol=0.0)
 
-    print()
-    print("helpers:")
-    print(input_mesh.field_data)
-    print()
-    print(mesh.field_data)
     for name, data in input_mesh.field_data.items():
         if isinstance(data, list):
             assert data == mesh.field_data[name]
@@ -737,12 +747,10 @@ def write_read(writer, reader, input_mesh, atol, extension=".dat"):
             assert np.allclose(var1, var2, atol=atol, rtol=0.0)
 
 
-def generic_io(filename):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        filepath = Path(temp_dir) / filename
-        meshio.write_points_cells(filepath, tri_mesh.points, tri_mesh.cells)
-        out_mesh = meshio.read(filepath)
-        assert (abs(out_mesh.points - tri_mesh.points) < 1.0e-15).all()
-        for c0, c1 in zip(tri_mesh.cells, out_mesh.cells):
-            assert c0.type == c1.type
-            assert (c0.data == c1.data).all()
+def generic_io(filepath):
+    meshio.write_points_cells(filepath, tri_mesh.points, tri_mesh.cells)
+    out_mesh = meshio.read(filepath)
+    assert (abs(out_mesh.points - tri_mesh.points) < 1.0e-15).all()
+    for c0, c1 in zip(tri_mesh.cells, out_mesh.cells):
+        assert c0.type == c1.type
+        assert (c0.data == c1.data).all()

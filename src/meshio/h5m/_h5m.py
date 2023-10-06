@@ -2,13 +2,13 @@
 I/O for h5m, cf.
 <https://www.mcs.anl.gov/~fathom/moab-docs/html/h5mmain.html>.
 """
-import logging
 from datetime import datetime
 
 import numpy as np
 
 from .. import __about__
-from .._helpers import register
+from .._common import warn
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 # def _int_to_bool_list(num):
@@ -228,9 +228,11 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
         "triangle": {"name": "Tri3", "type": 2},
         "tetra": {"name": "Tet4", "type": 5},
     }
-    for key, data in mesh.cells:
+    for cell_block in mesh.cells:
+        key = cell_block.type
+        data = cell_block.data
         if key not in meshio_to_h5m_type:
-            logging.warning("Unsupported H5M element type '%s'. Skipping.", key)
+            warn("Unsupported H5M element type '%s'. Skipping.", key)
             continue
         this_type = meshio_to_h5m_type[key]
         elem_group = elements.create_group(this_type["name"])
@@ -265,4 +267,4 @@ def write(filename, mesh, add_global_ids=True, compression="gzip", compression_o
     tstt.attrs.create("max_id", global_id, dtype="u8")
 
 
-register("h5m", [".h5m"], read, {"h5m": write})
+register_format("h5m", [".h5m"], read, {"h5m": write})

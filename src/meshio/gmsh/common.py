@@ -1,8 +1,11 @@
-import logging
+from __future__ import annotations
+
 import shlex
 
 import numpy as np
+from numpy.typing import ArrayLike
 
+from .._common import warn
 from .._exceptions import ReadError, WriteError
 
 c_int = np.dtype("int32")
@@ -21,7 +24,7 @@ def _fast_forward_to_end_block(f, block):
         if line.strip() == f"$End{block}":
             break
     else:
-        logging.warning(f"${block} not closed by $End{block}.")
+        warn(f"${block} not closed by $End{block}.")
 
 
 def _fast_forward_over_blank_lines(f):
@@ -78,7 +81,7 @@ def _read_data(f, tag, data_dict, data_size, is_ascii):
 
     _fast_forward_to_end_block(f, tag)
 
-    # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
+    # The gmsh format cannot distinguish between data of shape (n,) and (n, 1).
     # If shape[1] == 1, cut it off.
     if data.shape[1] == 1:
         data = data[:, 0]
@@ -158,17 +161,7 @@ _gmsh_to_meshio_type = {
 _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
 
 
-def _reorder_cells(cells, ordering):
-    cells = cells[:]
-    for i, (cell_type, cell_data) in enumerate(cells):
-        permutation = ordering.get(cell_type)
-        if permutation is not None:
-            cell_data = cell_data[:, permutation]
-            cells[i] = (cell_type, cell_data)
-    return cells
-
-
-def _gmsh_to_meshio_order(cells):
+def _gmsh_to_meshio_order(cell_type: str, idx: ArrayLike) -> np.ndarray:
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     meshio_ordering = {
         # fmt: off
@@ -188,10 +181,13 @@ def _gmsh_to_meshio_order(cells):
         "pyramid13": [0, 1, 2, 3, 4, 5, 8, 10, 6, 7, 9, 11, 12],
         # fmt: on
     }
-    return _reorder_cells(cells, meshio_ordering)
+    idx = np.asarray(idx)
+    if cell_type not in meshio_ordering:
+        return idx
+    return idx[:, meshio_ordering[cell_type]]
 
 
-def _meshio_to_gmsh_order(cells):
+def _meshio_to_gmsh_order(cell_type: str, idx: ArrayLike) -> np.ndarray:
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
     gmsh_ordering = {
         # fmt: off
@@ -211,7 +207,10 @@ def _meshio_to_gmsh_order(cells):
         "pyramid13": [0, 1, 2, 3, 4, 5, 8, 9, 6, 10, 7, 11, 12],
         # fmt: on
     }
-    return _reorder_cells(cells, gmsh_ordering)
+    idx = np.asarray(idx)
+    if cell_type not in gmsh_ordering:
+        return idx
+    return idx[:, gmsh_ordering[cell_type]]
 
 
 def _write_physical_names(fh, field_data):
@@ -223,7 +222,7 @@ def _write_physical_names(fh, field_data):
             phys_num, phys_dim = int(phys_num), int(phys_dim)
             entries.append((phys_dim, phys_num, phys_name))
         except (ValueError, TypeError):
-            logging.warning("Field data contains entry that cannot be processed.")
+            warn("Field data contains entry that cannot be processed.")
     entries.sort()
     if entries:
         fh.write(b"$PhysicalNames\n")

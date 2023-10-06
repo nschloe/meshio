@@ -2,14 +2,12 @@
 I/O for AVS-UCD format, cf.
 <https://lanl.github.io/LaGriT/pages/docs/read_avs.html>.
 """
-import logging
-
 import numpy as np
 
 from ..__about__ import __version__ as version
-from .._common import _pick_first_int_data
+from .._common import _pick_first_int_data, warn
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 meshio_to_avsucd_type = {
@@ -98,20 +96,20 @@ def _read_cells(f, num_cells, point_ids):
         cell_type = avsucd_to_meshio_type[line[2]]
         corner = [point_ids[int(pid)] for pid in line[3:]]
 
-        if len(cells) > 0 and cells[-1].type == cell_type:
-            cells[-1].data.append(corner)
+        if len(cells) > 0 and cells[-1][0] == cell_type:
+            cells[-1][1].append(corner)
             cell_data["avsucd:material"][-1].append(cell_mat)
         else:
-            cells.append(CellBlock(cell_type, [corner]))
+            cells.append((cell_type, [corner]))
             cell_data["avsucd:material"].append([cell_mat])
 
         cell_ids[cell_id] = count
         count += 1
 
     # Convert to numpy arrays
-    for k, c in enumerate(cells):
+    for k, (cell_type, cdata) in enumerate(cells):
         cells[k] = CellBlock(
-            c.type, np.array(c.data)[:, avsucd_to_meshio_order[c.type]]
+            cell_type, np.array(cdata)[:, avsucd_to_meshio_order[cell_type]]
         )
         cell_data["avsucd:material"][k] = np.array(cell_data["avsucd:material"][k])
     return cell_ids, cells, cell_data
@@ -147,13 +145,11 @@ def _read_data(f, num_entities, entity_ids):
 
 def write(filename, mesh):
     if len(mesh.points.shape) > 1 and mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "AVS-UCD requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
+        mesh.points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
 
     with open_file(filename, "w") as f:
         # Write meshio version
@@ -167,7 +163,7 @@ def write(filename, mesh):
         key, other = _pick_first_int_data(mesh.cell_data)
         if key and other:
             other_string = ", ".join(other)
-            logging.warning(
+            warn(
                 "AVS-UCD can only write one cell data array. "
                 f"Picking {key}, skipping {other_string}."
             )
@@ -221,9 +217,11 @@ def _write_nodes(f, points):
 
 def _write_cells(f, cells, material):
     i = 0
-    for cell_type, v in cells:
+    for cell_block in cells:
+        cell_type = cell_block.type
+        v = cell_block.data
         for cell in v[:, meshio_to_avsucd_order[cell_type]]:
-            cell_str = " ".join(str(c + 1) for c in cell)
+            cell_str = " ".join(str(c) for c in cell + 1)
             f.write(
                 f"{i + 1} {material[i]} {meshio_to_avsucd_type[cell_type]} {cell_str}\n"
             )
@@ -241,4 +239,4 @@ def _write_data(f, labels, data_array, num_entities, num_data, num_data_sum):
     np.savetxt(f, data_array, delimiter=" ", fmt=["%d"] + ["%.14e"] * num_data_sum)
 
 
-register("avsucd", [".avs"], read, {"avsucd": write})
+register_format("avsucd", [".avs"], read, {"avsucd": write})

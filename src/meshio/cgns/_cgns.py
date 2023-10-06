@@ -6,7 +6,7 @@ TODO link to specification?
 import numpy as np
 
 from .._exceptions import ReadError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 
@@ -78,23 +78,23 @@ def write(filename, mesh, compression="gzip", compression_opts=4):
     # TODO write cells other than tetra
     elems = zone1.create_group("GridElements")
     rnge = elems.create_group("ElementRange")
-    for cell_type, data in mesh.cells:
-        if cell_type == "tetra":
+    for cell_block in mesh.cells:
+        if cell_block.type == "tetra":
             rnge.create_dataset(
                 " data",
-                data=[1, data.shape[0]],
+                data=[1, cell_block.data.shape[0]],
                 compression=compression,
                 compression_opts=compression_opts,
             )
     conn = elems.create_group("ElementConnectivity")
-    for cell_type, data in mesh.cells:
-        if cell_type == "tetra":
+    for cell_block in mesh.cells:
+        if cell_block.type == "tetra":
             conn.create_dataset(
                 " data",
-                data=data.reshape(-1) + 1,
+                data=cell_block.data.reshape(-1) + 1,
                 compression=compression,
                 compression_opts=compression_opts,
             )
 
 
-register("cgns", [".cgns"], read, {"cgns": write})
+register_format("cgns", [".cgns"], read, {"cgns": write})

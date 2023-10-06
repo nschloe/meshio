@@ -2,18 +2,14 @@
 I/O for Gmsh's msh format (version 4.0, as used by Gmsh 4.1.5), cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
-import logging
+from __future__ import annotations
+
 from functools import partial
 
 import numpy as np
 
-from .._common import (
-    _topological_dimension,
-    cell_data_from_raw,
-    num_nodes_per_cell,
-    raw_from_cell_data,
-)
-from .._exceptions import ReadError, WriteError
+from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
+from .._exceptions import ReadError
 from .._mesh import CellBlock, Mesh
 from .common import (
     _fast_forward_to_end_block,
@@ -33,7 +29,7 @@ c_ulong = np.dtype("L")
 c_double = np.dtype("d")
 
 
-def read_buffer(f, is_ascii, data_size):
+def read_buffer(f, is_ascii: bool, data_size) -> Mesh:
     # Initialize the optional data fields
     points = []
     field_data = {}
@@ -54,13 +50,11 @@ def read_buffer(f, is_ascii, data_size):
         if environ == "PhysicalNames":
             _read_physical_names(f, field_data)
         elif environ == "Entities":
-            physical_tags = _read_entities(f, is_ascii, data_size)
+            physical_tags = _read_entities(f, is_ascii)
         elif environ == "Nodes":
-            points, point_tags = _read_nodes(f, is_ascii, data_size)
+            points, point_tags = _read_nodes(f, is_ascii)
         elif environ == "Elements":
-            cells, cell_tags = _read_elements(
-                f, point_tags, physical_tags, is_ascii, data_size
-            )
+            cells, cell_tags = _read_elements(f, point_tags, physical_tags, is_ascii)
         elif environ == "Periodic":
             periodic = _read_periodic(f, is_ascii)
         elif environ == "NodeData":
@@ -91,7 +85,7 @@ def read_buffer(f, is_ascii, data_size):
     )
 
 
-def _read_entities(f, is_ascii, data_size):
+def _read_entities(f, is_ascii: bool):
     physical_tags = tuple({} for _ in range(4))  # dims 0, 1, 2, 3
     fromfile = partial(np.fromfile, sep=" " if is_ascii else "")
     number = fromfile(f, c_ulong, 4)  # dims 0, 1, 2, 3
@@ -109,7 +103,7 @@ def _read_entities(f, is_ascii, data_size):
     return physical_tags
 
 
-def _read_nodes(f, is_ascii, data_size):
+def _read_nodes(f, is_ascii):
     if is_ascii:
         # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
         line = f.readline().decode()
@@ -119,12 +113,12 @@ def _read_nodes(f, is_ascii, data_size):
         tags = np.empty(total_num_nodes, dtype=int)
 
         idx = 0
-        for k in range(num_entity_blocks):
+        for _ in range(num_entity_blocks):
             # first line in the entity block:
             # tagEntity(int) dimEntity(int) typeNode(int) numNodes(unsigned long)
             line = f.readline().decode()
-            tag_entity, dim_entity, type_node, num_nodes = map(int, line.split())
-            for i in range(num_nodes):
+            _, _, _, num_nodes = map(int, line.split())
+            for _ in range(num_nodes):
                 # tag(int) x(double) y(double) z(double)
                 line = f.readline().decode()
                 tag, x, y, z = line.split()
@@ -157,15 +151,15 @@ def _read_nodes(f, is_ascii, data_size):
     return points, tags
 
 
-def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
+def _read_elements(f, point_tags, physical_tags, is_ascii):
     fromfile = partial(np.fromfile, sep=" " if is_ascii else "")
 
     # numEntityBlocks(unsigned long) numElements(unsigned long)
-    num_entity_blocks, total_num_elements = fromfile(f, c_ulong, 2)
+    num_entity_blocks, _ = fromfile(f, c_ulong, 2)
 
     data = []
 
-    for k in range(num_entity_blocks):
+    for _ in range(num_entity_blocks):
         # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
         tag_entity, dim_entity, type_ele = fromfile(f, c_int, 3)
         (num_ele,) = fromfile(f, c_ulong, 1)
@@ -197,7 +191,7 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
     cells = []
     cell_data = {}
     for physical_tag, geom_tag, key, values in data:
-        cells.append((key, values))
+        cells.append(CellBlock(key, _gmsh_to_meshio_order(key, values)))
         if physical_tag:
             if "gmsh:physical" not in cell_data:
                 cell_data["gmsh:physical"] = []
@@ -207,7 +201,6 @@ def _read_elements(f, point_tags, physical_tags, is_ascii, data_size):
         if "gmsh:geometrical" not in cell_data:
             cell_data["gmsh:geometrical"] = []
         cell_data["gmsh:geometrical"].append(np.full(len(values), geom_tag, int))
-    cells[:] = _gmsh_to_meshio_order(cells)
 
     return cells, cell_data
 
@@ -242,31 +235,10 @@ def _read_periodic(f, is_ascii):
     return periodic
 
 
-def write(filename, mesh, float_fmt=".16e", binary=True):
+def write(filename, mesh: Mesh, float_fmt: str = ".16e", binary: bool = True) -> None:
     """Writes msh files, cf.
     <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
     """
-    if mesh.points.shape[1] == 2:
-        logging.warning(
-            "msh4 requires 3D points, but 2D points given. "
-            "Appending 0 third component."
-        )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
-
-    if binary:
-        for k, (key, value) in enumerate(mesh.cells):
-            if value.dtype != c_int:
-                logging.warning(
-                    "Binary Gmsh needs c_int (typically np.int32) integers "
-                    "(got %s). Converting.",
-                    value.dtype,
-                )
-                mesh.cells[k] = CellBlock(key, np.array(value, dtype=c_int))
-
-    cells = _meshio_to_gmsh_order(mesh.cells)
-
     with open(filename, "wb") as fh:
         mode_idx = 1 if binary else 0
         size_of_double = 8
@@ -280,7 +252,7 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             _write_physical_names(fh, mesh.field_data)
 
         _write_nodes(fh, mesh.points, float_fmt, binary)
-        _write_elements(fh, cells, binary)
+        _write_elements(fh, mesh.cells, binary)
         if mesh.gmsh_periodic is not None:
             _write_periodic(fh, mesh.gmsh_periodic, float_fmt, binary)
         for name, dat in mesh.point_data.items():
@@ -290,7 +262,10 @@ def write(filename, mesh, float_fmt=".16e", binary=True):
             _write_data(fh, "ElementData", name, dat, binary)
 
 
-def _write_nodes(fh, points, float_fmt, binary):
+def _write_nodes(fh, points: np.ndarray, float_fmt: str, binary: bool) -> None:
+    if points.shape[1] == 2:
+        points = np.column_stack([points, np.zeros_like(points[:, 0])])
+
     fh.write(b"$Nodes\n")
 
     # TODO not sure what dimEntity is supposed to say
@@ -327,26 +302,30 @@ def _write_nodes(fh, points, float_fmt, binary):
     fh.write(b"$EndNodes\n")
 
 
-def _write_elements(fh, cells, binary):
+def _write_elements(fh, cell_blocks: list[CellBlock], binary: bool):
     # TODO respect binary
     # write elements
     fh.write(b"$Elements\n")
 
     if binary:
-        total_num_cells = sum(data.shape[0] for _, data in cells)
-        np.array([len(cells), total_num_cells], dtype=c_ulong).tofile(fh)
+        total_num_cells = sum(len(cell_block) for cell_block in cell_blocks)
+        np.array([len(cell_blocks), total_num_cells], dtype=c_ulong).tofile(fh)
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells:
+        for cell_block in cell_blocks:
+            node_idcs = _meshio_to_gmsh_order(cell_block.type, cell_block.data)
+
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             np.array(
-                [1, _topological_dimension[cell_type], _meshio_to_gmsh_type[cell_type]],
+                [1, cell_block.dim, _meshio_to_gmsh_type[cell_block.type]],
                 dtype=c_int,
             ).tofile(fh)
             np.array([node_idcs.shape[0]], dtype=c_ulong).tofile(fh)
 
             if node_idcs.dtype != c_int:
-                raise WriteError()
+                # Binary Gmsh needs c_int (typically np.int32) integers Converting.
+                node_idcs = node_idcs.astype(c_int)
+
             data = np.column_stack(
                 [
                     np.arange(
@@ -364,22 +343,25 @@ def _write_elements(fh, cells, binary):
         fh.write(b"\n")
     else:
         # count all cells
-        total_num_cells = sum(data.shape[0] for _, data in cells)
-        fh.write(f"{len(cells)} {total_num_cells}\n".encode())
+        total_num_cells = sum(len(cell_block) for cell_block in cell_blocks)
+        fh.write(f"{len(cell_blocks)} {total_num_cells}\n".encode())
 
         consecutive_index = 0
-        for cell_type, node_idcs in cells:
+        for cell_block in cell_blocks:
+            cell_type = cell_block.type
+            cell_data = _meshio_to_gmsh_order(cell_block.type, cell_block.data)
+
             # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
             fh.write(
                 "{} {} {} {}\n".format(
                     1,  # tag
-                    _topological_dimension[cell_type],
+                    cell_block.dim,
                     _meshio_to_gmsh_type[cell_type],
-                    node_idcs.shape[0],
+                    len(cell_data),
                 ).encode()
             )
             # increment indices by one to conform with gmsh standard
-            idcs = node_idcs + 1
+            idcs = cell_data + 1
 
             fmt = " ".join(["{}"] * (num_nodes_per_cell[cell_type] + 1)) + "\n"
             for idx in idcs:

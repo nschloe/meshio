@@ -1,14 +1,13 @@
 """
 I/O for PERMAS dat files.
 """
-import logging
-
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 permas_to_meshio_type = {
@@ -222,13 +221,13 @@ def read_set(f, params_map):
 
 def write(filename, mesh):
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "PERMAS requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
+        points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
+    else:
+        points = mesh.points
 
     with open_file(filename, "wt") as f:
         f.write("!PERMAS DataFile Version 18.0\n")
@@ -236,38 +235,39 @@ def write(filename, mesh):
         f.write("$ENTER COMPONENT NAME=DFLT_COMP\n")
         f.write("$STRUCTURE\n")
         f.write("$COOR\n")
-        for k, x in enumerate(mesh.points):
+        for k, x in enumerate(points):
             f.write(f"{k + 1} {x[0]} {x[1]} {x[2]}\n")
         eid = 0
         tria6_order = [0, 3, 1, 4, 2, 5]
         tet10_order = [0, 4, 1, 5, 2, 6, 7, 8, 9, 3]
         quad9_order = [0, 4, 1, 7, 8, 5, 3, 6, 2]
         wedge15_order = [0, 6, 1, 7, 2, 8, 9, 10, 11, 3, 12, 4, 13, 5, 14]
-        for cell_type, node_idcs in mesh.cells:
+        for cell_block in mesh.cells:
+            node_idcs = cell_block.data
             f.write("!\n")
-            f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_type] + "\n")
-            if cell_type == "tetra10":
+            f.write("$ELEMENT TYPE=" + meshio_to_permas_type[cell_block.type] + "\n")
+            if cell_block.type == "tetra10":
                 for row in node_idcs:
                     eid += 1
                     mylist = row.tolist()
                     mylist = [mylist[i] for i in tet10_order]
                     nids_strs = (str(nid + 1) for nid in mylist)
                     f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
-            elif cell_type == "triangle6":
+            elif cell_block.type == "triangle6":
                 for row in node_idcs:
                     eid += 1
                     mylist = row.tolist()
                     mylist = [mylist[i] for i in tria6_order]
                     nids_strs = (str(nid + 1) for nid in mylist)
                     f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
-            elif cell_type == "quad9":
+            elif cell_block.type == "quad9":
                 for row in node_idcs:
                     eid += 1
                     mylist = row.tolist()
                     mylist = [mylist[i] for i in quad9_order]
                     nids_strs = (str(nid + 1) for nid in mylist)
                     f.write(str(eid) + " " + " ".join(nids_strs) + "\n")
-            elif cell_type == "wedge15":
+            elif cell_block.type == "wedge15":
                 for row in node_idcs:
                     eid += 1
                     mylist = row.tolist()
@@ -284,4 +284,6 @@ def write(filename, mesh):
         f.write("$FIN\n")
 
 
-register("permas", [".post", ".post.gz", ".dato", ".dato.gz"], read, {"permas": write})
+register_format(
+    "permas", [".post", ".post.gz", ".dato", ".dato.gz"], read, {"permas": write}
+)

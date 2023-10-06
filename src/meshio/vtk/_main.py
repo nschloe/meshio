@@ -1,7 +1,7 @@
 import pathlib
 
 from .._exceptions import ReadError
-from .._helpers import register
+from .._helpers import register_format
 from . import _vtk_42, _vtk_51
 
 
@@ -34,7 +34,7 @@ def write(filename, mesh, fmt_version: str = "5.1", **kwargs):
     _vtk_51.write(filename, mesh, **kwargs)
 
 
-register(
+register_format(
     "vtk",
     [".vtk"],
     read,

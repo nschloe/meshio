@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import os
 import pathlib
-import warnings
 from io import BytesIO
 from xml.etree import ElementTree as ET
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
@@ -32,7 +34,7 @@ class TimeSeriesReader:
         if root.tag != "Xdmf":
             raise ReadError()
 
-        version = root.get("Version")
+        version = root.attrib["Version"]
         if version.split(".")[0] != "3":
             raise ReadError(f"Unknown XDMF version {version}.")
 
@@ -82,18 +84,17 @@ class TimeSeriesReader:
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *_):
         # Those files are opened in _read_data_item()
         for f in self.hdf5_files.values():
             f.close()
 
     def read_points_cells(self):
-        grid = self.mesh_grid
-
         points = None
         cells = []
 
-        for c in grid:
+        assert self.mesh_grid is not None
+        for c in self.mesh_grid:
             if c.tag == "Topology":
                 data_items = list(c)
                 if len(data_items) != 1:
@@ -104,12 +105,12 @@ class TimeSeriesReader:
 
                 # The XDMF2 key is `TopologyType`, just `Type` for XDMF3.
                 # Allow both.
-                if c.get("Type"):
-                    if c.get("TopologyType"):
-                        raise ReadError()
-                    cell_type = c.get("Type")
+                if "Type" in c.attrib:
+                    if "TopologyType" in c.attrib:
+                        raise ReadError("Both 'Type' and 'TopologyType' keys present")
+                    cell_type = c.attrib["Type"]
                 else:
-                    cell_type = c.get("TopologyType")
+                    cell_type = c.attrib["TopologyType"]
 
                 if cell_type == "Mixed":
                     cells = translate_mixed_cells(data)
@@ -117,13 +118,10 @@ class TimeSeriesReader:
                     cells.append(CellBlock(xdmf_to_meshio_type[cell_type], data))
 
             elif c.tag == "Geometry":
-                try:
-                    geometry_type = c.get("GeometryType")
-                except KeyError:
-                    pass
-                else:
-                    if geometry_type not in ["XY", "XYZ"]:
-                        raise ReadError()
+                if "GeometryType" in c.attrib:
+                    geo_type = c.attrib["GeometryType"]
+                    if geo_type not in ["XY", "XYZ"]:
+                        raise ReadError(f"Unknown geometry_type '{geo_type}'")
 
                 data_items = list(c)
                 if len(data_items) != 1:
@@ -134,7 +132,7 @@ class TimeSeriesReader:
         self.cells = cells
         return points, cells
 
-    def read_data(self, k):
+    def read_data(self, k: int):
         point_data = {}
         cell_data_raw = {}
 
@@ -142,7 +140,7 @@ class TimeSeriesReader:
 
         for c in list(self.collection[k]):
             if c.tag == "Time":
-                t = float(c.get("Value"))
+                t = float(c.attrib["Value"])
             elif c.tag == "Attribute":
                 name = c.get("Name")
 
@@ -184,7 +182,7 @@ class TimeSeriesReader:
             data_type = data_item.get("NumberType")
         else:
             # Default, see
-            # <https://www.xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
+            # <https://xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
             data_type = "Float"
 
         try:
@@ -192,7 +190,7 @@ class TimeSeriesReader:
         except KeyError:
             precision = "4"
 
-        data_format = data_item.get("Format")
+        data_format = data_item.attrib["Format"]
 
         if data_format == "XML":
             return np.fromstring(
@@ -233,7 +231,7 @@ class TimeSeriesReader:
 
 
 class TimeSeriesWriter:
-    def __init__(self, filename, data_format="HDF"):
+    def __init__(self, filename, data_format: str = "HDF") -> None:
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -258,7 +256,7 @@ class TimeSeriesWriter:
         ET.register_namespace("xi", "https://www.w3.org/2001/XInclude/")
 
         self.has_mesh = False
-        self.mesh_name = None
+        self.mesh_name = "mesh"
 
     def __enter__(self):
         if self.data_format == "HDF":
@@ -273,7 +271,11 @@ class TimeSeriesWriter:
         if self.data_format == "HDF":
             self.h5_file.close()
 
-    def write_points_cells(self, points, cells):
+    def write_points_cells(
+        self,
+        points: ArrayLike,
+        cells: dict[str, ArrayLike] | list[tuple[str, ArrayLike] | CellBlock],
+    ) -> None:
         # <Grid Name="mesh" GridType="Uniform">
         #   <Topology NumberOfElements="16757" TopologyType="Triangle" NodesPerElement="3">
         #     <DataItem Dimensions="16757 3" NumberType="UInt" Format="HDF">maxwell.h5:/Mesh/0/mesh/topology</DataItem>
@@ -282,14 +284,11 @@ class TimeSeriesWriter:
         #     <DataItem Dimensions="8457 2" Format="HDF">maxwell.h5:/Mesh/0/mesh/geometry</DataItem>
         #   </Geometry>
         # </Grid>
-        self.mesh_name = "mesh"
         grid = ET.SubElement(
             self.domain, "Grid", Name=self.mesh_name, GridType="Uniform"
         )
         self.points(grid, np.asarray(points))
-        self.cells(
-            [CellBlock(cell_type, np.asarray(data)) for cell_type, data in cells], grid
-        )
+        self.cells(cells, grid)
         self.has_mesh = True
 
     def write_data(self, t, point_data=None, cell_data=None):
@@ -311,7 +310,7 @@ class TimeSeriesWriter:
         if point_data:
             self.point_data(point_data, grid)
 
-        # permit old dict strucutre, convert it to list of tuples
+        # permit old dict structure, convert it to list of tuples
         for name, entry in cell_data.items():
             if isinstance(entry, dict):
                 cell_data[name] = np.array(list(entry.values()))
@@ -360,19 +359,26 @@ class TimeSeriesWriter:
         )
         data_item.text = self.numpy_to_xml_string(points)
 
-    def cells(self, cells, grid):
+    def cells(
+        self,
+        cells: dict[str, ArrayLike] | list[tuple[str, ArrayLike] | CellBlock],
+        grid: ET.Element,
+    ) -> None:
         if isinstance(cells, dict):
-            warnings.warn(
-                "cell dictionaries are deprecated, use list of tuples, e.g., "
-                '[("triangle", [[0, 1, 2], ...])]',
-                DeprecationWarning,
-            )
-            cells = [CellBlock(cell_type, data) for cell_type, data in cells.items()]
-        else:
-            cells = [CellBlock(cell_type, data) for cell_type, data in cells]
-        if len(cells) == 1:
-            meshio_type = cells[0].type
-            num_cells = len(cells[0].data)
+            # convert dict to list of tuples
+            cells = list(cells.items())
+
+        # conver to cell_blocks
+        cell_blocks = []
+        for cell_block in cells:
+            if isinstance(cell_block, tuple):
+                cell_type, data = cell_block
+                cell_block = CellBlock(cell_type, np.asarray(data))
+            cell_blocks.append(cell_block)
+
+        if len(cell_blocks) == 1:
+            meshio_type = cell_blocks[0].type
+            num_cells = len(cell_blocks[0].data)
             xdmf_type = meshio_to_xdmf_type[meshio_type][0]
             topo = ET.SubElement(
                 grid,
@@ -380,30 +386,29 @@ class TimeSeriesWriter:
                 TopologyType=xdmf_type,
                 NumberOfElements=str(num_cells),
             )
-            dt, prec = numpy_to_xdmf_dtype[cells[0].data.dtype.name]
-            dim = "{} {}".format(*cells[0].data.shape)
+            dt, prec = numpy_to_xdmf_dtype[cell_blocks[0].data.dtype.name]
             data_item = ET.SubElement(
                 topo,
                 "DataItem",
                 DataType=dt,
-                Dimensions=dim,
+                Dimensions="{} {}".format(*cell_blocks[0].data.shape),
                 Format=self.data_format,
                 Precision=prec,
             )
-            data_item.text = self.numpy_to_xml_string(cells[0].data)
-        elif len(cells) > 1:
-            total_num_cells = sum(c.data.shape[0] for c in cells)
+            data_item.text = self.numpy_to_xml_string(cell_blocks[0].data)
+        elif len(cell_blocks) > 1:
+            total_num_cells = sum(len(c.data) for c in cell_blocks)
             topo = ET.SubElement(
                 grid,
                 "Topology",
                 TopologyType="Mixed",
                 NumberOfElements=str(total_num_cells),
             )
-            total_num_cell_items = sum(np.prod(c.data.shape) for c in cells)
+            total_num_cell_items = sum(np.prod(c.data.shape) for c in cell_blocks)
             dim = total_num_cell_items + total_num_cells
             # Lines translate to Polylines, and one needs to specify the exact
             # number of nodes. Hence, prepend 2.
-            for c in cells:
+            for c in cell_blocks:
                 if c.type == "line":
                     c.data[:] = np.insert(c.data, 0, 2, axis=1)
                     dim += len(c.data)
@@ -412,9 +417,9 @@ class TimeSeriesWriter:
                 [
                     # prepend column with xdmf type index
                     np.insert(
-                        value, 0, meshio_type_to_xdmf_index[key], axis=1
+                        c.data, 0, meshio_type_to_xdmf_index[c.type], axis=1
                     ).flatten()
-                    for key, value in cells
+                    for c in cell_blocks
                 ]
             )
             dt, prec = numpy_to_xdmf_dtype[cd.dtype.name]
@@ -428,7 +433,7 @@ class TimeSeriesWriter:
             )
             data_item.text = self.numpy_to_xml_string(cd)
 
-    def point_data(self, point_data, grid):
+    def point_data(self, point_data: dict[str, np.ndarray], grid: ET.Element):
         for name, data in point_data.items():
             att = ET.SubElement(
                 grid,
@@ -449,7 +454,9 @@ class TimeSeriesWriter:
             )
             data_item.text = self.numpy_to_xml_string(data)
 
-    def cell_data(self, cell_data, grid):
+    def cell_data(
+        self, cell_data: dict[str, list[np.ndarray]], grid: ET.Element
+    ) -> None:
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(

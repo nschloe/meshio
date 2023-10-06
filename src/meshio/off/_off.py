@@ -3,13 +3,12 @@ I/O for the OFF surface format, cf.
 <https://en.wikipedia.org/wiki/OFF_(file_format)>,
 <http://www.geomview.org/docs/html/OFF.html>.
 """
-import logging
-
 import numpy as np
 
+from .._common import warn
 from .._exceptions import ReadError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 
 
@@ -54,18 +53,18 @@ def read_buffer(f):
 
 def write(filename, mesh):
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "OFF requires 3D points, but 2D points given. "
             "Appending 0 as third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
+        points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
+    else:
+        points = mesh.points
 
     skip = [c for c in mesh.cells if c.type != "triangle"]
     if skip:
         string = ", ".join(item.type for item in skip)
-        logging.warning(f"OFF only supports triangle cells. Skipping {string}.")
+        warn(f"OFF only supports triangle cells. Skipping {string}.")
 
     tri = mesh.get_cells_type("triangle")
 
@@ -79,9 +78,8 @@ def write(filename, mesh):
 
         # vertices
         # np.savetxt(fh, mesh.points, "%r")  # slower
-        out = mesh.points
-        fmt = " ".join(["{}"] * out.shape[1])
-        out = "\n".join([fmt.format(*row) for row in out]) + "\n"
+        fmt = " ".join(["{}"] * points.shape[1])
+        out = "\n".join([fmt.format(*row) for row in points]) + "\n"
         fh.write(out.encode())
 
         # triangles
@@ -93,4 +91,4 @@ def write(filename, mesh):
         fh.write(out.encode())
 
 
-register("off", [".off"], read, {"off": write})
+register_format("off", [".off"], read, {"off": write})

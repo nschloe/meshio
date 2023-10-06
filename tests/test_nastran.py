@@ -25,8 +25,10 @@ from . import helpers
         helpers.hex20_mesh,
     ],
 )
-def test(mesh):
-    helpers.write_read(meshio.nastran.write, meshio.nastran.read, mesh, 1.0e-13)
+def test(mesh, tmp_path):
+    helpers.write_read(
+        tmp_path, meshio.nastran.write, meshio.nastran.read, mesh, 1.0e-13
+    )
 
 
 @pytest.mark.parametrize("filename", ["cylinder.fem", "cylinder_cells_first.fem"])
@@ -47,7 +49,9 @@ def test_reference_file(filename):
         "pyramid": 1180,
         "tetra": 5309,
     }
-    assert {k: v.sum() for k, v in mesh.cells} == ref_num_cells
+    assert {
+        cell_block.type: cell_block.data.sum() for cell_block in mesh.cells
+    } == ref_num_cells
 
 
 def test_long_format():

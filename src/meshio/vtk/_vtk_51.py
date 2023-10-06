@@ -1,9 +1,9 @@
-import logging
 from functools import reduce
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import info, join_strings, replace_space, warn
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
 from .._mesh import Mesh
@@ -482,7 +482,7 @@ def _pad(array):
 
 def write(filename, mesh, binary=True):
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "VTK requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
@@ -493,7 +493,7 @@ def write(filename, mesh, binary=True):
     if mesh.point_data:
         for name, values in mesh.point_data.items():
             if len(values.shape) == 2 and values.shape[1] == 2:
-                logging.warning(
+                warn(
                     "VTK requires 3D vectors, but 2D vectors given. "
                     f"Appending 0 third component to {name}."
                 )
@@ -502,14 +502,32 @@ def write(filename, mesh, binary=True):
     for name, data in mesh.cell_data.items():
         for k, values in enumerate(data):
             if len(values.shape) == 2 and values.shape[1] == 2:
-                logging.warning(
+                warn(
                     "VTK requires 3D vectors, but 2D vectors given. "
                     f"Appending 0 third component to {name}."
                 )
                 data[k] = _pad(data[k])
 
     if not binary:
-        logging.warning("VTK ASCII files are only meant for debugging.")
+        warn("VTK ASCII files are only meant for debugging.")
+
+    if mesh.point_sets:
+        info(
+            "VTK format cannot write point_sets. Converting them to point_data...",
+            highlight=False,
+        )
+        key, _ = join_strings(list(mesh.point_sets.keys()))
+        key, _ = replace_space(key)
+        mesh.point_sets_to_data(key)
+
+    if mesh.cell_sets:
+        info(
+            "VTK format cannot write cell_sets. Converting them to cell_data...",
+            highlight=False,
+        )
+        key, _ = join_strings(list(mesh.cell_sets.keys()))
+        key, _ = replace_space(key)
+        mesh.cell_sets_to_data(key)
 
     with open_file(filename, "wb") as f:
         f.write(b"# vtk DataFile Version 5.1\n")

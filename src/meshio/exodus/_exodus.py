@@ -1,18 +1,19 @@
 """
 I/O for Exodus II.
 
-See <https://prod.sandia.gov/techlib/access-control.cgi/1992/922137.pdf>, in particular
-Appendix A (page 171, Implementation of EXODUS II with netCDF).
+See
+<https://src.fedoraproject.org/repo/pkgs/exodusii/922137.pdf/a45d67f4a1a8762bcf66af2ec6eb35f9/922137.pdf>,
+in particular Appendix A (page 171, Implementation of EXODUS II with netCDF).
 """
 import datetime
 import re
-import warnings
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 exodus_to_meshio_type = {
@@ -33,16 +34,16 @@ exodus_to_meshio_type = {
     "QUAD8": "quad8",
     "QUAD9": "quad9",
     #
+    "TRI": "triangle",
     "TRIANGLE": "triangle",
-    # 'TRI': 'triangle',
     "TRI3": "triangle",
+    "TRI6": "triangle6",
     "TRI7": "triangle7",
     # 'TRISHELL': 'triangle',
     # 'TRISHELL3': 'triangle',
+    # 'TRISHELL6': 'triangle6',
     # 'TRISHELL7': 'triangle',
     #
-    "TRI6": "triangle6",
-    # 'TRISHELL6': 'triangle6',
     # volumes
     "HEX": "hexahedron",
     "HEXAHEDRON": "hexahedron",
@@ -121,7 +122,7 @@ def read(filename):  # noqa: C901
                 # For now only take the first value
                 pd[idx] = value[0]
                 if len(value) > 1:
-                    warnings.warn("Skipping some time data")
+                    warn("Skipping some time data")
             elif key == "name_elem_var":
                 value.set_auto_mask(False)
                 cell_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
@@ -138,7 +139,7 @@ def read(filename):  # noqa: C901
                 cd[idx][block] = value[0]
 
                 if len(value) > 1:
-                    warnings.warn("Skipping some time data")
+                    warn("Skipping some time data")
             elif key == "ns_names":
                 value.set_auto_mask(False)
                 ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
@@ -306,16 +307,16 @@ def write(filename, mesh):
         data = rootgrp.createVariable("eb_prop1", "i4", "num_el_blk")
         for k in range(len(mesh.cells)):
             data[k] = k
-        for k, (key, values) in enumerate(mesh.cells):
+        for k, cell_block in enumerate(mesh.cells):
             dim1 = f"num_el_in_blk{k + 1}"
             dim2 = f"num_nod_per_el{k + 1}"
-            rootgrp.createDimension(dim1, values.shape[0])
-            rootgrp.createDimension(dim2, values.shape[1])
-            dtype = numpy_to_exodus_dtype[values.dtype.name]
+            rootgrp.createDimension(dim1, cell_block.data.shape[0])
+            rootgrp.createDimension(dim2, cell_block.data.shape[1])
+            dtype = numpy_to_exodus_dtype[cell_block.data.dtype.name]
             data = rootgrp.createVariable(f"connect{k + 1}", dtype, (dim1, dim2))
-            data.elem_type = meshio_to_exodus_type[key]
+            data.elem_type = meshio_to_exodus_type[cell_block.type]
             # Exodus is 1-based
-            data[:] = values + 1
+            data[:] = cell_block.data + 1
 
         # point data
         # The variable `name_nod_var` holds the names and indices of the node variables, the
@@ -368,4 +369,4 @@ def write(filename, mesh):
                 data[:] = values + 1
 
 
-register("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
+register_format("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})

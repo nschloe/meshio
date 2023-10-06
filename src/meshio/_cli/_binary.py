@@ -2,7 +2,7 @@ import os
 import pathlib
 
 from .. import ansys, flac3d, gmsh, mdpa, ply, stl, vtk, vtu, xdmf
-from .._helpers import _filetype_from_path, read, reader_map
+from .._helpers import _filetypes_from_path, read, reader_map
 
 
 def add_args(parser):
@@ -19,8 +19,12 @@ def add_args(parser):
 
 
 def binary(args):
-    # read mesh data
-    fmt = args.input_format or _filetype_from_path(pathlib.Path(args.infile))
+    if args.input_format:
+        fmts = [args.input_format]
+    else:
+        fmts = _filetypes_from_path(pathlib.Path(args.infile))
+    # pick the first
+    fmt = fmts[0]
 
     size = os.stat(args.infile).st_size
     print(f"File size before: {size / 1024 ** 2:.2f} MB")

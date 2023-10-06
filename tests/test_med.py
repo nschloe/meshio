@@ -34,17 +34,17 @@ h5py = pytest.importorskip("h5py")
         helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), np.float64)]),
     ],
 )
-def test_io(mesh):
-    helpers.write_read(meshio.med.write, meshio.med.read, mesh, 1.0e-15)
+def test_io(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.med.write, meshio.med.read, mesh, 1.0e-15)
 
 
-def test_generic_io():
-    helpers.generic_io("test.med")
+def test_generic_io(tmp_path):
+    helpers.generic_io(tmp_path / "test.med")
     # With additional, insignificant suffix:
-    helpers.generic_io("test.0.med")
+    helpers.generic_io(tmp_path / "test.0.med")
 
 
-def test_reference_file_with_mixed_cells():
+def test_reference_file_with_mixed_cells(tmp_path):
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "med" / "cylinder.med"
     mesh = meshio.read(filename)
@@ -54,7 +54,9 @@ def test_reference_file_with_mixed_cells():
 
     # CellBlock
     ref_num_cells = {"pyramid": 18, "quad": 18, "line": 17, "tetra": 63, "triangle": 4}
-    assert {k: len(v) for k, v in mesh.cells} == ref_num_cells
+    assert {
+        cell_block.type: len(cell_block) for cell_block in mesh.cells
+    } == ref_num_cells
 
     # Point tags
     assert mesh.point_data["point_tags"].sum() == 52
@@ -83,10 +85,10 @@ def test_reference_file_with_mixed_cells():
     }
     assert mesh.cell_tags == ref_cell_tags_info
 
-    helpers.write_read(meshio.med.write, meshio.med.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, meshio.med.write, meshio.med.read, mesh, 1.0e-15)
 
 
-def test_reference_file_with_point_cell_data():
+def test_reference_file_with_point_cell_data(tmp_path):
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "med" / "box.med"
 
@@ -96,7 +98,9 @@ def test_reference_file_with_point_cell_data():
     assert np.isclose(mesh.points.sum(), 12)
 
     # CellBlock
-    assert {k: len(v) for k, v in mesh.cells} == {"hexahedron": 1}
+    assert {cell_block.type: len(cell_block) for cell_block in mesh.cells} == {
+        "hexahedron": 1
+    }
 
     # Point data
     data_u = mesh.point_data["resu____DEPL"]
@@ -126,4 +130,4 @@ def test_reference_file_with_point_cell_data():
     data_psi_elem = mesh.cell_data["resu____ENEL_ELEM"][0]
     assert np.isclose(np.mean(data_psi, axis=1)[0, 0], data_psi_elem[0])
 
-    helpers.write_read(meshio.med.write, meshio.med.read, mesh, 1.0e-15)
+    helpers.write_read(tmp_path, meshio.med.write, meshio.med.read, mesh, 1.0e-15)

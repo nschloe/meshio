@@ -21,5 +21,5 @@ from . import helpers
         helpers.add_point_data(helpers.add_point_data(helpers.tri_mesh, 1), 3),
     ],
 )
-def test(mesh):
-    helpers.write_read(meshio.avsucd.write, meshio.avsucd.read, mesh, 1.0e-13)
+def test(mesh, tmp_path):
+    helpers.write_read(tmp_path, meshio.avsucd.write, meshio.avsucd.read, mesh, 1.0e-13)

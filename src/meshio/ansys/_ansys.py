@@ -1,16 +1,17 @@
 """
-I/O for Ansys's msh format, cf.
-<https://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>.
+I/O for Ansys's msh format.
+
+<https://romeo.univ-reims.fr/documents/fluent/tgrid/ug/appb.pdf>
 """
-import logging
 import re
 
 import numpy as np
 
 from ..__about__ import __version__
+from .._common import warn
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._helpers import register
+from .._helpers import register_format
 from .._mesh import Mesh
 
 
@@ -18,7 +19,6 @@ def _skip_to(f, char):
     c = None
     while c != char:
         c = f.read(1).decode()
-    return
 
 
 def _skip_close(f, num_open_brackets):
@@ -28,7 +28,6 @@ def _skip_close(f, num_open_brackets):
             num_open_brackets += 1
         elif char == ")":
             num_open_brackets -= 1
-    return
 
 
 def _read_points(f, line, first_point_index_overall, last_point_index):
@@ -39,6 +38,7 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
 
     # (3010 (zone-id first-index last-index type ND)
     out = re.match("\\s*\\(\\s*(|20|30)10\\s*\\(([^\\)]*)\\).*", line)
+    assert out is not None
     a = [int(num, 16) for num in out.group(2).split()]
 
     if len(a) <= 4:
@@ -100,6 +100,7 @@ def _read_cells(f, line):
         return None, None
 
     out = re.match("\\s*\\(\\s*(|20|30)12\\s*\\(([^\\)]+)\\).*", line)
+    assert out is not None
     a = [int(num, 16) for num in out.group(2).split()]
     if len(a) <= 4:
         raise ReadError()
@@ -139,7 +140,8 @@ def _read_cells(f, line):
                 return None, None
 
     if key == "mixed":
-        # From <https://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
+        # From
+        # <https://www.afs.enea.it/project/neptunius/docs/fluent/html/ug/node1470.htm>:
         #
         # > If a zone is of mixed type (element-type=0), it will have a body that
         # > lists the element type of each cell.
@@ -187,6 +189,7 @@ def _read_faces(f, line):
         return {}
 
     out = re.match("\\s*\\(\\s*(|20|30)13\\s*\\(([^\\)]+)\\).*", line)
+    assert out is not None
     a = [int(num, 16) for num in out.group(2).split()]
 
     if len(a) <= 4:
@@ -214,7 +217,8 @@ def _read_faces(f, line):
     if out.group(1) == "":
         # ASCII
         if key == "mixed":
-            # From <https://www.afs.enea.it/fluent/Public/Fluent-Doc/PDF/chp03.pdf>:
+            # From
+            # <https://www.afs.enea.it/project/neptunius/docs/fluent/html/ug/node1471.htm>:
             #
             # > If the face zone is of mixed type (element-type = > 0), the body of the
             # > section will include the face type and will appear as follows
@@ -353,23 +357,22 @@ def read(filename):  # noqa: C901
                     cells.append((key, data[key]))
 
             elif index == "39":
-                logging.warning("Zone specification not supported yet. Skipping.")
+                warn("Zone specification not supported yet. Skipping.")
                 _skip_close(f, line.count("(") - line.count(")"))
 
             elif index == "45":
                 # (45 (2 fluid solid)())
                 obj = re.match("\\(45 \\([0-9]+ ([\\S]+) ([\\S]+)\\)\\(\\)\\)", line)
                 if obj:
-                    logging.warning(
-                        "Zone specification not supported yet (%r, %r). " "Skipping.",
-                        obj.group(1),
-                        obj.group(2),
+                    warn(
+                        f"Zone specification not supported yet ({obj.group(1)}, {obj.group(2)}). "
+                        + "Skipping.",
                     )
                 else:
-                    logging.warning("Zone specification not supported yet.")
+                    warn("Zone specification not supported yet.")
 
             else:
-                logging.warning("Unknown index %r. Skipping.", index)
+                warn(f"Unknown index {index}. Skipping.")
                 # Skipping ahead to the next line with two closing brackets.
                 _skip_close(f, line.count("(") - line.count(")"))
 
@@ -433,7 +436,9 @@ def write(filename, mesh, binary=True):
             np.dtype("int32"): "2012",
             np.dtype("int64"): "3012",
         }
-        for cell_type, values in mesh.cells:
+        for cell_block in mesh.cells:
+            cell_type = cell_block.type
+            values = cell_block.data
             key = binary_dtypes[values.dtype] if binary else "12"
             last_index = first_index + len(values) - 1
             try:
@@ -456,4 +461,4 @@ def write(filename, mesh, binary=True):
             first_index = last_index + 1
 
 
-register("ansys", [], read, {"ansys": write})
+register_format("ansys", [".msh"], read, {"ansys": write})

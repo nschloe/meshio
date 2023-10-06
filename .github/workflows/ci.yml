@@ -20,24 +20,21 @@ jobs:
         uses: pre-commit/action@v2.0.3
 
   build:
-    runs-on: ubuntu-latest
+    needs: [lint]
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
     steps:
-    - uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - uses: actions/checkout@v2
-      with:
-        lfs: true
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libhdf5-dev libnetcdf-dev
-    - name: Test with tox
-      run: |
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Checkout code
+        uses: nschloe/action-cached-lfs-checkout@v1
+      - name: Test with tox
+        run: |
           pip install tox
           tox -- --cov meshio --cov-report xml --cov-report term
-    - uses: codecov/codecov-action@v1
-      if: ${{ matrix.python-version == '3.9' }}
+      - uses: codecov/codecov-action@v1
+        if: ${{ matrix.python-version == '3.10' && matrix.os == 'ubuntu-latest' }}

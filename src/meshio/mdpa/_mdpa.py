@@ -5,15 +5,13 @@ I/O for KratosMultiphysics's mdpa format, cf.
 The MDPA format is unsuitable for fast consumption, this is why:
 <https://github.com/KratosMultiphysics/Kratos/issues/5365>.
 """
-import logging
-
 import numpy as np
 
-from .._common import num_nodes_per_cell, raw_from_cell_data
+from .._common import num_nodes_per_cell, raw_from_cell_data, warn
 from .._exceptions import ReadError, WriteError
 from .._files import open_file
-from .._helpers import register
-from .._mesh import CellBlock, Mesh
+from .._helpers import register_format
+from .._mesh import Mesh
 
 ## We check if we can read/write the mesh natively from Kratos
 # TODO: Implement native reading
@@ -158,19 +156,15 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
         if t is None:
             t = inverse_num_nodes_per_cell[num_nodes_per_elem]
 
-        if len(cells) == 0 or t != cells[-1].type:
-            cells.append(CellBlock(t, []))
+        if len(cells) == 0 or t != cells[-1][0]:
+            cells.append((t, []))
         # Subtract one to account for the fact that python indices are 0-based.
-        cells[-1].data.append(np.array(data[-num_nodes_per_elem:]) - 1)
+        cells[-1][1].append(np.array(data[-num_nodes_per_elem:]) - 1)
 
         # Using the property id as tag
         if t not in cell_tags:
             cell_tags[t] = []
         cell_tags[t].append([data[1]])
-
-    # convert to numpy arrays
-    for k, c in enumerate(cells):
-        cells[k] = CellBlock(c.type, np.array(c.data, dtype=int))
 
     # Cannot convert cell_tags[key] to numpy array: There may be a
     # different number of tags for each cell.
@@ -273,7 +267,7 @@ def _prepare_cells(cells, cell_tags):
 #     if line.strip() != f"End {tag}":
 #         raise ReadError()
 #
-#     # The gmsh format cannot distingiush between data of shape (n,) and (n, 1).
+#     # The gmsh format cannot distinguish between data of shape (n,) and (n, 1).
 #     # If shape[1] == 1, cut it off.
 #     if data.shape[1] == 1:
 #         data = data[:, 0]
@@ -337,7 +331,7 @@ def read_buffer(f):
     #     # _read_data(f, "ConditionalData", cell_data_raw, data_size, is_ascii)
 
     if has_additional_tag_data:
-        logging.warning("The file contains tag data that couldn't be processed.")
+        warn("The file contains tag data that couldn't be processed.")
 
     # cell_data = cell_data_from_raw(cells, cell_data_raw)
 
@@ -385,7 +379,9 @@ def _write_elements_and_conditions(fh, cells, tag_data, binary=False, dimension=
     dimension_name = f"{dimension}D"
     wrong_dimension_name = "3D" if dimension == 2 else "2D"
     consecutive_index = 0
-    for cell_type, node_idcs in cells:
+    for cell_block in cells:
+        cell_type = cell_block.type
+        node_idcs = cell_block.data
         # NOTE: The names of the dummy conditions are not regular, require extra work
         # local_dimension = local_dimension_types[cell_type]
         # if (local_dimension < dimension):
@@ -440,13 +436,13 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
     if binary:
         raise WriteError()
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "mdpa requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
-        )
+        points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
+    else:
+        points = mesh.points
 
     # Kratos cells are mostly ordered like VTK, with a few exceptions:
     cells = mesh.cells.copy()
@@ -515,7 +511,7 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
                 break
 
         # identify entities
-        _write_nodes(fh, mesh.points, float_fmt, binary)
+        _write_nodes(fh, points, float_fmt, binary)
         _write_elements_and_conditions(fh, cells, tag_data, binary, dimension)
         for name, dat in mesh.point_data.items():
             _write_data(fh, "NodalData", name, dat, binary)
@@ -525,4 +521,4 @@ def write(filename, mesh, float_fmt=".16e", binary=False):
             _write_data(fh, "ElementalData", name, dat, binary)
 
 
-register("mdpa", [".mdpa"], read, {"mdpa": write})
+register_format("mdpa", [".mdpa"], read, {"mdpa": write})

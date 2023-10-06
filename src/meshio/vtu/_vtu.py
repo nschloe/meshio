@@ -4,7 +4,6 @@ I/O for VTU.
 <https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf>
 """
 import base64
-import logging
 import re
 import sys
 import zlib
@@ -12,9 +11,9 @@ import zlib
 import numpy as np
 
 from ..__about__ import __version__
-from .._common import raw_from_cell_data
-from .._exceptions import ReadError
-from .._helpers import register
+from .._common import info, join_strings, raw_from_cell_data, replace_space, warn
+from .._exceptions import CorruptionError, ReadError
+from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 from .._vtk_common import meshio_to_vtk_order, meshio_to_vtk_type, vtk_cells_from_data
 
@@ -401,7 +400,10 @@ class VtuReader:
                     for c in child:
                         if c.tag != "DataArray":
                             raise ReadError()
-                        piece_point_data[c.attrib["Name"]] = self.read_data(c)
+                        try:
+                            piece_point_data[c.attrib["Name"]] = self.read_data(c)
+                        except CorruptionError as e:
+                            warn(e.args[0] + " Skipping.")
 
                     point_data.append(piece_point_data)
 
@@ -444,23 +446,22 @@ class VtuReader:
     def read_uncompressed_binary(self, data, dtype):
         byte_string = base64.b64decode(data)
 
+        # the first item is the total_num_bytes, given in header_dtype
         header_dtype = vtu_to_numpy_type[self.header_type]
         if self.byte_order is not None:
             header_dtype = header_dtype.newbyteorder(
                 "<" if self.byte_order == "LittleEndian" else ">"
             )
-        num_bytes_per_item = np.dtype(header_dtype).itemsize
-        total_num_bytes = int(
-            np.frombuffer(byte_string[:num_bytes_per_item], header_dtype)[0]
-        )
+        num_header_bytes = np.dtype(header_dtype).itemsize
+        total_num_bytes = np.frombuffer(byte_string[:num_header_bytes], header_dtype)[0]
 
         # Check if block size was decoded separately
         # (so decoding stopped after block size due to padding)
-        if len(byte_string) == num_bytes_per_item:
+        if len(byte_string) == num_header_bytes:
             header_len = len(base64.b64encode(byte_string))
             byte_string = base64.b64decode(data[header_len:])
         else:
-            byte_string = byte_string[num_bytes_per_item:]
+            byte_string = byte_string[num_header_bytes:]
 
         # Read the block data; multiple blocks possible here?
         if self.byte_order is not None:
@@ -558,7 +559,16 @@ class VtuReader:
             raise ReadError(f"Unknown data format '{fmt}'.")
 
         if "NumberOfComponents" in c.attrib:
-            data = data.reshape(-1, int(c.attrib["NumberOfComponents"]))
+            nc = int(c.attrib["NumberOfComponents"])
+            try:
+                data = data.reshape(-1, nc)
+            except ValueError:
+                name = c.attrib["Name"]
+                raise CorruptionError(
+                    "VTU file corrupt. "
+                    + f"The size of the data array '{name}' is {data.size} "
+                    + f"which doesn't fit the number of components {nc}."
+                )
         return data
 
 
@@ -604,16 +614,34 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                 )
 
     if not binary:
-        logging.warning("VTU ASCII files are only meant for debugging.")
+        warn("VTU ASCII files are only meant for debugging.")
 
     if mesh.points.shape[1] == 2:
-        logging.warning(
+        warn(
             "VTU requires 3D points, but 2D points given. "
             "Appending 0 third component."
         )
-        mesh.points = np.column_stack(
-            [mesh.points[:, 0], mesh.points[:, 1], np.zeros(mesh.points.shape[0])]
+        points = np.column_stack([mesh.points, np.zeros_like(mesh.points[:, 0])])
+    else:
+        points = mesh.points
+
+    if mesh.point_sets:
+        info(
+            "VTU format cannot write point_sets. Converting them to point_data...",
+            highlight=False,
         )
+        key, _ = join_strings(list(mesh.point_sets.keys()))
+        key, _ = replace_space(key)
+        mesh.point_sets_to_data(key)
+
+    if mesh.cell_sets:
+        info(
+            "VTU format cannot write cell_sets. Converting them to cell_data...",
+            highlight=False,
+        )
+        key, _ = join_strings(list(mesh.cell_sets.keys()))
+        key, _ = replace_space(key)
+        mesh.cell_sets_to_data(key)
 
     vtk_file = ET.Element(
         "VTKFile",
@@ -623,13 +651,15 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
         # a bit.
         byte_order=("LittleEndian" if sys.byteorder == "little" else "BigEndian"),
     )
-    header_type = (
-        "UInt32" if header_type is None else vtk_file.set("header_type", header_type)
-    )
+
+    if header_type is None:
+        header_type = "UInt32"
+    else:
+        vtk_file.set("header_type", header_type)
     assert header_type is not None
 
     if binary and compression:
-        # TODO lz4, lzma <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>
+        # TODO lz4 <https://vtk.org/doc/nightly/html/classvtkDataCompressor.html>
         compressions = {
             "lzma": "vtkLZMADataCompressor",
             "zlib": "vtkZLibDataCompressor",
@@ -640,8 +670,10 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     # swap the data to match the system byteorder
     # Don't use byteswap to make sure that the dtype is changed; see
     # <https://github.com/numpy/numpy/issues/10372>.
-    points = mesh.points.astype(mesh.points.dtype.newbyteorder("="), copy=False)
-    for k, (cell_type, data) in enumerate(mesh.cells):
+    points = points.astype(points.dtype.newbyteorder("="), copy=False)
+    for k, cell_block in enumerate(mesh.cells):
+        cell_type = cell_block.type
+        data = cell_block.data
         # Treatment of polyhedra is different from other types
         if is_polyhedron_grid:
             new_cell_info = []
@@ -728,10 +760,10 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             da.text_writer = text_writer_ascii
 
     def _polyhedron_face_cells(face_cells):
-        # Define the faces of each cell on the format specfied for VTU Polyhedron cells.
-        # These are defined in Mesh.polyhedron_faces, as block data. The block consists
-        # of a nested list (outer list represents cell, inner is faces for this cells),
-        # where the items of the inner list are the nodes of specific faces.
+        # Define the faces of each cell on the format specified for VTU Polyhedron
+        # cells. These are defined in Mesh.polyhedron_faces, as block data. The block
+        # consists of a nested list (outer list represents cell, inner is faces for this
+        # cells), where the items of the inner list are the nodes of specific faces.
         #
         # The output format is specified at https://vtk.org/Wiki/VTK/Polyhedron_Support
 
@@ -828,12 +860,13 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
         # types
         types_array = []
-        for key, v in mesh.cells:
+        for cell_block in mesh.cells:
+            key = cell_block.type
             # some adaptions for polyhedron
             if key.startswith("polyhedron"):
                 # Get face-cell relation on the vtu format. See comments in helper
                 # function for more information of how to specify this.
-                faces_loc, faceoffsets_loc = _polyhedron_face_cells(v)
+                faces_loc, faceoffsets_loc = _polyhedron_face_cells(cell_block.data)
                 # Adjust offsets to global numbering
                 assert faceoffsets is not None
                 if len(faceoffsets) > 0:
@@ -844,7 +877,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
                 faceoffsets += faceoffsets_loc
                 key = "polyhedron"
 
-            types_array.append(np.full(len(v), meshio_to_vtk_type[key]))
+            types_array.append(np.full(len(cell_block), meshio_to_vtk_type[key]))
 
         types = np.concatenate(
             types_array
@@ -875,4 +908,4 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     tree.write(filename)
 
 
-register("vtu", [".vtu"], read, {"vtu": write})
+register_format("vtu", [".vtu"], read, {"vtu": write})
