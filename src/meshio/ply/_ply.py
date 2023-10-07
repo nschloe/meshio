@@ -311,7 +311,7 @@ def _read_binary(
     buffer_position = 0
 
     cell_data = {}
-    for (name, dt) in zip(cell_data_names, dts):
+    for name, dt in zip(cell_data_names, dts):
         if isinstance(dt, tuple):
             buffer_increment, cell_data[name] = _read_binary_list(
                 buffer[buffer_position:], dt[0], dt[1], num_cells, endianness
@@ -370,7 +370,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
     # `block_dtype` to include the initial counts in each row avoids any
     # wasteful copy operations.
     blocks = []
-    for (start, end) in block_bounds:
+    for start, end in block_bounds:
         if start == end:
             # This should only happen if the element was empty to begin with.
             continue
@@ -389,7 +389,6 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
 
 
 def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
-
     with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")
 

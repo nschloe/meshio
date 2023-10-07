@@ -50,7 +50,6 @@ def _produce_dtype(string_type, dim, itype, ftype):
 
 
 def read_binary_buffer(f):
-
     meshio_from_medit = {
         "GmfVertices": ("point", None),
         "GmfEdges": ("line", 2),
@@ -380,7 +379,6 @@ def write_ascii_file(filename, mesh, float_fmt=".16e"):
 
 def write_binary_file(f, mesh):
     with open_file(f, "wb") as fh:
-
         version = 3
         itype = "i4"
         postype = "i8"

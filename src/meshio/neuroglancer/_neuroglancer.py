@@ -57,7 +57,10 @@ def read_buffer(file):
     if len(buf) != 4 * 3 * num_vertices:
         raise ReadError("The precomputed mesh data is too short")
     flat_vertices = np.frombuffer(buf, "<f")
-    vertices = np.reshape(flat_vertices, (num_vertices, 3),).copy(
+    vertices = np.reshape(
+        flat_vertices,
+        (num_vertices, 3),
+    ).copy(
         order="C"
     )  # TODO remove copy
     # BUG: this could easily exhaust memory if reading a large file that is not

@@ -43,7 +43,6 @@ meshio_to_su2_type = {
 
 
 def read(filename):
-
     with open_file(filename, "r") as f:
         mesh = read_buffer(f)
     return mesh
@@ -246,7 +245,6 @@ def _translate_cells(data, has_extra_column=False):
 
 
 def write(filename, mesh):
-
     with open_file(filename, "wb") as f:
         dim = mesh.points.shape[1]
         f.write(f"NDIME= {dim}\n".encode())
@@ -310,7 +308,6 @@ def write(filename, mesh):
 
         # First, find unique tags and how many elements per tags we have
         for index, cell_block in enumerate(mesh.cells):
-
             if cell_block.type not in types:
                 continue
 
@@ -333,12 +330,10 @@ def write(filename, mesh):
 
         # write the blocks you found in previous step
         for tag, count in tags_per_cell_block.items():
-
             f.write(f"MARKER_TAG= {tag}\n".encode())
             f.write(f"MARKER_ELEMS= {count}\n".encode())
 
             for index, (cell_type, data) in enumerate(mesh.cells):
-
                 if cell_type not in types:
                     continue
 
