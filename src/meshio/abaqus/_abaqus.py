@@ -109,7 +109,7 @@ def read(filename):
 
 def read_buffer(f):
     # Initialize the optional data fields
-    points = []
+    points = None
     cells = []
     cell_ids = []
     point_sets = {}
@@ -120,6 +120,9 @@ def read_buffer(f):
     cell_data = {}
     point_data = {}
     point_ids = None
+
+    # MODIFIED jeffrey-cochran: Keep track of point id through multiple node blocks
+    counter = 0
 
     line = f.readline()
     while True:
@@ -133,7 +136,15 @@ def read_buffer(f):
 
         keyword = line.partition(",")[0].strip().replace("*", "").upper()
         if keyword == "NODE":
-            points, point_ids, line = _read_nodes(f)
+            # MODIFIED jeffrey-cochran: persist counter
+            tmp_points, tmp_point_ids, line, counter = _read_nodes(f, counter=counter)
+
+            # MODIFIED jeffrey-cochran: persist points
+            points = tmp_points if points is None else np.concatenate((points, tmp_points), axis=0)
+
+            # MODIFIED jeffrey-cochran: persist point_ids
+            point_ids = tmp_point_ids if point_ids is None else {**point_ids, **tmp_point_ids}
+
         elif keyword == "ELEMENT":
             if point_ids is None:
                 raise ReadError("Expected NODE before ELEMENT")
@@ -228,10 +239,9 @@ def read_buffer(f):
     )
 
 
-def _read_nodes(f):
+def _read_nodes(f, counter=None):
     points = []
     point_ids = {}
-    counter = 0
     while True:
         line = f.readline()
         if not line or line.startswith("*"):
@@ -245,7 +255,7 @@ def _read_nodes(f):
         points.append([float(x) for x in coords])
         counter += 1
 
-    return np.array(points, dtype=float), point_ids, line
+    return np.array(points, dtype=float), point_ids, line, counter
 
 
 def _read_cells(f, params_map, point_ids):
