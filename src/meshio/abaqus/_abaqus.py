@@ -410,6 +410,7 @@ def write(
         for k, x in enumerate(mesh.points):
             f.write(fmt.format(k + 1, *x))
         eid = 0
+        nnl = 16
         for cell_block in mesh.cells:
             cell_type = cell_block.type
             node_idcs = cell_block.data
@@ -419,8 +420,17 @@ def write(
             f.write(f"*ELEMENT, TYPE={name}\n")
             for row in node_idcs:
                 eid += 1
-                nids_strs = (str(nid + 1) for nid in row.tolist())
-                f.write(str(eid) + "," + ",".join(nids_strs) + "\n")
+                eid_nids_strs = [str(eid)]
+                eid_nids_strs.extend(
+                    str(nid + 1) for nid in row.tolist()
+                )
+                f.write(
+                    ",\n".join(
+                        ",".join(eid_nids_strs[i : i + nnl])
+                        for i in range(0, len(eid_nids_strs), nnl)
+                    )
+                    + "\n"
+                )
 
         nnl = 8
         offset = 0
