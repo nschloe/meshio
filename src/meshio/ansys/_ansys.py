@@ -22,6 +22,9 @@ def _skip_to(f, char):
 
 
 def _skip_close(f, num_open_brackets):
+    # if the brackets are at the end of previous line, you will not find them
+    current_idx = f.tell()
+    f.seek(current_idx-num_open_brackets-1) # return some positions back and start checking
     while num_open_brackets > 0:
         char = f.read(1).decode()
         if char == "(":
@@ -70,6 +73,9 @@ def _read_points(f, line, first_point_index_overall, last_point_index):
             line = ""
             while line.strip() == "":
                 line = f.readline().decode()
+                # remove closed brackets from line if present
+                if line.count(")") > 0:
+                    line = line.replace("))", "")
             dat = line.split()
             if len(dat) != dim:
                 raise ReadError()
@@ -252,7 +258,10 @@ def _read_faces(f, line):
             # read cell data
             data = np.empty((num_cells, num_nodes_per_cell), dtype=int)
             for k in range(num_cells):
-                line = f.readline().decode()
+                # skip ahead to the first line with data
+                line = ""
+                while line.strip() == "":
+                    line = f.readline().decode()
                 dat = line.split()
                 # The body of a regular face section contains the grid connectivity, and
                 # each line appears as follows:
