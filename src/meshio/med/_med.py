@@ -28,7 +28,7 @@ meshio_to_med_type = {
     "wedge15": "P15",
 }
 med_to_meshio_type = {v: k for k, v in meshio_to_med_type.items()}
-numpy_void_str = np.string_("")
+numpy_void_str = np.bytes_("")
 
 
 def read(filename):
