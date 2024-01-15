@@ -316,6 +316,8 @@ def read_buffer(f):
             "singular_face_inside",
             "singular_face_outside",
             "singular_points",
+            "facedescriptors",
+            "face_transparencies",
         ]:
             _skip_block(f)
         else:
