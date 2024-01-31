@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "meshio"
-version = "5.3.4"
+version = "5.3.5"
 description = "I/O for many mesh formats"
 readme = "README.md"
 requires-python = ">=3.8"
