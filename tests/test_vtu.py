@@ -36,6 +36,7 @@ test_set = [
     helpers.add_cell_data(helpers.tri_mesh, [("b", (3,), np.float64)]),
     helpers.add_cell_data(helpers.polygon_mesh, [("a", (), np.float32)]),
     helpers.add_cell_data(helpers.polyhedron_mesh, [("a", (2,), np.float32)]),
+    helpers.add_field_data(helpers.tri_mesh, [1,2,3], np.float64),
 ]
 
 
