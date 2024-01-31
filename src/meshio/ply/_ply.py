@@ -3,6 +3,7 @@ I/O for the PLY format, cf.
 <https://en.wikipedia.org/wiki/PLY_(file_format)>.
 <https://web.archive.org/web/20161221115231/http://www.cs.virginia.edu/~gfx/Courses/2001/Advanced.spring.01/plylib/Ply.txt>.
 """
+
 import collections
 import datetime
 import re
@@ -296,11 +297,13 @@ def _read_binary(
     # Convert strings to proper numpy dtypes
     dts = [
         (
-            endianness + ply_to_numpy_dtype_string[dtype[0]],
-            endianness + ply_to_numpy_dtype_string[dtype[1]],
+            (
+                endianness + ply_to_numpy_dtype_string[dtype[0]],
+                endianness + ply_to_numpy_dtype_string[dtype[1]],
+            )
+            if isinstance(dtype, tuple)
+            else endianness + ply_to_numpy_dtype_string[dtype]
         )
-        if isinstance(dtype, tuple)
-        else endianness + ply_to_numpy_dtype_string[dtype]
         for dtype in cell_data_dtypes
     ]
 
@@ -311,7 +314,7 @@ def _read_binary(
     buffer_position = 0
 
     cell_data = {}
-    for (name, dt) in zip(cell_data_names, dts):
+    for name, dt in zip(cell_data_names, dts):
         if isinstance(dt, tuple):
             buffer_increment, cell_data[name] = _read_binary_list(
                 buffer[buffer_position:], dt[0], dt[1], num_cells, endianness
@@ -370,7 +373,7 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
     # `block_dtype` to include the initial counts in each row avoids any
     # wasteful copy operations.
     blocks = []
-    for (start, end) in block_bounds:
+    for start, end in block_bounds:
         if start == end:
             # This should only happen if the element was empty to begin with.
             continue

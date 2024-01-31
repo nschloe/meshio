@@ -2,6 +2,7 @@
 I/O for the STL format, cf.
 <https://en.wikipedia.org/wiki/STL_(file_format)>.
 """
+
 from __future__ import annotations
 
 import os
