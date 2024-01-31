@@ -2,6 +2,7 @@
 I/O SU2 mesh format
 <https://su2code.github.io/docs_v7/Mesh-File/>
 """
+
 from itertools import chain, islice
 
 import numpy as np

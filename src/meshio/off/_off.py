@@ -3,6 +3,7 @@ I/O for the OFF surface format, cf.
 <https://en.wikipedia.org/wiki/OFF_(file_format)>,
 <http://www.geomview.org/docs/html/OFF.html>.
 """
+
 import numpy as np
 
 from .._common import warn

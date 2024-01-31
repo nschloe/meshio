@@ -3,6 +3,7 @@ I/O for Medit's format/Gamma Mesh Format,
 Latest official up-to-date documentation and a reference C implementation at
 <https://github.com/LoicMarechal/libMeshb>
 """
+
 import struct
 from ctypes import c_double, c_float
 
