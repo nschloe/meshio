@@ -2,6 +2,7 @@
 I/O for AVS-UCD format, cf.
 <https://lanl.github.io/LaGriT/pages/docs/read_avs.html>.
 """
+
 import numpy as np
 
 from ..__about__ import __version__ as version

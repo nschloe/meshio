@@ -3,6 +3,7 @@ CGNS <https://cgns.github.io/>
 
 TODO link to specification?
 """
+
 import numpy as np
 
 from .._exceptions import ReadError

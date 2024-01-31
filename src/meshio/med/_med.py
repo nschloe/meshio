@@ -2,6 +2,7 @@
 I/O for MED/Salome, cf.
 <https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html>.
 """
+
 import numpy as np
 
 from .._common import num_nodes_per_cell

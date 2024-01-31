@@ -3,6 +3,7 @@ I/O for Tecplot ASCII data format, cf.
 <https://github.com/su2code/SU2/raw/master/externals/tecio/360_data_format_guide.pdf>,
 <http://paulbourke.net/dataformats/tp/>.
 """
+
 import numpy as np
 
 from ..__about__ import __version__ as version
