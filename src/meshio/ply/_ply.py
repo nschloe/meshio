@@ -392,7 +392,6 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
 
 
 def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
-
     with open_file(filename, "wb") as fh:
         fh.write(b"ply\n")
 
