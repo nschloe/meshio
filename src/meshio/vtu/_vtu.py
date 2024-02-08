@@ -14,6 +14,7 @@ import numpy as np
 from ..__about__ import __version__
 from .._common import info, join_strings, raw_from_cell_data, replace_space, warn
 from .._exceptions import CorruptionError, ReadError
+from .._files import open_file
 from .._helpers import register_format
 from .._mesh import CellBlock, Mesh
 from .._vtk_common import meshio_to_vtk_order, meshio_to_vtk_type, vtk_cells_from_data
@@ -187,7 +188,7 @@ def get_grid(root):
 def _parse_raw_binary(filename):
     from xml.etree import ElementTree as ET
 
-    with open(filename, "rb") as f:
+    with open_file(filename, "rb") as f:
         raw = f.read()
 
     try:

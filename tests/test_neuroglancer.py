@@ -20,7 +20,15 @@ def test_neuroglancer(mesh, tmp_path):
         return meshio.neuroglancer.write(*args, **kwargs)
 
     # 32bit only
-    helpers.write_read(tmp_path, writer, meshio.neuroglancer.read, mesh, 1.0e-8)
+    helpers.write_read(
+        tmp_path,
+        writer,
+        meshio.neuroglancer.read,
+        mesh,
+        1.0e-8,
+        memory_file_is_binary=True,
+        test_memory_file=True,
+    )
 
 
 @pytest.mark.parametrize("filename, ref_sum, ref_num_cells", [("simple1", 20, 4)])

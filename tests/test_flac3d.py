@@ -27,6 +27,8 @@ def test(mesh, binary, tmp_path):
         meshio.flac3d.read,
         mesh,
         1.0e-15,
+        memory_file_is_binary=binary,
+        test_memory_file=True,
     )
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import string
+from io import BytesIO, StringIO
 
 import numpy as np
 
@@ -651,13 +652,55 @@ def add_cell_sets(mesh):
     return mesh2
 
 
-def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat"):
+def write_read(
+    tmp_path,
+    writer,
+    reader,
+    input_mesh,
+    atol,
+    extension=".dat",
+    memory_file_is_binary=False,
+    test_memory_file=False,
+):
     """Write and read a file, and make sure the data is the same as before."""
+    _write_read(tmp_path, writer, reader, input_mesh, atol, extension)
+    if test_memory_file:
+        _write_read(
+            tmp_path,
+            writer,
+            reader,
+            input_mesh,
+            atol,
+            extension,
+            memory_file_type="binary" if memory_file_is_binary else "ascii",
+        )
+
+
+def _write_read(
+    tmp_path, writer, reader, input_mesh, atol, extension, memory_file_type=None
+):
     in_mesh = copy.deepcopy(input_mesh)
 
     p = tmp_path / ("test" + extension)
     print(input_mesh)
     writer(p, input_mesh)
+    if memory_file_type is None:
+        writer(p, input_mesh)
+    else:
+        if memory_file_type == "ascii":
+            mode = "w"
+            with StringIO() as f:
+                writer(f, input_mesh)
+                value = f.getvalue()
+
+        elif memory_file_type == "binary":
+            mode = "wb"
+            with BytesIO() as f:
+                writer(f, input_mesh)
+                value = f.getvalue()
+
+        with open(p, mode) as f:
+            f.write(value)
     mesh = reader(p)
 
     # Make sure the output is writeable

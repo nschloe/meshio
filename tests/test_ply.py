@@ -32,7 +32,15 @@ def test_ply(mesh, binary, tmp_path):
     for k, c in enumerate(mesh.cells):
         mesh.cells[k] = meshio.CellBlock(c.type, c.data.astype(np.int32))
 
-    helpers.write_read(tmp_path, writer, meshio.ply.read, mesh, 1.0e-12)
+    helpers.write_read(
+        tmp_path,
+        writer,
+        meshio.ply.read,
+        mesh,
+        1.0e-12,
+        memory_file_is_binary=True,
+        test_memory_file=True,
+    )
 
 
 @pytest.mark.parametrize(

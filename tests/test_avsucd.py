@@ -22,4 +22,11 @@ from . import helpers
     ],
 )
 def test(mesh, tmp_path):
-    helpers.write_read(tmp_path, meshio.avsucd.write, meshio.avsucd.read, mesh, 1.0e-13)
+    helpers.write_read(
+        tmp_path,
+        meshio.avsucd.write,
+        meshio.avsucd.read,
+        mesh,
+        1.0e-13,
+        test_memory_file=True,
+    )

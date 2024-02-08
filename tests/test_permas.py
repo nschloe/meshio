@@ -22,7 +22,14 @@ from . import helpers
     ],
 )
 def test_io(mesh, tmp_path):
-    helpers.write_read(tmp_path, meshio.permas.write, meshio.permas.read, mesh, 1.0e-15)
+    helpers.write_read(
+        tmp_path,
+        meshio.permas.write,
+        meshio.permas.read,
+        mesh,
+        1.0e-15,
+        test_memory_file=True,
+    )
 
 
 def test_generic_io(tmp_path):
