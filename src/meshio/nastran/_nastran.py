@@ -408,9 +408,9 @@ def _float_to_nastran_string(value, length=16):
     Examples:
         1234.56789 --> "1.23456789E+3"
         -0.1234 --> "-1.234E-1"
-        3.1415926535897932 --> "3.14159265359E+0"
+        3.1415926535897932 --> "3.141592653E+0"
     """
-    out = np.format_float_scientific(value, exp_digits=1, precision=11).replace(
+    out = np.format_float_scientific(value, exp_digits=1, precision=9).replace(
         "e", "E"
     )
     assert len(out) <= 16
