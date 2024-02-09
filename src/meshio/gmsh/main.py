@@ -8,7 +8,7 @@ from .common import _fast_forward_to_end_block
 
 # Some mesh files out there have the version specified as version "2" when it really is
 # "2.2". Same with "4" vs "4.1".
-_readers = {"2": _gmsh22, "2.2": _gmsh22, "4.0": _gmsh40, "4": _gmsh41, "4.1": _gmsh41}
+_readers = {"2": _gmsh22, "2.2": _gmsh22, "4.0": _gmsh40, "4": _gmsh40, "4.1": _gmsh41}
 _writers = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
 
 
