@@ -71,7 +71,7 @@ class MeshioReader(VTKPythonAlgorithmBase):
 
         # Use meshio to read the mesh
         mesh = meshio.read(self._filename, self._file_format)
-        points, cells = mesh.points, mesh.cells
+        points, cells, cells_dict = mesh.points, mesh.cells, mesh.cells_dict
 
         # Points
         if points.shape[1] == 2:
@@ -82,16 +82,17 @@ class MeshioReader(VTKPythonAlgorithmBase):
         cell_types = np.array([], dtype=np.ubyte)
         cell_offsets = np.array([], dtype=int)
         cell_conn = np.array([], dtype=int)
-        for meshio_type, data in cells:
+        for meshio_type in cells_dict.keys():  # loop over cell types
             vtk_type = meshio_to_vtk_type[meshio_type]
-            ncells, npoints = data.shape
+            ncells = cells_dict[meshio_type].shape[0]
+            npoints = cells_dict[meshio_type][0].size  # for one cell
             cell_types = np.hstack(
                 [cell_types, np.full(ncells, vtk_type, dtype=np.ubyte)]
             )
             offsets = len(cell_conn) + (1 + npoints) * np.arange(ncells, dtype=int)
             cell_offsets = np.hstack([cell_offsets, offsets])
             conn = np.hstack(
-                [npoints * np.ones((ncells, 1), dtype=int), data]
+                [npoints * np.ones((ncells, 1), dtype=int), cells_dict[meshio_type]]
             ).flatten()
             cell_conn = np.hstack([cell_conn, conn])
         output.SetCells(cell_types, cell_offsets, cell_conn)
