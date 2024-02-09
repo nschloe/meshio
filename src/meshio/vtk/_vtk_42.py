@@ -248,7 +248,7 @@ def _read_subsection(f, info):
                 )
     elif info.section == "SCALARS":
         d.update(_read_scalar_field(f, info.num_items, info.split, info.is_ascii))
-    elif info.section == "VECTORS":
+    elif info.section in ["VECTORS", "NORMALS"]:
         d.update(_read_field(f, info.num_items, info.split, [3], info.is_ascii))
     elif info.section == "TENSORS":
         d.update(_read_field(f, info.num_items, info.split, [3, 3], info.is_ascii))
