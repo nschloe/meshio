@@ -120,11 +120,19 @@ def translate_mixed_cells(data):
         2: 2,  # line
         4: 3,  # triangle
         5: 4,  # quad
-        6: 4,  # tet
+        6: 4,  # tetra
         7: 5,  # pyramid
         8: 6,  # wedge
         9: 8,  # hex
-        11: 6,  # triangle6
+        34: 3,  # line3
+        35: 9,  # quad9
+        36: 6,  # triangle6
+        37: 8,  # quad8
+        38: 10,  # tetra10
+        39: 13,  # pyramid13
+        40: 15,  # wedge15
+        41: 18,  # wedge18
+        48: 20,  # hexa20
     }
 
     # collect types and offsets
