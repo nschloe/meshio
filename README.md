@@ -40,7 +40,7 @@ meshio can read and write all of the following and smoothly converts between the
 > [Gmsh](https://gmsh.info/doc/texinfo/gmsh.html#File-formats) (format versions 2.2, 4.0, and 4.1, `.msh`),
 > [OBJ](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (`.obj`),
 > [OFF](https://segeval.cs.princeton.edu/public/off_format.html) (`.off`),
-> [PERMAS](https://www.intes.de) (`.post`, `.post.gz`, `.dato`, `.dato.gz`),
+> [PERMAS](https://www.intes.de) (`.dat`,`.post`, `.post.gz`, `.dato`, `.dato.gz`),
 > [PLY](<https://en.wikipedia.org/wiki/PLY_(file_format)>) (`.ply`),
 > [STL](<https://en.wikipedia.org/wiki/STL_(file_format)>) (`.stl`),
 > [Tecplot .dat](http://paulbourke.net/dataformats/tp/),
