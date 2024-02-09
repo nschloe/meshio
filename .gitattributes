@@ -8,6 +8,7 @@
 *.ply filter=lfs diff=lfs merge=lfs -text
 *.vtk filter=lfs diff=lfs merge=lfs -text
 *.vtu filter=lfs diff=lfs merge=lfs -text
+*.vtp filter=lfs diff=lfs merge=lfs -text
 *.ugrid filter=lfs diff=lfs merge=lfs -text
 *.mesh filter=lfs diff=lfs merge=lfs -text
 *.meshb filter=lfs diff=lfs merge=lfs -text

@@ -48,6 +48,8 @@ def binary(args):
         stl.write(args.infile, mesh, binary=True)
     elif fmt == "vtk":
         vtk.write(args.infile, mesh, binary=True)
+    elif fmt == "vtp":
+        vtk.write(args.infile, mesh, binary=True)
     elif fmt == "vtu":
         vtu.write(args.infile, mesh, binary=True)
     elif fmt == "xdmf":

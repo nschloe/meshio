@@ -61,6 +61,10 @@ def compress(args):
         stl.write(args.infile, mesh, binary=True)
     elif fmt == "vtk":
         vtk.write(args.infile, mesh, binary=True)
+    elif fmt == "vtp":
+        vtu.write(
+            args.infile, mesh, binary=True, compression="lzma" if args.max else "zlib"
+        )
     elif fmt == "vtu":
         vtu.write(
             args.infile, mesh, binary=True, compression="lzma" if args.max else "zlib"

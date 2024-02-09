@@ -69,6 +69,11 @@ def read(filetype, filename):
         reader.SetReadAllVectors(1)
         reader.Update()
         vtk_mesh = reader.GetOutput()
+    elif filetype in ["vtp", "vtp-ascii", "vtp-binary"]:
+        reader = vtk.vtkXMLPolyDataReader()
+        reader.SetFileName(filename)
+        reader.Update()
+        vtk_mesh = reader.GetOutput()
     elif filetype in ["vtu", "vtu-ascii", "vtu-binary"]:
         reader = vtk.vtkXMLUnstructuredGridReader()
         reader.SetFileName(filename)

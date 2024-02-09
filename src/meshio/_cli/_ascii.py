@@ -49,6 +49,8 @@ def ascii(args):
         stl.write(args.infile, mesh, binary=False)
     elif fmt == "vtk":
         vtk.write(args.infile, mesh, binary=False)
+    elif fmt == "vtp":
+        vtk.write(args.infile, mesh, binary=False)
     elif fmt == "vtu":
         vtu.write(args.infile, mesh, binary=False)
     elif fmt == "xdmf":
