@@ -7,7 +7,6 @@ from .._helpers import _filetypes_from_path, read, reader_map
 
 
 def add_args(parser):
-    parser.add_argument("infile", type=str, help="mesh file to decompress")
     parser.add_argument(
         "--input-format",
         "-i",
@@ -16,35 +15,41 @@ def add_args(parser):
         help="input file format",
         default=None,
     )
+    parser.add_argument("infile", type=str, nargs='*', help="mesh file to decompress")
+
 
 
 def decompress(args):
-    if args.input_format:
-        fmts = [args.input_format]
-    else:
-        fmts = _filetypes_from_path(pathlib.Path(args.infile))
-    # pick the first
-    fmt = fmts[0]
+    if not isinstance(args.infile, list):
+        args.infile = [args.infile]
 
-    size = os.stat(args.infile).st_size
-    print(f"File size before: {size / 1024 ** 2:.2f} MB")
-    mesh = read(args.infile, file_format=args.input_format)
+    for file in args.infile:
+        if args.input_format:
+            fmts = [args.input_format]
+        else:
+            fmts = _filetypes_from_path(pathlib.Path(file))
+        # pick the first
+        fmt = fmts[0]
 
-    # # Some converters (like VTK) require `points` to be contiguous.
-    # mesh.points = np.ascontiguousarray(mesh.points)
+        size = os.stat(file).st_size
+        print(f"File size before: {size / 1024 ** 2:.2f} MB")
+        mesh = read(file, file_format=args.input_format)
 
-    # write it out
-    if fmt == "cgns":
-        cgns.write(args.infile, mesh, compression=None)
-    elif fmt == "h5m":
-        h5m.write(args.infile, mesh, compression=None)
-    elif fmt == "vtu":
-        vtu.write(args.infile, mesh, binary=True, compression=None)
-    elif fmt == "xdmf":
-        xdmf.write(args.infile, mesh, data_format="HDF", compression=None)
-    else:
-        error(f"Don't know how to decompress {args.infile}.")
-        exit(1)
+        # # Some converters (like VTK) require `points` to be contiguous.
+        # mesh.points = np.ascontiguousarray(mesh.points)
 
-    size = os.stat(args.infile).st_size
-    print(f"File size after:  {size / 1024 ** 2:.2f} MB")
+        # write it out
+        if fmt == "cgns":
+            cgns.write(file, mesh, compression=None)
+        elif fmt == "h5m":
+            h5m.write(file, mesh, compression=None)
+        elif fmt == "vtu":
+            vtu.write(file, mesh, binary=True, compression=None)
+        elif fmt == "xdmf":
+            xdmf.write(file, mesh, data_format="HDF", compression=None)
+        else:
+            error(f"Don't know how to decompress {file}.")
+            exit(1)
+
+        size = os.stat(file).st_size
+        print(f"File size after:  {size / 1024 ** 2:.2f} MB")
