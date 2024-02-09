@@ -26,6 +26,17 @@ test_set = [
 ]
 
 
+def test_cell_types():
+    "make sure all exodus cell types have known topo dimensions"
+    from meshio import _mesh
+    from meshio.exodus import _exodus
+
+    exodus_types = set(_exodus.exodus_to_meshio_type.values())
+    meshio_types = set(_mesh.topological_dimension.keys())
+
+    assert exodus_types.difference(meshio_types) == set()
+
+
 @pytest.mark.parametrize("mesh", test_set)
 def test_io(mesh, tmp_path):
     helpers.write_read(tmp_path, meshio.exodus.write, meshio.exodus.read, mesh, 1.0e-15)
