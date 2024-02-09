@@ -338,7 +338,9 @@ def write(filename, mesh):
             f.write(f"MARKER_TAG= {tag}\n".encode())
             f.write(f"MARKER_ELEMS= {count}\n".encode())
 
-            for index, (cell_type, data) in enumerate(mesh.cells):
+            for index, cell in enumerate(mesh.cells):
+                cell_type = cell.type
+                data = cell.data
 
                 if cell_type not in types:
                     continue
