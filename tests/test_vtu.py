@@ -21,6 +21,7 @@ test_set = [
     helpers.polygon2_mesh,
     helpers.tet_mesh,
     helpers.tet10_mesh,
+    helpers.voxel_mesh,
     helpers.hex_mesh,
     helpers.hex20_mesh,
     helpers.pyramid_mesh,
