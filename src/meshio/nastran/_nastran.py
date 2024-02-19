@@ -1,6 +1,7 @@
 """
 I/O for Nastran bulk data.
 """
+
 from __future__ import annotations
 
 import numpy as np
