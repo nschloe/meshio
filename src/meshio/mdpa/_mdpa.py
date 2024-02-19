@@ -44,6 +44,56 @@ _mdpa_to_meshio_type = {
     "Hexahedra3D20": "hexahedron20",
 }
 
+def _guess_element_type_from_MDPA_name(name) :
+    t = None
+    element_name=name.split('//')[0]
+    if element_name=='Sphere3D'or element_name=='SphericContinuumParticle3D' or element_name=='SphericParticle3D':
+        t="sphere"
+    elif element_name=='CylinderContinuumParticle2D' or element_name=='CylinderParticle2D':
+        t="circle"
+    else:
+        dim=int(element_name[-4])
+        nnodes=int(element_name[-2])
+        if nnodes==1:
+            t="vertex"
+        elif nnodes==2:
+            t="line"
+        elif nnodes==3:
+            if dim==1:
+                t='line3'
+            else:
+                t='triangle'
+        elif nnodes==4:
+            if dim==2:
+                t='quad'
+            else:
+                t='tetra'
+        elif nnodes==5:
+            t='pyramid'
+        elif nnodes==6:
+            if dim==2:
+                t='triangle6'
+            else:
+                t='wedge'
+        elif nnodes==8:
+            if dim==2:
+                t='quad8'
+            else:
+                t='hexahedron'
+        elif nnodes==9:
+            t='quad9'
+        elif nnodes==10:
+            t='tetra10'
+        elif nnodes==13:
+            t='pyramid13'
+        elif nnodes==18:
+            t='wedge18'
+        elif nnodes==20:
+            t='hexahedron20'
+        elif nnodes==27:
+            t='hexahedron27'
+    return t
+
 _meshio_to_mdpa_type = {
     "line": "Line2D2",
     "triangle": "Triangle2D3",
@@ -136,6 +186,9 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
                 if key in entity_name:
                     t = _mdpa_to_meshio_type[key]
                     break
+            if t is None:
+                t=_guess_element_type_from_MDPA_name(entity_name)
+
         elif environ.startswith("Begin Conditions "):
             entity_name = environ[17:]
             for key in _mdpa_to_meshio_type:
