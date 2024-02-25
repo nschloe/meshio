@@ -637,9 +637,17 @@ def _write_field_data(f, data, binary):
         if len(values.shape) == 1:
             num_tuples = values.shape[0]
             num_components = 1
-        else:
+        elif len(values.shape) == 2:
             num_tuples = values.shape[0]
             num_components = values.shape[1]
+        elif len(values.shape) == 3:
+            num_tuples = values.shape[0]
+            num_components = values.shape[1] * values.shape[2]
+        else:
+            raise WriteError(
+                f"VTK writer does not support the data with name '{name}' and shape {values.shape}."
+                "The supported shapes are 1D, 2D, and 3D."
+            )
 
         if " " in name:
             raise WriteError(f"VTK doesn't support spaces in field names ('{name}').")
