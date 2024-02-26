@@ -60,9 +60,8 @@ def test_generic_io(tmp_path):
     helpers.generic_io(tmp_path / "test.0.xdmf")
 
 
-def test_time_series():
-    # write the data
-    filename = "out.xdmf"
+def test_time_series(tmp_path):
+    filename = tmp_path / "out.xdmf"
 
     with meshio.xdmf.TimeSeriesWriter(filename) as writer:
         writer.write_points_cells(helpers.tri_mesh_2d.points, helpers.tri_mesh_2d.cells)
