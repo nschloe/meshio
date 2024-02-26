@@ -262,7 +262,7 @@ class TimeSeriesWriter:
         if self.data_format == "HDF":
             import h5py
 
-            self.h5_filename = self.filename.stem + ".h5"
+            self.h5_filename = self.filename.with_suffix(".h5")
             self.h5_file = h5py.File(self.h5_filename, "w")
         return self
 
