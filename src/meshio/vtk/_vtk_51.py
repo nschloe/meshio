@@ -199,9 +199,12 @@ def _read_subsection(f, info):
     elif info.active == "CELL_DATA":
         d = info.cell_data_raw
     elif info.active == "DATASET":
-        d = info.dataset
+        if info.section == "FIELD": # Put general field data in field_data
+            d = info.field_data
+        else:
+            d = info.dataset
     else:
-        d = info.field_data
+        raise ReadError(f"Unknown section '{info.section}' inside '{info.active}'.")
 
     if info.section in vtk_dataset_infos[info.dataset["type"]]:
         if info.section[1:] == "_COORDINATES":
@@ -534,6 +537,9 @@ def write(filename, mesh, binary=True):
         f.write(f"written by meshio v{__version__}\n".encode())
         f.write(("BINARY\n" if binary else "ASCII\n").encode())
         f.write(b"DATASET UNSTRUCTURED_GRID\n")
+
+        # write field data
+        _write_field_data(f, mesh.field_data, binary)
 
         # write points and cells
         _write_points(f, points, binary)
