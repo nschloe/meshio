@@ -53,6 +53,8 @@ def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
     # cell. Switch faceoffsets to give start points, not end points
     faceoffsets = np.append([0], faceoffsets[:-1])
 
+    # order of sizes needs to be tracked to preserver cell-cell data correspondence
+    sizes = []
     # Double loop over cells then faces.
     # This will be slow, but seems necessary to cover all cases
     for cell_start in faceoffsets:
@@ -74,6 +76,8 @@ def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
         # Done with this cell
         # Find number of nodes for this cell
         num_nodes_this_cell = np.unique(np.hstack([v for v in faces_this_cell])).size
+        if num_nodes_this_cell not in sizes:
+            sizes.append(num_nodes_this_cell)
 
         key = f"polyhedron{num_nodes_this_cell}"
         if key not in cells.keys():
@@ -90,7 +94,7 @@ def _polyhedron_cells_from_data(offsets, faces, faceoffsets, cell_data_raw):
 
     # Loop over all cell sizes, find all cells with this size, and store
     # cell data.
-    for sz in np.unique(size):
+    for sz in sizes:
         # Cells with this number of nodes.
         items = np.where(size == sz)[0]
 
