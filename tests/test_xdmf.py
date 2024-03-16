@@ -6,7 +6,7 @@ import meshio
 from . import helpers
 
 test_set_full = [
-    #helpers.empty_mesh,
+    helpers.empty_mesh,
     helpers.line_mesh,
     helpers.tri_mesh,
     helpers.line_tri_mesh,
@@ -59,7 +59,7 @@ def test_generic_io(tmp_path):
     # With additional, insignificant suffix:
     helpers.generic_io(tmp_path / "test.0.xdmf")
 
-@pytest.mark.parametrize("mesh", test_set_full)
+@pytest.mark.parametrize("mesh", [mesh for mesh in test_set_full if mesh != helpers.empty_mesh])
 def test_time_series(mesh):
     # write the data
     filename = "out.xdmf"
