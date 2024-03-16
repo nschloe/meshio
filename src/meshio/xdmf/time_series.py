@@ -410,7 +410,7 @@ class TimeSeriesWriter:
             # number of nodes. Hence, prepend 2.
             for c in cell_blocks:
                 if c.type == "line":
-                    c.data[:] = np.insert(c.data, 0, 2, axis=1)
+                    c.data = np.insert(c.data, 0, 2, axis=1)
                     dim += len(c.data)
             dim = str(dim)
             cd = np.concatenate(

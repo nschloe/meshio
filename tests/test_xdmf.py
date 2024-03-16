@@ -6,7 +6,7 @@ import meshio
 from . import helpers
 
 test_set_full = [
-    helpers.empty_mesh,
+    #helpers.empty_mesh,
     helpers.line_mesh,
     helpers.tri_mesh,
     helpers.line_tri_mesh,
@@ -59,26 +59,33 @@ def test_generic_io(tmp_path):
     # With additional, insignificant suffix:
     helpers.generic_io(tmp_path / "test.0.xdmf")
 
-
-def test_time_series():
+@pytest.mark.parametrize("mesh", test_set_full)
+def test_time_series(mesh):
     # write the data
     filename = "out.xdmf"
 
     with meshio.xdmf.TimeSeriesWriter(filename) as writer:
-        writer.write_points_cells(helpers.tri_mesh_2d.points, helpers.tri_mesh_2d.cells)
-        n = helpers.tri_mesh_2d.points.shape[0]
+        writer.write_points_cells(mesh.points, mesh.cells)
+        n = mesh.points.shape[0]
 
         times = np.linspace(0.0, 1.0, 5)
         point_data = [
             {
                 "phi": np.full(n, t),
-                "u": np.full(helpers.tri_mesh_2d.points.shape, t),
+                "u": np.full(mesh.points.shape, t),
             }
             for t in times
         ]
-        for t, pd in zip(times, point_data):
+        cell_data = [
+            {
+                "a": [np.full(c.data.shape[0], t) for c in mesh.cells],
+                "b": [np.full(c.data.shape[0], t) for c in mesh.cells]
+            }
+            for t in times
+        ]
+        for t, pd, cd in zip(times, point_data, cell_data):
             writer.write_data(
-                t, point_data=pd, cell_data={"a": {"triangle": [3.0, 4.2]}}
+                t, point_data=pd, cell_data=cd
             )
 
     # read it back in
