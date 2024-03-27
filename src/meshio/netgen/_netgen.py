@@ -312,6 +312,8 @@ def read_buffer(f):
 
         elif line in [
             "face_colours",
+            "face_transparencies",
+            "facedescriptors",
             "singular_edge_left",
             "singular_edge_right",
             "singular_face_inside",
