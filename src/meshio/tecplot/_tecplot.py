@@ -376,7 +376,11 @@ def _read_zone_data(f, num_data, num_cells, zone_format):
     return data, np.concatenate(cells)
 
 
-def write(filename, mesh):
+def write(filename, mesh, ncol=20, data_formats={}):
+    # ncol is the number of columns for saving the data
+    # data_formats is an optional dict containing a string format
+    # for every data variable (used as key), e.g. {"X": ".5f"}
+
     # Check cell types
     cell_types = []
     cell_blocks = []
@@ -489,20 +493,22 @@ def write(filename, mesh):
             f.write("\n")
 
         # Zone data
-        for arr in data:
-            _write_table(f, arr)
+        for i, arr in enumerate(data):
+            _write_table(
+                f, arr, ncol=ncol, data_format=data_formats.get(variables[i], "")
+            )
 
         # CellBlock
         for cell in cells:
             f.write(" ".join(str(c) for c in cell + 1) + "\n")
 
 
-def _write_table(f, data, ncol=20):
+def _write_table(f, data, ncol=20, data_format=""):
     nrow = len(data) // ncol
     lines = np.split(data, np.full(nrow, ncol).cumsum())
     for line in lines:
         if len(line):
-            f.write(" ".join(str(l) for l in line) + "\n")
+            f.write(" ".join(format(l, data_format) for l in line) + "\n")
 
 
 register_format("tecplot", [".dat", ".tec"], read, {"tecplot": write})
