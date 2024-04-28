@@ -1,0 +1,26 @@
+DGF
+% SPDX-FileCopyrightInfo: Copyright © DUNE Project contributors, see file LICENSE.md in module root
+% SPDX-License-Identifier: LicenseRef-GPL-2.0-only-with-DUNE-exception
+Vertex        % the vertices of the grid
+-1   -1       % vertex 0
+-0.2 -1       % vertex 1
+ 1   -1       % vertex 2
+ 1    -0.6    % vertex 3
+ 1    1       % vertex 4
+-1    1       % vertex 5
+0.2  -0.2     % vertex 6
+#
+CUBE            % a cube grid
+0 1 5 6         % cube 0, vertices 0,1,5,6
+1 2 6 3         % cube 1
+6 3 5 4         % cube 2
+#
+BOUNDARYSEGMENTS
+2   1 2       % between vertex 1,2 use id 2
+2   2 3       % between vertex 2,3 use id 2
+4   3 4       % between vertex 3,4 use id 4
+#
+BOUNDARYDOMAIN
+default 1     % all other boundary segments have id 1
+#
+# examplegrid1c.dgf
