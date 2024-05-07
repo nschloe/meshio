@@ -124,7 +124,8 @@ def translate_mixed_cells(data):
         7: 5,  # pyramid
         8: 6,  # wedge
         9: 8,  # hex
-        11: 6,  # triangle6
+        11: 6,  # triangle6 (I don't know where this 11 is comming from...leaving it, since it does no harm)
+        36: 6,  # triangle6
     }
 
     # collect types and offsets
