@@ -40,7 +40,7 @@ register_format(
     read,
     {
         "vtk42": _vtk_42.write,
-        "vtk51": _vtk_42.write,
+        "vtk51": _vtk_51.write,
         "vtk": _vtk_51.write,
     },
 )
