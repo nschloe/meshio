@@ -504,98 +504,33 @@ def _skip_meta(f):
             break
 
 
-def translate_cells(connectivity, types, cell_data_raw):
-    # https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
-    # Translate it into the cells array.
-    # `data` is a one-dimensional vector with
-    # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    # or a tuple with (offsets, connectivity)
-    has_polygon = np.any(types == meshio_to_vtk_type["polygon"])
-
-    cells = []
+def translate_cells(connectivity, offset, types, cell_data_raw):
+    cells = {}
     cell_data = {}
-    if has_polygon:
-        numnodes = np.empty(len(types), dtype=int)
-        # If some polygons are in the VTK file, loop over the cells
-        numcells = len(types)
-        offsets = np.empty(len(types), dtype=int)
-        offsets[0] = 0
-        for idx in range(numcells - 1):
-            numnodes[idx] = connectivity[offsets[idx]]
-            offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
+    idx = 0  # Index into connectivity array
 
-        idx = numcells - 1
-        numnodes[idx] = connectivity[offsets[idx]]
-        if not np.all(numnodes == connectivity[offsets]):
-            raise ReadError()
-
-        # TODO: cell_data
-        for idx, vtk_cell_type in enumerate(types):
-            start = offsets[idx] + 1
-
-            new_order = vtk_to_meshio_order(vtk_cell_type, offsets.dtype)
-            if new_order is None:
-                new_order = np.arange(numnodes[idx], dtype=offsets.dtype)
-
-            cell_idx = start + new_order
-
-            cell = connectivity[cell_idx]
-
-            cell_type = vtk_to_meshio_type[vtk_cell_type]
-
-            if (
-                len(cells) > 0
-                and cells[-1][0] == cell_type
-                # the following check if needed for polygons; key can be equal, but
-                # still needs to go into a new block
-                and len(cell) == len(cells[-1][1][-1])
-            ):
-                cells[-1][1].append(cell)
-            else:
-                # open up a new cell block
-                cells.append((cell_type, [cell]))
-    else:
-        # Infer offsets from the cell types. This is much faster than manually going
-        # through the data array. Slight disadvantage: This doesn't work for cells with
-        # a custom number of points.
-        if np.any(types >= len(vtk_type_to_numnodes)):
-            illegal_types = ", ".join(
-                str(item) for item in set(types[types >= len(vtk_type_to_numnodes)])
-            )
-            raise ReadError(
-                f"File contains cells that meshio cannot handle (types {illegal_types})"
-            )
-
-        numnodes = vtk_type_to_numnodes[types]
-        if not np.all(numnodes > 0):
-            raise ReadError("File contains cells that meshio cannot handle.")
-
-        offsets = np.cumsum(numnodes + 1) - (numnodes + 1)
-
-        if not np.all(numnodes == connectivity[offsets]):
-            raise ReadError()
-        idx0 = 1
-
-        b = np.concatenate(
-            [[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]]
-        )
-        for start, end in zip(b[:-1], b[1:]):
-            if start == end:
+    for vtk_type in types:
+        if vtk_type == 42:  # VTK_POLYHEDRON
+            num_faces = connectivity[idx]
+            idx += 1
+            faces = []
+            for _ in range(num_faces):
+                num_points = connectivity[idx]
+                idx += 1
+                face = connectivity[idx:idx + num_points]
+                idx += num_points
+                faces.append(face)
+            # Store the polyhedron cell
+            cells.setdefault("polyhedron", []).append(faces)
+        else:
+            num_nodes = vtk_type_to_numnodes.get(vtk_type, -1)
+            if num_nodes == -1:
+                warn(f"Unsupported VTK cell type {vtk_type}")
                 continue
-            meshio_type = vtk_to_meshio_type[types[start]]
-            n = numnodes[start]
-            new_order = vtk_to_meshio_order(types[start], dtype=offsets.dtype)
-            if new_order is None:
-                cell_idx = idx0 + np.arange(0, n, dtype=offsets.dtype)
-            else:
-                cell_idx = idx0 + new_order
-            indices = np.add.outer(offsets[start:end], cell_idx)
-            cells.append((meshio_type, connectivity[indices]))
-            for name, d in cell_data_raw.items():
-                if name not in cell_data:
-                    cell_data[name] = []
-                cell_data[name].append(d[start:end])
-
+            nodes = connectivity[idx:idx + num_nodes]
+            idx += num_nodes
+            meshio_type = vtk_to_meshio_type[vtk_type]
+            cells.setdefault(meshio_type, []).append(nodes)
     return cells, cell_data
 
 
@@ -677,57 +612,61 @@ def _write_points(f, points, binary):
     f.write(b"\n")
 
 
-def _write_cells(f, cells, binary):
-    total_num_cells = sum(len(c.data) for c in cells)
-    total_num_idx = sum(c.data.size for c in cells)
-    # For each cell, the number of nodes is stored
-    total_num_idx += total_num_cells
-    f.write(f"CELLS {total_num_cells} {total_num_idx}\n".encode())
-    if binary:
-        for c in cells:
-            n = c.data.shape[1]
-            d = c.data
+def _write_cells(f, cells, write_binary):
+    total_num_cells = sum(len(cell_list) for cell_list in cells.values())
+    total_num_entries = 0
 
-            new_order = meshio_to_vtk_order(c.type)
-            if new_order is not None:
-                d = d[:, new_order]
+    # Calculate total number of entries
+    for cell_type, cell_blocks in cells.items():
+        vtk_type = meshio_to_vtk_type[cell_type]
+        if vtk_type == 42:  # VTK_POLYHEDRON
+            for cell in cell_blocks:
+                num_faces = len(cell)
+                num_entries = 1 + sum(1 + len(face) for face in cell)
+                total_num_entries += num_entries
+        else:
+            num_nodes = vtk_type_to_numnodes[vtk_type]
+            num_entries = len(cell_blocks) * (1 + num_nodes)
+            total_num_entries += num_entries
 
-            dtype = np.dtype(">i4")
-            # One must force endianness here:
-            # <https://github.com/numpy/numpy/issues/15088>
-            np.column_stack(
-                [np.full(d.shape[0], n, dtype=dtype), d.astype(dtype)],
-            ).astype(dtype).tofile(f, sep="")
-        f.write(b"\n")
-    else:
-        # ascii
-        for c in cells:
-            n = c.data.shape[1]
+    # Write CELLS header
+    f.write(f"CELLS {total_num_cells} {total_num_entries}\n".encode())
 
-            d = c.data
-            new_order = meshio_to_vtk_order(c.type)
-            if new_order is not None:
-                d = d[:, new_order]
+    # Write cell connectivity
+    for cell_type, cell_blocks in cells.items():
+        vtk_type = meshio_to_vtk_type[cell_type]
 
-            # prepend a column with the value n
-            np.column_stack(
-                [np.full(c.data.shape[0], n, dtype=c.data.dtype), d]
-            ).tofile(f, sep="\n")
-            f.write(b"\n")
+        if vtk_type == 42:  # VTK_POLYHEDRON
+            for cell in cell_blocks:
+                num_faces = len(cell)
+                line = [num_faces]
+                for face in cell:
+                    line.append(len(face))
+                    line.extend(face)
+                if write_binary:
+                    np.array(line, dtype=">i4").tofile(f)
+                else:
+                    f.write(" ".join(map(str, line)).encode() + b"\n")
+        else:
+            num_nodes = vtk_type_to_numnodes[vtk_type]
+            for cell in cell_blocks:
+                line = [num_nodes]
+                line.extend(cell)
+                if write_binary:
+                    np.array(line, dtype=">i4").tofile(f)
+                else:
+                    f.write(" ".join(map(str, line)).encode() + b"\n")
 
-    # write cell types
+    # Write CELL_TYPES
     f.write(f"CELL_TYPES {total_num_cells}\n".encode())
-    if binary:
-        for c in cells:
-            vtk_type = meshio_to_vtk_type[c.type]
-            np.full(len(c.data), vtk_type, dtype=np.dtype(">i4")).tofile(f, sep="")
-        f.write(b"\n")
-    else:
-        # ascii
-        for c in cells:
-            vtk_type = meshio_to_vtk_type[c.type]
-            np.full(len(c.data), vtk_type).tofile(f, sep="\n")
-            f.write(b"\n")
+    for cell_type, cell_blocks in cells.items():
+        vtk_type = meshio_to_vtk_type[cell_type]
+        types_array = [vtk_type] * len(cell_blocks)
+        if write_binary:
+            np.array(types_array, dtype=">i4").tofile(f)
+        else:
+            for vtk_type in types_array:
+                f.write(f"{vtk_type}\n".encode())
 
 
 def _write_field_data(f, data, binary):
