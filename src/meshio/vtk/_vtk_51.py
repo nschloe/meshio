@@ -120,6 +120,28 @@ def read_buffer(f):
     )
 
 
+def _read_cell_offsets_and_connectivity(f, info):
+    """Read CELLS section data including offsets and connectivity."""
+    try:
+        line = f.readline().decode()
+    except UnicodeDecodeError:
+        line = ""
+
+    assert line.startswith("OFFSETS")
+    info.num_offsets = int(info.split[1])
+    info.num_items = int(info.split[2])
+    dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
+    offsets = _read_int_data(f, info.is_ascii, info.num_offsets, dtype)
+
+    line = f.readline().decode()
+    assert line.startswith("CONNECTIVITY")
+    dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
+    connectivity = _read_int_data(f, info.is_ascii, info.num_items, dtype)
+    
+    assert offsets[0] == 0
+    assert offsets[-1] == len(connectivity)
+    return connectivity, offsets[1:]
+
 def _read_section(f, info):
     if info.section == "METADATA":
         _skip_meta(f)
@@ -141,29 +163,7 @@ def _read_section(f, info):
 
     elif info.section == "CELLS":
         info.active = "CELLS"
-        try:
-            line = f.readline().decode()
-        except UnicodeDecodeError:
-            line = ""
-
-        assert line.startswith("OFFSETS")
-        # vtk DataFile Version 5.1 - appearing in Paraview 5.8.1 outputs
-        # No specification found for this file format.
-        # See the question on ParaView Discourse Forum:
-        # https://discourse.paraview.org/t/specification-of-vtk-datafile-version-5-1/5127
-        info.num_offsets = int(info.split[1])
-        info.num_items = int(info.split[2])
-        dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
-        offsets = _read_int_data(f, info.is_ascii, info.num_offsets, dtype)
-
-        line = f.readline().decode()
-        assert line.startswith("CONNECTIVITY")
-        dtype = np.dtype(vtk_to_numpy_dtype_name[line.split()[1]])
-        connectivity = _read_int_data(f, info.is_ascii, info.num_items, dtype)
-        info.connectivity = connectivity
-        assert offsets[0] == 0
-        assert offsets[-1] == len(connectivity)
-        info.offsets = offsets[1:]
+        info.connectivity, info.offsets = _read_cell_offsets_and_connectivity(f, info)
 
     elif info.section == "CELL_TYPES":
         info.active = "CELL_TYPES"

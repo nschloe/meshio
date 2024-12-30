@@ -483,6 +483,15 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
             else:
                 fh.write(b"0 ")
 
+    _write_bounding_entities(fh, dim, has_bounding_elements, matching_cell_block, cell_sets, binary)
+
+    if binary:
+       fh.write(b"\n")
+
+    # raise NotImplementedError
+    fh.write(b"$EndEntities\n")
+
+def _write_bounding_entities(fh, dim, has_bounding_elements, matching_cell_block, cell_sets, binary):
         if dim > 0:
             # Entities not of the lowest dimension can have their
             # bounding elements (of dimension one less) specified
@@ -516,11 +525,6 @@ def _write_entities(fh, cells, tag_data, cell_sets, point_data, binary):
             # If ascii, enforce line change
             if not binary:
                 fh.write(b"\n")
-
-    if binary:
-        fh.write(b"\n")
-    # raise NotImplementedError
-    fh.write(b"$EndEntities\n")
 
 
 def _write_nodes(fh, points, cells, point_data, float_fmt, binary):

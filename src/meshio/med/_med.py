@@ -32,12 +32,33 @@ med_to_meshio_type = {v: k for k, v in meshio_to_med_type.items()}
 numpy_void_str = np.bytes_("")
 
 
+def _read_cells(mesh, cell_data):
+    """Read cell blocks from MED file and return cells, cell_types"""
+    cells = []
+    cell_types = []
+    med_cells = mesh["MAI"]
+    for med_cell_type, med_cell_type_group in med_cells.items():
+        cell_type = med_to_meshio_type[med_cell_type]
+        cell_types.append(cell_type)
+        nod = med_cell_type_group["NOD"]
+        n_cells = nod.attrs["NBR"]
+        cells += [(cell_type, nod[()].reshape(n_cells, -1, order="F") - 1)]
+
+        # Cell tags
+        if "FAM" in med_cell_type_group:
+            tags = med_cell_type_group["FAM"][()]
+            if "cell_tags" not in cell_data:
+                cell_data["cell_tags"] = []
+            cell_data["cell_tags"].append(tags)
+            
+    return cells, cell_types
+
 def read(filename):
     import h5py
 
     f = h5py.File(filename, "r")
 
-    # Mesh ensemble
+    # Mesh ensemble 
     mesh_ensemble = f["ENS_MAA"]
     meshes = mesh_ensemble.keys()
     if len(meshes) != 1:
@@ -79,23 +100,8 @@ def read(filename):
     if "NOEUD" in fas:
         point_tags = _read_families(fas["NOEUD"])
 
-    # CellBlock
-    cells = []
-    cell_types = []
-    med_cells = mesh["MAI"]
-    for med_cell_type, med_cell_type_group in med_cells.items():
-        cell_type = med_to_meshio_type[med_cell_type]
-        cell_types.append(cell_type)
-        nod = med_cell_type_group["NOD"]
-        n_cells = nod.attrs["NBR"]
-        cells += [(cell_type, nod[()].reshape(n_cells, -1, order="F") - 1)]
-
-        # Cell tags
-        if "FAM" in med_cell_type_group:
-            tags = med_cell_type_group["FAM"][()]
-            if "cell_tags" not in cell_data:
-                cell_data["cell_tags"] = []
-            cell_data["cell_tags"].append(tags)
+    # Read cells
+    cells, cell_types = _read_cells(mesh, cell_data)
 
     # Information for cell tags
     cell_tags = {}
@@ -210,17 +216,8 @@ def _read_families(fas_data):
     return families
 
 
-def write(filename, mesh):
-    import h5py
-
-    # MED doesn't support compression,
-    # <https://github.com/nschloe/meshio/issues/781#issuecomment-616438066>
-    # compression = None
-
-    f = h5py.File(filename, "w")
-
-    # Strangely the version must be 3.0.x
-    # Any version >= 3.1.0 will NOT work with SALOME 8.3
+def _write_mesh_info(f, mesh):
+    """Create and write general mesh information"""
     info = f.create_group("INFOS_GENERALES")
     info.attrs.create("MAJ", 3)
     info.attrs.create("MIN", 0)
@@ -241,16 +238,11 @@ def write(filename, mesh):
     med_mesh.attrs.create("NOM", np.bytes_("".join(f"{name:<16}" for name in names)))
     med_mesh.attrs.create("DES", np.bytes_("Mesh created with meshio"))
     med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
+    
+    return mesh_ensemble, mesh_name, med_mesh
 
-    # Time-step
-    step = "-0000000000000000001-0000000000000000001"  # NDT NOR
-    time_step = med_mesh.create_group(step)
-    time_step.attrs.create("CGT", 1)
-    time_step.attrs.create("NDT", -1)  # no time step (-1)
-    time_step.attrs.create("NOR", -1)  # no iteration step (-1)
-    time_step.attrs.create("PDT", -1.0)  # current time
-
-    # Points
+def _write_points(time_step, mesh):
+    """Write mesh points"""
     nodes_group = time_step.create_group("NOE")
     nodes_group.attrs.create("CGT", 1)
     nodes_group.attrs.create("CGS", 1)
@@ -265,6 +257,28 @@ def write(filename, mesh):
         family = nodes_group.create_dataset("FAM", data=mesh.point_data["point_tags"])
         family.attrs.create("CGT", 1)
         family.attrs.create("NBR", len(mesh.points))
+    
+    return profile
+
+def write(filename, mesh):
+    """Write mesh to MED format"""
+    import h5py
+
+    f = h5py.File(filename, "w")
+    
+    # Write mesh info
+    mesh_ensemble, mesh_name, med_mesh = _write_mesh_info(f, mesh)
+
+    # Time-step
+    step = "-0000000000000000001-0000000000000000001"
+    time_step = med_mesh.create_group(step)
+    time_step.attrs.create("CGT", 1)
+    time_step.attrs.create("NDT", -1)
+    time_step.attrs.create("NOR", -1)
+    time_step.attrs.create("PDT", -1.0)
+
+    # Write points
+    profile = _write_points(time_step, mesh)
 
     # Cells (mailles in French)
     if len(mesh.cells) != len(np.unique([c.type for c in mesh.cells])):
@@ -319,6 +333,11 @@ def write(filename, mesh):
     name_idx = 0
     field_names = mesh.field_data["med:nom"] if "med:nom" in mesh.field_data else []
 
+    _write_nodal_data(mesh, mesh_name, fields, field_names, profile)
+
+    _write_cells_data(mesh, field_names, fields, mesh_name, profile)
+
+def _write_nodal_data(mesh, mesh_name, fields, field_names, profile):
     # Nodal data
     for name, data in mesh.point_data.items():
         if name == "point_tags":  # ignore point_tags already written under FAS
@@ -328,6 +347,7 @@ def write(filename, mesh):
         name_idx += 1
         _write_data(fields, mesh_name, field_name, profile, name, supp, data)
 
+def _write_cells_data(mesh, field_names, fields, mesh_name, profile):
     # Cell data
     # Only support writing ELEM fields with only 1 Gauss point per cell
     # Or ELNO (DG) fields defined at every node per cell
@@ -357,7 +377,6 @@ def write(filename, mesh):
                 med_type,
             )
         name_idx += 1
-
 
 def _write_data(
     fields,

@@ -213,10 +213,7 @@ def read_set(f, params_map):
             raise ReadError(set_ids)
         set_ids = np.arange(set_ids[0], set_ids[1], set_ids[2])
     else:
-        try:
-            set_ids = np.unique(np.array(set_ids, dtype="int32"))
-        except ValueError:
-            raise
+        set_ids = np.unique(np.array(set_ids, dtype="int32"))
     return set_ids
 
 

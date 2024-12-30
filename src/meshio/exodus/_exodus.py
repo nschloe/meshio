@@ -66,96 +66,114 @@ exodus_to_meshio_type = {
 meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
-def read(filename):  # noqa: C901
+def _read_points(nc):
+    points = np.zeros((len(nc.dimensions["num_nodes"]), 3))
+    if "coord" in nc.variables:
+        points = nc.variables["coord"][:].T
+    else:
+        if "coordx" in nc.variables:
+            points[:, 0] = nc.variables["coordx"][:]
+        if "coordy" in nc.variables:
+            points[:, 1] = nc.variables["coordy"][:]
+        if "coordz" in nc.variables:
+            points[:, 2] = nc.variables["coordz"][:]
+    return points
+
+def _read_info(nc):
+    info = []
+    if "info_records" in nc.variables:
+        value = nc.variables["info_records"]
+        value.set_auto_mask(False)
+        for c in value[:]:
+            try:
+                info += [b"".join(c).decode("UTF-8")]
+            except UnicodeDecodeError:
+                pass
+
+    if "qa_records" in nc.variables:
+        value = nc.variables["qa_records"]
+        value.set_auto_mask(False)
+        for val in value:
+            info += [b"".join(c).decode("UTF-8") for c in val[:]]
+    return info
+
+def _read_cells(nc):
+    cells = []
+    for key, value in nc.variables.items():
+        if key[:7] == "connect":
+            meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
+            cells.append((meshio_type, value[:] - 1))
+    return cells
+
+def _read_node_data(nc):
+    point_data_names = []
+    pd = {}
+    if "name_nod_var" in nc.variables:
+        value = nc.variables["name_nod_var"]
+        value.set_auto_mask(False)
+        point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+    
+    for key, value in nc.variables.items():
+        if key[:12] == "vals_nod_var":
+            idx = 0 if len(key) == 12 else int(key[12:]) - 1
+            value.set_auto_mask(False)
+            pd[idx] = value[0]
+            if len(value) > 1:
+                warn("Skipping some time data")
+    return point_data_names, pd
+
+def _read_cell_data(nc):
+    cell_data_names = []
+    cd = {}
+    if "name_elem_var" in nc.variables:
+        value = nc.variables["name_elem_var"]
+        value.set_auto_mask(False)
+        cell_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+
+    for key, value in nc.variables.items():
+        if key[:13] == "vals_elem_var":
+            m = re.match("vals_elem_var(\\d+)?(?:eb(\\d+))?", key)
+            idx = 0 if m.group(1) is None else int(m.group(1)) - 1
+            block = 0 if m.group(2) is None else int(m.group(2)) - 1
+
+            value.set_auto_mask(False)
+            if idx not in cd:
+                cd[idx] = {}
+            cd[idx][block] = value[0]
+
+    return cell_data_names, cd
+
+def _read_point_sets(nc):
+    ns_names = []
+    ns = []
+    if "ns_names" in nc.variables:
+        value = nc.variables["ns_names"]
+        value.set_auto_mask(False)
+        ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+
+    for key, value in nc.variables.items():
+        if key.startswith("node_ns"):
+            ns.append(value[:] - 1)
+
+    return {name: dat for name, dat in zip(ns_names, ns)}
+
+def read(filename):
     import netCDF4
 
     with netCDF4.Dataset(filename) as nc:
-        # assert nc.version == np.float32(5.1)
-        # assert nc.api_version == np.float32(5.1)
-        # assert nc.floating_point_word_size == 8
+        points = _read_points(nc)
+        cells = _read_cells(nc)
+        info = _read_info(nc)
+        
+        point_data_names, pd = _read_node_data(nc)
+        cell_data_names, cd = _read_cell_data(nc)
+        point_sets = _read_point_sets(nc)
 
-        # assert b''.join(nc.variables['coor_names'][0]) == b'X'
-        # assert b''.join(nc.variables['coor_names'][1]) == b'Y'
-        # assert b''.join(nc.variables['coor_names'][2]) == b'Z'
-
-        points = np.zeros((len(nc.dimensions["num_nodes"]), 3))
-        point_data_names = []
-        cell_data_names = []
-        pd = {}
-        cd = {}
-        cells = []
-        ns_names = []
-        # eb_names = []
-        ns = []
-        point_sets = {}
-        info = []
-
-        for key, value in nc.variables.items():
-            if key == "info_records":
-                value.set_auto_mask(False)
-                for c in value[:]:
-                    try:
-                        info += [b"".join(c).decode("UTF-8")]
-                    except UnicodeDecodeError:
-                        # https://github.com/nschloe/meshio/issues/983
-                        pass
-            elif key == "qa_records":
-                value.set_auto_mask(False)
-                for val in value:
-                    info += [b"".join(c).decode("UTF-8") for c in val[:]]
-            elif key[:7] == "connect":
-                meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
-                cells.append((meshio_type, value[:] - 1))
-            elif key == "coord":
-                points = nc.variables["coord"][:].T
-            elif key == "coordx":
-                points[:, 0] = value[:]
-            elif key == "coordy":
-                points[:, 1] = value[:]
-            elif key == "coordz":
-                points[:, 2] = value[:]
-            elif key == "name_nod_var":
-                value.set_auto_mask(False)
-                point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-            elif key[:12] == "vals_nod_var":
-                idx = 0 if len(key) == 12 else int(key[12:]) - 1
-                value.set_auto_mask(False)
-                # For now only take the first value
-                pd[idx] = value[0]
-                if len(value) > 1:
-                    warn("Skipping some time data")
-            elif key == "name_elem_var":
-                value.set_auto_mask(False)
-                cell_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-            elif key[:13] == "vals_elem_var":
-                # eb: element block
-                m = re.match("vals_elem_var(\\d+)?(?:eb(\\d+))?", key)
-                idx = 0 if m.group(1) is None else int(m.group(1)) - 1
-                block = 0 if m.group(2) is None else int(m.group(2)) - 1
-
-                value.set_auto_mask(False)
-                # For now only take the first value
-                if idx not in cd:
-                    cd[idx] = {}
-                cd[idx][block] = value[0]
-
-                if len(value) > 1:
-                    warn("Skipping some time data")
-            elif key == "ns_names":
-                value.set_auto_mask(False)
-                ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-            # elif key == "eb_names":
-            #     value.set_auto_mask(False)
-            #     eb_names = [b"".join(c).decode("UTF-8") for c in value[:]]
-            elif key.startswith("node_ns"):  # Expected keys: node_ns1, node_ns2
-                ns.append(value[:] - 1)  # Exodus is 1-based
-
-        # merge element block data; can't handle blocks yet
+        # merge element block data
         for k, value in cd.items():
             cd[k] = np.concatenate(list(value.values()))
 
-        # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
-        # triplets in the point data. If yes, they belong together.
+        # Process point data tuples
         single, double, triple = categorize(point_data_names)
 
         point_data = {}
@@ -166,6 +184,7 @@ def read(filename):  # noqa: C901
         for name, idx0, idx1, idx2 in triple:
             point_data[name] = np.column_stack([pd[idx0], pd[idx1], pd[idx2]])
 
+        # Process cell data
         cell_data = {}
         k = 0
         for _, cell in cells:
@@ -175,8 +194,6 @@ def read(filename):  # noqa: C901
                     cell_data[name] = []
                 cell_data[name].append(data[k : k + n])
             k += n
-
-        point_sets = {name: dat for name, dat in zip(ns_names, ns)}
 
     return Mesh(
         points,
@@ -205,14 +222,8 @@ def categorize(names):
         name = names[k]
         if name[-1] == "X":
             ix = k
-            try:
-                iy = names.index(name[:-1] + "Y")
-            except ValueError:
-                iy = None
-            try:
-                iz = names.index(name[:-1] + "Z")
-            except ValueError:
-                iz = None
+            iy = _lookup(names, name, "Y")
+            iz = _lookup(names, name, "Z")
             if iy and iz:
                 triple.append((name[:-1], ix, iy, iz))
                 is_accounted_for[ix] = True
@@ -223,10 +234,7 @@ def categorize(names):
                 is_accounted_for[ix] = True
         elif name[-2:] == "_R":
             ir = k
-            try:
-                iz = names.index(name[:-2] + "_Z")
-            except ValueError:
-                iz = None
+            iz = _lookup(names, name, "_Z", -2)
             if iz:
                 double.append((name[:-2], ir, iz))
                 is_accounted_for[ir] = True
@@ -258,6 +266,13 @@ numpy_to_exodus_dtype = {
     "uint64": "u8",
 }
 
+def _lookup(names, name, suffix, location=-1):
+
+    try:
+        response = names.index(name[:location] + suffix)
+    except ValueError:
+        response = None
+    return response
 
 def write(filename, mesh):
     import netCDF4

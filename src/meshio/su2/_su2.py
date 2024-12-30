@@ -50,140 +50,62 @@ def read(filename):
     return mesh
 
 
-def read_buffer(f):
-    cells = []
-    cell_data = {"su2:tag": []}
+def _parse_ndime(rest_of_line):
+    dim = int(rest_of_line)
+    if dim != 2 and dim != 3:
+        raise ReadError(f"Invalid dimension value {dim}")
+    return dim
 
-    itype = "i8"
-    ftype = "f8"
-    dim = 0
+def _parse_points(f, rest_of_line, dim, ftype):
+    first_line = f.readline().split()
+    first_line = np.array(first_line, dtype=ftype)
+    extra_columns = first_line.shape[0] - dim
+    
+    num_verts = int(rest_of_line.split()[0]) - 1
+    points = np.fromfile(
+        f, count=num_verts * (dim + extra_columns), dtype=ftype, sep=" "
+    ).reshape(num_verts, dim + extra_columns)
+    
+    if extra_columns > 0:
+        first_line = first_line[:-extra_columns]
+        points = points[:, :-extra_columns]
+    
+    return np.vstack([first_line, points])
 
-    next_tag_id = 0
-    expected_nmarkers = 0
-    markers_found = 0
-    while True:
-        line = f.readline()
-        if not line:
-            # EOF
-            break
+def _parse_elements(f, rest_of_line, itype, next_tag_id=0, is_boundary=False):
+    num_elems = int(rest_of_line)
+    first_line_str = next(islice(f, 1))
+    first_line = first_line_str.split()
+    nnodes = su2_type_to_numnodes[int(first_line[0])]
+    
+    has_extra_column = len(first_line) == nnodes + 2
+    if len(first_line) not in [nnodes + 1, nnodes + 2]:
+        raise ReadError("Invalid number of columns for elements field")
 
-        line = line.strip()
-        if len(line) == 0:
-            continue
-        if line[0] == "%":
-            continue
+    gen = chain([first_line_str], islice(f, num_elems - 1))
+    cell_array = " ".join([line.rstrip("\n") for line in gen])
+    cell_array = np.fromiter(cell_array.split(), dtype=itype)
+    
+    cells, _ = _translate_cells(cell_array, has_extra_column)
+    cell_blocks = []
+    cell_tags = []
+    
+    for eltype, data in cells.items():
+        cell_blocks.append(CellBlock(eltype, data))
+        num_block_elems = len(data)
+        tag_value = next_tag_id if is_boundary else 0
+        cell_tags.append(np.full(num_block_elems, tag_value, dtype=np.int32))
+    
+    return cell_blocks, cell_tags
 
-        try:
-            name, rest_of_line = line.split("=")
-        except ValueError:
-            warn(f"meshio could not parse line\n {line}\n skipping.....")
-            continue
-
-        if name == "NDIME":
-            dim = int(rest_of_line)
-            if dim != 2 and dim != 3:
-                raise ReadError(f"Invalid dimension value {line}")
-
-        elif name == "NPOIN":
-            # according to documentation rest_of_line should just be a int,
-            # and the next block should be just the coordinates of the points
-            # However, some file have one or two extra indices not related to the
-            # actual coordinates.
-            # So lets read the next line to find its actual number of columns
-            #
-            first_line = f.readline()
-            first_line = first_line.split()
-            first_line = np.array(first_line, dtype=ftype)
-
-            extra_columns = first_line.shape[0] - dim
-
-            num_verts = int(rest_of_line.split()[0]) - 1
-            points = np.fromfile(
-                f, count=num_verts * (dim + extra_columns), dtype=ftype, sep=" "
-            ).reshape(num_verts, dim + extra_columns)
-
-            # save off any extra info
-            if extra_columns > 0:
-                first_line = first_line[:-extra_columns]
-                points = points[:, :-extra_columns]
-
-            # add the first line we read separately
-            points = np.vstack([first_line, points])
-
-        elif name == "NELEM" or name == "MARKER_ELEMS":
-            # we cannot? read at once using numpy because we do not know the
-            # total size. Read, instead next num_elems as is and re-use the
-            # translate_cells function from vtk reader
-
-            num_elems = int(rest_of_line)
-            gen = islice(f, num_elems)
-
-            # some files has an extra int column while other not
-            # We do not need it so make sure we will skip it
-            first_line_str = next(gen)
-            first_line = first_line_str.split()
-            nnodes = su2_type_to_numnodes[int(first_line[0])]
-            has_extra_column = False
-            if nnodes + 1 == len(first_line):
-                has_extra_column = False
-            elif nnodes + 2 == len(first_line):
-                has_extra_column = True
-            else:
-                raise ReadError(f"Invalid number of columns for {name} field")
-
-            # reset generator
-            gen = chain([first_line_str], gen)
-
-            cell_array = " ".join([line.rstrip("\n") for line in gen])
-            cell_array = np.fromiter(cell_array.split(), dtype=itype)
-
-            cells_, _ = _translate_cells(cell_array, has_extra_column)
-
-            for eltype, data in cells_.items():
-                cells.append(CellBlock(eltype, data))
-                num_block_elems = len(data)
-                if name == "NELEM":
-                    cell_data["su2:tag"].append(
-                        np.full(num_block_elems, 0, dtype=np.int32)
-                    )
-                else:
-                    tags = np.full(num_block_elems, next_tag_id, dtype=np.int32)
-                    cell_data["su2:tag"].append(tags)
-
-        elif name == "NMARK":
-            expected_nmarkers = int(rest_of_line)
-        elif name == "MARKER_TAG":
-            next_tag = rest_of_line
-            try:
-                next_tag_id = int(next_tag)
-            except ValueError:
-                next_tag_id += 1
-                warn(
-                    "meshio does not support tags of string type.\n"
-                    f"    Surface tag {rest_of_line} will be replaced by {next_tag_id}"
-                )
-            markers_found += 1
-
-    if markers_found != expected_nmarkers:
-        warn(
-            f"expected {expected_nmarkers} markers according to NMARK value "
-            f"but found only {markers_found}"
-        )
-
-    # merge boundary elements in a single cellblock per cell type
-    if dim == 2:
-        types = ["line"]
-    else:
-        types = ["triangle", "quad"]
-
-    indices_to_merge = {}
-    for t in types:
-        indices_to_merge[t] = []
-
+def _merge_boundary_cells(cells, cell_data, dim):
+    types = ["line"] if dim == 2 else ["triangle", "quad"]
+    indices_to_merge = {t: [] for t in types}
+    
     for index, cell_block in enumerate(cells):
         if cell_block.type in types:
             indices_to_merge[cell_block.type].append(index)
-
+    
     cdata = cell_data["su2:tag"]
     for type, indices in indices_to_merge.items():
         if len(indices) > 1:
@@ -191,18 +113,67 @@ def read_buffer(f):
                 type, np.concatenate([cells[i].data for i in indices])
             )
             cdata[indices[0]] = np.concatenate([cdata[i] for i in indices])
-
-    # delete merged blocks
-    idelete = []
-    for type, indices in indices_to_merge.items():
-        idelete += indices[1:]
-
+    
+    idelete = [i for indices in indices_to_merge.values() for i in indices[1:]]
     for i in sorted(idelete, reverse=True):
         del cells[i]
         del cdata[i]
+    
+    return cells, cdata
 
-    cell_data["su2:tag"] = cdata
+def read_buffer(f):
+    cells = []
+    cell_data = {"su2:tag": []}
+    itype, ftype = "i8", "f8"
+    dim = 0
+    next_tag_id = 0
+    expected_nmarkers = markers_found = 0
+    
+    while True:
+        line = f.readline()
+        if not line:
+            break
+            
+        line = line.strip()
+        if len(line) == 0 or line[0] == "%":
+            continue
+            
+        try:
+            name, rest_of_line = line.split("=")
+        except ValueError:
+            warn(f"meshio could not parse line\n {line}\n skipping.....")
+            continue
+            
+        if name == "NDIME":
+            dim = _parse_ndime(rest_of_line)
+        elif name == "NPOIN":
+            points = _parse_points(f, rest_of_line, dim, ftype)
+        elif name in ["NELEM", "MARKER_ELEMS"]:
+            new_cells, new_tags = _parse_elements(f, rest_of_line, itype, next_tag_id, name == "MARKER_ELEMS")
+            cells.extend(new_cells)
+            cell_data["su2:tag"].extend(new_tags)
+        elif name == "NMARK":
+            expected_nmarkers = int(rest_of_line)
+        elif name == "MARKER_TAG":
+            next_tag_id = _handle_marker_tag(rest_of_line, next_tag_id)
+            markers_found += 1
+
+    if markers_found != expected_nmarkers:
+        warn(f"expected {expected_nmarkers} markers according to NMARK value but found only {markers_found}")
+
+    cells, cell_data["su2:tag"] = _merge_boundary_cells(cells, cell_data, dim)
     return Mesh(points, cells, cell_data=cell_data)
+
+def _handle_marker_tag(rest_of_line, next_tag_id):
+    try:
+        return int(rest_of_line)
+    except ValueError:
+        next_tag_id += 1
+        warn(
+            "meshio does not support tags of string type.\n"
+            f"    Surface tag {rest_of_line} will be replaced by {next_tag_id}"
+        )
+        return next_tag_id
 
 
 def _translate_cells(data, has_extra_column=False):

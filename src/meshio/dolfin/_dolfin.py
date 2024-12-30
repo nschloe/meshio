@@ -46,12 +46,7 @@ def _read_mesh(filename):
             ]
             cell_tags = [f"v{i}" for i in range(num_nodes_per_cell)]
         elif elem.tag == "vertices":
-            if dim is None:
-                raise ReadError("Expected `mesh` before `vertices`")
-            points = np.empty((int(elem.attrib["size"]), dim))
-            keys = ["x", "y"]
-            if dim == 3:
-                keys += ["z"]
+            points, keys = _handle_vertices(dim, elem)
         elif elem.tag == "vertex":
             if points is None or keys is None:
                 raise ReadError("Expected `vertices` before `vertex`")
@@ -78,6 +73,14 @@ def _read_mesh(filename):
 
     return points, cells, cell_type
 
+def _handle_vertices(dim, elem):
+    if dim is None:
+        raise ReadError("Expected `mesh` before `vertices`")
+    points = np.empty((int(elem.attrib["size"]), dim))
+    keys = ["x", "y"]
+    if dim == 3:
+        keys += ["z"]
+    return points, keys
 
 def _read_cell_data(filename):
     dolfin_type_to_numpy_type = {

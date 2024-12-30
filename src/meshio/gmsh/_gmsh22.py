@@ -27,6 +27,20 @@ c_int = np.dtype("i")
 c_double = np.dtype("d")
 
 
+def _merge_cell_tags_into_cell_data(cells, cell_tags, cell_data):
+    """Merge cell tags into cell data structure."""
+    for tag_name, tag_dict in cell_tags.items():
+        if tag_name not in cell_data:
+            cell_data[tag_name] = []
+        offset = {}
+        for cell_type, cell_array in cells:
+            start = offset.setdefault(cell_type, 0)
+            end = start + len(cell_array)
+            offset[cell_type] = end
+            tags = tag_dict.get(cell_type, [])
+            tags = np.array(tags[start:end], dtype=c_int)
+            cell_data[tag_name].append(tags)
+
 def read_buffer(f, is_ascii, data_size):
     # The format is specified at
     # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
@@ -73,19 +87,7 @@ def read_buffer(f, is_ascii, data_size):
         warn("The file contains tag data that couldn't be processed.")
 
     cell_data = cell_data_from_raw(cells, cell_data_raw)
-
-    # merge cell_tags into cell_data
-    for tag_name, tag_dict in cell_tags.items():
-        if tag_name not in cell_data:
-            cell_data[tag_name] = []
-        offset = {}
-        for cell_type, cell_array in cells:
-            start = offset.setdefault(cell_type, 0)
-            end = start + len(cell_array)
-            offset[cell_type] = end
-            tags = tag_dict.get(cell_type, [])
-            tags = np.array(tags[start:end], dtype=c_int)
-            cell_data[tag_name].append(tags)
+    _merge_cell_tags_into_cell_data(cells, cell_tags, cell_data)
 
     return Mesh(
         points,

@@ -38,13 +38,15 @@ def add_args(parser):
         "--sets-to-int-data",
         "-s",
         action="store_true",
-        help="if possible, convert sets to integer data (useful if the output type does not support sets)",
+        help=("if possible, convert sets to integer data "
+               + "(useful if the output type does not support sets)"),
     )
     parser.add_argument(
         "--int-data-to-sets",
         "-d",
         action="store_true",
-        help="if possible, convert integer data to sets (useful if the output type does not support integer data)",
+        help=("if possible, convert integer data to sets " 
+              + "(useful if the output type does not support integer data)"),
     )
 
 

@@ -179,7 +179,8 @@ def read_buffer(f):
                     else:
                         raise ReadError(f"Unknown cell set '{set_name}'")
         elif keyword == "INCLUDE":
-            # Splitting line to get external input file path (example: *INCLUDE,INPUT=wInclude_bulk.inp)
+            # Splitting line to get external input file path 
+            # (example: *INCLUDE,INPUT=wInclude_bulk.inp)
             ext_input_file = pathlib.Path(line.split("=")[-1].strip())
             if ext_input_file.exists() is False:
                 cd = pathlib.Path(f.name).parent

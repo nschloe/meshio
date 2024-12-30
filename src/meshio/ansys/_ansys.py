@@ -214,84 +214,92 @@ def _read_faces(f, line):
     if line.strip()[-1] != "(":
         _skip_to(f, "(")
 
-    data = {}
     if out.group(1) == "":
-        # ASCII
-        if key == "mixed":
-            # From
-            # <https://www.afs.enea.it/project/neptunius/docs/fluent/html/ug/node1471.htm>:
-            #
-            # > If the face zone is of mixed type (element-type = > 0), the body of the
-            # > section will include the face type and will appear as follows
-            # >
-            # > type v0 v1 v2 c0 c1
-            # >
-            for k in range(num_cells):
-                line = ""
-                while line.strip() == "":
-                    line = f.readline().decode()
-                dat = line.split()
-                type_index = int(dat[0], 16)
-                if type_index == 0:
-                    raise ReadError()
-                type_string, num_nodes_per_cell = element_type_to_key_num_nodes[
-                    type_index
-                ]
-                if len(dat) != num_nodes_per_cell + 3:
-                    raise ReadError()
-
-                if type_string not in data:
-                    data[type_string] = []
-
-                data[type_string].append(
-                    [int(d, 16) for d in dat[1 : num_nodes_per_cell + 1]]
-                )
-
-            data = {key: np.array(data[key]) for key in data}
-
-        else:
-            # read cell data
-            data = np.empty((num_cells, num_nodes_per_cell), dtype=int)
-            for k in range(num_cells):
-                line = f.readline().decode()
-                dat = line.split()
-                # The body of a regular face section contains the grid connectivity, and
-                # each line appears as follows:
-                #   n0 n1 n2 cr cl
-                # where n* are the defining nodes (vertices) of the face, and c* are the
-                # adjacent cells.
-                if len(dat) != num_nodes_per_cell + 2:
-                    raise ReadError()
-                data[k] = [int(d, 16) for d in dat[:num_nodes_per_cell]]
-            data = {key: data}
+        data = _read_faces_ascii(f, num_cells, key, num_nodes_per_cell)
     else:
-        # binary
-        if out.group(1) == "20":
-            dtype = np.int32
-        else:
-            if out.group(1) != "30":
-                ReadError(f"Expected keys '20' or '30', got {out.group(1)}.")
-            dtype = np.int64
-
-        if key == "mixed":
-            raise ReadError("Mixed element type for binary faces not supported yet")
-
-        # Read cell data.
-        # The body of a regular face section contains the grid
-        # connectivity, and each line appears as follows:
-        #   n0 n1 n2 cr cl
-        # where n* are the defining nodes (vertices) of the face,
-        # and c* are the adjacent cells.
-        shape = (num_cells, num_nodes_per_cell + 2)
-        count = shape[0] * shape[1]
-        data = np.fromfile(f, count=count, dtype=dtype).reshape(shape)
-        # Cut off the adjacent cell data.
-        data = data[:, :num_nodes_per_cell]
-        data = {key: data}
+        data = _read_faces_binary(f, num_cells, key, num_nodes_per_cell, out.group(1))
 
     # make sure that the data set is properly closed
     _skip_close(f, 2)
 
+    return data
+
+
+def _read_faces_ascii(f, num_cells, key, num_nodes_per_cell):
+    data = {}
+    if key == "mixed":
+        # From
+        # <https://www.afs.enea.it/project/neptunius/docs/fluent/html/ug/node1471.htm>:
+        #
+        # > If the face zone is of mixed type (element-type = > 0), the body of the
+        # > section will include the face type and will appear as follows
+        # >
+        # > type v0 v1 v2 c0 c1
+        # >
+        for k in range(num_cells):
+            line = ""
+            while line.strip() == "":
+                line = f.readline().decode()
+            dat = line.split()
+            type_index = int(dat[0], 16)
+            if type_index == 0:
+                raise ReadError()
+            type_string, num_nodes_per_cell = element_type_to_key_num_nodes[
+                type_index
+            ]
+            if len(dat) != num_nodes_per_cell + 3:
+                raise ReadError()
+
+            if type_string not in data:
+                data[type_string] = []
+
+            data[type_string].append(
+                [int(d, 16) for d in dat[1 : num_nodes_per_cell + 1]]
+            )
+
+        data = {key: np.array(data[key]) for key in data}
+
+    else:
+        # read cell data
+        data = np.empty((num_cells, num_nodes_per_cell), dtype=int)
+        for k in range(num_cells):
+            line = f.readline().decode()
+            dat = line.split()
+            # The body of a regular face section contains the grid connectivity, and
+            # each line appears as follows:
+            #   n0 n1 n2 cr cl
+            # where n* are the defining nodes (vertices) of the face, and c* are the
+            # adjacent cells.
+            if len(dat) != num_nodes_per_cell + 2:
+                raise ReadError()
+            data[k] = [int(d, 16) for d in dat[:num_nodes_per_cell]]
+        data = {key: data}
+    return data
+
+
+def _read_faces_binary(f, num_cells, key, num_nodes_per_cell, group):
+    if group == "20":
+        dtype = np.int32
+    else:
+        if group != "30":
+            ReadError(f"Expected keys '20' or '30', got {group}.")
+        dtype = np.int64
+
+    if key == "mixed":
+        raise ReadError("Mixed element type for binary faces not supported yet")
+
+    # Read cell data.
+    # The body of a regular face section contains the grid
+    # connectivity, and each line appears as follows:
+    #   n0 n1 n2 cr cl
+    # where n* are the defining nodes (vertices) of the face,
+    # and c* are the adjacent cells.
+    shape = (num_cells, num_nodes_per_cell + 2)
+    count = shape[0] * shape[1]
+    data = np.fromfile(f, count=count, dtype=dtype).reshape(shape)
+    # Cut off the adjacent cell data.
+    data = data[:, :num_nodes_per_cell]
+    data = {key: data}
     return data
 
 

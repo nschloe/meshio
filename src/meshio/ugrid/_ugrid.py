@@ -227,6 +227,13 @@ def _write_buffer(f, file_type, mesh):
 
     _write_section(f, file_type, mesh.points, ftype)
 
+    _write_cells(f, file_type, mesh, ugrid_counts, ugrid_meshio_id, itype)
+
+    if file_type["type"] == "F":
+        _write_section(f, file_type, fortran_header, itype)
+
+
+def _write_cells(f, file_type, mesh, ugrid_counts, ugrid_meshio_id, itype):
     for key in ["triangle", "quad"]:
         if ugrid_counts[key] == 0:
             continue
@@ -238,12 +245,6 @@ def _write_buffer(f, file_type, mesh):
     for key in ["triangle", "quad"]:
         if ugrid_counts[key] == 0:
             continue
-
-        # pick out cell data
-        # for data in mesh.cell_data.values():
-        #     if data.dtype in [np.int8, np.int16, np.int32, np.int64]:
-        #         labels = data
-        #         break
 
         # pick out cell_data
         labels_key, other = _pick_first_int_data(mesh.cell_data)
@@ -271,9 +272,5 @@ def _write_buffer(f, file_type, mesh):
         if c.type == "pyramid":
             out = out[:, [1, 0, 4, 2, 3]]
         _write_section(f, file_type, out, itype)
-
-    if file_type["type"] == "F":
-        _write_section(f, file_type, fortran_header, itype)
-
 
 register_format("ugrid", [".ugrid"], read, {"ugrid": write})

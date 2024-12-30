@@ -9,5 +9,5 @@ except ImportError:
 
 try:
     __version__ = metadata.version("meshio")
-except Exception:
+except metadata.PackageNotFoundError:
     __version__ = "unknown"

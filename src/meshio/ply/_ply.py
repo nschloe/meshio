@@ -71,34 +71,9 @@ def _next_line(f):
             break
     return line
 
-
-def read_buffer(f):
-    # assert that the first line reads `ply`
-    line = f.readline().decode().strip()
-    if line != "ply":
-        raise ReadError("Expected ply")
-
-    line = _next_line(f)
-    endianness = None
-    if line == "format ascii 1.0":
-        is_binary = False
-    elif line == "format binary_big_endian 1.0":
-        is_binary = True
-        endianness = ">"
-    else:
-        if line != "format binary_little_endian 1.0":
-            raise ReadError()
-        is_binary = True
-        endianness = "<"
-
+def _read_header(f, point_data_formats, point_data_names, cell_data_dtypes, cell_data_names):
     # read header
     line = _next_line(f)
-    num_verts = 0
-    num_cells = 0
-    point_data_formats = []
-    point_data_names = []
-    cell_data_names = []
-    cell_data_dtypes = []
     while line != "end_header":
         m_vert = re.match("element vertex (\\d+)", line)
         m_face = re.match("element face (\\d+)", line)
@@ -141,6 +116,36 @@ def read_buffer(f):
                 f"got `{line}`"
             )
 
+
+def read_buffer(f):
+    # assert that the first line reads `ply`
+    line = f.readline().decode().strip()
+    if line != "ply":
+        raise ReadError("Expected ply")
+
+    line = _next_line(f)
+    endianness = None
+    if line == "format ascii 1.0":
+        is_binary = False
+    elif line == "format binary_big_endian 1.0":
+        is_binary = True
+        endianness = ">"
+    else:
+        if line != "format binary_little_endian 1.0":
+            raise ReadError()
+        is_binary = True
+        endianness = "<"
+
+    # read header
+    line = _next_line(f)
+    num_verts = 0
+    num_cells = 0
+    point_data_formats = []
+    point_data_names = []
+    cell_data_names = []
+    cell_data_dtypes = []
+    _read_header(f, point_data_formats, point_data_names, cell_data_dtypes, cell_data_names)
+    
     if is_binary:
         mesh = _read_binary(
             f,
@@ -391,141 +396,114 @@ def _read_binary_list(buffer, count_dtype, data_dtype, num_cells, endianness):
     return byte_starts_ends[-1], blocks
 
 
-def write(filename, mesh: Mesh, binary: bool = True):  # noqa: C901
+def _write_header(fh, mesh, binary, num_cells):
+    """Write PLY header information."""
+    fh.write(b"ply\n")
+    if binary:
+        fh.write(f"format binary_{sys.byteorder}_endian 1.0\n".encode())
+    else:
+        fh.write(b"format ascii 1.0\n")
 
-    with open_file(filename, "wb") as fh:
-        fh.write(b"ply\n")
+    now = datetime.datetime.now().isoformat()
+    fh.write(f"comment Created by meshio v{__version__}, {now}\n".encode())
+    
+    # Write vertex info
+    fh.write(f"element vertex {mesh.points.shape[0]:d}\n".encode())
+    
+    # Write face info if needed
+    if num_cells > 0:
+        fh.write(f"element face {num_cells:d}\n".encode())
 
-        if binary:
-            fh.write(f"format binary_{sys.byteorder}_endian 1.0\n".encode())
-        else:
-            fh.write(b"format ascii 1.0\n")
+def _write_point_properties(fh, mesh):
+    """Write point property definitions."""
+    dim_names = ["x", "y", "z"]
+    type_name_table = {
+        np.dtype(np.int8): "int8",
+        np.dtype(np.int16): "int16",
+        np.dtype(np.int32): "int32",
+        np.dtype(np.int64): "int64",
+        np.dtype(np.uint8): "uint8",
+        np.dtype(np.uint16): "uint16",
+        np.dtype(np.uint32): "uint32",
+        np.dtype(np.uint64): "uint64",
+        np.dtype(np.float32): "float", 
+        np.dtype(np.float64): "double",
+    }
+    
+    # Write coordinate properties
+    for k in range(mesh.points.shape[1]):
+        type_name = type_name_table[mesh.points.dtype]
+        fh.write(f"property {type_name} {dim_names[k]}\n".encode())
+    
+    # Write additional point data properties
+    pd = []
+    for key, value in mesh.point_data.items():
+        if len(value.shape) > 1:
+            warn(f"PLY writer doesn't support multidimensional point data yet. Skipping {key}.")
+            continue
+        type_name = type_name_table[value.dtype]
+        fh.write(f"property {type_name} {key}\n".encode())
+        pd.append(value)
+    return pd
 
-        now = datetime.datetime.now().isoformat()
-        fh.write(f"comment Created by meshio v{__version__}, {now}\n".encode())
+def _write_data(fh, mesh, binary, pd):
+    """Write the actual data."""
+    if binary:
+        # Points and point data
+        out = np.rec.fromarrays([coord for coord in mesh.points.T] + pd)
+        fh.write(out.tobytes())
 
-        # counts
-        fh.write(f"element vertex {mesh.points.shape[0]:d}\n".encode())
-        #
-        dim_names = ["x", "y", "z"]
-        # From <https://en.wikipedia.org/wiki/PLY_(file_format)>:
-        #
-        # > The type can be specified with one of char uchar short ushort int uint float
-        # > double, or one of int8 uint8 int16 uint16 int32 uint32 float32 float64.
-        #
-        # We're adding [u]int64 here.
-        type_name_table = {
-            np.dtype(np.int8): "int8",
-            np.dtype(np.int16): "int16",
-            np.dtype(np.int32): "int32",
-            np.dtype(np.int64): "int64",
-            np.dtype(np.uint8): "uint8",
-            np.dtype(np.uint16): "uint16",
-            np.dtype(np.uint32): "uint32",
-            np.dtype(np.uint64): "uint64",
-            np.dtype(np.float32): "float",
-            np.dtype(np.float64): "double",
-        }
-        for k in range(mesh.points.shape[1]):
-            type_name = type_name_table[mesh.points.dtype]
-            fh.write(f"property {type_name} {dim_names[k]}\n".encode())
-
-        pd = []
-        for key, value in mesh.point_data.items():
-            if len(value.shape) > 1:
-                warn(
-                    "PLY writer doesn't support multidimensional point data yet. "
-                    f"Skipping {key}."
-                )
-                continue
-            type_name = type_name_table[value.dtype]
-            fh.write(f"property {type_name} {key}\n".encode())
-            pd.append(value)
-
-        num_cells = 0
+        # Cells
         legal_cell_types = ["vertex", "line", "triangle", "quad", "polygon"]
         for cell_block in mesh.cells:
-            if cell_block.type in legal_cell_types:
-                num_cells += cell_block.data.shape[0]
-
-        if num_cells > 0:
-            fh.write(f"element face {num_cells:d}\n".encode())
-
-            # possibly cast down to int32
-            # TODO don't alter the mesh data
-            has_cast = False
-            for k, cell_block in enumerate(mesh.cells):
-                if cell_block.data.dtype == np.int64:
-                    has_cast = True
-                    mesh.cells[k] = CellBlock(
-                        cell_block.type, cell_block.data.astype(np.int32)
-                    )
-
-            if has_cast:
-                warn("PLY doesn't support 64-bit integers. Casting down to 32-bit.")
-
-            # assert that all cell dtypes are equal
-            cell_dtype = None
-            for cell_block in mesh.cells:
-                if cell_dtype is None:
-                    cell_dtype = cell_block.data.dtype
-                if cell_block.data.dtype != cell_dtype:
-                    raise WriteError()
-
-            if cell_dtype is not None:
-                ply_type = numpy_to_ply_dtype[cell_dtype]
-                fh.write(f"property list uint8 {ply_type} vertex_indices\n".encode())
-
-        # TODO other cell data
-        fh.write(b"end_header\n")
-
-        if binary:
-            # points and point_data
-            out = np.rec.fromarrays([coord for coord in mesh.points.T] + pd)
+            if cell_block.type not in legal_cell_types:
+                warn(f'cell_type "{cell_block.type}" is not supported by PLY format - skipping')
+                continue
+            d = cell_block.data
+            out = np.rec.fromarrays([np.broadcast_to(np.uint8(d.shape[1]), d.shape[0]), *d.T])
             fh.write(out.tobytes())
+    else:
+        # ASCII format
+        out = np.rec.fromarrays([coord for coord in mesh.points.T] + pd)
+        fmt = " ".join(["{}"] * len(out[0]))
+        out = "\n".join([fmt.format(*row) for row in out]) + "\n"
+        fh.write(out.encode())
 
-            # cells
-            for cell_block in mesh.cells:
-                if cell_block.type not in legal_cell_types:
-                    warn(
-                        f'cell_type "{cell_block.type}" is not supported by PLY format '
-                        "- skipping"
-                    )
-                    continue
-                # prepend with count
-                d = cell_block.data
-                out = np.rec.fromarrays(
-                    [np.broadcast_to(np.uint8(d.shape[1]), d.shape[0]), *d.T]
-                )
-                fh.write(out.tobytes())
-        else:
-            # vertices
-            # np.savetxt(fh, mesh.points, "%r")  # slower
-            # out = np.column_stack([mesh.points] + list(mesh.point_data.values()))
-            out = np.rec.fromarrays([coord for coord in mesh.points.T] + pd)
-            fmt = " ".join(["{}"] * len(out[0]))
+        # Write cells
+        legal_cell_types = ["vertex", "line", "triangle", "quad", "polygon"]
+        for cell_block in mesh.cells:
+            if cell_block.type not in legal_cell_types:
+                warn(f'cell_type "{cell_block.type}" is not supported by PLY format - skipping')
+                continue
+            d = cell_block.data
+            out = np.column_stack([np.full(d.shape[0], d.shape[1], dtype=d.dtype), d])
+            fmt = " ".join(["{}"] * out.shape[1])
             out = "\n".join([fmt.format(*row) for row in out]) + "\n"
             fh.write(out.encode())
 
-            # cells
-            for cell_block in mesh.cells:
-                if cell_block.type not in legal_cell_types:
-                    warn(
-                        f'cell_type "{cell_block.type}" is not supported by PLY format '
-                        + "- skipping"
-                    )
-                    continue
-                #                if cell_type not in cell_type_to_count.keys():
-                #                    continue
-                d = cell_block.data
-                out = np.column_stack(
-                    [np.full(d.shape[0], d.shape[1], dtype=d.dtype), d]
-                )
-                # savetxt is slower
-                # np.savetxt(fh, out, "%d  %d %d %d")
-                fmt = " ".join(["{}"] * out.shape[1])
-                out = "\n".join([fmt.format(*row) for row in out]) + "\n"
-                fh.write(out.encode())
+def write(filename, mesh: Mesh, binary: bool = True):
+    legal_cell_types = ["vertex", "line", "triangle", "quad", "polygon"]
+    num_cells = sum(cell_block.data.shape[0] for cell_block in mesh.cells 
+                   if cell_block.type in legal_cell_types)
 
+    # Handle int64 casting
+    for k, cell_block in enumerate(mesh.cells):
+        if cell_block.data.dtype == np.int64:
+            warn("PLY doesn't support 64-bit integers. Casting down to 32-bit.")
+            mesh.cells[k] = CellBlock(cell_block.type, cell_block.data.astype(np.int32))
+
+    with open_file(filename, "wb") as fh:
+        _write_header(fh, mesh, binary, num_cells)
+        pd = _write_point_properties(fh, mesh)
+        
+        # Write vertex indices property if needed
+        if num_cells > 0:
+            cell_dtype = next((cb.data.dtype for cb in mesh.cells), None)
+            if cell_dtype is not None:
+                ply_type = numpy_to_ply_dtype[cell_dtype]
+                fh.write(f"property list uint8 {ply_type} vertex_indices\n".encode())
+        
+        fh.write(b"end_header\n")
+        _write_data(fh, mesh, binary, pd)
 
 register_format("ply", [".ply"], read, {"ply": write})

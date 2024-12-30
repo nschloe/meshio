@@ -352,10 +352,8 @@ def _update_cells(cells, cell, flag):
         cells.append((cell_type, [cell]))
 
 
-def split_f_z(mesh):
-    # FLAC3D makes a difference between ZONES (3D-cells only) and FACES
-    # (2D-cells only). Split cells into zcells and fcells, along with the cell
-    # sets etc.
+def _split_cells(mesh):
+    """Split cells into zones (3D) and faces (2D)."""
     zcells = []
     fcells = []
     for cell_block in mesh.cells:
@@ -363,7 +361,10 @@ def split_f_z(mesh):
             zcells.append(cell_block)
         elif cell_block.type in meshio_only["face"]:
             fcells.append(cell_block)
+    return zcells, fcells
 
+def _split_cell_sets(mesh):
+    """Split cell sets into zone and face sets."""
     zsets = {}
     fsets = {}
     for key, cset in mesh.cell_sets.items():
@@ -376,47 +377,42 @@ def split_f_z(mesh):
             fsets[key].append(
                 sblock if cell_block.type in meshio_only["face"] else None
             )
+            
+    # Remove empty sets
+    zsets = {key: value for key, value in zsets.items() 
+             if not all(item is None for item in value)}
+    fsets = {key: value for key, value in fsets.items() 
+             if not all(item is None for item in value)}
+    
+    return zsets, fsets
 
-    # remove the data that is only None
-    zsets = {
-        key: value
-        for key, value in zsets.items()
-        if not all(item is None for item in value)
-    }
-    fsets = {
-        key: value
-        for key, value in fsets.items()
-        if not all(item is None for item in value)
-    }
-
-    # Right now, the zsets contain indices into the corresponding cell block.
-    # FLAC3D expects _global_ indices. Update.
-    cell_block_sizes = [len(cb) for cb in zcells]
-    for key, data in zsets.items():
+def _update_global_indices(sets, cells):
+    """Update indices to be global rather than per-block."""
+    cell_block_sizes = [len(cb) for cb in cells]
+    for key, data in sets.items():
         gid = 0
         for n, block in zip(cell_block_sizes, data):
-            block += gid
+            if block is not None:
+                block += gid
             gid += n
+            
+    # Concatenate blocks and adjust to 1-based indexing
+    for label, values in sets.items():
+        values = [v for v in values if v is not None]
+        sets[label] = np.concatenate(values) + 1
+            
+    return sets
 
-    # TODO not sure if fcells and zcells share a common global index
-    cell_block_sizes = [len(cb) for cb in fcells]
-    for key, data in fsets.items():
-        gid = 0
-        for n, block in zip(cell_block_sizes, data):
-            block += gid
-            gid += n
-
-    for label, values in zsets.items():
-        zsets[label] = np.concatenate(values)
-    for label, values in fsets.items():
-        fsets[label] = np.concatenate(values)
-
-    # flac3d indices start at 1
-    for label, values in zsets.items():
-        zsets[label] += 1
-    for label, values in fsets.items():
-        fsets[label] += 1
-
+def split_f_z(mesh):
+    """Split mesh into zones (3D) and faces (2D) with corresponding cell sets."""
+    # Split cells and cell sets
+    zcells, fcells = _split_cells(mesh)
+    zsets, fsets = _split_cell_sets(mesh)
+    
+    # Update indices to be global
+    zsets = _update_global_indices(zsets, zcells)
+    fsets = _update_global_indices(fsets, fcells)
+    
     return zcells, fcells, zsets, fsets
 
 

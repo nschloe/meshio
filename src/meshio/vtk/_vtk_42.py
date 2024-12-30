@@ -504,56 +504,53 @@ def _skip_meta(f):
             break
 
 
+def _process_polygon_cells(connectivity, types, offsets):
+    """Process VTK polygon cells and return the translated cells."""
+    cells = []
+    numcells = len(types)
+    numnodes = np.empty(len(types), dtype=int)
+    
+    # Calculate offsets and verify numnodes
+    offsets[0] = 0
+    for idx in range(numcells - 1):
+        numnodes[idx] = connectivity[offsets[idx]]
+        offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
+
+    idx = numcells - 1
+    numnodes[idx] = connectivity[offsets[idx]]
+    if not np.all(numnodes == connectivity[offsets]):
+        raise ReadError()
+
+    # Process each cell
+    for idx, vtk_cell_type in enumerate(types):
+        start = offsets[idx] + 1
+
+        new_order = vtk_to_meshio_order(vtk_cell_type, offsets.dtype)
+        if new_order is None:
+            new_order = np.arange(numnodes[idx], dtype=offsets.dtype)
+
+        cell_idx = start + new_order
+        cell = connectivity[cell_idx]
+        cell_type = vtk_to_meshio_type[vtk_cell_type]
+
+        if (len(cells) > 0 and 
+            cells[-1][0] == cell_type and 
+            len(cell) == len(cells[-1][1][-1])):
+            cells[-1][1].append(cell)
+        else:
+            cells.append((cell_type, [cell]))
+    
+    return cells
+
 def translate_cells(connectivity, types, cell_data_raw):
     # https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
-    # Translate it into the cells array.
-    # `data` is a one-dimensional vector with
-    # (num_points0, p0, p1, ... ,pk, numpoints1, p10, p11, ..., p1k, ...
-    # or a tuple with (offsets, connectivity)
     has_polygon = np.any(types == meshio_to_vtk_type["polygon"])
 
     cells = []
     cell_data = {}
     if has_polygon:
-        numnodes = np.empty(len(types), dtype=int)
-        # If some polygons are in the VTK file, loop over the cells
-        numcells = len(types)
         offsets = np.empty(len(types), dtype=int)
-        offsets[0] = 0
-        for idx in range(numcells - 1):
-            numnodes[idx] = connectivity[offsets[idx]]
-            offsets[idx + 1] = offsets[idx] + numnodes[idx] + 1
-
-        idx = numcells - 1
-        numnodes[idx] = connectivity[offsets[idx]]
-        if not np.all(numnodes == connectivity[offsets]):
-            raise ReadError()
-
-        # TODO: cell_data
-        for idx, vtk_cell_type in enumerate(types):
-            start = offsets[idx] + 1
-
-            new_order = vtk_to_meshio_order(vtk_cell_type, offsets.dtype)
-            if new_order is None:
-                new_order = np.arange(numnodes[idx], dtype=offsets.dtype)
-
-            cell_idx = start + new_order
-
-            cell = connectivity[cell_idx]
-
-            cell_type = vtk_to_meshio_type[vtk_cell_type]
-
-            if (
-                len(cells) > 0
-                and cells[-1][0] == cell_type
-                # the following check if needed for polygons; key can be equal, but
-                # still needs to go into a new block
-                and len(cell) == len(cells[-1][1][-1])
-            ):
-                cells[-1][1].append(cell)
-            else:
-                # open up a new cell block
-                cells.append((cell_type, [cell]))
+        cells = _process_polygon_cells(connectivity, types, offsets)
     else:
         # Infer offsets from the cell types. This is much faster than manually going
         # through the data array. Slight disadvantage: This doesn't work for cells with

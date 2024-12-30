@@ -75,39 +75,10 @@ def read_binary_buffer(f):
     keytype = "i4"
 
     code = np.fromfile(f, count=1, dtype=keytype).item()
-
-    if code != 1 and code != 16777216:
-        raise ReadError("Invalid code")
-
-    if code == 16777216:
-        # swap endianness
-        swapped = ">" if struct.unpack("=l", struct.pack("<l", 1))[0] == 1 else "<"
-        itype += swapped
-        ftype += swapped
-        postype += swapped
-        keytype = swapped + keytype
+    _update_by_code(code, itype, ftype, postype)
 
     version = np.fromfile(f, count=1, dtype=keytype).item()
-
-    if version < 1 or version > 4:
-        raise ReadError("Invalid version")
-
-    if version == 1:
-        itype += "i4"
-        ftype += "f4"
-        postype += "i4"
-    elif version == 2:
-        itype += "i4"
-        ftype += "f8"
-        postype += "i4"
-    elif version == 3:
-        itype += "i4"
-        ftype += "f8"
-        postype += "i8"
-    else:
-        itype += "i8"
-        ftype += "f8"
-        postype += "i8"
+    _update_by_version(version, itype, ftype, postype)
 
     field = np.fromfile(f, count=1, dtype=keytype).item()
 
@@ -168,11 +139,73 @@ def read_binary_buffer(f):
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
 
+def _update_by_code(code, itype, ftype, postype):
+
+    if code != 1 and code != 16777216:
+        raise ReadError("Invalid code")
+
+    if code == 16777216:
+        # swap endianness
+        swapped = ">" if struct.unpack("=l", struct.pack("<l", 1))[0] == 1 else "<"
+        itype += swapped
+        ftype += swapped
+        postype += swapped
+        keytype = swapped + keytype
+
+def _update_by_version(version, itype, ftype, postype):
+
+    if version < 1 or version > 4:
+        raise ReadError("Invalid version")
+
+    if version == 1:
+        itype += "i4"
+        ftype += "f4"
+        postype += "i4"
+    elif version == 2:
+        itype += "i4"
+        ftype += "f8"
+        postype += "i4"
+    elif version == 3:
+        itype += "i4"
+        ftype += "f8"
+        postype += "i8"
+    else:
+        itype += "i8"
+        ftype += "f8"
+        postype += "i8"
+
+
+def _read_vertices(f, dim, dtype):
+    """Read vertices section from Medit ascii file."""
+    num_verts = int(f.readline())
+    out = np.fromfile(
+        f, count=num_verts * (dim + 1), dtype=dtype, sep=" "
+    ).reshape(num_verts, dim + 1)
+    points = out[:, :dim]
+    point_data = {"medit:ref": out[:, dim].astype(int)}
+    return points, point_data
+
+def _read_cells(f, cell_info):
+    """Read cell section from Medit ascii file."""
+    meshio_type, points_per_cell = cell_info
+    num_cells = int(f.readline())
+    out = np.fromfile(
+        f, count=num_cells * (points_per_cell + 1), dtype=int, sep=" "
+    ).reshape(num_cells, points_per_cell + 1)
+    return meshio_type, out[:, :points_per_cell] - 1, out[:, -1]
+
+def _skip_section(f, dtype, n_per_line):
+    """Skip a section by reading and discarding data."""
+    num_items = int(f.readline())
+    np.fromfile(f, count=num_items * n_per_line, dtype=dtype, sep=" ")
+
 def read_ascii_buffer(f):
     dim = 0
     cells = []
     point_data = {}
     cell_data = {"medit:ref": []}
+    points = None
+    dtype = None
 
     meshio_from_medit = {
         "Edges": ("line", 2),
@@ -184,21 +217,23 @@ def read_ascii_buffer(f):
         "Hexahedra": ("hexahedron", 8),  # Frey
         "Hexaedra": ("hexahedron", 8),  # Dobrzynski
     }
-    points = None
-    dtype = None
 
-    while True:
-        line = f.readline()
-        if not line:
-            # EOF
-            break
+    skip_dict = {"NormalAtVertices": lambda x: _skip_section(x, int, 2)
+                  , "EdgeOnGeometricEdge": lambda x: _skip_section(x, int, 2)
+                  , "SubDomainFromMesh": lambda x: _skip_section(x, int, 4)
+                  , "VertexOnGeometricVertex": lambda x: _skip_section(x, int, 2)
+                  , "VertexOnGeometricEdge": lambda x: _skip_section(x, float, 3)
+                  }
+
+    line = f.readline()
+    while line:
+        
 
         line = line.strip()
         if len(line) == 0 or line[0] == "#":
             continue
 
         items = line.split()
-
         if not items[0].isalpha():
             raise ReadError()
 
@@ -206,95 +241,47 @@ def read_ascii_buffer(f):
             version = items[1]
             dtype = {"0": c_float, "1": c_float, "2": c_double}[version]
         elif items[0] == "Dimension":
-            if len(items) >= 2:
-                dim = int(items[1])
-            else:
-                dim = int(
-                    int(f.readline())
-                )  # e.g. Dimension\n3, where the number of dimensions is on the next line
+            dim = int(items[1]) if len(items) >= 2 else int(f.readline())
         elif items[0] == "Vertices":
-            if dim <= 0:
-                raise ReadError()
-            if dtype is None:
-                raise ReadError("Expected `MeshVersionFormatted` before `Vertices`")
-            num_verts = int(f.readline())
-            out = np.fromfile(
-                f, count=num_verts * (dim + 1), dtype=dtype, sep=" "
-            ).reshape(num_verts, dim + 1)
-            points = out[:, :dim]
-            point_data["medit:ref"] = out[:, dim].astype(int)
+            points, point_data =  _handle_Vertices(f, dim, dtype)
         elif items[0] in meshio_from_medit:
-            meshio_type, points_per_cell = meshio_from_medit[items[0]]
-            # The first value is the number of elements
-            num_cells = int(f.readline())
-
-            out = np.fromfile(
-                f, count=num_cells * (points_per_cell + 1), dtype=int, sep=" "
-            ).reshape(num_cells, points_per_cell + 1)
-
-            # adapt for 0-base
-            cells.append((meshio_type, out[:, :points_per_cell] - 1))
-            cell_data["medit:ref"].append(out[:, -1])
-        elif items[0] == "Corners":
-            # those are just discarded
-            num_corners = int(f.readline())
-            np.fromfile(f, count=num_corners, dtype=dtype, sep=" ")
-        elif items[0] == "Normals":
-            # those are just discarded
-            num_normals = int(f.readline())
-            np.fromfile(f, count=num_normals * dim, dtype=dtype, sep=" ").reshape(
-                num_normals, dim
-            )
-        elif items[0] == "NormalAtVertices":
-            # those are just discarded
-            num_normal_at_vertices = int(f.readline())
-            np.fromfile(
-                f, count=num_normal_at_vertices * 2, dtype=int, sep=" "
-            ).reshape(num_normal_at_vertices, 2)
-        elif items[0] == "SubDomainFromMesh":
-            # those are just discarded
-            num_sub_domain_from_mesh = int(f.readline())
-            np.fromfile(
-                f, count=num_sub_domain_from_mesh * 4, dtype=int, sep=" "
-            ).reshape(num_sub_domain_from_mesh, 4)
-        elif items[0] == "VertexOnGeometricVertex":
-            # those are just discarded
-            num_vertex_on_geometric_vertex = int(f.readline())
-            np.fromfile(
-                f, count=num_vertex_on_geometric_vertex * 2, dtype=int, sep=" "
-            ).reshape(num_vertex_on_geometric_vertex, 2)
-        elif items[0] == "VertexOnGeometricEdge":
-            # those are just discarded
-            num_vertex_on_geometric_edge = int(f.readline())
-            np.fromfile(
-                f, count=num_vertex_on_geometric_edge * 3, dtype=float, sep=" "
-            ).reshape(num_vertex_on_geometric_edge, 3)
-        elif items[0] == "EdgeOnGeometricEdge":
-            # those are just discarded
-            num_edge_on_geometric_edge = int(f.readline())
-            np.fromfile(
-                f, count=num_edge_on_geometric_edge * 2, dtype=int, sep=" "
-            ).reshape(num_edge_on_geometric_edge, 2)
-        elif items[0] == "Identifier" or items[0] == "Geometry":
+            meshio_type, cell_data_i, ref_data = _read_cells(f, meshio_from_medit[items[0]])
+            cells.append((meshio_type, cell_data_i))
+            cell_data["medit:ref"].append(ref_data)
+        elif items[0] in ["Corners", "Identifier", "Geometry"]:
             f.readline()
-        elif items[0] in [
-            "RequiredVertices",
-            "TangentAtVertices",
-            "Tangents",
-            "Ridges",
-        ]:
-            msg = f"Meshio doesn't know keyword {items[0]}. Skipping."
-            warn(msg)
-            num_to_pass = int(f.readline())
-            for _ in range(num_to_pass):
-                f.readline()
+        elif items[0] == "Normals":
+            _skip_section(f, dtype, dim)
+        elif items[0] in ["NormalAtVertices"
+                          , "EdgeOnGeometricEdge"
+                          , "SubDomainFromMesh"
+                          , "VertexOnGeometricVertex"
+                          , "VertexOnGeometricEdge"]:
+            skip_dict[items[0]](f)
+        
         else:
-            if items[0] != "End":
-                raise ReadError(f"Unknown keyword '{items[0]}'.")
+            _handle_unknown_keywords(items[0], f)
+        
+        line = f.readline()
 
     if points is None:
         raise ReadError("Expected `Vertices`")
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
+
+def _handle_Vertices(f, dim, dtype):
+    if dim <= 0 or dtype is None:
+        raise ReadError()
+    points, point_data = _read_vertices(f, dim, dtype)
+    return points, point_data
+
+def _handle_unknown_keywords(keyword, f):
+    if keyword in ["RequiredVertices", "TangentAtVertices", "Tangents", "Ridges"]:
+        warn(f"Meshio doesn't know keyword {keyword}. Skipping.")
+        num_to_pass = int(f.readline())
+        for _ in range(num_to_pass):
+            f.readline()
+    elif keyword != "End":
+        raise ReadError(f"Unknown keyword '{keyword}'.")
 
 
 def write(filename, mesh, float_fmt=".16e"):

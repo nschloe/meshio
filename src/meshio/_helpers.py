@@ -153,7 +153,8 @@ def write(filename, mesh: Mesh, file_format: str | None = None, **kwargs):
             raise WriteError("File format must be supplied if `filename` is a buffer")
         if file_format == "tetgen":
             raise WriteError(
-                "tetgen format is spread across multiple files, and so cannot be written to a buffer"
+                "tetgen format is spread across multiple files," 
+                + " and so cannot be written to a buffer"
             )
     else:
         path = Path(filename)

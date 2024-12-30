@@ -155,68 +155,16 @@ class XdmfReader:
 
         for c in grid:
             if c.tag == "Topology":
-                data_items = list(c)
-                if len(data_items) != 1:
-                    message = (
-                        "Need exactly 1 data item in <Topology>, "
-                        f"found {len(data_items)}."
-                    )
-                    if len(data_items) == 0:
-                        message += (
-                            "\nStructured meshes are not supported, see "
-                            "<https://github.com/nschloe/meshio/issues/404>."
-                        )
-                    raise ReadError(message)
-
-                topology_type = c.attrib["TopologyType"]
-                if topology_type == "Mixed":
-                    cells = translate_mixed_cells(
-                        np.fromstring(
-                            data_items[0].text,
-                            int,
-                            int(data_items[0].get("Dimensions")),
-                            " ",
-                        )
-                    )
-                else:
-                    data = self._read_data_item(data_items[0])
-                    cells.append(CellBlock(xdmf_to_meshio_type[topology_type], data))
-
+                self._read_topology_v2(c, cells)
             elif c.tag == "Geometry":
-                if "GeometryType" in c.attrib:
-                    geo_type = c.attrib["GeometryType"]
-                    if geo_type != "XYZ":
-                        raise ReadError(f'Expected GeometryType "XYZ", not {geo_type}.')
-                data_items = list(c)
-                if len(data_items) != 1:
-                    raise ReadError()
-                points = self._read_data_item(data_items[0])
-
+                points = self._read_geometry_v2(c)
             elif c.tag == "Information":
                 c_data = c.text
                 if not c_data:
                     raise ReadError()
                 field_data = self.read_information(c_data)
-
             elif c.tag == "Attribute":
-                # assert c.attrib['Active'] == '1'
-                # assert c.attrib['AttributeType'] == 'None'
-
-                data_items = list(c)
-                if len(data_items) != 1:
-                    raise ReadError()
-
-                data = self._read_data_item(data_items[0])
-
-                name = c.attrib["Name"]
-                if c.attrib["Center"] == "Node":
-                    point_data[name] = data
-                elif c.attrib["Center"] == "Cell":
-                    cell_data_raw[name] = data
-                else:
-                    # TODO field data?
-                    if c.attrib["Center"] != "Grid":
-                        raise ReadError()
+                self._read_attribute_v2(c, point_data, cell_data_raw)
             else:
                 raise ReadError(f"Unknown section '{c.tag}'.")
 
@@ -230,6 +178,59 @@ class XdmfReader:
             field_data=field_data,
         )
 
+    def _read_topology_v2(self, c, cells):
+        data_items = list(c)
+        if len(data_items) != 1:
+            message = (
+                "Need exactly 1 data item in <Topology>, "
+                f"found {len(data_items)}."
+            )
+            if len(data_items) == 0:
+                message += (
+                    "\nStructured meshes are not supported, see "
+                    "<https://github.com/nschloe/meshio/issues/404>."
+                )
+            raise ReadError(message)
+
+        topology_type = c.attrib["TopologyType"]
+        if topology_type == "Mixed":
+            cells = translate_mixed_cells(
+                np.fromstring(
+                    data_items[0].text,
+                    int,
+                    int(data_items[0].get("Dimensions")),
+                    " ",
+                )
+            )
+        else:
+            data = self._read_data_item(data_items[0])
+            cells.append(CellBlock(xdmf_to_meshio_type[topology_type], data))
+
+    def _read_geometry_v2(self, c):
+        if "GeometryType" in c.attrib:
+            geo_type = c.attrib["GeometryType"]
+            if geo_type != "XYZ":
+                raise ReadError(f'Expected GeometryType "XYZ", not {geo_type}.')
+        data_items = list(c)
+        if len(data_items) != 1:
+            raise ReadError()
+        return self._read_data_item(data_items[0])
+
+    def _read_attribute_v2(self, c, point_data, cell_data_raw):
+        data_items = list(c)
+        if len(data_items) != 1:
+            raise ReadError()
+
+        data = self._read_data_item(data_items[0])
+
+        name = c.attrib["Name"]
+        if c.attrib["Center"] == "Node":
+            point_data[name] = data
+        elif c.attrib["Center"] == "Cell":
+            cell_data_raw[name] = data
+        else:
+            if c.attrib["Center"] != "Grid":
+                raise ReadError()
     def read_xdmf3(self, root):  # noqa: C901
         domains = list(root)
         if len(domains) != 1:
@@ -253,71 +254,16 @@ class XdmfReader:
 
         for c in grid:
             if c.tag == "Topology":
-                data_items = list(c)
-                if len(data_items) != 1:
-                    raise ReadError()
-                data_item = data_items[0]
-
-                data = self._read_data_item(data_item)
-
-                # The XDMF2 key is `TopologyType`, just `Type` for XDMF3. Allow either
-                # one.
-                if "Type" in c.attrib and "TopologyType" in c.attrib:
-                    raise ReadError()
-                elif "Type" in c.attrib:
-                    cell_type = c.attrib["Type"]
-                else:
-                    cell_type = c.attrib["TopologyType"]
-
-                if cell_type == "Mixed":
-                    cells = translate_mixed_cells(data)
-                else:
-                    cells.append(CellBlock(xdmf_to_meshio_type[cell_type], data))
-
+                self._read_topology(c, cells)
             elif c.tag == "Geometry":
-                if "Type" in c.attrib and "GeometryType" in c.attrib:
-                    raise ReadError()
-                elif "Type" in c.attrib:
-                    geometry_type = c.attrib["Type"]
-                else:
-                    geometry_type = c.attrib["GeometryType"]
-
-                if geometry_type not in ["XY", "XYZ"]:
-                    raise ReadError(f'Illegal geometry type "{geometry_type}".')
-
-                data_items = list(c)
-                if len(data_items) != 1:
-                    raise ReadError()
-                data_item = data_items[0]
-                points = self._read_data_item(data_item)
-
+                points = self._read_geometry(c)
             elif c.tag == "Information":
                 c_data = c.text
                 if not c_data:
                     raise ReadError()
                 field_data = self.read_information(c_data)
-
             elif c.tag == "Attribute":
-                # Don't be too strict here: FEniCS, for example, calls this
-                # 'AttributeType'.
-                # assert c.attrib['Type'] == 'None'
-
-                data_items = list(c)
-                if len(data_items) != 1:
-                    raise ReadError()
-                data_item = data_items[0]
-
-                data = self._read_data_item(data_item)
-
-                if c.attrib["Center"] not in ["Node", "Cell"]:
-                    raise ReadError(f"Unknown center '{c.attrib['Center']}'.")
-
-                name = c.attrib["Name"]
-                if c.attrib["Center"] == "Node":
-                    point_data[name] = data
-                else:
-                    cell_data_raw[name] = data
-
+                self._read_attribute(c, point_data, cell_data_raw)
             else:
                 raise ReadError(f"Unknown section '{c.tag}'.")
 
@@ -330,6 +276,66 @@ class XdmfReader:
             cell_data=cell_data,
             field_data=field_data,
         )
+
+    def _read_topology(self, c, cells):
+        data_items = list(c)
+        if len(data_items) != 1:
+            raise ReadError()
+        data_item = data_items[0]
+
+        data = self._read_data_item(data_item)
+
+        # The XDMF2 key is `TopologyType`, just `Type` for XDMF3. Allow either
+        # one.
+        if "Type" in c.attrib and "TopologyType" in c.attrib:
+            raise ReadError()
+        elif "Type" in c.attrib:
+            cell_type = c.attrib["Type"]
+        else:
+            cell_type = c.attrib["TopologyType"]
+
+        if cell_type == "Mixed":
+            cells = translate_mixed_cells(data)
+        else:
+            cells.append(CellBlock(xdmf_to_meshio_type[cell_type], data))
+
+    def _read_geometry(self, c):
+        if "Type" in c.attrib and "GeometryType" in c.attrib:
+            raise ReadError()
+        elif "Type" in c.attrib:
+            geometry_type = c.attrib["Type"]
+        else:
+            geometry_type = c.attrib["GeometryType"]
+
+        if geometry_type not in ["XY", "XYZ"]:
+            raise ReadError(f'Illegal geometry type "{geometry_type}".')
+
+        data_items = list(c)
+        if len(data_items) != 1:
+            raise ReadError()
+        data_item = data_items[0]
+        return self._read_data_item(data_item)
+
+    def _read_attribute(self, c, point_data, cell_data_raw):
+        # Don't be too strict here: FEniCS, for example, calls this
+        # 'AttributeType'.
+        # assert c.attrib['Type'] == 'None'
+
+        data_items = list(c)
+        if len(data_items) != 1:
+            raise ReadError()
+        data_item = data_items[0]
+
+        data = self._read_data_item(data_item)
+
+        if c.attrib["Center"] not in ["Node", "Cell"]:
+            raise ReadError(f"Unknown center '{c.attrib['Center']}'.")
+
+        name = c.attrib["Name"]
+        if c.attrib["Center"] == "Node":
+            point_data[name] = data
+        else:
+            cell_data_raw[name] = data
 
 
 class XdmfWriter:

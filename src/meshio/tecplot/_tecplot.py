@@ -126,46 +126,11 @@ def read_buffer(f):
         line = readline(f)
 
         if line.upper().startswith("VARIABLES"):
-            # Multilines for VARIABLES appears to work only if
-            # variable name is double quoted
-            lines = [line]
-            i = f.tell()
-            line = readline(f).upper()
-            while True:
-                if line.startswith('"'):
-                    lines += [line]
-                    i = f.tell()
-                    line = readline(f).upper()
-                else:
-                    f.seek(i)
-                    break
-            line = " ".join(lines)
+            line = _read_multiline_variables(f, line)
             variables = _read_variables(line)
 
         elif line.upper().startswith("ZONE"):
-            # ZONE can be defined on several lines e.g.
-            # ```
-            # ZONE NODES = 62533, ELEMENTS = 57982
-            # , DATAPACKING = BLOCK, ZONETYPE = FEQUADRILATERAL
-            # , VARLOCATION = ([1-2] = NODAL, [3-7] = CELLCENTERED)
-            # ```
-            # is valid (and understood by ParaView and VisIt).
-            info_lines = [line]
-            i = f.tell()
-            line = readline(f).upper()
-            while True:
-                # check if the first entry can be converted to a float
-                try:
-                    float(line.split()[0])
-                except ValueError:
-                    info_lines += [line]
-                    i = f.tell()
-                    line = readline(f).upper()
-                else:
-                    f.seek(i)
-                    break
-            line = " ".join(info_lines)
-
+            line = _read_multiline_zone(f, line)
             assert variables is not None
 
             zone = _read_zone(line)
@@ -222,6 +187,37 @@ def read_buffer(f):
 
     return Mesh(points, cells, point_data, cell_data)
 
+
+def _read_multiline_variables(f, line):
+    lines = [line]
+    i = f.tell()
+    line = readline(f).upper()
+    while True:
+        if line.startswith('"'):
+            lines += [line]
+            i = f.tell()
+            line = readline(f).upper()
+        else:
+            f.seek(i)
+            break
+    return " ".join(lines)
+
+
+def _read_multiline_zone(f, line):
+    info_lines = [line]
+    i = f.tell()
+    line = readline(f).upper()
+    while True:
+        try:
+            float(line.split()[0])
+        except ValueError:
+            info_lines += [line]
+            i = f.tell()
+            line = readline(f).upper()
+        else:
+            f.seek(i)
+            break
+    return " ".join(info_lines)
 
 def _read_variables(line):
     # Gather variables in a list
@@ -377,20 +373,7 @@ def _read_zone_data(f, num_data, num_cells, zone_format):
 
 
 def write(filename, mesh):
-    # Check cell types
-    cell_types = []
-    cell_blocks = []
-    for ic, c in enumerate(mesh.cells):
-        if c.type in meshio_only:
-            cell_types.append(c.type)
-            cell_blocks.append(ic)
-        else:
-            warn(
-                (
-                    "Tecplot does not support cell type '{}'. "
-                    "Skipping cell block {}."
-                ).format(c.type, ic)
-            )
+    cell_types, cell_blocks = _get_cell_types_and_blocks(mesh)
 
     # Define cells and zone type
     cell_types = np.unique(cell_types)
@@ -424,6 +407,59 @@ def write(filename, mesh):
         )
 
     # Define variables
+    variables, data, varrange = _get_variables_and_data(mesh, cell_blocks)
+
+    with open_file(filename, "w") as f:
+        # Title
+        f.write(f'TITLE = "Written by meshio v{version}"\n')
+
+        # Variables
+        variables_str = ", ".join(f'"{var}"' for var in variables)
+        f.write(f"VARIABLES = {variables_str}\n")
+
+        # Zone record
+        num_nodes = len(mesh.points)
+        num_cells = sum(len(mesh.cells[ic].data) for ic in cell_blocks)
+        f.write(f"ZONE NODES = {num_nodes}, ELEMENTS = {num_cells},\n")
+        f.write(f"DATAPACKING = BLOCK, ZONETYPE = {zone_type}")
+        if varrange[0] <= varrange[1]:
+            f.write(",\n")
+            varlocation_str = (
+                f"{varrange[0]}"
+                if varrange[0] == varrange[1]
+                else f"{varrange[0]}-{varrange[1]}"
+            )
+            f.write(f"VARLOCATION = ([{varlocation_str}] = CELLCENTERED)\n")
+        else:
+            f.write("\n")
+
+        # Zone data
+        for arr in data:
+            _write_table(f, arr)
+
+        # CellBlock
+        for cell in cells:
+            f.write(" ".join(str(c) for c in cell + 1) + "\n")
+
+
+def _get_cell_types_and_blocks(mesh):
+    cell_types = []
+    cell_blocks = []
+    for ic, c in enumerate(mesh.cells):
+        if c.type in meshio_only:
+            cell_types.append(c.type)
+            cell_blocks.append(ic)
+        else:
+            warn(
+                (
+                    "Tecplot does not support cell type '{}'. "
+                    "Skipping cell block {}."
+                ).format(c.type, ic)
+            )
+    return cell_types, cell_blocks
+
+
+def _get_variables_and_data(mesh, cell_blocks):
     variables = ["X", "Y"]
     data = [mesh.points[:, 0], mesh.points[:, 1]]
     varrange = [3, 0]
@@ -464,37 +500,7 @@ def write(filename, mesh):
             else:
                 warn(f"Skipping cell data '{k}'.")
 
-    with open_file(filename, "w") as f:
-        # Title
-        f.write(f'TITLE = "Written by meshio v{version}"\n')
-
-        # Variables
-        variables_str = ", ".join(f'"{var}"' for var in variables)
-        f.write(f"VARIABLES = {variables_str}\n")
-
-        # Zone record
-        num_nodes = len(mesh.points)
-        num_cells = sum(len(mesh.cells[ic].data) for ic in cell_blocks)
-        f.write(f"ZONE NODES = {num_nodes}, ELEMENTS = {num_cells},\n")
-        f.write(f"DATAPACKING = BLOCK, ZONETYPE = {zone_type}")
-        if varrange[0] <= varrange[1]:
-            f.write(",\n")
-            varlocation_str = (
-                f"{varrange[0]}"
-                if varrange[0] == varrange[1]
-                else f"{varrange[0]}-{varrange[1]}"
-            )
-            f.write(f"VARLOCATION = ([{varlocation_str}] = CELLCENTERED)\n")
-        else:
-            f.write("\n")
-
-        # Zone data
-        for arr in data:
-            _write_table(f, arr)
-
-        # CellBlock
-        for cell in cells:
-            f.write(" ".join(str(c) for c in cell + 1) + "\n")
+    return variables, data, varrange
 
 
 def _write_table(f, data, ncol=20):

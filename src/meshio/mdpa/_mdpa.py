@@ -129,21 +129,8 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
         raise ReadError("Can only read ASCII cells")
 
     # First we try to identify the entity
-    t = None
-    if environ is not None:
-        if environ.startswith("Begin Elements "):
-            entity_name = environ[15:]
-            for key in _mdpa_to_meshio_type:
-                if key in entity_name:
-                    t = _mdpa_to_meshio_type[key]
-                    break
-        elif environ.startswith("Begin Conditions "):
-            entity_name = environ[17:]
-            for key in _mdpa_to_meshio_type:
-                if key in entity_name:
-                    t = _mdpa_to_meshio_type[key]
-                    break
-
+    t = _identify_entity(environ)
+    
     while True:
         line = f.readline().decode()
         if line.startswith("End Elements") or line.startswith("End Conditions"):
@@ -172,6 +159,23 @@ def _read_cells(f, cells, is_ascii, cell_tags, environ=None):
 
     if line.strip() not in ["End Elements", "End Conditions"]:
         raise ReadError()
+
+def _identify_entity(environ):
+    t = None
+    if environ is not None:
+        if environ.startswith("Begin Elements "):
+            entity_name = environ[15:]
+            for key in _mdpa_to_meshio_type:
+                if key in entity_name:
+                    t = _mdpa_to_meshio_type[key]
+                    break
+        elif environ.startswith("Begin Conditions "):
+            entity_name = environ[17:]
+            for key in _mdpa_to_meshio_type:
+                if key in entity_name:
+                    t = _mdpa_to_meshio_type[key]
+                    break
+    return t
 
 
 def _prepare_cells(cells, cell_tags):

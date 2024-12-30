@@ -89,6 +89,19 @@ def read(filename):
     )
 
 
+def _process_attr_refs(data_dict):
+    """Extract attribute and reference keys from a data dictionary."""
+    attr_keys = list(data_dict.keys())
+    ref_keys = [k for k in attr_keys if ":ref" in k]
+    if len(attr_keys) > 0:
+        if len(ref_keys) > 0:
+            ref_keys = ref_keys[:1]
+            attr_keys.remove(ref_keys[0])
+        else:
+            ref_keys = attr_keys[:1]
+            attr_keys = attr_keys[1:]
+    return attr_keys, ref_keys
+
 def write(filename, mesh, float_fmt=".16e"):
     filename = pathlib.Path(filename)
     if filename.suffix == ".node":
@@ -105,18 +118,9 @@ def write(filename, mesh, float_fmt=".16e"):
 
     # write nodes
     with open(node_filename, "w") as fh:
-        # identify ":ref" key
-        attr_keys = list(mesh.point_data.keys())
-        ref_keys = [k for k in attr_keys if ":ref" in k]
-        if len(attr_keys) > 0:
-            if len(ref_keys) > 0:
-                ref_keys = ref_keys[:1]
-                attr_keys.remove(ref_keys[0])
-            else:
-                ref_keys = attr_keys[:1]
-                attr_keys = attr_keys[1:]
-
+        attr_keys, ref_keys = _process_attr_refs(mesh.point_data)
         nattr, nref = len(attr_keys), len(ref_keys)
+
         fh.write(f"# This file was created by meshio v{__version__}\n")
         if (nattr + nref) > 0:
             fh.write(
@@ -145,14 +149,9 @@ def write(filename, mesh, float_fmt=".16e"):
 
     # write cells
     with open(ele_filename, "w") as fh:
-        attr_keys = list(mesh.cell_data.keys())
-        ref_keys = [k for k in attr_keys if ":ref" in k]
-        if len(attr_keys) > 0:
-            if len(ref_keys) > 0:
-                attr_keys.remove(ref_keys[0])
-                attr_keys = ref_keys[:1] + attr_keys
+        attr_keys, ref_keys = _process_attr_refs(mesh.cell_data)
+        nattr = len(attr_keys) + len(ref_keys)
 
-        nattr = len(attr_keys)
         fh.write(f"# This file was created by meshio v{__version__}\n")
         if nattr > 0:
             fh.write("# attribute names: {}\n".format(", ".join(attr_keys)))

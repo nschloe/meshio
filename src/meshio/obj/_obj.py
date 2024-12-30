@@ -21,59 +21,60 @@ def read(filename):
 
 
 def read_buffer(f):
-    points = []
-    vertex_normals = []
-    texture_coords = []
-    face_groups = []
-    face_group_ids = []
+    points, vertex_normals, texture_coords, face_groups, face_group_ids = [], [], [], [], []
     face_group_id = -1
+
     while True:
         line = f.readline()
-
         if not line:
-            # EOF
             break
+        process_line(line.strip(), points, vertex_normals, texture_coords, face_groups, face_group_ids, face_group_id)
 
-        strip = line.strip()
+    face_groups, face_group_ids = clean_empty_groups(face_groups, face_group_ids)
+    points, texture_coords, vertex_normals, point_data = convert_to_numpy(points, texture_coords, vertex_normals)
+    cells, cell_data = create_cells(face_groups, face_group_ids)
 
-        if len(strip) == 0 or strip[0] == "#":
-            continue
+    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
 
-        split = strip.split()
 
-        if split[0] == "v":
-            points.append([float(item) for item in split[1:]])
-        elif split[0] == "vn":
-            vertex_normals.append([float(item) for item in split[1:]])
-        elif split[0] == "vt":
-            texture_coords.append([float(item) for item in split[1:]])
-        elif split[0] == "s":
-            # "s 1" or "s off" controls smooth shading
-            pass
-        elif split[0] == "f":
-            dat = [int(item.split("/")[0]) for item in split[1:]]
-            if len(face_groups) == 0 or (
-                len(face_groups[-1]) > 0 and len(face_groups[-1][-1]) != len(dat)
-            ):
-                face_groups.append([])
-                face_group_ids.append([])
+def process_line(strip, points, vertex_normals, texture_coords, face_groups, face_group_ids, face_group_id):
+    if len(strip) == 0 or strip[0] == "#":
+        return
 
-            face_groups[-1].append(dat)
-            face_group_ids[-1].append(face_group_id)
-        elif split[0] == "g":
-            # new group
-            face_groups.append([])
-            face_group_ids.append([])
-            face_group_id += 1
-        else:
-            # who knows
-            pass
+    split = strip.split()
+    if split[0] == "v":
+        points.append([float(item) for item in split[1:]])
+    elif split[0] == "vn":
+        vertex_normals.append([float(item) for item in split[1:]])
+    elif split[0] == "vt":
+        texture_coords.append([float(item) for item in split[1:]])
+    elif split[0] == "s":
+        pass
+    elif split[0] == "f":
+        process_face(split, face_groups, face_group_ids, face_group_id)
+    elif split[0] == "g":
+        face_groups.append([])
+        face_group_ids.append([])
+        face_group_id += 1
 
-    # There may be empty groups, too. <https://github.com/nschloe/meshio/issues/770>
-    # Remove them.
+
+def process_face(split, face_groups, face_group_ids, face_group_id):
+    dat = [int(item.split("/")[0]) for item in split[1:]]
+    if len(face_groups) == 0 or (len(face_groups[-1]) > 0 and len(face_groups[-1][-1]) != len(dat)):
+        face_groups.append([])
+        face_group_ids.append([])
+
+    face_groups[-1].append(dat)
+    face_group_ids[-1].append(face_group_id)
+
+
+def clean_empty_groups(face_groups, face_group_ids):
     face_groups = [f for f in face_groups if len(f) > 0]
     face_group_ids = [g for g in face_group_ids if len(g) > 0]
+    return face_groups, face_group_ids
 
+
+def convert_to_numpy(points, texture_coords, vertex_normals):
     points = np.array(points)
     texture_coords = np.array(texture_coords)
     vertex_normals = np.array(vertex_normals)
@@ -82,8 +83,10 @@ def read_buffer(f):
         point_data["obj:vt"] = texture_coords
     if len(vertex_normals) > 0:
         point_data["obj:vn"] = vertex_normals
+    return points, texture_coords, vertex_normals, point_data
 
-    # convert to numpy arrays
+
+def create_cells(face_groups, face_group_ids):
     face_groups = [np.array(f) for f in face_groups]
     cell_data = {"obj:group_ids": []}
     cells = []
@@ -95,9 +98,7 @@ def read_buffer(f):
         else:
             cells.append(CellBlock("polygon", f - 1))
         cell_data["obj:group_ids"].append(gid)
-
-    return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
-
+    return cells, cell_data
 
 def write(filename, mesh):
     for c in mesh.cells:

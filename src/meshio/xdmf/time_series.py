@@ -48,16 +48,7 @@ class TimeSeriesReader:
         grids = list(self.domain)
 
         # find the collection grid
-        collection_grid = None
-        for g in grids:
-            if g.get("GridType") == "Collection":
-                collection_grid = g
-        if collection_grid is None:
-            raise ReadError("Couldn't find the mesh grid")
-        if collection_grid.tag != "Grid":
-            raise ReadError()
-        if collection_grid.get("CollectionType") != "Temporal":
-            raise ReadError()
+        collection_grid = self.find_grid_collection(grids)
 
         # get the collection at once
         self.collection = list(collection_grid)
@@ -80,6 +71,22 @@ class TimeSeriesReader:
             raise ReadError("Couldn't find the mesh grid")
         if self.mesh_grid.tag != "Grid":
             raise ReadError()
+        
+    def find_grid_collection(self, grids):
+        # find the collection grid
+        collection_grid = None
+        for g in grids:
+            if g.get("GridType") == "Collection":
+                collection_grid = g
+        if collection_grid is None:
+            raise ReadError("Couldn't find the mesh grid")
+        if collection_grid.tag != "Grid":
+            raise ReadError()
+        if collection_grid.get("CollectionType") != "Temporal":
+            raise ReadError()
+        
+        return collection_grid
+
 
     def __enter__(self):
         return self
@@ -167,9 +174,7 @@ class TimeSeriesReader:
 
         return t, point_data, cell_data
 
-    def _read_data_item(self, data_item):
-        dims = [int(d) for d in data_item.get("Dimensions").split()]
-
+    def _get_data_type_and_precision(self, data_item):
         # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files out there
         # use both keys interchangeably.
         if data_item.get("DataType"):
@@ -185,11 +190,12 @@ class TimeSeriesReader:
             # <https://xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
             data_type = "Float"
 
-        try:
-            precision = data_item.attrib["Precision"]
-        except KeyError:
-            precision = "4"
+        precision = data_item.attrib.get("Precision", "4")
+        return data_type, precision
 
+    def _read_data_item(self, data_item):
+        dims = [int(d) for d in data_item.get("Dimensions").split()]
+        data_type, precision = self._get_data_type_and_precision(data_item)
         data_format = data_item.attrib["Format"]
 
         if data_format == "XML":
