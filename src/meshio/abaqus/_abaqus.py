@@ -89,7 +89,7 @@ abaqus_to_meshio_type = {
     "C3D10MH": "tetra10",
     # "TETRA14": "tetra14",
     #
-    # "PYRAMID": "pyramid",
+    "C3D5": "pyramid",
     "C3D6": "wedge",
     "C3D15": "wedge15",
     #
