@@ -15,6 +15,11 @@ extension_to_filetypes = {}
 reader_map = {}
 _writer_map = {}
 
+# NumPy 2.x changed the representaion of scalars.
+# This reverts to the old behavior.
+# https://numpy.org/doc/2.2/release/2.0.0-notes.html#representation-of-numpy-scalars-changed
+if np.lib.NumpyVersion(np.__version__) >= '2.0.0':
+    np.set_printoptions(legacy="1.25")
 
 def register_format(
     format_name: str, extensions: list[str], reader, writer_map
