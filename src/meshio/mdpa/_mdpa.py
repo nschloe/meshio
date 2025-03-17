@@ -418,7 +418,7 @@ def _write_data(fh, tag, name, data, binary):
         data = data[:, 0]
 
     # Actually write the data
-    fmt = " ".join(["{}"] + ["{!r}"] * num_components) + "\n"
+    fmt = " ".join(["{}"] * (num_components + 1)) + "\n"
     # TODO unify
     if num_components == 1:
         for k, x in enumerate(data):

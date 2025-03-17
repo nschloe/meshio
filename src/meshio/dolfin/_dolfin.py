@@ -207,7 +207,7 @@ def _write_cell_data(filename, dim, cell_data):
     )
 
     for k, value in enumerate(cell_data):
-        ET.SubElement(mesh_function, "entity", index=str(k), value=repr(value))
+        ET.SubElement(mesh_function, "entity", index=str(k), value=str(value))
 
     tree = ET.ElementTree(dolfin)
     tree.write(filename)
