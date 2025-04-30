@@ -410,10 +410,11 @@ def _float_to_nastran_string(value, length=16):
         -0.1234 --> "-1.234E-1"
         3.1415926535897932 --> "3.14159265359E+0"
     """
-    out = np.format_float_scientific(value, exp_digits=1, precision=11).replace(
+    precision = length - 5 if value > 0.0 else length - 6
+    out = np.format_float_scientific(value, exp_digits=1, precision=precision).replace(
         "e", "E"
     )
-    assert len(out) <= 16
+    assert len(out) <= length
     return out
     # The following is the manual float conversion. Keep it around for a while in case
     # we still need it.
