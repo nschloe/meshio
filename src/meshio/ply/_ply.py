@@ -264,18 +264,21 @@ def _read_binary(
     cell_data_dtypes,
 ):
     ply_to_numpy_dtype_string = {
-        "uchar": "i1",
+        "uchar": "u1",
+        "short": "i2",
+        "ushort": "u2",
+        "int": "i4",
+        "int8": "i1",
+        "int32": "i4",
+        "int64": "i8",
         "uint": "u4",
         "uint8": "u1",
         "uint16": "u2",
         "uint32": "u4",
         "uint64": "u8",
-        "int": "i4",
-        "int8": "i1",
-        "int32": "i4",
-        "int64": "i8",
         "float": "f4",
         "float32": "f4",
+        "float64": "f8",
         "double": "f8",
     }
 
