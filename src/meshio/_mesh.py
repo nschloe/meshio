@@ -13,6 +13,7 @@ topological_dimension = {
     "triangle": 2,
     "quad": 2,
     "tetra": 3,
+    "tetra4": 3,
     "hexahedron": 3,
     "wedge": 3,
     "pyramid": 3,

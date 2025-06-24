@@ -15,7 +15,7 @@ from ..__about__ import __version__
 from .._common import warn
 from .._exceptions import ReadError
 from .._helpers import register_format
-from .._mesh import Mesh
+from .._mesh import Mesh, CellBlock
 
 exodus_to_meshio_type = {
     "SPHERE": "vertex",
@@ -85,10 +85,15 @@ def read(filename):  # noqa: C901
         cd = {}
         cells = []
         ns_names = []
-        # eb_names = []
+        eb_names = []
         ns = []
         point_sets = {}
         info = []
+
+        for key, value in nc.variables.items():
+            if key == "eb_names":
+                value.set_auto_mask(False)
+                eb_names = [b"".join(c).decode("UTF-8") for c in value[:]]
 
         for key, value in nc.variables.items():
             if key == "info_records":
@@ -120,10 +125,10 @@ def read(filename):  # noqa: C901
             elif key[:12] == "vals_nod_var":
                 idx = 0 if len(key) == 12 else int(key[12:]) - 1
                 value.set_auto_mask(False)
-                # For now only take the first value
-                pd[idx] = value[0]
-                if len(value) > 1:
-                    warn("Skipping some time data")
+                # loop over all value (equal to timesteps)
+                pd[idx] = []
+                for val in value:
+                    pd[idx].append(val)
             elif key == "name_elem_var":
                 value.set_auto_mask(False)
                 cell_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
@@ -134,13 +139,15 @@ def read(filename):  # noqa: C901
                 block = 0 if m.group(2) is None else int(m.group(2)) - 1
 
                 value.set_auto_mask(False)
-                # For now only take the first value
-                if idx not in cd:
-                    cd[idx] = {}
-                cd[idx][block] = value[0]
 
-                if len(value) > 1:
-                    warn("Skipping some time data")
+                # loop over all value (equal to timesteps)
+                if idx not in cd:
+                    cd[idx] = []
+
+                for t, val in enumerate(value):
+                    if block == 0:
+                        cd[idx].append({})
+                    cd[idx][t][block] = val
             elif key == "ns_names":
                 value.set_auto_mask(False)
                 ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
@@ -150,37 +157,71 @@ def read(filename):  # noqa: C901
             elif key.startswith("node_ns"):  # Expected keys: node_ns1, node_ns2
                 ns.append(value[:] - 1)  # Exodus is 1-based
 
-        # merge element block data; can't handle blocks yet
-        for k, value in cd.items():
-            cd[k] = np.concatenate(list(value.values()))
 
         # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
         # triplets in the point data. If yes, they belong together.
         single, double, triple = categorize(point_data_names)
 
         point_data = {}
-        for name, idx in single:
-            point_data[name] = pd[idx]
-        for name, idx0, idx1 in double:
-            point_data[name] = np.column_stack([pd[idx0], pd[idx1]])
-        for name, idx0, idx1, idx2 in triple:
-            point_data[name] = np.column_stack([pd[idx0], pd[idx1], pd[idx2]])
+        for name_base, idx in single:
+            for t, pd_t in enumerate(pd[idx]):
+                if len(pd[idx]) > 1:
+                    name = f"{name_base}_time{t}"
+                else:
+                    name = name_base
+                if name not in point_data:
+                    point_data[name] = []
+                point_data[name] = pd_t
+        for name_base, idx0, idx1 in double:
+            for t, (pd0_t, pd1_t) in enumerate(zip(pd[idx0], pd[idx1])):
+                if len(pd[idx0]) > 1:
+                    name = f"{name_base}_time{t}"
+                else:
+                    name = name_base
+                if name not in point_data:
+                    point_data[name] = []
+                point_data[name] = np.column_stack([pd0_t, pd1_t])
+        for name_base, idx0, idx1, idx2 in triple:
+            for t, (pd0_t, pd1_t, pd2_t) in enumerate(zip(pd[idx0], pd[idx1], pd[idx2])):
+                if len(pd[idx0]) > 1:
+                    name = f"{name_base}_time{t}"
+                else:
+                    name = name_base
+                if name not in point_data:
+                    point_data[name] = []
+                point_data[name] = np.column_stack([pd0_t, pd1_t, pd2_t])
 
         cell_data = {}
-        k = 0
-        for _, cell in cells:
-            n = len(cell)
-            for name, data in zip(cell_data_names, cd.values()):
-                if name not in cell_data:
-                    cell_data[name] = []
-                cell_data[name].append(data[k : k + n])
-            k += n
+        for name_base, (idx, data) in zip(cell_data_names, cd.items()):
+            for t, data_per_time in enumerate(data):
+                for b, (_, cell) in enumerate(cells):
+                    if len(data) > 1:
+                        name = f"{name_base}_time{t}"
+                    else:
+                        name = name_base
+                    if name not in cell_data:
+                        cell_data[name] = []
+                    cell_data[name].append(data_per_time[b])
 
         point_sets = {name: dat for name, dat in zip(ns_names, ns)}
 
+        # Format data into CellBlock with block name as a tag
+        out_cells = []
+        for cell_block, block_name in zip(cells, eb_names):
+            if isinstance(cell_block, tuple):
+                cell_type, data = cell_block
+                cell_block = CellBlock(
+                    cell_type,
+                    # polyhedron data cannot be converted to numpy arrays
+                    # because the sublists don't all have the same length
+                    data if cell_type.startswith("polyhedron") else np.asarray(data),
+                    tags=[block_name]
+                )
+            out_cells.append(cell_block)
+
     return Mesh(
         points,
-        cells,
+        out_cells,
         point_data=point_data,
         cell_data=cell_data,
         point_sets=point_sets,
@@ -263,6 +304,12 @@ def write(filename, mesh):
     import netCDF4
 
     with netCDF4.Dataset(filename, "w") as rootgrp:
+        # if time-dependent, pass in mesh and time_step as list
+        if type(mesh) is list:
+            mesh, time_step = mesh
+        else:
+            time_step = None
+
         # set global data
         now = datetime.datetime.now().isoformat()
         rootgrp.title = f"Created by meshio v{__version__}, {now}"
@@ -280,7 +327,7 @@ def write(filename, mesh):
         rootgrp.createDimension("len_string", 33)
         rootgrp.createDimension("len_line", 81)
         rootgrp.createDimension("four", 4)
-        rootgrp.createDimension("time_step", None)
+        rootgrp.createDimension("time_step", time_step)
 
         # dummy time step
         data = rootgrp.createVariable("time_whole", "f4", ("time_step",))
@@ -349,6 +396,9 @@ def write(filename, mesh):
                     fill_value=False,
                 )
                 node_data[0] = data
+                if time_step is not None:
+                    for time_index in range(1, time_step):
+                        node_data[time_index] = data
 
         # node sets
         num_point_sets = len(mesh.point_sets)
@@ -368,6 +418,39 @@ def write(filename, mesh):
                 data = rootgrp.createVariable(f"node_ns{k + 1}", dtype, (dim1,))
                 # Exodus is 1-based
                 data[:] = values + 1
+
+        # cell data
+        # The variable `name_elem_var` holds the names and indices of the node variables, the
+        # variables `vals_elem_var{1,2,...}` hold the actual data.
+        num_elem_var = len(mesh.cell_data)
+        if num_elem_var > 0:
+            rootgrp.createDimension("num_elem_var", num_elem_var)
+            # set names
+            cell_data_names = rootgrp.createVariable(
+                "name_elem_var", "S1", ("num_elem_var", "len_string")
+            )
+            cell_data_names.set_auto_mask(False)
+            for k, name in enumerate(mesh.cell_data.keys()):
+                for i, letter in enumerate(name):
+                    cell_data_names[k, i] = letter.encode()
+
+            for k, (name, data) in enumerate(mesh.cell_data.items()):
+                # For some reason, data is list of len == 1. 
+                # Not sure when larger lists this would occur, in all tests so far it has been = 1
+                assert len(data) == 1, f"cell_data expected len == 1, len is {len(data)}, name {name}"
+                data = data[0] 
+                for i, s in enumerate(data.shape):
+                    rootgrp.createDimension(f"dim_elem_var{k}{i}", s)
+                dims = ["time_step"] + [
+                    f"dim_elem_var{k}{i}" for i in range(len(data.shape))
+                ]
+                elem_data = rootgrp.createVariable(
+                    f"vals_elem_var{k + 1}",
+                    numpy_to_exodus_dtype[data.dtype.name],
+                    tuple(dims),
+                    fill_value=False,
+                )
+                elem_data[0] = data
 
 
 register_format("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})

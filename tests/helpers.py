@@ -605,6 +605,18 @@ def add_point_data(mesh, dim, num_tags=2, seed=0, dtype=float):
     return mesh2
 
 
+def add_timevarying_point_data(mesh, dim, time_step=2, num_tags=2, seed=0, dtype=float):
+    rng = np.random.default_rng(seed)
+
+    mesh2 = copy.deepcopy(mesh)
+
+    shape = (len(mesh.points),) if dim == 1 else (len(mesh.points), dim)
+    data = [(100 * rng.random(shape)).astype(dtype) for _ in range(num_tags)]
+    
+    for k, d in enumerate(data):
+        mesh2.point_data[string.ascii_lowercase[k]] = d
+    return [mesh2, time_step]
+
 def add_cell_data(mesh, specs: list[tuple[str, tuple[int, ...], type]]):
     mesh2 = copy.deepcopy(mesh)
 
@@ -653,11 +665,20 @@ def add_cell_sets(mesh):
 
 def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat"):
     """Write and read a file, and make sure the data is the same as before."""
-    in_mesh = copy.deepcopy(input_mesh)
+    if type(input_mesh) is list:
+        in_mesh = copy.deepcopy(input_mesh[0])
+    else:
+        in_mesh = copy.deepcopy(input_mesh)
 
     p = tmp_path / ("test" + extension)
     print(input_mesh)
     writer(p, input_mesh)
+    # when using time-varying data, we pass time_step in list with 
+    # mesh to avoid excessive code changes
+    if type(input_mesh) is list:
+        input_mesh, time_step = input_mesh
+    else:
+        time_step = None
     mesh = reader(p)
 
     # Make sure the output is writeable
@@ -718,10 +739,20 @@ def write_read(tmp_path, writer, reader, input_mesh, atol, extension=".dat"):
             print("b", cells1.data)
             assert np.array_equal(cells0.data, cells1.data)
 
-    for key in input_mesh.point_data.keys():
-        assert np.allclose(
-            input_mesh.point_data[key], mesh.point_data[key], atol=atol, rtol=0.0
-        )
+    if time_step is None:
+        for key in input_mesh.point_data.keys():
+            assert np.allclose(
+                input_mesh.point_data[key], mesh.point_data[key], atol=atol, rtol=0.0
+            )
+    else:
+        # we cannot write time-dependent data to input_mesh.point_data 
+        # (as far as I can see). So for testing we set all times equal
+        for key in input_mesh.point_data.keys():
+            for time_index in range(time_step):
+                time_dep_key = f"{key}_time{time_index}"
+                assert np.allclose(
+                    input_mesh.point_data[key], mesh.point_data[time_dep_key], atol=atol, rtol=0.0
+                )
 
     print(input_mesh.cell_data)
     print()
