@@ -160,57 +160,44 @@ _gmsh_to_meshio_type = {
 }
 _meshio_to_gmsh_type = {v: k for k, v in _gmsh_to_meshio_type.items()}
 
+_gmsh_to_meshio = {
+    # fmt: off
+    "tetra10": [0, 1, 2, 3, 4, 5, 6, 7, 9, 8],
+    "hexahedron20": [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13,
+        9, 16, 18, 19, 17, 10, 12, 14, 15,
+    ],  # https://vtk.org/doc/release/4.2/html/classvtkQuadraticHexahedron.html and https://gmsh.info/doc/texinfo/gmsh.html#Node-ordering
+    "hexahedron27": [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13,
+        9, 16, 18, 19, 17, 10, 12, 14, 15,
+        22, 23, 21, 24, 20, 25, 26,
+    ],
+    "wedge15": [
+        0, 1, 2, 3, 4, 5, 6, 9, 7, 12, 14, 13, 8, 10, 11
+    ],  # http://davis.lbl.gov/Manuals/VTK-4.5/classvtkQuadraticWedge.html and https://gmsh.info/doc/texinfo/gmsh.html#Node-ordering
+    "wedge18": [
+        0, 1, 2, 3, 4, 5, 6, 9, 7, 12, 14, 13, 8, 10, 11, 15, 17, 16
+    ],
+    "pyramid13": [0, 1, 2, 3, 4, 5, 8, 10, 6, 7, 9, 11, 12],
+    # fmt: on
+}
+
+_meshio_to_gmsh = {cell_type: [order.index(i)  for i in range(len(order))]
+                   for cell_type, order in _gmsh_to_meshio.items()}
 
 def _gmsh_to_meshio_order(cell_type: str, idx: ArrayLike) -> np.ndarray:
     # Gmsh cells are mostly ordered like VTK, with a few exceptions:
-    meshio_ordering = {
-        # fmt: off
-        "tetra10": [0, 1, 2, 3, 4, 5, 6, 7, 9, 8],
-        "hexahedron20": [
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13,
-            9, 16, 18, 19, 17, 10, 12, 14, 15,
-        ],  # https://vtk.org/doc/release/4.2/html/classvtkQuadraticHexahedron.html and https://gmsh.info/doc/texinfo/gmsh.html#Node-ordering
-        "hexahedron27": [
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13,
-            9, 16, 18, 19, 17, 10, 12, 14, 15,
-            22, 23, 21, 24, 20, 25, 26,
-        ],
-        "wedge15": [
-            0, 1, 2, 3, 4, 5, 6, 9, 7, 12, 14, 13, 8, 10, 11
-        ],  # http://davis.lbl.gov/Manuals/VTK-4.5/classvtkQuadraticWedge.html and https://gmsh.info/doc/texinfo/gmsh.html#Node-ordering
-        "pyramid13": [0, 1, 2, 3, 4, 5, 8, 10, 6, 7, 9, 11, 12],
-        # fmt: on
-    }
     idx = np.asarray(idx)
-    if cell_type not in meshio_ordering:
+    if cell_type not in _gmsh_to_meshio:
         return idx
-    return idx[:, meshio_ordering[cell_type]]
-
+    return idx[:, _gmsh_to_meshio[cell_type]]
 
 def _meshio_to_gmsh_order(cell_type: str, idx: ArrayLike) -> np.ndarray:
-    # Gmsh cells are mostly ordered like VTK, with a few exceptions:
-    gmsh_ordering = {
-        # fmt: off
-        "tetra10": [0, 1, 2, 3, 4, 5, 6, 7, 9, 8],
-        "hexahedron20": [
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16,
-            9, 17, 10, 18, 19, 12, 15, 13, 14,
-        ],
-        "hexahedron27": [
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 16,
-            9, 17, 10, 18, 19, 12, 15, 13, 14,
-            24, 22, 20, 21, 23, 25, 26,
-        ],
-        "wedge15": [
-            0, 1, 2, 3, 4, 5, 6, 8, 12, 7, 13, 14, 9, 11, 10,
-        ],
-        "pyramid13": [0, 1, 2, 3, 4, 5, 8, 9, 6, 10, 7, 11, 12],
-        # fmt: on
-    }
+    # Gmsh cells are mostly ordered like VTK, with a few exceptions:    
     idx = np.asarray(idx)
-    if cell_type not in gmsh_ordering:
+    if cell_type not in _meshio_to_gmsh:
         return idx
-    return idx[:, gmsh_ordering[cell_type]]
+    return idx[:, _meshio_to_gmsh[cell_type]]
 
 
 def _write_physical_names(fh, field_data):
