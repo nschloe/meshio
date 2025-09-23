@@ -43,6 +43,7 @@ abaqus_to_meshio_type = {
     "S4RS": "quad",
     "S4RSW": "quad",
     "S4R5": "quad",
+    "CAX8": "quad8",
     "S8R": "quad8",
     "S8R5": "quad8",
     "S9R5": "quad9",
