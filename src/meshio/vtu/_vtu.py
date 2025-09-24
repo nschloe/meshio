@@ -702,7 +702,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
     def numpy_to_xml_array(parent, name, data):
         vtu_type = numpy_to_vtu_type[data.dtype]
-        fmt = "{:.11e}" if vtu_type.startswith("Float") else "{:d}"
+        fmt = "%.11e" if vtu_type.startswith("Float") else "%d"
         da = ET.SubElement(parent, "DataArray", type=vtu_type, Name=name)
         if len(data.shape) == 2:
             da.set("NumberOfComponents", f"{data.shape[1]}")
@@ -742,14 +742,7 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
             f.write(base64.b64encode(header.tobytes() + data_bytes).decode())
 
         def text_writer_ascii(f):
-            # This write() loop is the bottleneck for the write. Alternatives:
-            # savetxt is super slow:
-            #   np.savetxt(f, data.reshape(-1), fmt=fmt)
-            # joining and writing is a bit faster, but consumes huge amounts of
-            # memory:
-            #   f.write("\n".join(map(fmt.format, data.reshape(-1))))
-            for item in data.reshape(-1):
-                f.write((fmt + "\n").format(item))
+            np.savetxt(f, data, fmt=fmt)
 
         if binary:
             da.set("format", "binary")
