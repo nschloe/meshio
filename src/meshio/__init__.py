@@ -41,7 +41,7 @@ from ._helpers import (
     write,
     write_points_cells,
 )
-from ._mesh import CellBlock, Mesh
+from ._mesh import CellBlock, Mesh, topological_dimension
 
 __all__ = [
     "abaqus",
