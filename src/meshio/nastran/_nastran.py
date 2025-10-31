@@ -239,6 +239,19 @@ def read_buffer(f):
                 # where the last three floats specify the orientation vector.
                 # This information is removed.
                 cell = chunks[3:5]
+            #Sometimes Nastran shell elements have properties after nodes, so we limit the slices
+            #$            EID     PID      N1      N2      N3      N4            ZOFF
+            #CQUAD4        38       1      39      40      45      46             0.1+
+            #$                             T1      T2      T3      T4
+            #+                             1.      2.      3.      4.
+            elif keyword == "CQUAD4":
+                cell = chunks[3:7]
+            elif keyword == "CTRIA3":
+                cell = chunks[3:6]
+            elif keyword == "CQUAD8":
+                cell = chunks[3:11]
+            elif keyword == "CTRIA6":
+                cell = chunks[3:9]
             else:
                 cell = chunks[3:]
 
