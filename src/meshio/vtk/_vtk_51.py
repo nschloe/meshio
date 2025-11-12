@@ -83,6 +83,9 @@ def read_buffer(f):
     f.readline()
 
     data_type = f.readline().decode().strip().upper()
+    if "Created by Gmsh" in data_type:
+        # Gmesh vtk files have one extra header line to skip before data_type
+        data_type = f.readline().decode().strip().upper()
     if data_type not in ["ASCII", "BINARY"]:
         raise ReadError(f"Unknown VTK data type '{data_type}'.")
     info.is_ascii = data_type == "ASCII"
