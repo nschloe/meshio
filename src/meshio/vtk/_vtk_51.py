@@ -83,6 +83,9 @@ def read_buffer(f):
     f.readline()
 
     data_type = f.readline().decode().strip().upper()
+    if "Created by Gmsh" in data_type:
+        # Gmesh vtk files have one extra header line to skip before data_type
+        data_type = f.readline().decode().strip().upper()
     if data_type not in ["ASCII", "BINARY"]:
         raise ReadError(f"Unknown VTK data type '{data_type}'.")
     info.is_ascii = data_type == "ASCII"
@@ -402,7 +405,7 @@ def _read_scalar_field(f, num_data, split, is_ascii):
         dtype = dtype.newbyteorder(">")
         data = np.fromfile(f, count=num_data * num_comp, dtype=dtype)
         line = f.readline().decode()
-        if line != "\n":
+        if line not in ["\n", ""]:  # special case: Gmsh vtk files use "" not "\n"
             raise ReadError()
 
     data = data.reshape(-1, num_comp)
