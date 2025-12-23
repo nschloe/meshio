@@ -2,6 +2,7 @@
 I/O for MED/Salome, cf.
 <https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html>.
 """
+
 import numpy as np
 
 from .._common import num_nodes_per_cell
@@ -28,7 +29,7 @@ meshio_to_med_type = {
     "wedge15": "P15",
 }
 med_to_meshio_type = {v: k for k, v in meshio_to_med_type.items()}
-numpy_void_str = np.string_("")
+numpy_void_str = np.bytes_("")
 
 
 def read(filename):
@@ -237,8 +238,8 @@ def write(filename, mesh):
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
     # component names:
     names = ["X", "Y", "Z"][: mesh.points.shape[1]]
-    med_mesh.attrs.create("NOM", np.string_("".join(f"{name:<16}" for name in names)))
-    med_mesh.attrs.create("DES", np.string_("Mesh created with meshio"))
+    med_mesh.attrs.create("NOM", np.bytes_("".join(f"{name:<16}" for name in names)))
+    med_mesh.attrs.create("DES", np.bytes_("Mesh created with meshio"))
     med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
 
     # Time-step
@@ -254,7 +255,7 @@ def write(filename, mesh):
     nodes_group.attrs.create("CGT", 1)
     nodes_group.attrs.create("CGS", 1)
     profile = "MED_NO_PROFILE_INTERNAL"
-    nodes_group.attrs.create("PFL", np.string_(profile))
+    nodes_group.attrs.create("PFL", np.bytes_(profile))
     coo = nodes_group.create_dataset("COO", data=mesh.points.flatten(order="F"))
     coo.attrs.create("CGT", 1)
     coo.attrs.create("NBR", len(mesh.points))
@@ -277,7 +278,7 @@ def write(filename, mesh):
         med_cells = cells_group.create_group(med_type)
         med_cells.attrs.create("CGT", 1)
         med_cells.attrs.create("CGS", 1)
-        med_cells.attrs.create("PFL", np.string_(profile))
+        med_cells.attrs.create("PFL", np.bytes_(profile))
         nod = med_cells.create_dataset("NOD", data=cells.flatten(order="F") + 1)
         nod.attrs.create("CGT", 1)
         nod.attrs.create("NBR", len(cells))
@@ -375,21 +376,21 @@ def _write_data(
     # Field
     try:  # a same MED field may contain fields of different natures
         field = fields.create_group(name)
-        field.attrs.create("MAI", np.string_(mesh_name))
+        field.attrs.create("MAI", np.bytes_(mesh_name))
         field.attrs.create("TYP", 6)  # MED_FLOAT64
         field.attrs.create("UNI", numpy_void_str)  # physical unit
         field.attrs.create("UNT", numpy_void_str)  # time unit
         n_components = 1 if data.ndim == 1 else data.shape[-1]
         field.attrs.create("NCO", n_components)  # number of components
         # names = _create_component_names(n_components)
-        # field.attrs.create("NOM", np.string_("".join(f"{name:<16}" for name in names)))
+        # field.attrs.create("NOM", np.bytes_("".join(f"{name:<16}" for name in names)))
 
         if field_name:
             field.attrs.create(
-                "NOM", np.string_("".join(f"{name:<16}" for name in field_name))
+                "NOM", np.bytes_("".join(f"{name:<16}" for name in field_name))
             )
         else:
-            field.attrs.create("NOM", np.string_(f"{'':<16}"))
+            field.attrs.create("NOM", np.bytes_(f"{'':<16}"))
 
         # Time-step
         step = "0000000000000000000100000000000000000001"
@@ -414,7 +415,7 @@ def _write_data(
         typ = time_step.create_group("MAI." + med_type)
 
     typ.attrs.create("GAU", numpy_void_str)  # no associated Gauss points
-    typ.attrs.create("PFL", np.string_(profile))
+    typ.attrs.create("PFL", np.bytes_(profile))
     profile = typ.create_group(profile)
     profile.attrs.create("NBR", len(data))  # number of data
     if supp == "ELNO":

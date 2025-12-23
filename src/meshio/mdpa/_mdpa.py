@@ -5,6 +5,7 @@ I/O for KratosMultiphysics's mdpa format, cf.
 The MDPA format is unsuitable for fast consumption, this is why:
 <https://github.com/KratosMultiphysics/Kratos/issues/5365>.
 """
+
 import numpy as np
 
 from .._common import num_nodes_per_cell, raw_from_cell_data, warn

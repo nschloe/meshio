@@ -1,6 +1,7 @@
 """
 I/O for Abaqus inp files.
 """
+
 import pathlib
 from itertools import count
 

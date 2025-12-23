@@ -2,6 +2,7 @@
 I/O for the Wavefront .obj file format, cf.
 <https://en.wikipedia.org/wiki/Wavefront_.obj_file>.
 """
+
 import datetime
 
 import numpy as np

@@ -1,33 +1,46 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "meshio"
-version = "5.0.0"
+version = "5.3.5"
 description = "I/O for many mesh formats"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = {file = "LICENSE.txt"}
-keywords = ["mesh", "file formats", "scientific", "engineering", "fem", "finite elements"]
+keywords = [
+  "mesh",
+  "file formats",
+  "scientific",
+  "engineering",
+  "fem",
+  "finite elements"
+]
 authors = [
   {email = "nico.schloemer@gmail.com"},
   {name = "Nico Schlömer"}
 ]
 classifiers = [
-  "Development Status :: 4 - Beta",
-  "Programming Language :: Python",
   "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python",
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.7",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering",
-  "Topic :: Utilities"
+  "Topic :: Utilities",
 ]
 dependencies = [
   "importlib_metadata; python_version<'3.8'",
-  "numpy>=1.20.0"
+  "numpy>=1.20.0",
+  "rich",
 ]
 
 [project.optional-dependencies]
@@ -40,14 +53,13 @@ all = [
 homepage = "https://github.com/nschloe/meshio"
 code = "https://github.com/nschloe/meshio"
 issues = "https://github.com/nschloe/meshio/issues"
-funding = "https://github.com/sponsors/nschloe"
 
 [project.entry-points.console_scripts]
 meshio = "meshio._cli:main"
 
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [tool.isort]
 profile = "black"
+
+# [options.data_files]
+# share/paraview-5.9/plugins =
+#     tools/paraview-meshio-plugin.py

@@ -2,6 +2,7 @@
 I/O for Gmsh's msh format, cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#File-formats>.
 """
+
 from __future__ import annotations
 
 import numpy as np

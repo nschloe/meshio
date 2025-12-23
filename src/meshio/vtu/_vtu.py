@@ -3,6 +3,7 @@ I/O for VTU.
 <https://vtk.org/Wiki/VTK_XML_Formats>
 <https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf>
 """
+
 import base64
 import re
 import sys

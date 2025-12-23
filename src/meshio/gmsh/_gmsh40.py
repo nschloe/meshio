@@ -2,6 +2,7 @@
 I/O for Gmsh's msh format (version 4.0, as used by Gmsh 4.1.5), cf.
 <http://gmsh.info//doc/texinfo/gmsh.html#MSH-file-format-_0028version-4_0029>.
 """
+
 from __future__ import annotations
 
 from functools import partial

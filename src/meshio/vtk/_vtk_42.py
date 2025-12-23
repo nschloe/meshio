@@ -1,6 +1,7 @@
 """
 I/O for VTK <https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf>.
 """
+
 from functools import reduce
 
 import numpy as np
