@@ -259,8 +259,63 @@ numpy_to_exodus_dtype = {
 }
 
 
-def write(filename, mesh):
+def write(filename, mesh, **kwargs):
+    """
+    Valid kwargs:
+        point_data: list | dict
+        cell_data: list | dict
+        time_step_size: float
+        time_final: float
+        timestep_arr: list[float]
+    If point/cell data are not specified, those contained in the mesh will be used.
+    If data are specified with lists, each entry will be associated with a timestep.
+        Otherwise, the data is treated as a single timestep.
+    Timestep definition works as follows:
+        If timestep_arr (list of all time values) is given, it is used.
+        Otherwise, if time_step_size (and optionally time_final) is (are) given,
+            a linspace array of times is created based on this fixed timestep.
+    """
+
     import netCDF4
+
+    # get data, compatible with multiple timesteps
+    point_data = kwargs.get("point_data", mesh.point_data)
+    if isinstance(point_data, dict):
+        point_data = [point_data]
+    cell_data = kwargs.get("cell_data", mesh.cell_data)
+    if isinstance(cell_data, dict):
+        cell_data = [cell_data]
+
+    # type checking for data
+    if not isinstance(point_data, list):
+        raise TypeError(
+            f"Incompatible point data (type {type(point_data)}, expected list or dict)"
+        )
+    for i, d in enumerate(point_data):
+        if not isinstance(d, dict):
+            raise TypeError(
+                f"Incompatible point data for timestep {i} (type {type(d)}, expected dict) "
+            )
+    if not isinstance(cell_data, list):
+        raise TypeError(
+            f"Incompatible cell data (type {type(cell_data)}, expected list or dict)"
+        )
+    for i, d in enumerate(cell_data):
+        if not isinstance(d, dict):
+            raise TypeError(
+                f"Incompatible cell data for timestep {i} (type {type(d)}, expected dict)"
+            )
+
+    # determine time steps
+    time_step_size = kwargs.get("time_step_size", 1.0)
+    time_initial = kwargs.get("time_initial", 0.0)
+    time_final = kwargs.get("time_final", None)
+    timestep_arr = kwargs.get("timestep_arr", None)
+    if timestep_arr is None:
+        num_timesteps = max(len(point_data), len(cell_data))
+        if time_final is None:
+            time_final = time_step_size * (num_timesteps - 1)
+        timestep_arr = np.linspace(time_initial, time_final)
 
     with netCDF4.Dataset(filename, "w") as rootgrp:
         # set global data
@@ -282,9 +337,10 @@ def write(filename, mesh):
         rootgrp.createDimension("four", 4)
         rootgrp.createDimension("time_step", None)
 
-        # dummy time step
+        # time steps
         data = rootgrp.createVariable("time_whole", "f4", ("time_step",))
-        data[:] = 0.0
+        data.set_auto_mask(False)
+        data[:] = timestep_arr
 
         # points
         coor_names = rootgrp.createVariable(
@@ -303,18 +359,20 @@ def write(filename, mesh):
         data[:] = mesh.points.T
 
         # cells
-        # ParaView needs eb_prop1 -- some ID. The values don't seem to matter as
-        # long as they are different for the for different blocks.
         data = rootgrp.createVariable("eb_prop1", "i4", "num_el_blk")
-        for k in range(len(mesh.cells)):
-            data[k] = k
-        for k, cell_block in enumerate(mesh.cells):
-            dim1 = f"num_el_in_blk{k + 1}"
-            dim2 = f"num_nod_per_el{k + 1}"
+        for block_idx in range(len(mesh.cells)):
+            eb_id = block_idx + 1
+            data[block_idx] = (
+                eb_id
+            )  # eb_prop1 should be 1-indexed for full Exodus compliance (e.g. for SEACAS tools)
+        for block_idx, cell_block in enumerate(mesh.cells):
+            eb_id = block_idx + 1
+            dim1 = f"num_el_in_blk{eb_id}"
+            dim2 = f"num_nod_per_el{eb_id}"
             rootgrp.createDimension(dim1, cell_block.data.shape[0])
             rootgrp.createDimension(dim2, cell_block.data.shape[1])
             dtype = numpy_to_exodus_dtype[cell_block.data.dtype.name]
-            data = rootgrp.createVariable(f"connect{k + 1}", dtype, (dim1, dim2))
+            data = rootgrp.createVariable(f"connect{eb_id}", dtype, (dim1, dim2))
             data.elem_type = meshio_to_exodus_type[cell_block.type]
             # Exodus is 1-based
             data[:] = cell_block.data + 1
@@ -322,34 +380,80 @@ def write(filename, mesh):
         # point data
         # The variable `name_nod_var` holds the names and indices of the node variables, the
         # variables `vals_nod_var{1,2,...}` hold the actual data.
-        num_nod_var = len(mesh.point_data)
+        # assuming all timesteps have the same variables
+        num_nod_var = len(point_data[0])
         if num_nod_var > 0:
             rootgrp.createDimension("num_nod_var", num_nod_var)
+
             # set names
             point_data_names = rootgrp.createVariable(
                 "name_nod_var", "S1", ("num_nod_var", "len_string")
             )
             point_data_names.set_auto_mask(False)
-            for k, name in enumerate(mesh.point_data.keys()):
-                for i, letter in enumerate(name):
-                    point_data_names[k, i] = letter.encode()
 
-            # Set data. ParaView might have some problems here, see
-            # <https://gitlab.kitware.com/paraview/paraview/-/issues/18403>.
-            for k, (name, data) in enumerate(mesh.point_data.items()):
-                for i, s in enumerate(data.shape):
-                    rootgrp.createDimension(f"dim_nod_var{k}{i}", s)
-                dims = ["time_step"] + [
-                    f"dim_nod_var{k}{i}" for i in range(len(data.shape))
-                ]
-                node_data = rootgrp.createVariable(
-                    f"vals_nod_var{k + 1}",
-                    numpy_to_exodus_dtype[data.dtype.name],
-                    tuple(dims),
+            # fix order of variables once to avoid undefined dict order behavior
+            name_arr = list(point_data[0].keys())
+            
+            # set names and create variables
+            for var_idx, name in enumerate(name_arr):
+                var_id = var_idx + 1
+                for i, letter in enumerate(name.ljust(33, "\x00")):
+                    point_data_names[var_idx, i] = letter.encode("ascii")
+                dtype = point_data[0][name].dtype.name
+                rootgrp.createVariable(
+                    f"vals_nod_var{var_id}",
+                    numpy_to_exodus_dtype[dtype],
+                    ("time_step", "num_nodes",),
                     fill_value=False,
                 )
-                node_data[0] = data
+            
+            # set data values
+            for ts, point_data_ts in enumerate(point_data):
+                for var_idx, var_name in enumerate(name_arr):
+                    var_id = var_idx + 1
+                    var = rootgrp.variables[f"vals_nod_var{var_id}"]
+                    values = point_data_ts[name]
+                    var[ts] = values
 
+        # cell data
+        num_cell_var = len(cell_data[0])
+        if num_cell_var > 0:
+            rootgrp.createDimension("num_elem_var", num_cell_var)
+            
+            # set names
+            cell_data_names = rootgrp.createVariable(
+                "name_elem_var", "S1", ("num_elem_var", "len_string")
+            )
+            cell_data_names.set_auto_mask(False)
+
+            # fix order of variables once to avoid undefined dict order behavior
+            name_arr = list(cell_data[0].keys())
+            
+            # set names and create variables
+            for var_idx, name in enumerate(name_arr):
+                var_id = var_idx + 1
+                for i, letter in enumerate(name.ljust(33, "\x00")):
+                    cell_data_names[var_idx, i] = letter.encode("ascii")
+                dtype = cell_data[0][name].dtype.name
+                for block_idx in range(len(mesh.cells)):
+                    eb_id = block_idx + 1
+                    rootgrp.createVariable(
+                        f"vals_elem_var{var_id}eb{eb_id}",
+                        numpy_to_exodus_dtype[dtype],
+                        ("time_step", f"num_elem_in_blk{eb_id}",),
+                        fill_value=False,
+                    )
+            
+            # fill data values
+            for ts, cell_data_ts in enumerate(point_data):
+                for var_idx, var_name in enumerate(name_arr):
+                    for block_idx in range(len(mesh.cells)):
+                        var_id = var_idx + 1
+                        eb_id = block_idx + 1
+                        var = rootgrp.variables[f"vals_elem_var{var_id}eb{eb_id}"]
+                        values = cell_data_ts[name][block_idx]
+                        var[ts] = values
+            
         # node sets
         num_point_sets = len(mesh.point_sets)
         if num_point_sets > 0:
@@ -358,15 +462,14 @@ def write(filename, mesh):
                 "ns_names", "S1", ("num_node_sets", "len_string")
             )
             for k, name in enumerate(mesh.point_sets.keys()):
-                data[k] = k
-                for i, letter in enumerate(name):
-                    data_names[k, i] = letter.encode()
+                data[k] = k + 1
+                for i, letter in enumerate(name.ljust(33, "\x00")):
+                    data_names[k, i] = letter.encode("ascii")
             for k, (key, values) in enumerate(mesh.point_sets.items()):
                 dim1 = f"num_nod_ns{k + 1}"
                 rootgrp.createDimension(dim1, values.shape[0])
                 dtype = numpy_to_exodus_dtype[values.dtype.name]
                 data = rootgrp.createVariable(f"node_ns{k + 1}", dtype, (dim1,))
-                # Exodus is 1-based
                 data[:] = values + 1
 
 
