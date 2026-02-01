@@ -407,7 +407,7 @@ def write(filename, mesh, **kwargs):
                     fill_value=False,
                 )
             
-            # set data values
+            # fill data values
             for ts, point_data_ts in enumerate(point_data):
                 for var_idx, var_name in enumerate(name_arr):
                     var_id = var_idx + 1
@@ -445,7 +445,7 @@ def write(filename, mesh, **kwargs):
                     )
             
             # fill data values
-            for ts, cell_data_ts in enumerate(point_data):
+            for ts, cell_data_ts in enumerate(cell_data):
                 for var_idx, var_name in enumerate(name_arr):
                     for block_idx in range(len(mesh.cells)):
                         var_id = var_idx + 1
@@ -457,20 +457,22 @@ def write(filename, mesh, **kwargs):
         # node sets
         num_point_sets = len(mesh.point_sets)
         if num_point_sets > 0:
-            data = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets")
-            data_names = rootgrp.createVariable(
+            ns_prop = rootgrp.createVariable("ns_prop1", "i4", "num_node_sets")
+            ns_names = rootgrp.createVariable(
                 "ns_names", "S1", ("num_node_sets", "len_string")
             )
-            for k, name in enumerate(mesh.point_sets.keys()):
-                data[k] = k + 1
+            for ns_idx, (name, indices) in enumerate(mesh.point_sets.items()):
+                ns_id = ns_idx + 1
+                ns_prop[ns_idx] = ns_id
                 for i, letter in enumerate(name.ljust(33, "\x00")):
-                    data_names[k, i] = letter.encode("ascii")
-            for k, (key, values) in enumerate(mesh.point_sets.items()):
-                dim1 = f"num_nod_ns{k + 1}"
-                rootgrp.createDimension(dim1, values.shape[0])
-                dtype = numpy_to_exodus_dtype[values.dtype.name]
-                data = rootgrp.createVariable(f"node_ns{k + 1}", dtype, (dim1,))
-                data[:] = values + 1
+                    ns_names[ns_idx, i] = letter.encode("ascii")
+                
+                dim = f"num_nod_ns{ns_id}"
+                rootgrp.createDimension(dim, indices.shape[0])
+                data = rootgrp.createVariable(
+                    f"node_ns{ns_id}", numpy_to_exodus_dtype[indices.dtype.name], dim
+                )
+                data[:] = indices + 1
 
 
 register_format("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
