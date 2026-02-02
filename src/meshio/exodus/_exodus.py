@@ -277,6 +277,7 @@ def write(filename, mesh, **kwargs):
             a linspace array of times is created based on this fixed timestep.
     To specify side sets, provide a dictionary of format {"set_name" : (elem_ids, side_ids)}
         Use pythonic 0-indexing; conversion to Exodus's 1-indexing will be done in the function
+        Element indices should be global
     """
 
     import netCDF4
@@ -314,11 +315,14 @@ def write(filename, mesh, **kwargs):
     time_initial = kwargs.get("time_initial", 0.0)
     time_final = kwargs.get("time_final", None)
     timestep_arr = kwargs.get("timestep_arr", None)
+    num_timesteps = max(len(point_data), len(cell_data))
     if timestep_arr is None:
-        num_timesteps = max(len(point_data), len(cell_data))
         if time_final is None:
             time_final = time_step_size * (num_timesteps - 1)
-        timestep_arr = np.linspace(time_initial, time_final)
+        timestep_arr = np.linspace(time_initial, time_final, num=num_timesteps)
+    else:
+        if (lt:=len(timestep_arr)) != num_timesteps:
+            raise ValueError(f"timestep_arr has length incompatible with data ({lt} != {num_timesteps})")
 
     # get side sets, if they exist
     side_sets = kwargs.get("side_sets")
@@ -491,20 +495,23 @@ def write(filename, mesh, **kwargs):
         if side_sets:
             rootgrp.createDimension("num_side_sets", len(side_sets))
             ss_prop = rootgrp.createVariable("ss_prop1", "i4", "num_side_sets")
+            ss_names = rootgrp.createVariable("ss_names", "S1", ("num_side_sets", "len_string"))
+            for ss_idx, (name, (elem_ids, side_ids)) in enumerate(side_sets.items()):
+                ss_id = ss_idx + 1
+                ss_prop[ss_idx] = ss_id
+                for i, letter in enumerate(name.ljust(33, "\x00")):
+                    ss_names[ss_idx, i] = letter.encode("ascii")
 
-            for set_idx, (name, (elem_ids, side_ids)) in enumerate(side_sets.items()):
-                set_id = set_idx + 1
-                ss_prop[set_idx] = set_id
-                dim = f"num_side_ss{set_id}"
+                dim = f"num_side_ss{ss_id}"
                 rootgrp.createDimension(dim, len(elem_ids))
 
                 # write parent element IDs
-                el_var = rootgrp.createVariable(f"elem_ss{set_id}", "i4", dim)
+                el_var = rootgrp.createVariable(f"elem_ss{ss_id}", "i4", dim)
                 el_var[:] = np.asarray(elem_ids) + 1
 
                 # write local side IDs
-                si_var = rootgrp.createVariable(f"side_ss{set_id}", "i4", dim)
-                si_var[:] = np.assarray(side_ids) + 1
+                si_var = rootgrp.createVariable(f"side_ss{ss_id}", "i4", dim)
+                si_var[:] = np.asarray(side_ids) + 1
 
         # Exodus does not have a common analog to meshio's cell_sets (there are Element Sets, but these are rarely used); typically, element blocks are used instead
         # Here, however, the element blocks are topology-based, so they cannot be used for other types of labels
