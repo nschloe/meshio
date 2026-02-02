@@ -66,43 +66,45 @@ exodus_to_meshio_type = {
 meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
 
-def read(filename):  # noqa: C901
+def read(filename, **kwargs):  # noqa: C901
+    """
+    Valid kwargs:
+        timestep: int | str
+    By default, timestep=0 is used. Providing an integer timestep will return a single Mesh object
+        with the data at that index timestep. If instead timestep="all" is passed, a list of Mesh
+        objects (one per timestep) will be returned.
+    """
     import netCDF4
 
     with netCDF4.Dataset(filename) as nc:
-        # assert nc.version == np.float32(5.1)
-        # assert nc.api_version == np.float32(5.1)
-        # assert nc.floating_point_word_size == 8
-
-        # assert b''.join(nc.variables['coor_names'][0]) == b'X'
-        # assert b''.join(nc.variables['coor_names'][1]) == b'Y'
-        # assert b''.join(nc.variables['coor_names'][2]) == b'Z'
-
-        points = np.zeros((len(nc.dimensions["num_nodes"]), 3))
+        # read static geometry
+        points = np.zeros((len(nc.dimensions["num_nodes"]), nc.dimensions.get("num_dim", 3)))
         point_data_names = []
         cell_data_names = []
-        pd = {}
-        cd = {}
+        field_data_names = []
         cells = []
         ns_names = []
+        # ss_names = [] # meshio has no side set analog
         # eb_names = []
         ns = []
-        point_sets = {}
+        # ss = []
         info = []
 
+        point_data_keys = []
+        cell_data_keys = []
         for key, value in nc.variables.items():
             if key == "info_records":
                 value.set_auto_mask(False)
                 for c in value[:]:
                     try:
-                        info += [b"".join(c).decode("UTF-8")]
+                        info += [b"".join(c).decode("UTF-8").strip("\x00")]
                     except UnicodeDecodeError:
                         # https://github.com/nschloe/meshio/issues/983
                         pass
             elif key == "qa_records":
                 value.set_auto_mask(False)
                 for val in value:
-                    info += [b"".join(c).decode("UTF-8") for c in val[:]]
+                    info += [b"".join(c).decode("UTF-8").strip("\x00") for c in val[:]]
             elif key[:7] == "connect":
                 meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
                 cells.append((meshio_type, value[:] - 1))
@@ -116,76 +118,112 @@ def read(filename):  # noqa: C901
                 points[:, 2] = value[:]
             elif key == "name_nod_var":
                 value.set_auto_mask(False)
-                point_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+                point_data_names = [b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]]
             elif key[:12] == "vals_nod_var":
-                idx = 0 if len(key) == 12 else int(key[12:]) - 1
-                value.set_auto_mask(False)
-                # For now only take the first value
-                pd[idx] = value[0]
-                if len(value) > 1:
-                    warn("Skipping some time data")
+                point_data_keys.append(key)
             elif key == "name_elem_var":
                 value.set_auto_mask(False)
-                cell_data_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+                cell_data_names = [b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]]
             elif key[:13] == "vals_elem_var":
-                # eb: element block
-                m = re.match("vals_elem_var(\\d+)?(?:eb(\\d+))?", key)
-                idx = 0 if m.group(1) is None else int(m.group(1)) - 1
-                block = 0 if m.group(2) is None else int(m.group(2)) - 1
-
+                cell_data_keys.append(key)
+            elif key == "name_glo_var":
                 value.set_auto_mask(False)
-                # For now only take the first value
-                if idx not in cd:
-                    cd[idx] = {}
-                cd[idx][block] = value[0]
-
-                if len(value) > 1:
-                    warn("Skipping some time data")
+                field_data_names = [b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]]
             elif key == "ns_names":
                 value.set_auto_mask(False)
-                ns_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+                ns_names = [b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]]
             # elif key == "eb_names":
             #     value.set_auto_mask(False)
-            #     eb_names = [b"".join(c).decode("UTF-8") for c in value[:]]
+            #     eb_names = [b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]]
             elif key.startswith("node_ns"):  # Expected keys: node_ns1, node_ns2
                 ns.append(value[:] - 1)  # Exodus is 1-based
 
-        # merge element block data; can't handle blocks yet
-        for k, value in cd.items():
-            cd[k] = np.concatenate(list(value.values()))
-
-        # Check if there are any <name>R, <name>Z tuples or <name>X, <name>Y, <name>Z
-        # triplets in the point data. If yes, they belong together.
+        point_sets = {name: dat for name, dat in zip(ns_names, ns)}
         single, double, triple = categorize(point_data_names)
 
-        point_data = {}
-        for name, idx in single:
-            point_data[name] = pd[idx]
-        for name, idx0, idx1 in double:
-            point_data[name] = np.column_stack([pd[idx0], pd[idx1]])
-        for name, idx0, idx1, idx2 in triple:
-            point_data[name] = np.column_stack([pd[idx0], pd[idx1], pd[idx2]])
+        # time logic
+        num_steps = len(nc.dimensions["time_step"])
+        timestep = kwargs.get("timestep", 0)
+        if timestep == "all":
+            indices = range(num_steps)
+        elif isinstance(timestep, int):
+            if (timestep < 0) or (timestep >= num_steps):
+                raise ValueError(f"Only {num_steps} available, timestep={timestep} is invalid")
+            indices = [timestep]
+        else:
+            raise TypeError("timestep must be either 'all' or an integer")
 
-        cell_data = {}
-        k = 0
-        for _, cell in cells:
-            n = len(cell)
-            for name, data in zip(cell_data_names, cd.values()):
-                if name not in cell_data:
-                    cell_data[name] = []
-                cell_data[name].append(data[k : k + n])
-            k += n
+        # pre-fetch point and cell data variable objects
+        pd_vars = {key: nc.variables[key] for key in point_data_keys}
+        for v in pd_vars.values():
+            v.set_auto_mask(False)
+        cd_vars = {key: nc.variables[key] for key in cell_data_keys}
+        for v in cd_vars.values():
+            v.set_auto_mask(False)
 
-        point_sets = {name: dat for name, dat in zip(ns_names, ns)}
+        # data extraction at each timestep
+        meshes = []
+        for ts_idx in indices:
+            pd = {}
+            cd = {}
 
-    return Mesh(
-        points,
-        cells,
-        point_data=point_data,
-        cell_data=cell_data,
-        point_sets=point_sets,
-        info=info,
-    )
+            for key in point_data_keys:                
+                index = 0 if len(key) == 12 else int(key[12:]) - 1
+                
+                pd[index] = pd_vars[key][ts_idx]
+
+            for key in cell_data_keys:
+                m = re.match("vals_elem_var(\\d+)?(?:eb(\\d+))?", key)
+                var_idx = 0 if m.group(1) is None else int(m.group(1)) - 1
+                eb_idx = 0 if m.group(2) is None else int(m.group(2)) - 1
+
+                if var_idx not in cd:
+                    cd[var_idx] = {}
+                cd[var_idx][eb_idx] = cd_vars[key][ts_idx]
+
+            # assign correct names to point data and keep linked variables (e.g. for vectors) together
+            point_data = {}
+            for name, idx in single:
+                point_data[name] = pd[idx]
+            for name, idx0, idx1 in double:
+                point_data[name] = np.column_stack([pd[idx0], pd[idx1]])
+            for name, idx0, idx1, idx2 in triple:
+                point_data[name] = np.column_stack([pd[idx0], pd[idx1], pd[idx2]])
+
+            # construct cell_data with correct names, accounting for separate element blocks (though not currently taking names)
+            cell_data = {}
+            for var_idx, name in enumerate(cell_data_names):
+                block_data_list = []
+                for eb_idx in range(len(cells)):
+                    data = cd.get(var_idx, {}).get(eb_idx)
+                    if data is None:
+                        num_cells_in_block = cells[eb_idx][1].shape[0]
+                        data = np.zeros(num_cells_in_block)
+                    block_data_list.append(data)
+                
+                cell_data[name] = block_data_list
+            
+            # load field data, including time
+            if "vals_glo_var" in nc.variables:
+                values = nc.variables["vals_glo_var"][ts_idx]
+                field_data = {name: val for name, val in zip(field_data_names, values)}
+            else:
+                field_data = {}
+            if "time_whole" in nc.variables and "time" not in field_data:
+                field_data["time"] = nc.variables["time_whole"][ts_idx]
+
+            m = Mesh(
+                points,
+                cells,
+                point_data=point_data,
+                cell_data=cell_data,
+                point_sets=point_sets,
+                field_data=field_data,
+                info=info,
+            )
+            meshes.append(m)
+
+        return meshes if timestep == "all" else meshes[0]
 
 
 def categorize(names):
@@ -265,6 +303,7 @@ def write(filename, mesh, **kwargs):
         point_data: list | dict
         cell_data: list | dict
         field_data: list | dict
+        time_whole: float
         time_step_size: float
         time_final: float
         timestep_arr: list[float]
@@ -272,10 +311,16 @@ def write(filename, mesh, **kwargs):
     If point/cell data are not specified, those contained in the mesh will be used.
     If data are specified with lists, each entry will be associated with a timestep.
         Otherwise, the data is treated as a single timestep.
-    Timestep definition works as follows:
-        If timestep_arr (list of all time values) is given, it is used.
-        Otherwise, if time_step_size (and optionally time_final) is (are) given,
-            a linspace array of times is created based on this fixed timestep.
+    Timestep definition/inference works as follows:
+        For single timestep:
+            If time_whole is given, it is used.
+            Otherwise, if "time" is a key in field_data, it is used.
+            Otherwise, time_whole defaults to 0.0.
+        For multiple timesteps:
+            If timestep_arr (list of all time values) is given, it is used.
+            Otherwise, if "time" is a key in field_data, it is used.
+            Otherwise, if time_step_size (and optionally time_final) is (are) given,
+                a linspace array of times is created based on this fixed timestep.
     To specify side sets, provide a dictionary of format {"set_name" : (elem_ids, side_ids)}
         Use pythonic 0-indexing; conversion to Exodus's 1-indexing will be done in the function
         Element indices should be global
@@ -325,15 +370,34 @@ def write(filename, mesh, **kwargs):
             )
 
     # determine time steps
-    time_step_size = kwargs.get("time_step_size", 1.0)
-    time_initial = kwargs.get("time_initial", 0.0)
+    time_step_size = kwargs.get("time_step_size", None)
+    time_initial = kwargs.get("time_initial", None)
     time_final = kwargs.get("time_final", None)
     timestep_arr = kwargs.get("timestep_arr", None)
     num_timesteps = max(len(point_data), len(cell_data), len(field_data))
     if timestep_arr is None:
-        if time_final is None:
-            time_final = time_step_size * (num_timesteps - 1)
-        timestep_arr = np.linspace(time_initial, time_final, num=num_timesteps)
+        if num_timesteps == 1:
+            time_whole = kwargs.get("time_whole", None)
+            if time_whole is None:
+                if "time" in field_data[0]:
+                    time_whole = field_data[0]["time"]
+                else:
+                    time_whole = 0.0
+            elif not isinstance(time_whole, (int, float)):
+                warn("Provided value of time_whole invalid, using 0.0")
+                time_whole = 0.0
+            timestep_arr = [float(time_whole)]
+        else:
+            if time_step_size is None and time_initial is None and time_final is None and all("time" in fd for fd in field_data) and len(field_data) == num_timesteps:
+                timestep_arr = [fd["time"] for fd in field_data]
+            else:
+                if time_step_size is None:
+                    time_step_size = 1.0
+                if time_initial is None:
+                    time_initial = 0.0
+                if time_final is None:
+                    time_final = time_initial + time_step_size * (num_timesteps - 1)
+                timestep_arr = np.linspace(time_initial, time_final, num=num_timesteps)
     else:
         if (lt := len(timestep_arr)) != num_timesteps:
             raise ValueError(
