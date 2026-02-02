@@ -123,17 +123,23 @@ def read(filename, **kwargs):  # noqa: C901
                 points[:, 2] = value[:]
             elif key == "name_nod_var":
                 value.set_auto_mask(False)
-                point_data_names = [b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]]
+                point_data_names = [
+                    b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]
+                ]
             elif key[:12] == "vals_nod_var":
                 point_data_keys.append(key)
             elif key == "name_elem_var":
                 value.set_auto_mask(False)
-                cell_data_names = [b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]]
+                cell_data_names = [
+                    b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]
+                ]
             elif key[:13] == "vals_elem_var":
                 cell_data_keys.append(key)
             elif key == "name_glo_var":
                 value.set_auto_mask(False)
-                field_data_names = [b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]]
+                field_data_names = [
+                    b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]
+                ]
             elif key == "ns_names":
                 value.set_auto_mask(False)
                 ns_names = [b"".join(c).decode("UTF-8").strip("\x00") for c in value[:]]
@@ -145,6 +151,7 @@ def read(filename, **kwargs):  # noqa: C901
 
         point_sets = {name: dat for name, dat in zip(ns_names, ns)}
         single, double, triple = categorize(point_data_names)
+        single_c, double_c, triple_c = categorize(cell_data_names)
 
         # time logic
         num_steps = len(nc.dimensions["time_step"])
@@ -153,7 +160,9 @@ def read(filename, **kwargs):  # noqa: C901
             indices = range(num_steps)
         elif isinstance(timestep, int):
             if (timestep < 0) or (timestep >= num_steps):
-                raise ValueError(f"Only {num_steps} available, timestep={timestep} is invalid")
+                raise ValueError(
+                    f"Only {num_steps} available, timestep={timestep} is invalid"
+                )
             indices = [timestep]
         else:
             raise TypeError("timestep must be either 'all' or an integer")
@@ -172,9 +181,9 @@ def read(filename, **kwargs):  # noqa: C901
             pd = {}
             cd = {}
 
-            for key in point_data_keys:                
+            for key in point_data_keys:
                 index = 0 if len(key) == 12 else int(key[12:]) - 1
-                
+
                 pd[index] = pd_vars[key][ts_idx]
 
             for key in cell_data_keys:
@@ -195,8 +204,8 @@ def read(filename, **kwargs):  # noqa: C901
             for name, idx0, idx1, idx2 in triple:
                 point_data[name] = np.column_stack([pd[idx0], pd[idx1], pd[idx2]])
 
-            # construct cell_data with correct names, accounting for separate element blocks (though not currently taking names)
-            cell_data = {}
+            # accounting for separate element blocks in cell data (though not currently taking block names)
+            cell_data_raw = {}
             for var_idx, name in enumerate(cell_data_names):
                 block_data_list = []
                 for eb_idx in range(len(cells)):
@@ -205,9 +214,30 @@ def read(filename, **kwargs):  # noqa: C901
                         num_cells_in_block = cells[eb_idx][1].shape[0]
                         data = np.zeros(num_cells_in_block)
                     block_data_list.append(data)
-                
-                cell_data[name] = block_data_list
-            
+
+                cell_data_raw[var_idx] = block_data_list
+
+            # now actually construct cell_data with the same linked variables/vectors functionality
+            cell_data = {}
+            for name, idx in single_c:
+                cell_data[name] = cell_data_raw[idx]
+            for name, idx0, idx1 in double_c:
+                cell_data[name] = [
+                    np.column_stack([cell_data_raw[idx0][eb], cell_data_raw[idx1][eb]])
+                    for eb in range(len(cells))
+                ]
+            for name, idx0, idx1, idx2 in triple_c:
+                cell_data[name] = [
+                    np.column_stack(
+                        [
+                            cell_data_raw[idx0][eb],
+                            cell_data_raw[idx1][eb],
+                            cell_data_raw[idx2][eb],
+                        ]
+                    )
+                    for eb in range(len(cells))
+                ]
+
             # load field data, including time
             if "vals_glo_var" in nc.variables:
                 values = nc.variables["vals_glo_var"][ts_idx]
@@ -256,11 +286,13 @@ def categorize(names):
                 iz = names.index(name[:-1] + "Z")
             except ValueError:
                 iz = None
-            if iy and iz:
+
+            if iy is not None and iz is not None:
                 triple.append((name[:-1], ix, iy, iz))
-                is_accounted_for[ix] = True
-                is_accounted_for[iy] = True
-                is_accounted_for[iz] = True
+                is_accounted_for[ix] = is_accounted_for[iy] = is_accounted_for[iz] = True
+            elif iy is not None:
+                double.append((name[:-1], ix, iy))
+                is_accounted_for[ix] = is_accounted_for[iy] = True
             else:
                 single.append((name, ix))
                 is_accounted_for[ix] = True
@@ -393,7 +425,13 @@ def write(filename, mesh, **kwargs):
                 time_whole = 0.0
             timestep_arr = [float(time_whole)]
         else:
-            if time_step_size is None and time_initial is None and time_final is None and all("time" in fd for fd in field_data) and len(field_data) == num_timesteps:
+            if (
+                time_step_size is None
+                and time_initial is None
+                and time_final is None
+                and all("time" in fd for fd in field_data)
+                and len(field_data) == num_timesteps
+            ):
                 timestep_arr = [fd["time"] for fd in field_data]
             else:
                 if time_step_size is None:
@@ -482,26 +520,42 @@ def write(filename, mesh, **kwargs):
         # point data
         # The variable `name_nod_var` holds the names and indices of the node variables, the
         # variables `vals_nod_var{1,2,...}` hold the actual data.
-        # assuming all timesteps have the same variables
-        num_nod_var = len(point_data[0])
+        # Assuming all timesteps have the same variables
+        # fix order of variables once to avoid undefined dict order behavior
+        pd_name_arr = list(point_data[0].keys())
+        # split vectors into scalar components
+        pd_names_split = []
+        pd_dtypes = []
+        for name in pd_name_arr:
+            values = point_data[0][name]
+            if len(values.shape) == 1:
+                pd_names_split.append(name)
+                pd_dtypes.append(values.dtype.name)
+            else:
+                suffixes = (
+                    ["X", "Y", "Z"]
+                    if values.shape[1] <= 3
+                    else [str(i + 1) for i in range(values.shape[1])]
+                )
+                for i in range(values.shape[1]):
+                    pd_names_split.append(f"{name}{suffixes[i]}")
+                    pd_dtypes.append(values.dtype.name)
+        # now with the split components, write names and data
+        num_nod_var = len(pd_names_split)
         if num_nod_var > 0:
             rootgrp.createDimension("num_nod_var", num_nod_var)
 
-            # set names
             point_data_names = rootgrp.createVariable(
                 "name_nod_var", "S1", ("num_nod_var", "len_string")
             )
             point_data_names.set_auto_mask(False)
 
-            # fix order of variables once to avoid undefined dict order behavior
-            name_arr = list(point_data[0].keys())
-
             # set names and create variables
-            for var_idx, name in enumerate(name_arr):
+            for var_idx, name in enumerate(pd_names_split):
                 var_id = var_idx + 1
                 for i, letter in enumerate(name.ljust(33, "\x00")):
                     point_data_names[var_idx, i] = letter.encode("ascii")
-                dtype = point_data[0][name].dtype.name
+                dtype = pd_dtypes[var_idx]
                 rootgrp.createVariable(
                     f"vals_nod_var{var_id}",
                     numpy_to_exodus_dtype[dtype],
@@ -514,33 +568,53 @@ def write(filename, mesh, **kwargs):
 
             # fill data values
             for ts, point_data_ts in enumerate(point_data):
-                for var_idx, var_name in enumerate(name_arr):
-                    var_id = var_idx + 1
-                    var = rootgrp.variables[f"vals_nod_var{var_id}"]
-                    values = point_data_ts[name]
-                    var[ts] = values
+                var_idx = 0
+                for var_name in pd_name_arr:
+                    values = point_data_ts[var_name]
+                    if len(values.shape) == 1:
+                        var = rootgrp.variables[f"vals_nod_var{var_idx+1}"]
+                        var[ts] = values
+                        var_idx += 1
+                    else:
+                        for i in range(values.shape[1]):
+                            var = rootgrp.variables[f"vals_nod_var{var_idx+1}"]
+                            var[ts] = values[:, i]
+                            var_idx += 1
 
         # cell data
-        num_cell_var = len(cell_data[0])
+        # similar procedure to point data
+        cd_name_arr = list(cell_data[0].keys())
+        cd_names_split = []
+        cd_dtypes = []
+        for name in cd_name_arr:
+            blocks = cell_data[0][name]
+            if len(blocks[0].shape) == 1:
+                cd_names_split.append(name)
+                cd_dtypes.append(blocks[0].dtype.name)
+            else:
+                suffixes = (
+                    ["X", "Y", "Z"]
+                    if blocks[0].shape[1] <= 3
+                    else [str(i + 1) for i in range(blocks[0].shape[1])]
+                )
+                for i in range(blocks[0].shape[1]):
+                    cd_names_split.append(f"{name}{suffixes[i]}")
+                    cd_dtypes.append(blocks[0].dtype.name)
+        num_cell_var = len(cd_names_split)
         if num_cell_var > 0:
             rootgrp.createDimension("num_elem_var", num_cell_var)
 
-            # set names
             cell_data_names = rootgrp.createVariable(
                 "name_elem_var", "S1", ("num_elem_var", "len_string")
             )
             cell_data_names.set_auto_mask(False)
 
-            # fix order of variables once to avoid undefined dict order behavior
-            name_arr = list(cell_data[0].keys())
-
-            # set names and create variables
-            for var_idx, name in enumerate(name_arr):
-                var_id = var_idx + 1
+            for var_idx, name in enumerate(cd_names_split):
                 for i, letter in enumerate(name.ljust(33, "\x00")):
                     cell_data_names[var_idx, i] = letter.encode("ascii")
-                dtype = cell_data[0][name][0].dtype.name
+                dtype = cd_dtypes[var_idx]
                 for block_idx in range(len(mesh.cells)):
+                    var_id = var_idx + 1
                     eb_id = block_idx + 1
                     rootgrp.createVariable(
                         f"vals_elem_var{var_id}eb{eb_id}",
@@ -554,27 +628,42 @@ def write(filename, mesh, **kwargs):
 
             # fill data values
             for ts, cell_data_ts in enumerate(cell_data):
-                for var_idx, var_name in enumerate(name_arr):
-                    for block_idx in range(len(mesh.cells)):
-                        var_id = var_idx + 1
-                        eb_id = block_idx + 1
-                        var = rootgrp.variables[f"vals_elem_var{var_id}eb{eb_id}"]
-                        values = cell_data_ts[name][block_idx]
-                        var[ts] = values
+                var_idx = 0
+                for var_name in cd_name_arr:
+                    blocks = cell_data_ts[var_name]
+                    if len(blocks[0].shape) == 1:
+                        for block_idx, values in enumerate(blocks):
+                            var = rootgrp.variables[
+                                f"vals_elem_var{var_idx+1}eb{block_idx+1}"
+                            ]
+                            var[ts] = values
+                        var_idx += 1
+                    else:
+                        for i in range(blocks[0].shape[1]):
+                            for block_idx, values in enumerate(blocks):
+                                var = rootgrp.variables[
+                                    f"vals_elem_var{var_idx+1}eb{block_idx+1}"
+                                ]
+                                var[ts] = values[:, i]
+                            var_idx += 1
 
         # field data
         num_globals = len(field_data[0])
         if num_globals > 0:
             rootgrp.createDimension("num_glo_var", num_globals)
             global_names = list(field_data[0].keys())
-            name_var = rootgrp.createVariable("name_glo_var", "S1", ("num_glo_var", "len_string"))
+            name_var = rootgrp.createVariable(
+                "name_glo_var", "S1", ("num_glo_var", "len_string")
+            )
             name_var.set_auto_mask(False)
 
             for k, name in enumerate(global_names):
                 for i, letter in enumerate(name.ljust(33, "\x00")):
                     name_var[k, i] = letter.encode("ascii")
 
-            data = rootgrp.createVariable("vals_glo_var", "f8", ("time_step", "num_glo_var"))
+            data = rootgrp.createVariable(
+                "vals_glo_var", "f8", ("time_step", "num_glo_var")
+            )
             for ts, field_data_ts in enumerate(field_data):
                 row_values = [field_data_ts[name] for name in global_names]
                 data[ts] = row_values
