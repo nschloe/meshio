@@ -264,6 +264,7 @@ def write(filename, mesh, **kwargs):
     Valid kwargs:
         point_data: list | dict
         cell_data: list | dict
+        field_data: list | dict
         time_step_size: float
         time_final: float
         timestep_arr: list[float]
@@ -282,13 +283,17 @@ def write(filename, mesh, **kwargs):
 
     import netCDF4
 
-    # get data, compatible with multiple timesteps
+    # get data, standardize to support one or multiple timesteps
     point_data = kwargs.get("point_data", mesh.point_data)
     if isinstance(point_data, dict):
         point_data = [point_data]
     cell_data = kwargs.get("cell_data", mesh.cell_data)
     if isinstance(cell_data, dict):
         cell_data = [cell_data]
+    # field data (typical for storing global variables)
+    field_data = kwargs.get("field_data", mesh.field_data)
+    if isinstance(field_data, dict):
+        field_data = [field_data]
 
     # type checking for data
     if not isinstance(point_data, list):
@@ -309,26 +314,44 @@ def write(filename, mesh, **kwargs):
             raise TypeError(
                 f"Incompatible cell data for timestep {i} (type {type(d)}, expected dict)"
             )
+    if not isinstance(field_data, list):
+        raise TypeError(
+            f"Incompatible field data (type {type(field_data)}, expected list or dict)"
+        )
+    for i, d in enumerate(field_data):
+        if not isinstance(d, dict):
+            raise TypeError(
+                f"Incompatible field data for timestep {i} (type {type(d)}, expected dict)"
+            )
 
     # determine time steps
     time_step_size = kwargs.get("time_step_size", 1.0)
     time_initial = kwargs.get("time_initial", 0.0)
     time_final = kwargs.get("time_final", None)
     timestep_arr = kwargs.get("timestep_arr", None)
-    num_timesteps = max(len(point_data), len(cell_data))
+    num_timesteps = max(len(point_data), len(cell_data), len(field_data))
     if timestep_arr is None:
         if time_final is None:
             time_final = time_step_size * (num_timesteps - 1)
         timestep_arr = np.linspace(time_initial, time_final, num=num_timesteps)
     else:
-        if (lt:=len(timestep_arr)) != num_timesteps:
-            raise ValueError(f"timestep_arr has length incompatible with data ({lt} != {num_timesteps})")
+        if (lt := len(timestep_arr)) != num_timesteps:
+            raise ValueError(
+                f"timestep_arr has length incompatible with data ({lt} != {num_timesteps})"
+            )
+    if num_timesteps > 1:
+        if len(point_data) == 1:
+            point_data = point_data * num_timesteps
+        if len(cell_data) == 1:
+            cell_data = cell_data * num_timesteps
+        if len(field_data) == 1:
+            field_data = field_data * num_timesteps
 
     # get side sets, if they exist
     side_sets = kwargs.get("side_sets")
 
     with netCDF4.Dataset(filename, "w") as rootgrp:
-        # set global data
+        # set global metadata
         now = datetime.datetime.now().isoformat()
         rootgrp.title = f"Created by meshio v{__version__}, {now}"
         rootgrp.version = np.float32(5.1)
@@ -348,7 +371,7 @@ def write(filename, mesh, **kwargs):
         rootgrp.createDimension("time_step", None)
 
         # time steps
-        data = rootgrp.createVariable("time_whole", "f4", ("time_step",))
+        data = rootgrp.createVariable("time_whole", "f4", "time_step")
         data.set_auto_mask(False)
         data[:] = timestep_arr
 
@@ -447,7 +470,7 @@ def write(filename, mesh, **kwargs):
                 var_id = var_idx + 1
                 for i, letter in enumerate(name.ljust(33, "\x00")):
                     cell_data_names[var_idx, i] = letter.encode("ascii")
-                dtype = cell_data[0][name].dtype.name
+                dtype = cell_data[0][name][0].dtype.name
                 for block_idx in range(len(mesh.cells)):
                     eb_id = block_idx + 1
                     rootgrp.createVariable(
@@ -455,7 +478,7 @@ def write(filename, mesh, **kwargs):
                         numpy_to_exodus_dtype[dtype],
                         (
                             "time_step",
-                            f"num_elem_in_blk{eb_id}",
+                            f"num_el_in_blk{eb_id}",
                         ),
                         fill_value=False,
                     )
@@ -470,6 +493,23 @@ def write(filename, mesh, **kwargs):
                         values = cell_data_ts[name][block_idx]
                         var[ts] = values
 
+        # field data
+        num_globals = len(field_data[0])
+        if num_globals > 0:
+            rootgrp.createDimension("num_glo_var", num_globals)
+            global_names = list(field_data[0].keys())
+            name_var = rootgrp.createVariable("name_glo_var", "S1", ("num_glo_var", "len_string"))
+            name_var.set_auto_mask(False)
+
+            for k, name in enumerate(global_names):
+                for i, letter in enumerate(name.ljust(33, "\x00")):
+                    name_var[k, i] = letter.encode("ascii")
+
+            data = rootgrp.createVariable("vals_glo_var", "f8", ("time_step", "num_glo_var"))
+            for ts, field_data_ts in enumerate(field_data):
+                row_values = [field_data_ts[name] for name in global_names]
+                data[ts] = row_values
+
         # node sets
         num_point_sets = len(mesh.point_sets)
         if num_point_sets > 0:
@@ -477,6 +517,7 @@ def write(filename, mesh, **kwargs):
             ns_names = rootgrp.createVariable(
                 "ns_names", "S1", ("num_node_sets", "len_string")
             )
+            ns_names.set_auto_mask(False)
             for ns_idx, (name, indices) in enumerate(mesh.point_sets.items()):
                 ns_id = ns_idx + 1
                 ns_prop[ns_idx] = ns_id
@@ -495,7 +536,10 @@ def write(filename, mesh, **kwargs):
         if side_sets:
             rootgrp.createDimension("num_side_sets", len(side_sets))
             ss_prop = rootgrp.createVariable("ss_prop1", "i4", "num_side_sets")
-            ss_names = rootgrp.createVariable("ss_names", "S1", ("num_side_sets", "len_string"))
+            ss_names = rootgrp.createVariable(
+                "ss_names", "S1", ("num_side_sets", "len_string")
+            )
+            ss_names.set_auto_mask(False)
             for ss_idx, (name, (elem_ids, side_ids)) in enumerate(side_sets.items()):
                 ss_id = ss_idx + 1
                 ss_prop[ss_idx] = ss_id
