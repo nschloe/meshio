@@ -267,6 +267,7 @@ def write(filename, mesh, **kwargs):
         time_step_size: float
         time_final: float
         timestep_arr: list[float]
+        side_sets: dict[str, tuple[list, list]]
     If point/cell data are not specified, those contained in the mesh will be used.
     If data are specified with lists, each entry will be associated with a timestep.
         Otherwise, the data is treated as a single timestep.
@@ -274,6 +275,8 @@ def write(filename, mesh, **kwargs):
         If timestep_arr (list of all time values) is given, it is used.
         Otherwise, if time_step_size (and optionally time_final) is (are) given,
             a linspace array of times is created based on this fixed timestep.
+    To specify side sets, provide a dictionary of format {"set_name" : (elem_ids, side_ids)}
+        Use pythonic 0-indexing; conversion to Exodus's 1-indexing will be done in the function
     """
 
     import netCDF4
@@ -316,6 +319,9 @@ def write(filename, mesh, **kwargs):
         if time_final is None:
             time_final = time_step_size * (num_timesteps - 1)
         timestep_arr = np.linspace(time_initial, time_final)
+
+    # get side sets, if they exist
+    side_sets = kwargs.get("side_sets")
 
     with netCDF4.Dataset(filename, "w") as rootgrp:
         # set global data
@@ -363,8 +369,8 @@ def write(filename, mesh, **kwargs):
         for block_idx in range(len(mesh.cells)):
             eb_id = block_idx + 1
             data[block_idx] = (
-                eb_id
-            )  # eb_prop1 should be 1-indexed for full Exodus compliance (e.g. for SEACAS tools)
+                eb_id  # eb_prop1 should be 1-indexed for full Exodus compliance (e.g. for SEACAS tools)
+            )
         for block_idx, cell_block in enumerate(mesh.cells):
             eb_id = block_idx + 1
             dim1 = f"num_el_in_blk{eb_id}"
@@ -393,7 +399,7 @@ def write(filename, mesh, **kwargs):
 
             # fix order of variables once to avoid undefined dict order behavior
             name_arr = list(point_data[0].keys())
-            
+
             # set names and create variables
             for var_idx, name in enumerate(name_arr):
                 var_id = var_idx + 1
@@ -403,10 +409,13 @@ def write(filename, mesh, **kwargs):
                 rootgrp.createVariable(
                     f"vals_nod_var{var_id}",
                     numpy_to_exodus_dtype[dtype],
-                    ("time_step", "num_nodes",),
+                    (
+                        "time_step",
+                        "num_nodes",
+                    ),
                     fill_value=False,
                 )
-            
+
             # fill data values
             for ts, point_data_ts in enumerate(point_data):
                 for var_idx, var_name in enumerate(name_arr):
@@ -419,7 +428,7 @@ def write(filename, mesh, **kwargs):
         num_cell_var = len(cell_data[0])
         if num_cell_var > 0:
             rootgrp.createDimension("num_elem_var", num_cell_var)
-            
+
             # set names
             cell_data_names = rootgrp.createVariable(
                 "name_elem_var", "S1", ("num_elem_var", "len_string")
@@ -428,7 +437,7 @@ def write(filename, mesh, **kwargs):
 
             # fix order of variables once to avoid undefined dict order behavior
             name_arr = list(cell_data[0].keys())
-            
+
             # set names and create variables
             for var_idx, name in enumerate(name_arr):
                 var_id = var_idx + 1
@@ -440,10 +449,13 @@ def write(filename, mesh, **kwargs):
                     rootgrp.createVariable(
                         f"vals_elem_var{var_id}eb{eb_id}",
                         numpy_to_exodus_dtype[dtype],
-                        ("time_step", f"num_elem_in_blk{eb_id}",),
+                        (
+                            "time_step",
+                            f"num_elem_in_blk{eb_id}",
+                        ),
                         fill_value=False,
                     )
-            
+
             # fill data values
             for ts, cell_data_ts in enumerate(cell_data):
                 for var_idx, var_name in enumerate(name_arr):
@@ -453,7 +465,7 @@ def write(filename, mesh, **kwargs):
                         var = rootgrp.variables[f"vals_elem_var{var_id}eb{eb_id}"]
                         values = cell_data_ts[name][block_idx]
                         var[ts] = values
-            
+
         # node sets
         num_point_sets = len(mesh.point_sets)
         if num_point_sets > 0:
@@ -466,13 +478,37 @@ def write(filename, mesh, **kwargs):
                 ns_prop[ns_idx] = ns_id
                 for i, letter in enumerate(name.ljust(33, "\x00")):
                     ns_names[ns_idx, i] = letter.encode("ascii")
-                
+
                 dim = f"num_nod_ns{ns_id}"
                 rootgrp.createDimension(dim, indices.shape[0])
                 data = rootgrp.createVariable(
                     f"node_ns{ns_id}", numpy_to_exodus_dtype[indices.dtype.name], dim
                 )
                 data[:] = indices + 1
+
+        # side sets
+        # there is no exact analog to this in meshio; this must be specified by the user
+        if side_sets:
+            rootgrp.createDimension("num_side_sets", len(side_sets))
+            ss_prop = rootgrp.createVariable("ss_prop1", "i4", "num_side_sets")
+
+            for set_idx, (name, (elem_ids, side_ids)) in enumerate(side_sets.items()):
+                set_id = set_idx + 1
+                ss_prop[set_idx] = set_id
+                dim = f"num_side_ss{set_id}"
+                rootgrp.createDimension(dim, len(elem_ids))
+
+                # write parent element IDs
+                el_var = rootgrp.createVariable(f"elem_ss{set_id}", "i4", dim)
+                el_var[:] = np.asarray(elem_ids) + 1
+
+                # write local side IDs
+                si_var = rootgrp.createVariable(f"side_ss{set_id}", "i4", dim)
+                si_var[:] = np.assarray(side_ids) + 1
+
+        # Exodus does not have a common analog to meshio's cell_sets (there are Element Sets, but these are rarely used); typically, element blocks are used instead
+        # Here, however, the element blocks are topology-based, so they cannot be used for other types of labels
+        # As a workaround, one may use the mesh's cell_sets and call cell_sets_to_data() on the mesh to instead store cell labels in cell_data
 
 
 register_format("exodus", [".e", ".exo", ".ex2"], read, {"exodus": write})
