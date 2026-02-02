@@ -78,7 +78,12 @@ def read(filename, **kwargs):  # noqa: C901
 
     with netCDF4.Dataset(filename) as nc:
         # read static geometry
-        points = np.zeros((len(nc.dimensions["num_nodes"]), nc.dimensions.get("num_dim", 3)))
+        num_nodes = len(nc.dimensions["num_nodes"])
+        if "num_dim" in nc.dimensions:
+            num_dim = len(nc.dimensions["num_dim"])
+        else:
+            num_dim = 3
+        points = np.zeros((num_nodes, num_dim))
         point_data_names = []
         cell_data_names = []
         field_data_names = []
@@ -435,7 +440,7 @@ def write(filename, mesh, **kwargs):
         rootgrp.createDimension("time_step", None)
 
         # time steps
-        data = rootgrp.createVariable("time_whole", "f4", "time_step")
+        data = rootgrp.createVariable("time_whole", "f8", "time_step")
         data.set_auto_mask(False)
         data[:] = timestep_arr
 
