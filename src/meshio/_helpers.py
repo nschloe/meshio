@@ -57,7 +57,7 @@ def _filetypes_from_path(path: Path) -> list[str]:
     return out
 
 
-def read(filename, file_format: str | None = None):
+def read(filename, file_format: str | None = None, **kwargs):
     """Reads an unstructured mesh with added data.
 
     :param filenames: The files/PathLikes to read from.
@@ -66,12 +66,12 @@ def read(filename, file_format: str | None = None):
     :returns mesh{2,3}d: The mesh data.
     """
     if is_buffer(filename, "r"):
-        return _read_buffer(filename, file_format)
+        return _read_buffer(filename, file_format, **kwargs)
 
-    return _read_file(Path(filename), file_format)
+    return _read_file(Path(filename), file_format, **kwargs)
 
 
-def _read_buffer(filename, file_format: str | None):
+def _read_buffer(filename, file_format: str | None, **kwargs):
     if file_format is None:
         raise ReadError("File format must be given if buffer is used")
     if file_format == "tetgen":
@@ -82,10 +82,10 @@ def _read_buffer(filename, file_format: str | None):
     if file_format not in reader_map:
         raise ReadError(f"Unknown file format '{file_format}'")
 
-    return reader_map[file_format](filename)
+    return reader_map[file_format](filename, **kwargs)
 
 
-def _read_file(path: Path, file_format: str | None):
+def _read_file(path: Path, file_format: str | None, **kwargs):
     if not path.exists():
         raise ReadError(f"File {path} not found.")
 
@@ -100,7 +100,7 @@ def _read_file(path: Path, file_format: str | None):
             raise ReadError(f"Unknown file format '{file_format}' of '{path}'.")
 
         try:
-            return reader_map[file_format](str(path))
+            return reader_map[file_format](str(path), **kwargs)
         except ReadError as e:
             print(e)
 
