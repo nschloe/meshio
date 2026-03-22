@@ -57,6 +57,7 @@ def read_buffer(f):
     itype = "i8"
     ftype = "f8"
     dim = 0
+    points = np.empty((0,), dtype=ftype)
 
     next_tag_id = 0
     expected_nmarkers = 0
@@ -98,14 +99,12 @@ def read_buffer(f):
             extra_columns = first_line.shape[0] - dim
 
             num_verts = int(rest_of_line.split()[0]) - 1
-            points = np.fromfile(
-                f, count=num_verts * (dim + extra_columns), dtype=ftype, sep=" "
-            ).reshape(num_verts, dim + extra_columns)
+            raw = [f.readline().split()[:dim] for _ in range(num_verts)]
+            points = np.array(raw, dtype=ftype)
 
             # save off any extra info
             if extra_columns > 0:
                 first_line = first_line[:-extra_columns]
-                points = points[:, :-extra_columns]
 
             # add the first line we read separately
             points = np.vstack([first_line, points])
@@ -163,6 +162,31 @@ def read_buffer(f):
                     f"    Surface tag {rest_of_line} will be replaced by {next_tag_id}"
                 )
             markers_found += 1
+
+        elif name == "NPERIODIC":
+            nperiodic = int(rest_of_line)
+            for _ in range(nperiodic):
+                f.readline()  # PERIODIC_INDEX= n
+                f.readline()  # translation vector
+                f.readline()  # rotation center
+                f.readline()  # rotation angles
+        elif name == "FFD_NBOX":
+            pass
+
+        elif name == "FFD_CORNER_POINTS":
+            # 8 corner coordinate lines follow: x y z
+            for _ in range(int(rest_of_line)):
+                f.readline()
+
+        elif name == "FFD_CONTROL_POINTS":
+            # N lines follow: i j k x y z
+            for _ in range(int(rest_of_line)):
+                f.readline()
+
+        elif name == "FFD_SURFACE_POINTS":
+            # N lines follow: marker_tag elem i j k
+            for _ in range(int(rest_of_line)):
+                f.readline()
 
     if markers_found != expected_nmarkers:
         warn(
