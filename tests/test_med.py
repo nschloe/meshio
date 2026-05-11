@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 import meshio
-
+from meshio.med._med import numpy_to_med_type
 from . import helpers
 
 h5py = pytest.importorskip("h5py")
@@ -131,3 +131,55 @@ def test_reference_file_with_point_cell_data(tmp_path):
     assert np.isclose(np.mean(data_psi, axis=1)[0, 0], data_psi_elem[0])
 
     helpers.write_read(tmp_path, meshio.med.write, meshio.med.read, mesh, 1.0e-15)
+
+@pytest.mark.parametrize("dtype, expected_med_type", [
+    (np.float32, 4),   # MED_FLOAT32
+    (np.float64, 6),   # MED_FLOAT64
+    (np.int32,   24),  # MED_INT32
+    (np.int64,   26),  # MED_INT64
+])
+def test_med_type_mapping(dtype, expected_med_type):
+    """Vérifie que le mapping numpy dtype -> constante MED est correct."""
+    data = np.array([1, 2, 3], dtype=dtype)
+    result = numpy_to_med_type[data.dtype]
+    assert result == expected_med_type, (
+        f"dtype={dtype.__name__}: "
+        f"attendu {expected_med_type}, obtenu {result}"
+    )
+
+
+def test_med_type_mapping_unknown_dtype():
+    """Un dtype non supporté doit lever une KeyError."""
+    data = np.array([1, 2, 3], dtype=np.complex128)
+    with pytest.raises(KeyError):
+        _ = numpy_to_med_type[data.dtype]
+
+
+@pytest.mark.parametrize("dtype, expected_med_type", [
+    (np.float32, 4),   # MED_FLOAT32
+    (np.float64, 6),   # MED_FLOAT64
+    (np.int32,   24),  # MED_INT32
+    (np.int64,   26),  # MED_INT64
+])
+def test_med_type_preserved_after_write_read(tmp_path, dtype, expected_med_type):
+    """
+    Vérifie que le TYP écrit dans le HDF5 correspond
+    bien au type MED attendu après un write meshio.
+    """
+    filename = tmp_path / f"test_roundtrip_{dtype.__name__}.med"
+
+    mesh = helpers.add_point_data(helpers.tri_mesh, 1)
+    for key in mesh.point_data:
+        mesh.point_data[key] = mesh.point_data[key].astype(dtype)
+
+    meshio.med.write(filename, mesh)
+
+    with h5py.File(filename, "r") as f:
+        if "CHA" in f:
+            for field_name in f["CHA"]:
+                written_type = f["CHA"][field_name].attrs.get("TYP")
+                if written_type is not None:
+                    assert written_type == expected_med_type, (
+                        f"Champ '{field_name}', dtype={dtype.__name__}: "
+                        f"TYP={written_type}, attendu={expected_med_type}"
+                    )
