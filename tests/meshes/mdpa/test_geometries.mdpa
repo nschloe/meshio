@@ -1,0 +1,27 @@
+Begin ModelPartData
+End ModelPartData
+
+Begin Properties 0
+End Properties
+
+Begin Nodes
+  1 0.0 0.0 0.0
+  2 1.0 0.0 0.0
+  3 1.0 1.0 0.0
+  4 0.0 1.0 0.0
+  5 2.0 0.0 0.0
+End Nodes
+
+Begin Geometries Triangle2D3
+  101 1 2 3
+  102 1 3 4
+End Geometries
+
+Begin Geometries Line2D2
+  201 1 2
+  205 2 5
+End Geometries
+
+Begin Elements Triangle2D3
+  1 0 1 2 3
+End Elements
