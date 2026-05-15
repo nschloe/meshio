@@ -1,0 +1,196 @@
+Begin ModelPartData
+//  VARIABLE_NAME value
+End ModelPartData
+
+Begin Properties 0
+End Properties
+
+Begin Properties 1
+End Properties
+
+Begin Nodes
+    1   0.00   0.00   0.00
+    2   0.25   0.00   0.00
+    3   0.50   0.00   0.00
+    4   1.00   0.00   0.00
+    5   0.00   0.25   0.00
+    6   0.25   0.25   0.00
+    7   0.50   0.25   0.00
+    8   1.00   0.25   0.00
+    9   0.00   0.50   0.00
+    10  0.25   0.50   0.00
+    11  0.50   0.50   0.00
+    12  1.00   0.50   0.00
+    13  0.00   1.00   0.00
+    14  0.25   1.00   0.00
+    15  0.50   1.00   0.00
+    16  1.00   1.00   0.00
+End Nodes
+
+Begin Elements Element3D3N// GUI group identifier: Domain
+         1          1         1         2         5
+         2          1         2         6         5
+         3          1         2         3         6
+         4          1         3         7         6
+         5          1         3         4         7
+         6          1         4         8         7
+         7          1         5         6         9
+         8          1         6         10        9
+         9          1         6         7         10
+        10          1         7         11        10
+        11          1         7         8         11
+        12          1         8         12        11
+        13          1         9         10        13
+        14          1         10        14        13
+        15          1         10        11        14
+        16          1         11        15        14
+        17          1         11        12        15
+        18          1         12        16        15
+End Elements
+
+Begin Conditions LineCondition3D2N// GUI group identifier: Skin
+    1 0 1 2
+    2 0 2 3
+    3 0 3 4
+    4 0 4 8
+    5 0 8 12
+    6 0 12 16
+    7 0 16 15
+    8 0 15 14
+    9 0 14 13
+    10 0 13 9
+    11 0 9 5
+    12 0 5 1
+End Conditions
+
+Begin SubModelPart Main_domain
+    Begin SubModelPartNodes
+         1
+         2
+         3
+         4
+         5
+         6
+         7
+         8
+         9
+        10
+        11
+        12
+        13
+        14
+        15
+        16
+    End SubModelPartNodes
+    Begin SubModelPartElements
+         1
+         2
+         3
+         4
+         5
+         6
+         7
+         8
+         9
+        10
+        11
+        12
+        13
+        14
+        15
+        16
+        17
+        18
+    End SubModelPartElements
+    Begin SubModelPartConditions
+    End SubModelPartConditions
+End SubModelPart
+Begin SubModelPart Left_side
+    Begin SubModelPartNodes
+         1
+         5
+         9
+         13
+    End SubModelPartNodes
+    Begin SubModelPartElements
+    End SubModelPartElements
+    Begin SubModelPartConditions
+        10
+        11
+        12
+    End SubModelPartConditions
+End SubModelPart
+Begin SubModelPart Right_side
+    Begin SubModelPartNodes
+        4
+        8
+        12
+        16
+    End SubModelPartNodes
+    Begin SubModelPartElements
+    End SubModelPartElements
+    Begin SubModelPartConditions
+        4
+        5
+        6
+    End SubModelPartConditions
+End SubModelPart
+Begin SubModelPart Top_side
+    Begin SubModelPartNodes
+        13
+        14
+        15
+        16
+    End SubModelPartNodes
+    Begin SubModelPartElements
+    End SubModelPartElements
+    Begin SubModelPartConditions
+        7
+        8
+        9
+    End SubModelPartConditions
+End SubModelPart
+Begin SubModelPart Bot_side
+    Begin SubModelPartNodes
+         1
+         2
+         3
+         4
+    End SubModelPartNodes
+    Begin SubModelPartElements
+    End SubModelPartElements
+    Begin SubModelPartConditions
+         7
+         8
+         9
+    End SubModelPartConditions
+End SubModelPart
+Begin SubModelPart Main_subdomain
+    Begin SubModelPartNodes
+         1
+         2
+         3
+         5
+         6
+         7
+         9
+        10
+        11
+    End SubModelPartNodes
+    Begin SubModelPartElements
+         1
+         2
+         3
+         4
+         7
+         8
+         9
+        10
+    End SubModelPartElements
+    Begin SubModelPartConditions
+         1
+         2
+        11
+        12
+    End SubModelPartConditions
+End SubModelPart

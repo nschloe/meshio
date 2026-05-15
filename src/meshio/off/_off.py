@@ -44,10 +44,29 @@ def read_buffer(f):
     verts = np.fromfile(f, dtype=float, count=3 * num_verts, sep=" ").reshape(
         num_verts, 3
     )
-    data = np.fromfile(f, dtype=int, count=4 * num_faces, sep=" ").reshape(num_faces, 4)
-    if not np.all(data[:, 0] == 3):
-        raise ReadError("Can only read triangular faces")
-    cells = [CellBlock("triangle", data[:, 1:])]
+    cells=""
+    if num_faces :
+        #identify the number of nodes of the first face (and assume all faces with same amount, but can be false!!)
+        file_position=f.tell()
+        line = f.readline().strip()
+        f.seek(file_position)
+        num_nodes_face=int(line.split(" ")[0])
+        element=""
+        if num_nodes_face==3 :
+            element="triangle"
+        elif num_nodes_face==4 :
+            element="quad"
+        elif num_nodes_face>0 :
+            element="polygon"
+        else :
+            element=""            
+        if num_nodes_face>0 :
+            data = np.fromfile(f, dtype=int, count=(num_nodes_face+1)*num_faces, sep=" ").reshape(num_faces, num_nodes_face+1)
+            if not np.all(data[:, 0] == num_nodes_face):
+                raise ReadError("Can only read faces with same amount of nodes "+str(num_nodes_face))
+            cells = [CellBlock(element, data[:, 1:])]
+        else :
+            raise ReadError("Unexpected number of nodes by face"+str(num_nodes_face))    
 
     return verts, cells
 

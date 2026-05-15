@@ -89,6 +89,7 @@ def _read_file(path: Path, file_format: str | None):
     if not path.exists():
         raise ReadError(f"File {path} not found.")
 
+    error_msgs = ""
     if file_format:
         possible_file_formats = [file_format]
     else:
@@ -102,7 +103,9 @@ def _read_file(path: Path, file_format: str | None):
         try:
             return reader_map[file_format](str(path))
         except ReadError as e:
-            print(e)
+            #print(e)
+            error_msgs += str(e) + "\n"
+            
 
     if len(possible_file_formats) == 1:
         msg = f"Couldn't read file {path} as {possible_file_formats[0]}"
@@ -110,8 +113,9 @@ def _read_file(path: Path, file_format: str | None):
         lst = ", ".join(possible_file_formats)
         msg = f"Couldn't read file {path} as either of {lst}"
 
-    error(msg)
-    sys.exit(1)
+    # error(msg)
+    # sys.exit(1)
+    raise ReadError(msg+":\n"+error_msgs)
 
 
 def write_points_cells(
