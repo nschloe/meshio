@@ -74,9 +74,9 @@ def read(filename):
         raise ReadError(f"Must only contain exactly 1 mesh, found {len(meshes)}.")
     mesh_name = list(meshes)[0]
     mesh = mesh_ensemble[mesh_name]
-    mesh_description = mesh.attrs.get("DES", b"").decode().strip().rstrip("\x00")
-    mesh_unit_time   = mesh.attrs.get("UNT", b"").decode().strip().rstrip("\x00")
-    mesh_unit_coords = mesh.attrs.get("UNI", b"").decode().strip().rstrip("\x00")
+    mesh_description = mesh.attrs.get("DES", b"").decode("latin-1").strip().rstrip("\x00")
+    mesh_unit_time   = mesh.attrs.get("UNT", b"").decode("latin-1").strip().rstrip("\x00")
+    mesh_unit_coords = mesh.attrs.get("UNI", b"").decode("latin-1").strip().rstrip("\x00")
 
     dim = mesh.attrs["ESP"]
 
@@ -296,13 +296,13 @@ def write(filename, mesh, med_version="4.1.0", **kwargs):
     unt  = getattr(mesh, "unit_time", "")
     uni  = getattr(mesh, "unit_coords", "")
     desc = getattr(mesh, "description", "Mesh created with meshio")
-    med_mesh.attrs.create("UNT", np.bytes_(unt) if unt else numpy_void_str)
-    med_mesh.attrs.create("UNI", np.bytes_(uni) if uni else numpy_void_str)
+    med_mesh.attrs.create("UNT", np.bytes_(unt.encode("latin-1")) if unt else numpy_void_str)
+    med_mesh.attrs.create("UNI", np.bytes_(uni.encode("latin-1")) if uni else numpy_void_str)
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
     # component names:
     names = ["X", "Y", "Z"][: mesh.points.shape[1]]
     med_mesh.attrs.create("NOM", np.bytes_("".join(f"{name:<16}" for name in names)))
-    med_mesh.attrs.create("DES", np.bytes_(desc))
+    med_mesh.attrs.create("DES", np.bytes_(desc.encode("latin-1")))
     med_mesh.attrs.create("TYP", 0)  # mesh type (MED_NON_STRUCTURE)
 
     # Time-step

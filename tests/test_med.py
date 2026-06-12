@@ -876,3 +876,23 @@ def test_read_strips_surrounding_whitespace(tmp_path):
  
     out = meshio.med.read(filename)
     assert out.description == "Salome mesh"
+
+
+def test_metadata_latin1_roundtrip(tmp_path):
+    """Non-ASCII Latin-1 metadata (µm, °C, French accents) must round-trip.
+    MED stores strings as 8-bit char arrays, so Latin-1 is the supported
+    encoding. Plain ASCII and Latin-1 supplements must both be preserved
+    without UnicodeEncodeError on write.
+    """
+    filename = tmp_path / "latin1.med"
+    mesh = copy.deepcopy(helpers.tri_mesh)
+    mesh.unit_coords = "µm"
+    mesh.unit_time = "µs"
+    mesh.description = "Maillage généré par Salome"
+
+    meshio.med.write(filename, mesh)
+    out = meshio.med.read(filename)
+
+    assert out.unit_coords == "µm"
+    assert out.unit_time == "µs"
+    assert out.description == "Maillage généré par Salome"
