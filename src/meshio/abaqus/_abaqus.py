@@ -125,6 +125,8 @@ def read_buffer(fl):
     faces={}
     files=[]
     f=fl
+    SysMtrx=[[1,0,0],[0,1,0],[0,0,1]]
+    SysVect=[0,0,0]
     while True:
         line = f.readline()
         while line:
@@ -137,7 +139,7 @@ def read_buffer(fl):
             keyword = line.partition(",")[0].strip().replace("*", "").upper()
             if keyword == "NODE":
                 params_map = get_param_map(line)
-                points, set_ids, line = _read_nodes(f, points, point_ids)
+                points, set_ids, line = _read_nodes(f, points, point_ids, SysMtrx, SysVect)
                 if "NSET" in params_map.keys():                    
                     name = params_map["NSET"]
                     if not name in point_sets_ids:
@@ -196,6 +198,35 @@ def read_buffer(fl):
                 files.append(f)
                 f = open(ext_input_file, "r")
                 line = f.readline()
+            elif keyword == "SYSTEM":
+                line = f.readline()
+                if not line or line.startswith("*"):
+                    SysMtrx = [[1,0,0],[0,1,0],[0,0,1]]
+                    SysVect = [0,0,0]
+                else:
+                    line = line.strip().split(",")
+                    SysVect = [float(line[0]),float(line[1]),float(line[2])]
+                    if len(line) == 6:
+                        Vec_b=[float(line[3])-SysVect[0],float(line[4])-SysVect[1],float(line[5])-SysVect[2]]
+                        line = f.readline()
+                        if not line or line.startswith("*"):
+                            SysMtrx = [[Vec_b[0]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,-Vec_b[1]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,0],
+                                       [Vec_b[1]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,Vec_b[0]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,0],
+                                       [0,0,0]]
+                        else:
+                            Len_b=np.linalg.norm(Vec_b)
+                            line = line.strip().split(",")
+                            Vec_c=[float(line[0])-SysVect[0],float(line[1])-SysVect[1],float(line[2])-SysVect[2]]
+                            Len_c=np.linalg.norm(Vec_c)
+                            Vec_z=np.cross(Vec_b,Vec_c)
+                            Len_z=np.linalg.norm(Vec_z)
+                            SysMtrx = [[Vec_b[0]/Len_b,Vec_c[0]/Len_c,Vec_z[0]/Len_z],
+                                       [Vec_b[1]/Len_b,Vec_c[1]/Len_c,Vec_z[1]/Len_z],
+                                       [Vec_b[2]/Len_b,Vec_c[2]/Len_c,Vec_z[2]/Len_z]]
+                            line = f.readline()
+                    else:
+                        SysMtrx = [[1,0,0],[0,1,0],[0,0,1]]
+                        line = f.readline()
             else:
                 # There are just too many Abaqus keywords to explicitly skip them.
                 line = f.readline()
@@ -237,7 +268,7 @@ def read_buffer(fl):
     )
 
 
-def _read_nodes(f, ext_points, point_ids):
+def _read_nodes(f, ext_points, point_ids, SysMtrx, SysVect):
     points=[]
     set_ids=set()
     counter = len(ext_points)
@@ -249,10 +280,15 @@ def _read_nodes(f, ext_points, point_ids):
             continue
 
         line = line.strip().split(",")
-        point_id, coords = line[0], line[1:]
-        point_ids[int(point_id)] = counter
-        points.append([float(x) for x in coords])
-        set_ids.add(int(point_id))
+        point_id = int(line[0])
+        point_ids[point_id] = counter
+        coords_loc = [float(x) for x in line[1:]]
+        coords = [SysVect[i] for i in range(len(coords_loc))]
+        for i in range(len(coords_loc)):
+            for j, vla in enumerate(coords_loc):
+                coords[i]+=SysMtrx[i][j]*val
+        points.append(coords)
+        set_ids.add(point_id)
         counter += 1
     if len(ext_points)==0:
         return np.array(points, dtype=float), set_ids, line
