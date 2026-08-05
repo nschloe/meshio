@@ -29,12 +29,12 @@ abaqus_to_meshio_type = {
     "B21H": "line",
     "B22": "line3",
     "B22H": "line3",
-    "B31": "line",
     "B31H": "line",
+    "B31": "line",
     "B32": "line3",
     "B32H": "line3",
-    "B33": "line3",
     "B33H": "line3",
+    "B33": "line3",
     # surfaces
     "CPS4": "quad",
     "CPS4R": "quad",
@@ -43,6 +43,7 @@ abaqus_to_meshio_type = {
     "S4RS": "quad",
     "S4RSW": "quad",
     "S4R5": "quad",
+    "CAX8": "quad8",
     "S8R": "quad8",
     "S8R5": "quad8",
     "S9R5": "quad9",
@@ -66,27 +67,27 @@ abaqus_to_meshio_type = {
     "STRI65": "triangle6",
     # 'TRISHELL6': 'triangle6',
     # volumes
-    "C3D8": "hexahedron",
-    "C3D8H": "hexahedron",
-    "C3D8I": "hexahedron",
-    "C3D8IH": "hexahedron",
-    "C3D8R": "hexahedron",
     "C3D8RH": "hexahedron",
+    "C3D8R": "hexahedron",
+    "C3D8IH": "hexahedron",
+    "C3D8I": "hexahedron",
+    "C3D8H": "hexahedron",
+    "C3D8": "hexahedron",
     # "HEX9": "hexahedron9",
-    "C3D20": "hexahedron20",
-    "C3D20H": "hexahedron20",
-    "C3D20R": "hexahedron20",
     "C3D20RH": "hexahedron20",
+    "C3D20R": "hexahedron20",
+    "C3D20H": "hexahedron20",
+    "C3D20": "hexahedron20",
     # "HEX27": "hexahedron27",
     #
-    "C3D4": "tetra",
     "C3D4H": "tetra4",
+    "C3D4": "tetra",
     # "TETRA8": "tetra8",
-    "C3D10": "tetra10",
-    "C3D10H": "tetra10",
-    "C3D10I": "tetra10",
-    "C3D10M": "tetra10",
     "C3D10MH": "tetra10",
+    "C3D10M": "tetra10",
+    "C3D10I": "tetra10",
+    "C3D10H": "tetra10",
+    "C3D10": "tetra10",
     # "TETRA14": "tetra14",
     #
     # "PYRAMID": "pyramid",
@@ -108,115 +109,152 @@ def read(filename):
     return out
 
 
-def read_buffer(f):
+def read_buffer(fl):
     # Initialize the optional data fields
     points = []
     cells = []
     cell_ids = []
     point_sets = {}
     cell_sets = {}
-    cell_sets_element = {}  # Handle cell sets defined in ELEMENT
-    cell_sets_element_order = []  # Order of keys is not preserved in Python 3.5
     field_data = {}
     cell_data = {}
     point_data = {}
-    point_ids = None
-
-    line = f.readline()
+    point_ids = {}
+    point_sets_ids = {}
+    cell_sets_ids = {}
+    faces={}
+    files=[]
+    f=fl
+    SysMtrx=[[1,0,0],[0,1,0],[0,0,1]]
+    SysVect=[0,0,0]
     while True:
-        if not line:  # EOF
-            break
+        line = f.readline()
+        while line:
 
-        # Comments
-        if line.startswith("**"):
-            line = f.readline()
-            continue
+            # Comments
+            if line.startswith("**"):
+                line = f.readline()
+                continue
 
-        keyword = line.partition(",")[0].strip().replace("*", "").upper()
-        if keyword == "NODE":
-            points, point_ids, line = _read_nodes(f)
-        elif keyword == "ELEMENT":
-            if point_ids is None:
-                raise ReadError("Expected NODE before ELEMENT")
-            params_map = get_param_map(line, required_keys=["TYPE"])
-            cell_type, cells_data, ids, sets, line = _read_cells(
-                f, params_map, point_ids
-            )
-            cells.append(CellBlock(cell_type, cells_data))
-            cell_ids.append(ids)
-            if sets:
-                cell_sets_element.update(sets)
-                cell_sets_element_order += list(sets.keys())
-        elif keyword == "NSET":
-            params_map = get_param_map(line, required_keys=["NSET"])
-            set_ids, _, line = _read_set(f, params_map)
-            name = params_map["NSET"]
-            point_sets[name] = np.array(
-                [point_ids[point_id] for point_id in set_ids], dtype="int32"
-            )
-        elif keyword == "ELSET":
-            params_map = get_param_map(line, required_keys=["ELSET"])
-            set_ids, set_names, line = _read_set(f, params_map)
-            name = params_map["ELSET"]
-            cell_sets[name] = []
-            if set_ids.size:
-                for cell_ids_ in cell_ids:
-                    cell_sets_ = np.array(
-                        [
-                            cell_ids_[set_id]
-                            for set_id in set_ids
-                            if set_id in cell_ids_
-                        ],
-                        dtype="int32",
-                    )
-                    cell_sets[name].append(cell_sets_)
-            elif set_names:
-                for set_name in set_names:
-                    if set_name in cell_sets.keys():
-                        cell_sets[name].append(cell_sets[set_name])
-                    elif set_name in cell_sets_element.keys():
-                        cell_sets[name].append(cell_sets_element[set_name])
+            keyword = line.partition(",")[0].strip().replace("*", "").upper()
+            if keyword == "NODE":
+                params_map = get_param_map(line)
+                points, set_ids, line = _read_nodes(f, points, point_ids, SysMtrx, SysVect)
+                if "NSET" in params_map.keys():                    
+                    name = params_map["NSET"]
+                    if not name in point_sets_ids:
+                        point_sets[name]=[]
+                        point_sets_ids[name]=set()
+                    point_sets_ids[name]=point_sets_ids[name].union(set_ids)
+            elif keyword == "ELEMENT":
+                if point_ids is None:
+                    raise ReadError("Expected NODE before ELEMENT")
+                params_map = get_param_map(line, required_keys=["TYPE"])
+                cell_type, cells_data, ids, sets, line = _read_cells(
+                    f, params_map, point_ids
+                )
+                cells.append(CellBlock(cell_type, cells_data))
+                cell_ids.append(ids)
+                if sets:
+                    name=list(sets.keys())[0]
+                    if not name in cell_sets:
+                        cell_sets[name] = []
+                        cell_sets_ids[name]=set()
+                    cell_sets_ids[name]=cell_sets_ids[name].union(sets[name])
+            elif keyword == "NSET":
+                params_map = get_param_map(line, required_keys=["NSET"])
+                set_ids, _, line = _read_set(f, params_map)
+                name = params_map["NSET"]
+                if not name in point_sets_ids:
+                    point_sets[name]=[]
+                    point_sets_ids[name]=set()
+                point_sets_ids[name]=point_sets_ids[name].union(set_ids)
+            elif keyword == "ELSET":
+                params_map = get_param_map(line, required_keys=["ELSET"])
+                set_ids, set_names, line = _read_set(f, params_map)
+                name = params_map["ELSET"]
+                if not name in cell_sets:
+                    cell_sets[name] = []
+                    cell_sets_ids[name]=set()
+                if len(set_ids):
+                    cell_sets_ids[name]=cell_sets_ids[name].union(set_ids)
+                elif set_names:
+                    for set_name in set_names:
+                        if set_name in cell_sets.keys():
+                            cell_sets_ids[name]=cell_sets_ids[name].union(set(cell_sets[set_name]))
+                        else:
+                            raise ReadError(f"Unknown cell set '{set_name}'")
+            elif keyword == "SURFACE":
+                params_map = get_param_map(line, required_keys=["TYPE","NAME"])                
+                face, line = _read_surf(f, params_map)
+                if face:
+                    faces[params_map["NAME"]]=face
+            elif keyword == "INCLUDE":
+                # Splitting line to get external input file path (example: *INCLUDE,INPUT=wInclude_bulk.inp)
+                ext_input_file = pathlib.Path(line.split("=")[-1].strip())
+                if ext_input_file.exists() is False:
+                    cd = pathlib.Path(f.name).parent
+                    ext_input_file = cd / ext_input_file
+                files.append(f)
+                f = open(ext_input_file, "r")
+                line = f.readline()
+            elif keyword == "SYSTEM":
+                line = f.readline()
+                if not line or line.startswith("*"):
+                    SysMtrx = [[1,0,0],[0,1,0],[0,0,1]]
+                    SysVect = [0,0,0]
+                else:
+                    line = line.strip().split(",")
+                    SysVect = [float(line[0]),float(line[1]),float(line[2])]
+                    if len(line) == 6:
+                        Vec_b=[float(line[3])-SysVect[0],float(line[4])-SysVect[1],float(line[5])-SysVect[2]]
+                        line = f.readline()
+                        if not line or line.startswith("*"):
+                            SysMtrx = [[Vec_b[0]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,-Vec_b[1]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,0],
+                                       [Vec_b[1]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,Vec_b[0]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,0],
+                                       [0,0,1]]
+                        else:
+                            Len_b=np.linalg.norm(Vec_b)
+                            line = line.strip().split(",")
+                            Vec_c=[float(line[0])-SysVect[0],float(line[1])-SysVect[1],float(line[2])-SysVect[2]]
+                            Len_c=np.linalg.norm(Vec_c)
+                            Vec_z=np.cross(Vec_b,Vec_c)
+                            Len_z=np.linalg.norm(Vec_z)
+                            SysMtrx = [[Vec_b[0]/Len_b,Vec_c[0]/Len_c,Vec_z[0]/Len_z],
+                                       [Vec_b[1]/Len_b,Vec_c[1]/Len_c,Vec_z[1]/Len_z],
+                                       [Vec_b[2]/Len_b,Vec_c[2]/Len_c,Vec_z[2]/Len_z]]
+                            line = f.readline()
                     else:
-                        raise ReadError(f"Unknown cell set '{set_name}'")
-        elif keyword == "INCLUDE":
-            # Splitting line to get external input file path (example: *INCLUDE,INPUT=wInclude_bulk.inp)
-            ext_input_file = pathlib.Path(line.split("=")[-1].strip())
-            if ext_input_file.exists() is False:
-                cd = pathlib.Path(f.name).parent
-                ext_input_file = cd / ext_input_file
-
-            # Read contents from external input file into mesh object
-            out = read(ext_input_file)
-
-            # Merge contents of external file only if it is containing mesh data
-            if len(out.points) > 0:
-                points, cells = merge(
-                    out,
-                    points,
-                    cells,
-                    point_data,
-                    cell_data,
-                    field_data,
-                    point_sets,
-                    cell_sets,
-                )
-
-            line = f.readline()
+                        SysMtrx = [[1,0,0],[0,1,0],[0,0,1]]
+                        line = f.readline()
+            else:
+                # There are just too many Abaqus keywords to explicitly skip them.
+                line = f.readline()
+        if len(files)==0:
+            break
         else:
-            # There are just too many Abaqus keywords to explicitly skip them.
-            line = f.readline()
+            f=files.pop()
 
-    # Parse cell sets defined in ELEMENT
-    for i, name in enumerate(cell_sets_element_order):
-        # Not sure whether this case would ever happen
-        if name in cell_sets.keys():
-            cell_sets[name][i] = cell_sets_element[name]
-        else:
-            cell_sets[name] = []
-            for ic in range(len(cells)):
-                cell_sets[name].append(
-                    cell_sets_element[name] if i == ic else np.array([], dtype="int32")
-                )
+    # Store points and cell sets
+    for name in point_sets.keys():
+        for point_id in list(point_sets_ids[name]):
+            point_sets[name].append(point_ids[point_id])
+    for name in cell_sets.keys():
+        for cell_ids_ in cell_ids:
+            cell_sets_ = []
+            for set_id in cell_ids_:
+                if set_id in cell_sets_ids[name]:
+                    cell_sets_.append(cell_ids_[set_id])
+            cell_sets[name].append(np.array(cell_sets_))
+
+    # Store node and element numbers
+    point_data['Node_Ids']=np.zeros(points.shape[0], dtype="int32" )
+    for point_id in point_ids: point_data['Node_Ids'][point_ids[point_id]]=point_id
+    cell_data['Element_Ids']=[]
+    for cell_ids_ in cell_ids:
+        cell_data_=np.zeros(len(cell_ids_), dtype="int32" )
+        for cell_id in cell_ids_: cell_data_[cell_ids_[cell_id]]=cell_id
+        cell_data['Element_Ids'].append(cell_data_)
 
     return Mesh(
         points,
@@ -226,13 +264,14 @@ def read_buffer(f):
         field_data=field_data,
         point_sets=point_sets,
         cell_sets=cell_sets,
+        faces=faces,
     )
 
 
-def _read_nodes(f):
-    points = []
-    point_ids = {}
-    counter = 0
+def _read_nodes(f, ext_points, point_ids, SysMtrx, SysVect):
+    points=[]
+    set_ids=set()
+    counter = len(ext_points)
     while True:
         line = f.readline()
         if not line or line.startswith("*"):
@@ -241,12 +280,20 @@ def _read_nodes(f):
             continue
 
         line = line.strip().split(",")
-        point_id, coords = line[0], line[1:]
-        point_ids[int(point_id)] = counter
-        points.append([float(x) for x in coords])
+        point_id = int(line[0])
+        point_ids[point_id] = counter
+        coords_loc = [float(x) for x in line[1:]]
+        coords = [SysVect[i] for i in range(len(coords_loc))]
+        for i in range(len(coords_loc)):
+            for j, val in enumerate(coords_loc):
+                coords[i]+=SysMtrx[i][j]*val
+        points.append(coords)
+        set_ids.add(point_id)
         counter += 1
-
-    return np.array(points, dtype=float), point_ids, line
+    if len(ext_points)==0:
+        return np.array(points, dtype=float), set_ids, line
+    else:
+        return np.concatenate([ext_points,np.array(points, dtype=float)]), set_ids, line
 
 
 def _read_cells(f, params_map, point_ids):
@@ -276,14 +323,25 @@ def _read_cells(f, params_map, point_ids):
     cell_ids = dict(zip(idx[:, 0], count(0)))
     cells = np.array([[point_ids[node] for node in elem] for elem in idx[:, 1:]])
 
-    cell_sets = (
-        {params_map["ELSET"]: np.arange(len(cells), dtype="int32")}
+    cell_sets = ({params_map["ELSET"]: set(cell_ids.keys())}
         if "ELSET" in params_map.keys()
         else {}
     )
 
     return cell_type, cells, cell_ids, cell_sets, line
 
+def _read_surf(f, params_map):
+    face={}
+    while True:
+        line=f.readline()
+        if not line or line.startswith("*"):
+            break
+        if line.strip() == "":
+            continue
+        line = line.strip().split(",")
+        if params_map["TYPE"] == "ELEMENT":
+            face[line[0]]=int(line[1].split("S")[1])-1
+    return face, line
 
 def merge(
     mesh, points, cells, point_data, cell_data, field_data, point_sets, cell_sets
@@ -409,43 +467,65 @@ def write(
         f.write("*NODE\n")
         fmt = ", ".join(["{}"] + ["{:" + float_fmt + "}"] * mesh.points.shape[1]) + "\n"
         for k, x in enumerate(mesh.points):
-            f.write(fmt.format(k + 1, *x))
+            if 'Node_Ids' in mesh.point_data:
+                f.write(fmt.format(mesh.point_data['Node_Ids'][k], *x))
+            else:
+                f.write(fmt.format(k + 1, *x))
         eid = 0
-        for cell_block in mesh.cells:
-            cell_type = cell_block.type
-            node_idcs = cell_block.data
+        nnl = 16
+        for ic in range(len(mesh.cells)):
+            cell_type = mesh.cells[ic].type
+            node_idcs = mesh.cells[ic].data
             name = (
                 meshio_to_abaqus_type[cell_type] if translate_cell_names else cell_type
             )
             f.write(f"*ELEMENT, TYPE={name}\n")
-            for row in node_idcs:
-                eid += 1
-                nids_strs = (str(nid + 1) for nid in row.tolist())
-                f.write(str(eid) + "," + ",".join(nids_strs) + "\n")
+            for ir in range(len(node_idcs)):
+                row=node_idcs[ir]
+                if 'Element_Ids' in mesh.cell_data:
+                    eid = mesh.cell_data['Element_Ids'][ic][ir]
+                else:
+                    eid += 1
+                nums=[str(eid)]
+                if 'Node_Ids' in mesh.point_data:
+                    nids_strs = (str(mesh.point_data['Node_Ids'][nid]) for nid in row.tolist())
+                else:
+                    nids_strs = (str(nid + 1) for nid in row.tolist())
+                nums += nids_strs
+                f.write(",\n".join(",".join(nums[i : i + nnl]) for i in range(0, len(nums), nnl)) + "\n")
 
-        nnl = 8
         offset = 0
-        for ic in range(len(mesh.cells)):
-            for k, v in mesh.cell_sets.items():
+        for k, v in mesh.cell_sets.items():
+            f.write(f"*ELSET, ELSET={k}\n")
+            nums=[]
+            for ic in range(len(mesh.cells)):
                 if len(v[ic]) > 0:
-                    els = [str(i + 1 + offset) for i in v[ic]]
-                    f.write(f"*ELSET, ELSET={k}\n")
-                    f.write(
-                        ",\n".join(
-                            ",".join(els[i : i + nnl]) for i in range(0, len(els), nnl)
-                        )
-                        + "\n"
-                    )
-            offset += len(mesh.cells[ic].data)
-
-        for k, v in mesh.point_sets.items():
-            nds = [str(i + 1) for i in v]
-            f.write(f"*NSET, NSET={k}\n")
+                    if 'Element_Ids' in mesh.cell_data:
+                        for i in v[ic]: nums.append(str(mesh.cell_data['Element_Ids'][ic][i]))
+                    else:
+                        for i in v[ic]: nums.append(str(i + 1 + offset))
+                offset += len(mesh.cells[ic].data)
             f.write(
-                ",\n".join(",".join(nds[i : i + nnl]) for i in range(0, len(nds), nnl))
+                ",\n".join(
+                    ",".join(nums[i : i + nnl]) for i in range(0, len(nums), nnl)
+                )
                 + "\n"
             )
-
+        for k, v in mesh.point_sets.items():
+            if 'Node_Ids' in mesh.point_data:
+                nums = [str(mesh.point_data['Node_Ids'][i]) for i in v]
+            else:
+                nums = [str(i + 1) for i in v]
+            f.write(f"*NSET, NSET={k}\n")
+            f.write(
+                ",\n".join(",".join(nums[i : i + nnl]) for i in range(0, len(nums), nnl))
+                + "\n"
+            )
+        if hasattr(mesh, 'faces'):
+            for k, v in mesh.faces.items():
+                f.write(f"*SURFACE, TYPE=ELEMENT, NAME={k}\n")
+                for face in v:
+                    f.write(face+','+' S'+str(v[face]+1)+'\n')
         # https://github.com/nschloe/meshio/issues/747#issuecomment-643479921
         # f.write("*END")
 

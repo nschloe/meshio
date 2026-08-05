@@ -125,7 +125,10 @@ class Mesh:
         cell_sets: dict[str, list[ArrayLike]] | None = None,
         gmsh_periodic=None,
         info=None,
+        **kwargs,
     ):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self.points = np.asarray(points)
         if isinstance(cells, dict):
             # Let's not deprecate this for now.
@@ -319,24 +322,30 @@ class Mesh:
         default_value = -1
         if len(self.cell_sets) > 0:
             intfun = []
-            for k, c in enumerate(zip(*self.cell_sets.values())):
-                # Go for -1 as the default value. (NaN is not int.)
-                arr = np.full(len(self.cells[k]), default_value, dtype=int)
+            setkeys = []
+            for cell_block in self.cells:
+                setkeys.append(np.full(len(cell_block.data), '', dtype=str))
+                intfun.append(np.full(len(cell_block.data), default_value, dtype=int))
+            for k, c in enumerate(self.cell_sets.values()):
                 for i, cc in enumerate(c):
-                    if cc is None:
-                        continue
-                    arr[cc] = i
-                intfun.append(arr)
-
-            for item in intfun:
-                num_default = np.sum(item == default_value)
-                if num_default > 0:
-                    warn(
-                        f"{num_default} cells are not part of any cell set. "
-                        f"Using default value {default_value}."
-                    )
-                    break
-
+                    for j in cc: setkeys[i][j]+=str(k)+'_'
+            count=0
+            set_id_map={}
+            for cellbl in setkeys:
+                for item in cellbl:
+                    if item:
+                        if not item in set_id_map:
+                            set_id_map[item]=count
+                            count+=1
+                    num_default = np.sum(item == '')
+                    if num_default > 0:
+                        warn(
+                            f"{num_default} cells are not part of any cell set. "
+                            f"Using default value {default_value}."
+                        )
+            for i, cc in enumerate(setkeys):
+                for j, setkey in enumerate(cc):
+                    if setkey: intfun[i][j]=set_id_map[setkey]
             if data_name is None:
                 data_name = "-".join(self.cell_sets.keys())
             self.cell_data[data_name] = intfun
