@@ -212,7 +212,7 @@ def read_buffer(fl):
                         if not line or line.startswith("*"):
                             SysMtrx = [[Vec_b[0]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,-Vec_b[1]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,0],
                                        [Vec_b[1]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,Vec_b[0]/(Vec_b[0]**2+Vec_b[1]**2)**0.5,0],
-                                       [0,0,0]]
+                                       [0,0,1]]
                         else:
                             Len_b=np.linalg.norm(Vec_b)
                             line = line.strip().split(",")
@@ -285,7 +285,7 @@ def _read_nodes(f, ext_points, point_ids, SysMtrx, SysVect):
         coords_loc = [float(x) for x in line[1:]]
         coords = [SysVect[i] for i in range(len(coords_loc))]
         for i in range(len(coords_loc)):
-            for j, vla in enumerate(coords_loc):
+            for j, val in enumerate(coords_loc):
                 coords[i]+=SysMtrx[i][j]*val
         points.append(coords)
         set_ids.add(point_id)
