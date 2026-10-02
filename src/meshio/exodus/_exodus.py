@@ -65,6 +65,10 @@ exodus_to_meshio_type = {
 }
 meshio_to_exodus_type = {v: k for k, v in exodus_to_meshio_type.items()}
 
+# HEX20 orders the vertical midside nodes before the top-face midside nodes,
+# unlike meshio's VTK ordering. This permutation is its own inverse.
+_hex20_order = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 16, 17, 18, 19, 12, 13, 14, 15]
+
 
 def read(filename):  # noqa: C901
     import netCDF4
@@ -105,7 +109,10 @@ def read(filename):  # noqa: C901
                     info += [b"".join(c).decode("UTF-8") for c in val[:]]
             elif key[:7] == "connect":
                 meshio_type = exodus_to_meshio_type[value.elem_type.upper()]
-                cells.append((meshio_type, value[:] - 1))
+                connectivity = value[:] - 1
+                if meshio_type == "hexahedron20":
+                    connectivity = connectivity[:, _hex20_order]
+                cells.append((meshio_type, connectivity))
             elif key == "coord":
                 points = nc.variables["coord"][:].T
             elif key == "coordx":
@@ -316,8 +323,11 @@ def write(filename, mesh):
             dtype = numpy_to_exodus_dtype[cell_block.data.dtype.name]
             data = rootgrp.createVariable(f"connect{k + 1}", dtype, (dim1, dim2))
             data.elem_type = meshio_to_exodus_type[cell_block.type]
+            connectivity = cell_block.data
+            if cell_block.type == "hexahedron20":
+                connectivity = connectivity[:, _hex20_order]
             # Exodus is 1-based
-            data[:] = cell_block.data + 1
+            data[:] = connectivity + 1
 
         # point data
         # The variable `name_nod_var` holds the names and indices of the node variables, the
