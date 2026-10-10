@@ -190,17 +190,24 @@ def _parse_raw_binary(filename):
     with open(filename, "rb") as f:
         raw = f.read()
 
-    try:
-        res = re.search(re.compile(b'<AppendedData[^>]+(?:">)'), raw)
-        assert res is not None
-        i_start = res.end()
-        i_stop = raw.find(b"</AppendedData>")
-    except Exception:
+    res = re.search(re.compile(b"<AppendedData[^>]*>"), raw)
+    if res is None:
         raise ReadError()
+    i_start = res.end()
+    i_stop = raw.rfind(b"</AppendedData>")
+    if i_stop < 0:
+        raise ReadError()
+
+    encoding = re.search(b'encoding="([^"]*)"', res.group(0))
+    if encoding is None or encoding.group(1) != b"raw":
+        raise ReadError("AppendedData encoding is not 'raw'")
 
     header = raw[:i_start].decode()
     footer = raw[i_stop:].decode()
-    data = raw[i_start:i_stop].split(b"_", 1)[1].rsplit(b"\n", 1)[0]
+    try:
+        data = raw[i_start:i_stop].split(b"_", 1)[1]
+    except IndexError:
+        raise ReadError() from None
 
     root = ET.fromstring(header + footer)
 
@@ -211,23 +218,39 @@ def _parse_raw_binary(filename):
         )
 
     appended_data_tag = root.find("AppendedData")
-    assert appended_data_tag is not None
+    if appended_data_tag is None:
+        raise ReadError()
     appended_data_tag.set("encoding", "base64")
+
+    # Collect the appended DataArrays by their original offsets before
+    # rewriting any of them. Looking each block's tag up by offset while
+    # mutating the attribute can match an array whose offset was just
+    # rewritten to that value, leaving a later array un-rewritten and
+    # pointing into the middle of the base64 stream.
+    appended_das = {}
+    for da_tag in root.findall(".//DataArray"):
+        if da_tag.get("format") == "appended":
+            appended_das.setdefault(int(da_tag.attrib["offset"]), []).append(da_tag)
 
     compressor = root.get("compressor")
     if compressor is None:
         arrays = ""
         i = 0
         while i < len(data):
+            if not data[i:].strip():
+                break
             # The following find() runs into issues if offset is padded with spaces, see
             # <https://github.com/nschloe/meshio/issues/1135>. It works in ParaView.
             # Unfortunately, Python's built-in XML tree can't handle regexes, see
             # <https://stackoverflow.com/a/38810731/353337>.
-            da_tag = root.find(f".//DataArray[@offset='{i}']")
-            if da_tag is None:
+            da_tags = appended_das.get(i)
+            if da_tags is None:
                 raise RuntimeError(f"Could not find .//DataArray[@offset='{i}']")
-            da_tag.set("offset", str(len(arrays)))
+            for da_tag in da_tags:
+                da_tag.set("offset", str(len(arrays)))
 
+            if i + dtype.itemsize > len(data):
+                raise ReadError()
             block_size = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
             arrays += base64.b64encode(
                 data[i : i + block_size + dtype.itemsize]
@@ -242,10 +265,16 @@ def _parse_raw_binary(filename):
         arrays = ""
         i = 0
         while i < len(data):
-            da_tag = root.find(f".//DataArray[@offset='{i}']")
-            assert da_tag is not None
-            da_tag.set("offset", str(len(arrays)))
+            if not data[i:].strip():
+                break
+            da_tags = appended_das.get(i)
+            if da_tags is None:
+                raise RuntimeError(f"Could not find .//DataArray[@offset='{i}']")
+            for da_tag in da_tags:
+                da_tag.set("offset", str(len(arrays)))
 
+            if i + dtype.itemsize > len(data):
+                raise ReadError()
             num_blocks = int(np.frombuffer(data[i : i + dtype.itemsize], dtype)[0])
             num_header_items = 3 + num_blocks
             num_header_bytes = num_header_items * dtype.itemsize
