@@ -78,3 +78,75 @@ def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
     assert ref_cells == mesh.cells[0].type
     assert len(mesh.cells[0].data) == ref_num_cells
     assert len(mesh.points) == ref_num_pnt
+
+
+def _write_minimal_raw_vtu(path, encoding=b"raw"):
+    # A tiny raw-appended VTU where the rewritten base64 offset of the
+    # connectivity block (72) equals the original raw offset of the
+    # offsets block. See https://github.com/nschloe/meshio/issues/1571.
+    def block(arr):
+        b = np.asarray(arr).tobytes()
+        return np.uint32(len(b)).tobytes() + b
+
+    points = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float64)
+    connectivity = np.array([0, 1], dtype=np.int64)
+    offsets = np.array([2], dtype=np.int64)
+    types = np.array([3], dtype=np.uint8)
+    # last payload byte is 0x0a, exercising trailing-whitespace handling
+    tags = np.array([1, 10], dtype=np.int8)
+
+    payload = (
+        b"_"
+        + block(points)
+        + block(connectivity)
+        + block(offsets)
+        + block(types)
+        + block(tags)
+    )
+    data = (
+        b'<VTKFile type="UnstructuredGrid" version="0.1"'
+        b' byte_order="LittleEndian" header_type="UInt32">\n'
+        b"  <UnstructuredGrid>"
+        b'<Piece NumberOfPoints="2" NumberOfCells="1">\n'
+        b"    <PointData>"
+        b'<DataArray type="Int8" Name="tags" format="appended" offset="89"/>'
+        b"</PointData>\n"
+        b"    <Points>"
+        b'<DataArray type="Float64" NumberOfComponents="3"'
+        b' format="appended" offset="0"/>'
+        b"</Points>\n"
+        b"    <Cells>\n"
+        b'      <DataArray type="Int64" Name="connectivity"'
+        b' format="appended" offset="52"/>\n'
+        b'      <DataArray type="Int64" Name="offsets"'
+        b' format="appended" offset="72"/>\n'
+        b'      <DataArray type="UInt8" Name="types"'
+        b' format="appended" offset="84"/>\n'
+        b"    </Cells>\n"
+        b"  </Piece></UnstructuredGrid>\n"
+        b'<AppendedData encoding="'
+        + encoding
+        + b'">\n'
+        + payload
+        + b"\n</AppendedData>\n</VTKFile>"
+    )
+    path.write_bytes(data)
+
+
+def test_raw_binary_offset_rewrite_collision(tmp_path):
+    filename = tmp_path / "test.vtu"
+    _write_minimal_raw_vtu(filename)
+    mesh = meshio.read(filename)
+    assert mesh.points.tolist() == [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]
+    assert mesh.cells[0].data.tolist() == [[0, 1]]
+    assert mesh.point_data["tags"].tolist() == [1, 10]
+
+
+def test_raw_binary_requires_raw_encoding(tmp_path):
+    from meshio._exceptions import ReadError
+    from meshio.vtu._vtu import _parse_raw_binary
+
+    filename = tmp_path / "test.vtu"
+    _write_minimal_raw_vtu(filename, encoding=b"base64")
+    with pytest.raises(ReadError):
+        _parse_raw_binary(str(filename))
