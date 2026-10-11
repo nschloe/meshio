@@ -25,6 +25,17 @@ def test_cells_dict():
     assert_equal(mesh.cell_data_dict, {"a": {"triangle": [0.5, 1.3]}})
 
 
+def test_cell_data_nested_dict():
+    # cell_data maps field names to per-block arrays; a nested
+    # {cell type: {name: data}} dict must fail with a clear error
+    # rather than KeyError: 0 (#1520)
+    points = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    cells = {"triangle": [[0, 1, 2]]}
+    cell_data = {"triangle": {"a": [10.0]}}
+    with pytest.raises(TypeError, match="one array per cell block"):
+        meshio.Mesh(points, cells, cell_data=cell_data)
+
+
 def test_sets_to_int_data():
     mesh = helpers.tri_mesh_5
     mesh = helpers.add_point_sets(mesh)

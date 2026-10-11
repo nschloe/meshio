@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Mapping
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -170,6 +171,12 @@ class Mesh:
 
         # assert cell data consistency and convert to numpy arrays
         for key, data in self.cell_data.items():
+            if isinstance(data, Mapping):
+                raise TypeError(
+                    f"cell_data['{key}'] is a {type(data).__name__}; "
+                    "cell_data must map a field name to a list of "
+                    "arrays, one array per cell block."
+                )
             if len(data) != len(cells):
                 raise ValueError(
                     f"Incompatible cell data '{key}'. "
