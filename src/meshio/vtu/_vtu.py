@@ -512,6 +512,8 @@ class VtuReader:
         ]
 
         # process the compressed data
+        if num_blocks == 0:
+            return np.empty(0, dtype=dtype)
         block_data = np.concatenate(
             [
                 np.frombuffer(
@@ -700,10 +702,14 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     for key, data in mesh.field_data.items():
         mesh.field_data[key] = data.astype(data.dtype.newbyteorder("="), copy=False)
 
-    def numpy_to_xml_array(parent, name, data):
+    def numpy_to_xml_array(parent, name, data, is_field_data=False):
+        if is_field_data:
+            data = np.atleast_1d(data)
         vtu_type = numpy_to_vtu_type[data.dtype]
         fmt = "{:.11e}" if vtu_type.startswith("Float") else "{:d}"
         da = ET.SubElement(parent, "DataArray", type=vtu_type, Name=name)
+        if is_field_data:
+            da.set("NumberOfTuples", f"{data.shape[0]}")
         if len(data.shape) == 2:
             da.set("NumberOfComponents", f"{data.shape[1]}")
 
@@ -713,7 +719,10 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
 
             # round up
             num_blocks = -int(-len(data_bytes) // max_block_size)
-            last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
+            if num_blocks:
+                last_block_size = len(data_bytes) - (num_blocks - 1) * max_block_size
+            else:
+                last_block_size = 0
 
             # It's too bad that we have to keep all blocks in memory. This is
             # necessary because the header, written first, needs to know the
@@ -792,6 +801,11 @@ def write(filename, mesh, binary=True, compression="zlib", header_type=None):
     vtk_file.insert(1, comment)
 
     grid = ET.SubElement(vtk_file, "UnstructuredGrid")
+
+    if mesh.field_data:
+        fd = ET.SubElement(grid, "FieldData")
+        for name, data in mesh.field_data.items():
+            numpy_to_xml_array(fd, name, data, is_field_data=True)
 
     total_num_cells = sum(len(c.data) for c in mesh.cells)
     piece = ET.SubElement(

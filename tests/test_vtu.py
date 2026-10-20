@@ -1,4 +1,5 @@
 import pathlib
+import xml.etree.ElementTree as ET
 
 import numpy as np
 import pytest
@@ -78,3 +79,71 @@ def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
     assert ref_cells == mesh.cells[0].type
     assert len(mesh.cells[0].data) == ref_num_cells
     assert len(mesh.points) == ref_num_pnt
+
+
+@pytest.mark.parametrize(
+    "binary, compression",
+    [(False, None), (True, None), (True, "zlib"), (True, "lzma")],
+)
+def test_field_data_roundtrip(binary, compression, tmp_path):
+    """VTU field data should survive all supported output encodings."""
+    field_data = {
+        "sample_id": np.array([42], dtype=np.int32),
+        "physical_region": np.array([5, 2], dtype=np.int32),
+        "material_parameters": np.array([[1.2, 0.3], [2.1, 0.7]]),
+    }
+    mesh = meshio.Mesh(
+        np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
+        [("triangle", np.array([[0, 1, 2]]))],
+        field_data=field_data,
+    )
+    filename = tmp_path / "field_data.vtu"
+    meshio.vtu.write(filename, mesh, binary=binary, compression=compression)
+
+    # Field metadata must use a VTK-compatible XML representation.
+    field_xml = ET.parse(filename).getroot().find("./UnstructuredGrid/FieldData")
+    assert field_xml is not None
+    for array in field_xml:
+        original = field_data[array.attrib["Name"]]
+        assert int(array.attrib["NumberOfTuples"]) == original.shape[0]
+        assert int(array.attrib.get("NumberOfComponents", 1)) == (
+            original.shape[1] if original.ndim == 2 else 1
+        )
+
+    restored = meshio.vtu.read(filename)
+    assert restored.field_data.keys() == field_data.keys()
+    for name, values in field_data.items():
+        np.testing.assert_array_equal(restored.field_data[name], values)
+    np.testing.assert_array_equal(restored.cells[0].data, mesh.cells[0].data)
+    np.testing.assert_array_equal(restored.points, mesh.points)
+
+
+@pytest.mark.parametrize(
+    "binary, compression",
+    [(False, None), (True, None), (True, "zlib"), (True, "lzma")],
+)
+@pytest.mark.parametrize(
+    "field_value",
+    [
+        np.array(42, dtype=np.int32),
+        np.array([], dtype=np.float64),
+        np.empty((0, 2), dtype=np.float64),
+    ],
+    ids=["scalar", "empty-vector", "empty-matrix"],
+)
+def test_field_data_edge_cases(field_value, binary, compression, tmp_path):
+    points = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    mesh = meshio.Mesh(
+        points,
+        [("triangle", np.array([[0, 1, 2]]))],
+        field_data={"test_value": field_value},
+    )
+    filename = tmp_path / "edge_case.vtu"
+    meshio.vtu.write(filename, mesh, binary=binary, compression=compression)
+    xml = ET.parse(filename).getroot().find("./UnstructuredGrid/FieldData/DataArray")
+    assert xml is not None
+    assert int(xml.attrib["NumberOfTuples"]) == len(np.atleast_1d(field_value))
+    restored = meshio.vtu.read(filename)
+    np.testing.assert_array_equal(
+        restored.field_data["test_value"], np.atleast_1d(field_value)
+    )
