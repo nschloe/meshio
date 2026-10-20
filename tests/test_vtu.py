@@ -81,7 +81,6 @@ def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
     assert len(mesh.points) == ref_num_pnt
 
 
-
 @pytest.mark.parametrize(
     "binary, compression",
     [(False, None), (True, None), (True, "zlib"), (True, "lzma")],
