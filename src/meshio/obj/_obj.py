@@ -52,6 +52,8 @@ def read_buffer(f):
             pass
         elif split[0] == "f":
             dat = [int(item.split("/")[0]) for item in split[1:]]
+            # Negative indices are relative to the vertices defined before this face.
+            dat = [index + len(points) + 1 if index < 0 else index for index in dat]
             if len(face_groups) == 0 or (
                 len(face_groups[-1]) > 0 and len(face_groups[-1][-1]) != len(dat)
             ):
