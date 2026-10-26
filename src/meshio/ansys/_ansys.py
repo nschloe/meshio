@@ -440,6 +440,13 @@ def write(filename, mesh, binary=True):
         for cell_block in mesh.cells:
             cell_type = cell_block.type
             values = cell_block.data
+            if binary and values.dtype.kind == "u":
+                # ANSYS binary sections use signed integers, with one-based IDs.
+                if values.size and values.max() >= np.iinfo(np.int64).max:
+                    raise WriteError(
+                        "ANSYS node IDs must fit in signed 64-bit integers."
+                    )
+                values = values.astype(np.int64)
             key = binary_dtypes[values.dtype] if binary else "12"
             last_index = first_index + len(values) - 1
             try:
