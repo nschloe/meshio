@@ -31,6 +31,65 @@ def test(mesh, tmp_path):
     )
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        0.0,
+        7.0,
+        1234.56789,
+        -0.1234,
+        3.1415926535897932,
+        # three-digit exponents used to trip an assertion in
+        # _float_to_nastran_string since the formatted string, at the
+        # default precision, is longer than the 16-character field
+        1.234567890123e100,
+        -1.234567890123e-100,
+        1.500000000001e308,
+        -1.500000000001e308,
+        5e-324,
+    ],
+)
+def test_float_to_nastran_string(value):
+    from meshio.nastran._nastran import _float_to_nastran_string
+
+    out = _float_to_nastran_string(value)
+    assert len(out) <= 16
+    # nastran requires a decimal point in real numbers
+    assert "." in out
+    # the string must still represent the value (at reduced precision
+    # for the extreme values)
+    assert float(out) == pytest.approx(value, rel=1.0e-9)
+
+
+def test_write_extreme_coordinates(tmp_path):
+    # Writing a mesh whose coordinates have three-digit exponents used
+    # to fail with an AssertionError from _float_to_nastran_string.
+    mesh = meshio.Mesh(
+        points=np.array(
+            [
+                [1.500000000001e308, 0.0, 0.0],
+                [0.0, -1.234567890123e-100, 0.0],
+                [0.0, 0.0, 1.0],
+            ]
+        ),
+        cells=[("triangle", np.array([[0, 1, 2]]))],
+    )
+    path = tmp_path / "out.bdf"
+    meshio.nastran.write(path, mesh)
+    out = meshio.read(path)
+    assert np.allclose(out.points[2], [0.0, 0.0, 1.0])
+    assert out.points[0][0] == pytest.approx(1.500000000001e308, rel=1.0e-9)
+    assert out.points[1][1] == pytest.approx(-1.234567890123e-100, rel=1.0e-9)
+
+
+def test_float_to_nastran_string_short_field():
+    from meshio.nastran._nastran import _float_to_nastran_string
+
+    out = _float_to_nastran_string(1234.56789, length=10)
+    assert len(out) <= 10
+    assert float(out) == pytest.approx(1234.56789, rel=1.0e-3)
+
+
 @pytest.mark.parametrize("filename", ["cylinder.fem", "cylinder_cells_first.fem"])
 def test_reference_file(filename):
     this_dir = pathlib.Path(__file__).resolve().parent
