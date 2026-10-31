@@ -6,9 +6,9 @@ I/O for MED/Salome, cf.
 import numpy as np
 
 from .._common import num_nodes_per_cell
-from .._exceptions import ReadError, WriteError
+from .._exceptions import ReadError
 from .._helpers import register_format
-from .._mesh import Mesh
+from .._mesh import CellBlock, Mesh
 
 # https://docs.salome-platform.org/5/med/dev/med__outils_8hxx.html
 meshio_to_med_type = {
@@ -210,6 +210,37 @@ def _read_families(fas_data):
     return families
 
 
+def _merge_cell_blocks(cells, cell_data):
+    """Merge cell blocks sharing a cell type into a single block per type.
+
+    The merged blocks keep the order in which each type first appears, and
+    the cell data (one array per block) is concatenated along with them, so
+    it stays aligned with the blocks. Meshes without duplicate types are
+    returned unchanged.
+    """
+    block_indices = {}
+    for k, cell_block in enumerate(cells):
+        block_indices.setdefault(cell_block.type, []).append(k)
+    if len(block_indices) == len(cells):
+        return cells, cell_data
+
+    merged_cells = [
+        CellBlock(
+            cell_type,
+            np.concatenate([cells[k].data for k in indices], axis=0),
+        )
+        for cell_type, indices in block_indices.items()
+    ]
+    merged_cell_data = {
+        name: [
+            np.concatenate([data[k] for k in indices], axis=0)
+            for indices in block_indices.values()
+        ]
+        for name, data in cell_data.items()
+    }
+    return merged_cells, merged_cell_data
+
+
 def write(filename, mesh):
     import h5py
 
@@ -267,11 +298,12 @@ def write(filename, mesh):
         family.attrs.create("NBR", len(mesh.points))
 
     # Cells (mailles in French)
-    if len(mesh.cells) != len(np.unique([c.type for c in mesh.cells])):
-        raise WriteError("MED files cannot have two sections of the same cell type.")
+    # MED stores a single section per cell type, so cell blocks sharing a
+    # type (e.g. one block per physical group) are merged beforehand
+    merged_cells, merged_cell_data = _merge_cell_blocks(mesh.cells, mesh.cell_data)
     cells_group = time_step.create_group("MAI")
     cells_group.attrs.create("CGT", 1)
-    for k, cell_block in enumerate(mesh.cells):
+    for k, cell_block in enumerate(merged_cells):
         cell_type = cell_block.type
         cells = cell_block.data
         med_type = meshio_to_med_type[cell_type]
@@ -284,9 +316,9 @@ def write(filename, mesh):
         nod.attrs.create("NBR", len(cells))
 
         # Cell tags
-        if "cell_tags" in mesh.cell_data:  # works only for med -> med
+        if "cell_tags" in merged_cell_data:  # works only for med -> med
             family = med_cells.create_dataset(
-                "FAM", data=mesh.cell_data["cell_tags"][k]
+                "FAM", data=merged_cell_data["cell_tags"][k]
             )
             family.attrs.create("CGT", 1)
             family.attrs.create("NBR", len(cells))
@@ -331,10 +363,10 @@ def write(filename, mesh):
     # Cell data
     # Only support writing ELEM fields with only 1 Gauss point per cell
     # Or ELNO (DG) fields defined at every node per cell
-    for name, d in mesh.cell_data.items():
+    for name, d in merged_cell_data.items():
         if name == "cell_tags":  # ignore cell_tags already written under FAS
             continue
-        for cell, data in zip(mesh.cells, d):
+        for cell, data in zip(merged_cells, d):
             # Determine the nature of the cell data
             # Either shape = (n_data, ) or (n_data, n_components) -> ELEM
             # or shape = (n_data, n_gauss_points, n_components) -> ELNO or ELGA

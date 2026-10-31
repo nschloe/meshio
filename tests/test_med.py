@@ -131,3 +131,48 @@ def test_reference_file_with_point_cell_data(tmp_path):
     assert np.isclose(np.mean(data_psi, axis=1)[0, 0], data_psi_elem[0])
 
     helpers.write_read(tmp_path, meshio.med.write, meshio.med.read, mesh, 1.0e-15)
+
+
+def test_write_multiple_blocks_of_the_same_cell_type(tmp_path):
+    # MED stores a single section per cell type: meshes with several blocks
+    # of one type (e.g. one block per physical group, as GMSH produces) are
+    # merged into one section instead of failing to write
+    points = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+            [2.0, 0.0],
+            [2.0, 1.0],
+            [3.0, 0.0],
+            [3.0, 1.0],
+        ]
+    )
+    cells = [
+        ("triangle", np.array([[0, 1, 2], [0, 2, 3]])),
+        ("quad", np.array([[1, 4, 5, 2]])),
+        ("triangle", np.array([[4, 6, 7], [4, 7, 5]])),
+    ]
+    cell_data = {
+        "group": [np.array([1, 1]), np.array([2]), np.array([3, 3])],
+    }
+    mesh = meshio.Mesh(points, cells, cell_data=cell_data)
+
+    meshio.write(tmp_path / "merged.med", mesh)
+    read_mesh = meshio.read(tmp_path / "merged.med")
+    # The two triangle blocks became a single block of four, with the cell
+    # data concatenated along with the cells
+    blocks = {cell_block.type: cell_block.data for cell_block in read_mesh.cells}
+    assert set(blocks) == {"triangle", "quad"}
+    np.testing.assert_equal(
+        blocks["triangle"],
+        np.array([[0, 1, 2], [0, 2, 3], [4, 6, 7], [4, 7, 5]]),
+    )
+    np.testing.assert_equal(blocks["quad"], np.array([[1, 4, 5, 2]]))
+    groups = {
+        cell_block.type: data
+        for cell_block, data in zip(read_mesh.cells, read_mesh.cell_data["group"])
+    }
+    np.testing.assert_allclose(groups["triangle"], [1, 1, 3, 3])
+    np.testing.assert_allclose(groups["quad"], [2])
