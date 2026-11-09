@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 import meshio
@@ -21,4 +22,5 @@ def test_stl(mesh, binary, tol, tmp_path):
     def writer(*args, **kwargs):
         return meshio.stl.write(*args, binary=binary, **kwargs)
 
-    helpers.write_read(tmp_path, writer, meshio.stl.read, mesh, tol)
+    with np.errstate(over="raise"):
+        helpers.write_read(tmp_path, writer, meshio.stl.read, mesh, tol)
