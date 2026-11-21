@@ -78,3 +78,66 @@ def test_read_from_file(filename, ref_cells, ref_num_cells, ref_num_pnt):
     assert ref_cells == mesh.cells[0].type
     assert len(mesh.cells[0].data) == ref_num_cells
     assert len(mesh.points) == ref_num_pnt
+
+
+def _write_raw_vertex_mesh(path, encoding="raw"):
+    # One point and one vertex cell, stored as raw appended data. The
+    # block sizes are chosen such that the base64 offset that the
+    # connectivity array is rewritten to (40) equals the original offset
+    # of the offsets array, the regression case from
+    # <https://github.com/nschloe/meshio/issues/1571>.
+    import struct
+
+    def block(data):
+        return struct.pack("<I", len(data)) + data
+
+    blob = (
+        block(np.array([[1.0, 2.0, 3.0]]).astype("<f8").tobytes())
+        + block(np.array([0], dtype="<i8").tobytes())
+        + block(np.array([1], dtype="<i8").tobytes())
+        + block(np.array([1], dtype=np.uint8).tobytes())
+    )
+    header = f"""<VTKFile type="UnstructuredGrid" version="0.1" \
+byte_order="LittleEndian" header_type="UInt32">
+  <UnstructuredGrid>
+    <Piece NumberOfPoints="1" NumberOfCells="1">
+      <Points><DataArray type="Float64" Name="Points" \
+NumberOfComponents="3" format="appended" offset="0"/></Points>
+      <Cells>
+        <DataArray type="Int64" Name="connectivity" format="appended" offset="28"/>
+        <DataArray type="Int64" Name="offsets" format="appended" offset="40"/>
+        <DataArray type="UInt8" Name="types" format="appended" offset="52"/>
+      </Cells>
+    </Piece>
+  </UnstructuredGrid>
+  <AppendedData encoding="{encoding}">
+   _"""
+    with open(path, "wb") as f:
+        f.write(header.encode())
+        f.write(blob)
+        f.write(b"\n  </AppendedData>\n</VTKFile>\n")
+
+
+def test_raw_binary_offset_collision(tmp_path):
+    path = tmp_path / "collision.vtu"
+    _write_raw_vertex_mesh(path)
+
+    mesh = meshio.vtu.read(path)
+    assert np.allclose(mesh.points, [[1.0, 2.0, 3.0]])
+    assert len(mesh.cells) == 1
+    assert mesh.cells[0].type == "vertex"
+    # Without the fix, connectivity and offsets are swapped and this
+    # comes back as [[1]], an index that does not exist in the mesh.
+    assert mesh.cells[0].data.tolist() == [[0]]
+
+
+def test_raw_binary_wrong_encoding(tmp_path):
+    # A file whose appended data is not XML-parseable falls back to the
+    # raw-binary parser; if it does not actually declare the raw
+    # encoding, that parser must refuse it with a ReadError instead of
+    # silently treating the data as raw.
+    path = tmp_path / "wrong-encoding.vtu"
+    _write_raw_vertex_mesh(path, encoding="base64")
+
+    with pytest.raises(meshio.ReadError):
+        meshio.vtu.read(path)
