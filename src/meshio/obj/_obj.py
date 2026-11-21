@@ -51,14 +51,24 @@ def read_buffer(f):
             # "s 1" or "s off" controls smooth shading
             pass
         elif split[0] == "f":
-            dat = [int(item.split("/")[0]) for item in split[1:]]
+            # A face corner is v, v/vt, v//vn, or v/vt/vn. Keep all three
+            # indices: in OBJ, texture coordinates and normals are indexed
+            # per corner, not per point, so a single vertex can carry
+            # several different vt (or vn) entries, e.g. at UV seams.
+            corners = []
+            for item in split[1:]:
+                parts = item.split("/")
+                v_idx = int(parts[0])
+                vt_idx = int(parts[1]) if len(parts) > 1 and parts[1] else None
+                vn_idx = int(parts[2]) if len(parts) > 2 and parts[2] else None
+                corners.append((v_idx, vt_idx, vn_idx))
             if len(face_groups) == 0 or (
-                len(face_groups[-1]) > 0 and len(face_groups[-1][-1]) != len(dat)
+                len(face_groups[-1]) > 0 and len(face_groups[-1][-1]) != len(corners)
             ):
                 face_groups.append([])
                 face_group_ids.append([])
 
-            face_groups[-1].append(dat)
+            face_groups[-1].append(corners)
             face_group_ids[-1].append(face_group_id)
         elif split[0] == "g":
             # new group
@@ -78,10 +88,86 @@ def read_buffer(f):
     texture_coords = np.array(texture_coords)
     vertex_normals = np.array(vertex_normals)
     point_data = {}
-    if len(texture_coords) > 0:
-        point_data["obj:vt"] = texture_coords
-    if len(vertex_normals) > 0:
-        point_data["obj:vn"] = vertex_normals
+
+    def resolve(idx, count):
+        # OBJ indices are 1-based; negative indices count back from the end.
+        return idx - 1 if idx > 0 else count + idx
+
+    has_vt = any(
+        corner[1] is not None for group in face_groups for face in group for corner in face
+    )
+    has_vn = any(
+        corner[2] is not None for group in face_groups for face in group for corner in face
+    )
+
+    if has_vt or has_vn:
+        # Texture coordinates and normals are per-corner data in OBJ, while
+        # meshio point_data is per-point. Reconcile the two by de-indexing
+        # (splitting points): every unique (v, vt, vn) corner combination
+        # becomes its own point, carrying that corner's vt/vn. Points are
+        # only duplicated where a vertex is actually referenced with
+        # different vt/vn entries, and no UV/normal information is lost.
+        key_to_new_index = {}
+        keys = []
+        new_face_groups = []
+        for group in face_groups:
+            new_group = []
+            for face in group:
+                new_face = []
+                for v_idx, vt_idx, vn_idx in face:
+                    key = (
+                        resolve(v_idx, len(points)),
+                        resolve(vt_idx, len(texture_coords))
+                        if vt_idx is not None
+                        else None,
+                        resolve(vn_idx, len(vertex_normals))
+                        if vn_idx is not None
+                        else None,
+                    )
+                    if key not in key_to_new_index:
+                        key_to_new_index[key] = len(keys)
+                        keys.append(key)
+                    new_face.append(key_to_new_index[key])
+                new_group.append(new_face)
+            new_face_groups.append(new_group)
+
+        points = points[[key[0] for key in keys]]
+        if has_vt:
+            point_data["obj:vt"] = np.array(
+                [
+                    texture_coords[key[1]]
+                    if key[1] is not None
+                    else np.zeros(texture_coords.shape[1])
+                    for key in keys
+                ]
+            )
+        if has_vn:
+            point_data["obj:vn"] = np.array(
+                [
+                    vertex_normals[key[2]]
+                    if key[2] is not None
+                    else np.zeros(vertex_normals.shape[1])
+                    for key in keys
+                ]
+            )
+        face_groups = new_face_groups
+    else:
+        # No vt/vn referenced by any face: keep the historical behaviour of
+        # attaching the raw vt/vn lists as point data, which is only
+        # meaningful (and only passes Mesh's consistency check) when they
+        # happen to be per-point already. Unreferenced lists of a different
+        # length cannot be associated with points and are dropped.
+        if len(texture_coords) == len(points) and len(texture_coords) > 0:
+            point_data["obj:vt"] = texture_coords
+        if len(vertex_normals) == len(points) and len(vertex_normals) > 0:
+            point_data["obj:vn"] = vertex_normals
+        face_groups = [
+            [
+                [resolve(corner[0], len(points)) for corner in face]
+                for face in group
+            ]
+            for group in face_groups
+        ]
 
     # convert to numpy arrays
     face_groups = [np.array(f) for f in face_groups]
@@ -89,11 +175,11 @@ def read_buffer(f):
     cells = []
     for f, gid in zip(face_groups, face_group_ids):
         if f.shape[1] == 3:
-            cells.append(CellBlock("triangle", f - 1))
+            cells.append(CellBlock("triangle", f))
         elif f.shape[1] == 4:
-            cells.append(CellBlock("quad", f - 1))
+            cells.append(CellBlock("quad", f))
         else:
-            cells.append(CellBlock("polygon", f - 1))
+            cells.append(CellBlock("polygon", f))
         cell_data["obj:group_ids"].append(gid)
 
     return Mesh(points, cells, point_data=point_data, cell_data=cell_data)
