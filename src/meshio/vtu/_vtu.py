@@ -212,18 +212,38 @@ def _parse_raw_binary(filename):
 
     appended_data_tag = root.find("AppendedData")
     assert appended_data_tag is not None
+    # This function re-encodes raw appended data as base64. Anything else
+    # (e.g. a file that declares encoding="base64" but could not be parsed
+    # as XML) must not silently be treated as raw data.
+    encoding = appended_data_tag.get("encoding", "raw")
+    if encoding != "raw":
+        raise ReadError(
+            f"Unsupported AppendedData encoding '{encoding}'; "
+            "only 'raw' and 'base64' are supported."
+        )
     appended_data_tag.set("encoding", "base64")
+
+    # Snapshot the data arrays by their original offset before rewriting
+    # any of them. A rewritten (base64) offset can coincide with the
+    # original offset of an array that has not been rewritten yet, so
+    # looking arrays up by their current offset attribute (e.g. with
+    # root.find(f".//DataArray[@offset='{i}']")) can return an array that
+    # was already rewritten, leaving the later array pointing into the
+    # middle of the base64 stream. Its data is then read from the wrong
+    # position, which surfaces as corrupted data or a binascii.Error from
+    # the base64 decoder.
+    tags_by_offset = {
+        int(tag.attrib["offset"]): tag
+        for tag in root.findall(".//DataArray")
+        if "offset" in tag.attrib
+    }
 
     compressor = root.get("compressor")
     if compressor is None:
         arrays = ""
         i = 0
         while i < len(data):
-            # The following find() runs into issues if offset is padded with spaces, see
-            # <https://github.com/nschloe/meshio/issues/1135>. It works in ParaView.
-            # Unfortunately, Python's built-in XML tree can't handle regexes, see
-            # <https://stackoverflow.com/a/38810731/353337>.
-            da_tag = root.find(f".//DataArray[@offset='{i}']")
+            da_tag = tags_by_offset.get(i)
             if da_tag is None:
                 raise RuntimeError(f"Could not find .//DataArray[@offset='{i}']")
             da_tag.set("offset", str(len(arrays)))
@@ -242,7 +262,7 @@ def _parse_raw_binary(filename):
         arrays = ""
         i = 0
         while i < len(data):
-            da_tag = root.find(f".//DataArray[@offset='{i}']")
+            da_tag = tags_by_offset.get(i)
             assert da_tag is not None
             da_tag.set("offset", str(len(arrays)))
 
