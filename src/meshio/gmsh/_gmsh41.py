@@ -188,7 +188,12 @@ def _read_nodes(f, is_ascii: bool, data_size):
 
     _fast_forward_to_end_block(f, "Nodes")
 
-    return points, tags, dim_tags
+    # The declared total_num_nodes is not always trustworthy (see
+    # https://github.com/nschloe/meshio/issues/1562): the entity blocks can
+    # contain fewer nodes than declared. Only return the nodes that were
+    # actually read; the rest of the preallocated arrays is uninitialised
+    # memory whose garbage tags make _read_elements allocate absurd arrays.
+    return points[:idx], tags[:idx], dim_tags[:idx]
 
 
 def _read_elements(
