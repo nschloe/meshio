@@ -113,6 +113,45 @@ def test_gmsh41(mesh, binary, tmp_path):
     helpers.write_read(tmp_path, writer, meshio.gmsh.read, mesh, 1.0e-15)
 
 
+def test_gmsh41_overdeclared_num_nodes(tmp_path):
+    # Regression test for https://github.com/nschloe/meshio/issues/1562:
+    # the $Nodes header declares 10 nodes, but the entity block only
+    # contains 4. The reader must return exactly those 4 nodes instead of
+    # padding the mesh with uninitialised memory (whose garbage tags made
+    # _read_elements try to allocate absurdly large arrays).
+    msh = """$MeshFormat
+4.1 0 8
+$EndMeshFormat
+$Nodes
+1 10 1 4
+0 1 0 4
+1
+2
+3
+4
+0.0 0.0 0.0
+1.0 0.0 0.0
+1.0 1.0 0.0
+0.0 1.0 0.0
+$EndNodes
+$Elements
+1 1 1 1
+0 1 15 1
+1 1
+$EndElements
+"""
+    filepath = tmp_path / "overdeclared.msh"
+    filepath.write_text(msh)
+    mesh = meshio.read(filepath)
+    assert mesh.points.shape == (4, 3)
+    np.testing.assert_allclose(
+        mesh.points,
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]],
+    )
+    assert len(mesh.cells) == 1
+    np.testing.assert_array_equal(mesh.cells[0].data, [[0]])
+
+
 def test_generic_io(tmp_path):
     helpers.generic_io(tmp_path / "test.msh")
     # With additional, insignificant suffix:

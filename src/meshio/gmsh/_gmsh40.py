@@ -126,6 +126,11 @@ def _read_nodes(f, is_ascii):
                 points[idx] = [float(x), float(y), float(z)]
                 tags[idx] = tag
                 idx += 1
+        # Only return the nodes that were actually read; the declared
+        # total_num_nodes can exceed the number of nodes in the blocks
+        # (cf. https://github.com/nschloe/meshio/issues/1562).
+        points = points[:idx]
+        tags = tags[:idx]
     else:
         # numEntityBlocks(unsigned long) numNodes(unsigned long)
         num_entity_blocks, _ = np.fromfile(f, count=2, dtype=c_ulong)
