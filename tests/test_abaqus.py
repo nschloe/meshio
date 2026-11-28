@@ -27,6 +27,28 @@ def test(mesh, tmp_path):
     helpers.write_read(tmp_path, meshio.abaqus.write, meshio.abaqus.read, mesh, 1.0e-15)
 
 
+@pytest.mark.parametrize("element_type", ["CPS8", "CPS8R"])
+def test_read_eight_node_plane_stress_quad(tmp_path, element_type):
+    filename = tmp_path / "quad.inp"
+    filename.write_text(
+        f"""*NODE
+1, 0, 0
+2, 0.5, 0
+3, 1, 0
+4, 1, 0.5
+5, 1, 1
+6, 0.5, 1
+7, 0, 1
+8, 0, 0.5
+*ELEMENT, TYPE={element_type}
+1, 1, 3, 5, 7, 2, 4, 6, 8
+"""
+    )
+
+    mesh = meshio.read(filename)
+    np.testing.assert_array_equal(mesh.cells_dict["quad8"], [[0, 2, 4, 6, 1, 3, 5, 7]])
+
+
 @pytest.mark.parametrize(
     "filename, ref_sum, ref_num_cells, ref_num_cell_sets",
     [
